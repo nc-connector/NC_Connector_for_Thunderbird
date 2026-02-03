@@ -20,11 +20,13 @@ This is a community project and is not an official Nextcloud GmbH product.
 - **ESR-ready**
   Optimized and tested for Thunderbird ESR 140.X with a minimal experiment footprint.
 
-## Whats new in 2.2.4?
+## Whats new in 2.2.5?
 
-- Legal/branding update: renamed to NC Connector for Thunderbird with new app icon and headers.
-- Experiment quality cleanup for TB 140 (no XUL dialog includes, no window tracking maps, shared utils loaded only in the dialog window).
-- Note: The add-on ID has changed in 2.2.2. Please uninstall versions <=2.2.1 before installing 2.2.4.
+- Talk button now also available in the tab editor (not just the dialog window).
+- Optional auto-add of event invitees to the Talk room (Nextcloud users via system addressbook, others via e-mail).
+- Live Nextcloud password policy support for Talk + Sharing (min length + generator API with secure fallback).
+- Unified, modernized UI across Talk wizard, Sharing wizard, and settings (consistent spacing, buttons, animations).
+- Note: The add-on ID has changed in 2.2.2. Please uninstall versions <=2.2.1 before installing 2.2.5.
 
 ## Feature overview
 
@@ -49,7 +51,7 @@ This is a community project and is not an official Nextcloud GmbH product.
 - App password or Login Flow V2
 
 ## Installation
-1. Install the current XPI `nc4tb-2.2.4.xpi` in Thunderbird (Add-ons > Gear > Install Add-on From File).
+1. Install the current XPI `nc4tb-2.2.5.xpi` in Thunderbird (Add-ons > Gear > Install Add-on From File).
 2. Restart Thunderbird.
 3. In the add-on options, enter base URL, user, and app password or start the login flow.
 

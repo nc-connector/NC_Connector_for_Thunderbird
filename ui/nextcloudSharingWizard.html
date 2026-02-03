@@ -7,7 +7,15 @@ See LICENSE.txt for details.
 <meta charset="utf-8">
 <title data-i18n="sharing_dialog_title">Nextcloud Freigabe</title>
 <style>
-:root{--brand-blue:#0082C9;--header-height:48px;}
+:root{
+  --brand-blue:#0082C9;
+  --header-height:48px;
+  --control-height:38px;
+  --control-radius:10px;
+  --control-padding-x:12px;
+  --content-max:560px;
+  --dialog-shadow:0 24px 48px rgba(11,17,39,0.18);
+}
 html,
 body{
   height:100%;
@@ -15,14 +23,26 @@ body{
 body{
   margin:0;
   padding:0;
-  background:linear-gradient(180deg,#fafdff 0%,#eef2fb 100%);
-  font:14px 'Segoe UI',system-ui,sans-serif;
+  background:radial-gradient(120% 140% at 50% -20%,#ffffff 0%,#f3f6ff 55%,#e9effb 100%);
+  font:14px 'Segoe UI Variable','Segoe UI','Calibri','Trebuchet MS',sans-serif;
   color:#1f1f1f;
   min-height:0;
   box-sizing:border-box;
   display:flex;
   justify-content:center;
   align-items:flex-start;
+}
+@keyframes dialogEnter{
+  from{opacity:0; transform:translateY(12px);}
+  to{opacity:1; transform:translateY(0);}
+}
+@keyframes stepEnterForward{
+  from{opacity:0; transform:translateX(14px);}
+  to{opacity:1; transform:translateX(0);}
+}
+@keyframes stepEnterBack{
+  from{opacity:0; transform:translateX(-14px);}
+  to{opacity:1; transform:translateX(0);}
 }
 .nc-dialog{
   width:100%;
@@ -33,11 +53,12 @@ body{
   background:#fff;
   border-radius:16px;
   border:1px solid rgba(4,16,41,0.08);
-  box-shadow:0 24px 48px rgba(11,17,39,0.2);
+  box-shadow:var(--dialog-shadow);
   display:flex;
   flex-direction:column;
   overflow:hidden;
   min-height:0;
+  animation:dialogEnter .35s ease-out;
 }
 .nc-dialog-hero{
   background:var(--brand-blue);
@@ -72,12 +93,20 @@ body{
   gap:18px;
   background:#f7f8ff;
   overflow:hidden;
+  max-width:var(--content-max);
+  width:100%;
+  margin:0 auto;
 }
 .wizard-step{
   display:none;
+  will-change:transform,opacity;
 }
 .wizard-step.active{
   display:block;
+  animation:stepEnterForward .22s ease-out;
+}
+.nc-dialog-content[data-nav="back"] .wizard-step.active{
+  animation-name:stepEnterBack;
 }
 .wizard-step.active[data-step="3"]{
   display:flex;
@@ -103,15 +132,22 @@ input[type="date"],
 input[type="password"],
 textarea{
   border:1px solid #c7c7c7;
-  border-radius:6px;
-  padding:8px 10px;
+  border-radius:var(--control-radius);
+  padding:0 var(--control-padding-x);
   font-size:14px;
   font-family:inherit;
   width:100%;
   box-sizing:border-box;
 }
+input[type="text"],
+input[type="date"],
+input[type="password"]{
+  height:var(--control-height);
+  background:#fff;
+}
 textarea{
   min-height:140px;
+  padding:10px 12px;
 }
 .checkbox-row{
   display:flex;
@@ -122,7 +158,7 @@ textarea{
 .inline-field{
   display:flex;
   gap:10px;
-  align-items:center;
+  align-items:stretch;
   margin-bottom:10px;
 }
 .inline-field.hidden,
@@ -132,9 +168,10 @@ textarea{
   display:none;
 }
 .inline-field button{
-  padding:6px 12px;
+  height:var(--control-height);
+  padding:0 14px;
   border:1px solid #c7c7c7;
-  border-radius:4px;
+  border-radius:var(--control-radius);
   background:#f5f5f5;
   cursor:pointer;
 }
@@ -152,9 +189,10 @@ textarea{
   margin-bottom:10px;
 }
 .file-actions button{
-  padding:8px 14px;
+  height:var(--control-height);
+  padding:0 14px;
   border:1px solid #c7c7c7;
-  border-radius:4px;
+  border-radius:var(--control-radius);
   background:#f5f5f5;
   cursor:pointer;
 }
@@ -233,8 +271,9 @@ tbody tr.selected{
   align-items:center;
 }
 .nc-dialog-footer button{
-  padding:8px 18px;
-  border-radius:4px;
+  height:var(--control-height);
+  padding:0 18px;
+  border-radius:var(--control-radius);
   border:1px solid #c7c7c7;
   background:#f3f3f3;
   cursor:pointer;
@@ -253,6 +292,11 @@ tbody tr.selected{
 .footer-right{
   display:flex;
   gap:10px;
+}
+@media (prefers-reduced-motion: reduce){
+  .wizard-step.active{
+    animation:none;
+  }
 }
 </style>
 <body>
@@ -285,7 +329,7 @@ tbody tr.selected{
           <span data-i18n="sharing_permission_delete">Löschen</span>
         </label>
         <label class="checkbox-row">
-          <input type="checkbox" id="passwordToggle" checked>
+          <input type="checkbox" id="passwordToggle">
           <span data-i18n="sharing_password_toggle">Freigabe-Passwort setzen</span>
         </label>
         <div class="inline-field" id="passwordFields">

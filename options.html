@@ -7,19 +7,56 @@ See LICENSE.txt for details.
 <meta charset="utf-8">
 <title data-i18n="options_title">Nextcloud Talk - Einstellungen</title>
 <style>
-:root{--brand-blue:#0082C9;--header-height:48px;}
-body{font:14px system-ui, sans-serif; max-width:760px; margin:20px auto; line-height:1.45; background:linear-gradient(180deg,#fafdff 0%,#eef2fb 100%); color:#1f1f1f;}
+:root{
+  --brand-blue:#0082C9;
+  --header-height:48px;
+  --control-height:38px;
+  --control-radius:10px;
+  --control-padding-x:12px;
+  --content-max:760px;
+}
+body{
+  font:14px 'Segoe UI Variable','Segoe UI','Calibri','Trebuchet MS',sans-serif;
+  max-width:var(--content-max);
+  margin:20px auto;
+  line-height:1.45;
+  background:radial-gradient(120% 140% at 50% -20%,#ffffff 0%,#f3f6ff 55%,#e9effb 100%);
+  color:#1f1f1f;
+}
 
 .hero{border-radius:12px; margin-bottom:18px; display:flex; justify-content:center; align-items:center; overflow:hidden; height:var(--header-height); background:var(--brand-blue);}
 .hero img{width:auto; height:100%; max-width:328px; display:block; object-fit:contain;}
-.tabs{border:1px solid #d7d7d7; border-radius:10px; overflow:hidden;}
+.tabs{border:1px solid #d7d7d7; border-radius:12px; overflow:hidden; box-shadow:0 18px 36px rgba(11,17,39,0.12); background:#fff; --tab-panel-min-height:auto;}
 .tab-list{display:flex; flex-wrap:wrap; border-bottom:1px solid #e1e1e1; background:#f7f8fa;}
 .tab-list button{flex:1 1 120px; padding:10px; border:none; background:none; cursor:pointer; font-weight:600;}
 .tab-list button.active{background:#ffffff; border-bottom:3px solid var(--brand-blue);}
-.tab-panel{display:none; padding:20px;}
-.tab-panel.active{display:block;}
-.row{display:grid; grid-template-columns: 200px 1fr; gap:10px; align-items:center; margin:10px 0;}
-input[type="url"], input[type="text"], input[type="password"], select{padding:8px; border:1px solid #ccc; border-radius:6px; width:100%;}
+.tab-panel{display:none; padding:20px; min-height:var(--tab-panel-min-height); will-change:transform,opacity;}
+.tab-panel.active{display:block; animation:tabEnterForward .22s ease-out;}
+.tabs[data-nav="back"] .tab-panel.active{animation-name:tabEnterBack;}
+@keyframes tabEnterForward{
+  from{opacity:0; transform:translateX(14px);}
+  to{opacity:1; transform:translateX(0);}
+}
+@keyframes tabEnterBack{
+  from{opacity:0; transform:translateX(-14px);}
+  to{opacity:1; transform:translateX(0);}
+}
+@media (prefers-reduced-motion: reduce){
+  .tab-panel.active{animation:none;}
+}
+.row{display:grid; grid-template-columns: 220px minmax(240px, 420px); gap:10px; align-items:start; margin:10px 0;}
+.row.row-inset{padding:0 14px;}
+.row > div{max-width:420px; width:100%;}
+.field-stack{display:flex; flex-direction:column; gap:6px; max-width:420px; width:100%;}
+input[type="url"], input[type="text"], input[type="password"], select{
+  height:var(--control-height);
+  padding:0 var(--control-padding-x);
+  border:1px solid #ccc;
+  border-radius:var(--control-radius);
+  width:100%;
+  box-sizing:border-box;
+  background:#fff;
+}
 footer{display:flex; gap:8px; margin-top:16px}
 #status{opacity:.8; font-size:12px}
 .donation{display:flex; flex-direction:column; gap:8px; margin-top:12px;}
@@ -33,8 +70,21 @@ footer{display:flex; gap:8px; margin-top:16px}
 .auth-block legend{font-weight:600; padding:0 4px;}
 .radio-option{display:flex; align-items:center; gap:8px; margin:6px 0;}
 .button-row{display:flex; flex-wrap:wrap; gap:10px; margin-top:12px;}
-#testConnection,#loginFlowButton{padding:8px 12px;}
-#save{padding:8px 14px; background:var(--brand-blue); border:1px solid var(--brand-blue); color:#fff; border-radius:6px;}
+#testConnection,#loginFlowButton{
+  height:var(--control-height);
+  padding:0 14px;
+  border-radius:var(--control-radius);
+  border:1px solid #c7c7c7;
+  background:#f5f5f5;
+}
+#save{
+  height:var(--control-height);
+  padding:0 16px;
+  background:var(--brand-blue);
+  border:1px solid var(--brand-blue);
+  color:#fff;
+  border-radius:var(--control-radius);
+}
 .checklist{display:flex; flex-direction:column; gap:6px;}
 .checklist label{font-weight:400;}
 .hint{margin:6px 0 0 0; font-size:12px; color:#555;}
@@ -73,18 +123,20 @@ footer{display:flex; gap:8px; margin-top:16px}
     <div class="row"><label for="appPass" data-i18n="options_app_pass_label">App-Passwort</label><input id="appPass" type="password"></div>
   </section>
   <section id="tab-sharing" class="tab-panel">
-    <div class="row">
+    <div class="row row-inset">
       <label for="sharingBase" data-i18n="options_sharing_base_label">Basisverzeichnis</label>
-      <div>
+      <div class="field-stack">
         <input id="sharingBase" type="text">
-        <p style="margin:6px 0 0 0;font-size:12px;color:#555;" data-i18n="options_sharing_base_hint">Dateien werden unterhalb dieses Verzeichnisses abgelegt (z.B. "90 Freigaben - extern").</p>
+        <p class="hint" data-i18n="options_sharing_base_hint">Dateien werden unterhalb dieses Verzeichnisses abgelegt (z.B. "90 Freigaben - extern").</p>
       </div>
     </div>
     <fieldset class="auth-block">
       <legend data-i18n="options_sharing_defaults_heading">Default-Einstellungen</legend>
       <div class="row">
-        <label for="sharingDefaultShareName" data-i18n="options_sharing_default_share_name_label">Freigabename (Default)</label>
-        <input id="sharingDefaultShareName" type="text">
+        <label for="sharingDefaultShareName" data-i18n="options_sharing_default_share_name_label">Freigabename</label>
+        <div class="field-stack">
+          <input id="sharingDefaultShareName" type="text">
+        </div>
       </div>
       <div class="row">
         <label data-i18n="options_sharing_default_permissions_label">Standard-Berechtigungen</label>
@@ -95,7 +147,7 @@ footer{display:flex; gap:8px; margin-top:16px}
         </div>
       </div>
       <div class="row">
-        <label for="sharingDefaultPassword" data-i18n="options_sharing_default_password_label">Passwort setzen (Default)</label>
+        <label for="sharingDefaultPassword" data-i18n="options_sharing_default_password_label">Passwort setzen</label>
         <input id="sharingDefaultPassword" type="checkbox">
       </div>
       <div class="row">
@@ -108,7 +160,7 @@ footer{display:flex; gap:8px; margin-top:16px}
     <fieldset class="auth-block">
       <legend data-i18n="options_talk_defaults_heading">Default-Einstellungen</legend>
       <div class="row">
-        <label for="talkDefaultTitle" data-i18n="options_talk_default_title_label">Titel (Default)</label>
+        <label for="talkDefaultTitle" data-i18n="options_talk_default_title_label">Titel</label>
         <input id="talkDefaultTitle" type="text">
       </div>
       <div class="row">
@@ -118,6 +170,14 @@ footer{display:flex; gap:8px; margin-top:16px}
       <div class="row">
         <label for="talkDefaultListable" data-i18n="options_talk_default_listable_label">In Suche anzeigen</label>
         <input id="talkDefaultListable" type="checkbox">
+      </div>
+      <div class="row">
+        <label for="talkDefaultAddParticipants" data-i18n="options_talk_default_add_participants_label">Teilnehmer in den Raum hinzufügen</label>
+        <input id="talkDefaultAddParticipants" type="checkbox">
+      </div>
+      <div class="row">
+        <label for="talkDefaultPassword" data-i18n="options_talk_default_password_label">Passwort setzen</label>
+        <input id="talkDefaultPassword" type="checkbox">
       </div>
       <div class="row">
         <label data-i18n="options_talk_default_roomtype_label">Raumtyp</label>

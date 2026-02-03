@@ -14,8 +14,9 @@ var { ExtensionSupport } = ChromeUtils.importESModule("resource:///modules/Exten
 
 const BRIDGE_SCRIPT_PATH = "ui/calToolbarDialog.js";
 const CAL_SHARED_PATH = "ui/calToolbarShared.js";
-const EVENT_DIALOG_URLS = [
-  "chrome://calendar/content/calendar-event-dialog.xhtml"
+const CALENDAR_WINDOW_URLS = [
+  "chrome://calendar/content/calendar-event-dialog.xhtml",
+  "chrome://messenger/content/messenger.xhtml"
 ];
 const WINDOW_LISTENER_ID = "ext-nextcloud-enterprise-thunderbird";
 
@@ -111,22 +112,6 @@ class CalToolbarExperiment {
     return null;
   }
 
-  isEventDialogWindow(win) {
-    if (!win) return false;
-    try {
-      const doc = win.document;
-      const windowType = doc?.documentElement?.getAttribute("windowtype") || "";
-      if (windowType === "Calendar:EventDialog" || windowType === "Calendar:EventSummaryDialog") {
-        return true;
-      }
-      const href = doc?.location?.href || win.location?.href || "";
-      if (!href) return false;
-      return EVENT_DIALOG_URLS.some((url) => href.startsWith(url));
-    } catch (_) {
-      return false;
-    }
-  }
-
   createBridgeAPI(init = {}) {
     const state = {
       label: init.label || this.i18n("ui_insert_button_label"),
@@ -163,21 +148,15 @@ class CalToolbarExperiment {
     }
   }
 
+  /**
+   * Inject the calendar bridge API and dialog helpers into a window.
+   * @param {Window} win
+   * @param {object} init
+   * @returns {boolean}
+   */
   installBridge(win, init) {
     if (!win || !win.document) return false;
-    let windowId = null;
-    try {
-      const wrapper = this.extension?.windowManager?.getWrapper?.(win);
-      windowId = wrapper?.id ?? null;
-    } catch (_) {}
-    if (windowId == null) {
-      try {
-        const outerId = win?.docShell?.outerWindowID ?? win?.windowUtils?.outerWindowID;
-        if (typeof outerId === "number") {
-          windowId = outerId;
-        }
-      } catch (_) {}
-    }
+    const windowId = this.getWindowIdFromWindow(win);
     const initWithId = Object.assign({}, init, { windowId });
     const api = this.createBridgeAPI(initWithId);
     const utils = this.ensureCalUtilsInWindow(win);
@@ -214,18 +193,15 @@ class CalToolbarExperiment {
 
   registerWindowListener(init) {
     /**
-     * Inject the bridge into a newly opened event dialog window.
+     * Inject the bridge into a newly opened calendar-related window.
      * @param {Window} win
      */
     const onLoadWindow = (win) => {
       if (!win) return;
       /**
-       * Inject the dialog bridge after verifying window type.
+       * Inject the dialog bridge after the window finishes loading.
        */
       const inject = () => {
-        if (!this.isEventDialogWindow(win)) {
-          return;
-        }
         if (this.installBridge(win, init)) {
           console.log("[NCExp] bridge injected window");
         }
@@ -245,7 +221,7 @@ class CalToolbarExperiment {
     };
 
     ExtensionSupport.registerWindowListener(WINDOW_LISTENER_ID, {
-      chromeURLs: EVENT_DIALOG_URLS,
+      chromeURLs: CALENDAR_WINDOW_URLS,
       onLoadWindow
     });
 
@@ -255,7 +231,9 @@ class CalToolbarExperiment {
       active = false;
       try {
         ExtensionSupport.unregisterWindowListener(WINDOW_LISTENER_ID);
-      } catch (_) {}
+      } catch (e) {
+        console.error("[NCExp] window listener cleanup failed", e);
+      }
     };
   }
 
@@ -279,28 +257,89 @@ class CalToolbarExperiment {
     }
   }
 
-  getWindowById(windowId) {
-    if (typeof windowId !== "number") return null;
-    try {
-      const direct = this.extension?.windowManager?.get?.(windowId)?.window || null;
-      if (direct) return direct;
-    } catch (_) {}
-    try {
-      for (const candidate of ExtensionSupport.openWindows) {
-        try {
-          const wrapper = this.extension?.windowManager?.getWrapper?.(candidate);
-          if (wrapper?.id === windowId) {
-            return candidate;
-          }
-          const outerId = candidate?.docShell?.outerWindowID ?? candidate?.windowUtils?.outerWindowID;
-          if (typeof outerId === "number" && outerId === windowId) {
-            return candidate;
-          }
-        } catch (_) {}
+  resolveManagedWindow(win) {
+    if (!win) return null;
+    const windowType = win.document?.documentElement?.getAttribute("windowtype") || "";
+    if (this.isWindowManagerType(windowType)) {
+      return win;
+    }
+    let current = win;
+    for (let depth = 0; depth < 4; depth++) {
+      const opener = current?.opener;
+      if (!opener || opener === current) return null;
+      const openerType = opener?.document?.documentElement?.getAttribute("windowtype") || "";
+      if (this.isWindowManagerType(openerType)) {
+        return opener;
       }
-    } catch (_) {}
+      current = opener;
+    }
     return null;
   }
+
+  /**
+   * Resolve the WebExtension window id for a given Thunderbird window.
+   * @param {Window} win
+   * @returns {number|null}
+   */
+  getWindowIdFromWindow(win) {
+    const manager = this.extension?.windowManager;
+    if (!manager || typeof manager.getWrapper !== "function") return null;
+    const targetWindow = this.resolveManagedWindow(win);
+    if (!targetWindow) return null;
+    const wrapper = manager.getWrapper(targetWindow);
+    if (!wrapper) return null;
+    const id = wrapper.id;
+    return typeof id === "number" ? id : null;
+  }
+
+  isWindowManagerType(windowType) {
+    switch (windowType) {
+      case "mail:3pane":
+      case "msgcompose":
+      case "mail:messageWindow":
+      case "mail:extensionPopup":
+        return true;
+      default:
+        return false;
+    }
+  }
+
+  resolveActionWindow(win, payload) {
+    if (!payload || typeof payload !== "object") {
+      return win;
+    }
+    const outerId = payload._dialogOuterId;
+    if (typeof outerId !== "number") {
+      return win;
+    }
+    if (typeof Services === "undefined" || !Services?.wm?.getOuterWindowWithId) {
+      console.error("[NCExp] dialog window lookup unavailable");
+      return null;
+    }
+    const dialogWin = Services.wm.getOuterWindowWithId(outerId);
+    if (dialogWin && !dialogWin.closed) {
+      return dialogWin;
+    }
+    console.error("[NCExp] dialog window not available", outerId);
+    return null;
+  }
+
+  /**
+   * Look up a native window by WebExtension window id.
+   * @param {number} windowId
+   * @returns {Window|null}
+   */
+  getWindowById(windowId) {
+    if (typeof windowId !== "number") return null;
+    const windowObject = this.extension.windowManager.get(windowId);
+    if (!windowObject) return null;
+    return windowObject.window;
+  }
+  /**
+   * Dispatch a request to a specific window and execute an action in that context.
+   * @param {{windowId:number,action:string,payload?:object}} options
+   * @returns {Promise<any>}
+   */
   async invokeWindow(options = {}) {
     const windowId = options.windowId;
     const action = options.action;
@@ -315,8 +354,23 @@ class CalToolbarExperiment {
     return await this.executeWindowAction(win, action, payload);
   }
 
+  /**
+   * Execute an action against a target window using injected shared utils.
+   * @param {Window} win
+   * @param {string} action
+   * @param {object} payload
+   * @returns {Promise<object>}
+   */
   async executeWindowAction(win, action, payload) {
-    const utils = this.ensureCalUtilsInWindow(win);
+    const actionPayload = payload && typeof payload === "object" ? { ...payload } : payload;
+    if (actionPayload && typeof actionPayload === "object" && "_dialogOuterId" in actionPayload) {
+      delete actionPayload._dialogOuterId;
+    }
+    const targetWin = this.resolveActionWindow(win, payload);
+    if (!targetWin || targetWin.closed) {
+      return { ok: false, error: "target_window_unavailable" };
+    }
+    const utils = this.ensureCalUtilsInWindow(targetWin);
     if (!utils) {
       return { ok: false, error: "cal_utils_unavailable" };
     }
@@ -324,17 +378,17 @@ class CalToolbarExperiment {
       case "ping":
         return { ok: true };
       case "getTalkMetadata":
-        return { ok: true, metadata: utils.readTalkMetadataFromDocument(win.document) || {} };
+        return { ok: true, metadata: utils.readTalkMetadataFromDocument(targetWin.document) || {} };
       case "setTalkMetadata":
-        return utils.setTalkMetadataOnWindow(win, payload || {});
+        return utils.setTalkMetadataOnWindow(targetWin, actionPayload || {});
       case "getEventSnapshot":
-        return utils.getEventSnapshotFromWindow(win) || { ok: false, error: "snapshot_failed" };
+        return utils.getEventSnapshotFromWindow(targetWin) || { ok: false, error: "snapshot_failed" };
       case "applyEventFields":
-        return utils.applyEventFieldsOnWindow(win, payload || {}, { preferExecForDescription: true })
+        return utils.applyEventFieldsOnWindow(targetWin, actionPayload || {}, { preferExecForDescription: true })
           || { ok: false, error: "apply_failed" };
       case "registerCleanup":
-        if (typeof win.NCTalkRegisterCleanup === "function") {
-          return await win.NCTalkRegisterCleanup(payload || {});
+        if (typeof targetWin.NCTalkRegisterCleanup === "function") {
+          return await targetWin.NCTalkRegisterCleanup(actionPayload || {});
         }
         return { ok: false, error: "register_cleanup_unavailable" };
       default:

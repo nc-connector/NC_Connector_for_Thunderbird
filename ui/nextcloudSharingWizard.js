@@ -37,6 +37,7 @@
       passwordEnabled: true,
       expireDays: 7
     },
+    passwordPolicy: null,
     uploadInProgress: false,
     uploadCompleted: false,
     uploadResult: null,
@@ -46,7 +47,6 @@
     remoteFolderInfo: null
   };
   const dom = {};
-  const dialogRoot = document.querySelector('.nc-dialog');
   const i18n = NCI18n.translate;
   const DEFAULT_EXPIRE_DAYS = 7;
 
@@ -70,7 +70,8 @@
       console.error('[NCSHARE-UI] defaults', err);
     }
     setDefaultShareName();
-    applyDefaultSecuritySettings();
+    await loadPasswordPolicy();
+    await applyDefaultSecuritySettings();
     try{
       await Promise.all([loadBasePath(), loadDebugFlag()]);
     }catch(err){
@@ -89,6 +90,7 @@
    * Cache DOM elements used by the wizard.
    */
   function cacheElements(){
+    dom.content = document.querySelector('.nc-dialog-content');
     dom.steps = Array.from(document.querySelectorAll('.wizard-step'));
     dom.shareName = document.getElementById('shareName');
     dom.permCreate = document.getElementById('permCreate');
@@ -108,7 +110,6 @@
     dom.fileInput = document.getElementById('fileInput');
     dom.folderInput = document.getElementById('folderInput');
     dom.fileTableBody = document.getElementById('fileTableBody');
-    dom.fileTableWrapper = document.querySelector('.file-table-wrapper');
     dom.fileTableWrapper = document.querySelector('.file-table-wrapper');
     dom.fileEmptyPlaceholder = document.getElementById('fileEmptyPlaceholder');
     dom.uploadStatus = document.getElementById('uploadStatus');
@@ -147,19 +148,20 @@
     [dom.permCreate, dom.permWrite, dom.permDelete].forEach((checkbox) => {
       checkbox.addEventListener('change', invalidateUpload);
     });
-    dom.passwordToggle.addEventListener('change', () => {
-      dom.passwordFields.classList.toggle('hidden', !dom.passwordToggle.checked);
-      if (dom.passwordToggle.checked && !dom.passwordInput.value){
-        dom.passwordInput.value = NCTalkPassword.generatePassword();
+    dom.passwordToggle.addEventListener('change', async () => {
+      const enabled = dom.passwordToggle.checked;
+      applyPasswordToggleState(enabled);
+      if (enabled && !dom.passwordInput.value){
+        dom.passwordInput.value = await generatePasswordFromPolicy();
       }
       invalidateUpload();
       log('passwort toggle', dom.passwordToggle.checked);
     });
     dom.passwordInput.addEventListener('input', invalidateUpload);
-    dom.passwordGenerate.addEventListener('click', () => {
+    dom.passwordGenerate.addEventListener('click', async () => {
       dom.passwordToggle.checked = true;
-      dom.passwordFields.classList.remove('hidden');
-      dom.passwordInput.value = NCTalkPassword.generatePassword();
+      applyPasswordToggleState(true);
+      dom.passwordInput.value = await generatePasswordFromPolicy();
       invalidateUpload();
       log('passwort generiert');
     });
@@ -177,11 +179,11 @@
       log('note toggle', dom.noteToggle.checked);
     });
     dom.addFilesBtn.addEventListener('click', () => {
-      log('Datei-Dialog geÃƒÂ¶ffnet');
+      log('Datei-Dialog geÃ¶ffnet');
       dom.fileInput.click();
     });
     dom.addFolderBtn.addEventListener('click', () => {
-      log('Ordner-Dialog geÃƒÂ¶ffnet');
+      log('Ordner-Dialog geÃ¶ffnet');
       dom.folderInput?.click();
     });
     dom.fileInput.addEventListener('change', (event) => handleFileSelection(event, 'file'));
@@ -190,7 +192,7 @@
     dom.backBtn.addEventListener('click', () => {
       if (state.currentStep > 1 && !state.uploadInProgress){
         updateStep(state.currentStep - 1);
-        log('Step zurÃƒÂ¼ck', state.currentStep);
+        log('Step zurÃ¼ck', state.currentStep);
       }
     });
     dom.nextBtn.addEventListener('click', handleNext);
@@ -203,71 +205,6 @@
     dom.finishBtn.addEventListener('click', finalizeShare);
     dom.cancelBtn.addEventListener('click', handleCancel);
     log('Event-Handler registriert');
-  }
-
-  /**
-   * Load the default base path for sharing.
-   * @returns {Promise<void>}
-   */
-  async function loadBasePath(){
-    try{
-      const basePath = await (NCSharing.getFileLinkBasePath?.() || Promise.resolve(NCSharing.DEFAULT_BASE_PATH || ''));
-      state.basePath = basePath || NCSharing.DEFAULT_BASE_PATH || '';
-      if (dom.basePathLabel){
-        dom.basePathLabel.textContent = state.basePath;
-      }
-      log('Basisverzeichnis geladen', state.basePath);
-    }catch(err){
-      state.basePath = NCSharing.DEFAULT_BASE_PATH || '';
-      if (dom.basePathLabel){
-        dom.basePathLabel.textContent = state.basePath;
-      }
-      log('Basisverzeichnis fallback', state.basePath);
-      throw err;
-    }
-  }
-
-  /**
-   * Load the debug flag from storage.
-   * @returns {Promise<void>}
-   */
-  function loadDebugFlag(){
-    if (!browser?.storage?.local){
-      state.debugEnabled = false;
-      return Promise.resolve();
-    }
-    return browser.storage.local.get(['debugEnabled'])
-      .then((stored) => {
-        state.debugEnabled = !!stored.debugEnabled;
-        log('Debug-Flag gesetzt', state.debugEnabled);
-      })
-      .catch((err) => {
-        console.error('[NCSHARE-UI] debug flag', err);
-        state.debugEnabled = false;
-      });
-  }
-
-  /**
-   * Handle storage changes and update the UI state.
-   * @param {object} changes
-   * @param {string} area
-   */
-  function handleStorageChange(changes, area){
-    if (area !== 'local') return;
-    if (Object.prototype.hasOwnProperty.call(changes, 'debugEnabled')){
-      state.debugEnabled = !!changes.debugEnabled.newValue;
-      log('Debug-Flag aktualisiert', state.debugEnabled);
-    }
-    if (Object.prototype.hasOwnProperty.call(changes, SHARING_KEYS.basePath)){
-      const newValue = changes[SHARING_KEYS.basePath].newValue;
-      state.basePath = newValue || NCSharing.DEFAULT_BASE_PATH || '';
-      if (dom.basePathLabel){
-        dom.basePathLabel.textContent = state.basePath;
-      }
-      resetShareContext();
-      invalidateUpload();
-      log('Basisverzeichnis aktualisiert', state.basePath);
-    }
   }
 
   /**
@@ -317,7 +254,149 @@
     );
   }
   /**
-   * Apply the default share name to the input if empty.
+   * Fetch the live password policy from Nextcloud.
+   * @returns {Promise<object>}
+   */
+  async function loadPasswordPolicy(){
+    try{
+      const response = await browser.runtime.sendMessage({ type: "passwordPolicy:fetch" });
+      if (response?.policy){
+        state.passwordPolicy = response.policy;
+      }else{
+        state.passwordPolicy = { hasPolicy:false, minLength:null, apiGenerateUrl:null, apiValidateUrl:null };
+      }
+    }catch(err){
+      console.error('[NCSHARE-UI] password policy', err);
+      state.passwordPolicy = { hasPolicy:false, minLength:null, apiGenerateUrl:null, apiValidateUrl:null };
+    }
+    return state.passwordPolicy;
+  }
+
+  /**
+   * Load the configured base path and update the UI.
+   * @returns {Promise<string>}
+   */
+  async function loadBasePath(){
+    try{
+      const basePath = await NCSharing.getFileLinkBasePath();
+      state.basePath = basePath || '';
+      if (dom.basePathLabel){
+        dom.basePathLabel.textContent = state.basePath || '';
+      }
+    }catch(err){
+      console.error('[NCSHARE-UI] basePath', err);
+      state.basePath = NCSharing?.DEFAULT_BASE_PATH || '';
+      if (dom.basePathLabel){
+        dom.basePathLabel.textContent = state.basePath || '';
+      }
+    }
+    return state.basePath;
+  }
+
+  /**
+   * Load the debug flag from storage.
+   * @returns {Promise<boolean>}
+   */
+  async function loadDebugFlag(){
+    try{
+      if (!browser?.storage?.local){
+        state.debugEnabled = false;
+        return state.debugEnabled;
+      }
+      const stored = await browser.storage.local.get(['debugEnabled']);
+      state.debugEnabled = !!stored.debugEnabled;
+    }catch(err){
+      console.error('[NCSHARE-UI] debug flag', err);
+      state.debugEnabled = false;
+    }
+    return state.debugEnabled;
+  }
+
+  /**
+   * React to changes in local storage while the wizard is open.
+   * @param {object} changes
+   * @param {string} area
+   */
+  function handleStorageChange(changes, area){
+    if (area !== 'local'){
+      return;
+    }
+    if (Object.prototype.hasOwnProperty.call(changes, 'debugEnabled')){
+      state.debugEnabled = !!changes.debugEnabled.newValue;
+    }
+    if (Object.prototype.hasOwnProperty.call(changes, SHARING_KEYS.basePath)){
+      state.basePath = changes[SHARING_KEYS.basePath].newValue || '';
+      if (dom.basePathLabel){
+        dom.basePathLabel.textContent = state.basePath || '';
+      }
+    }
+  }
+
+  /**
+   * Read the minimum length from the active policy.
+   * @returns {number|null}
+   */
+  function getPolicyMinLength(){
+    const minLength = Number(state.passwordPolicy?.minLength);
+    return Number.isFinite(minLength) ? minLength : null;
+  }
+
+  /**
+   * Generate a password using Nextcloud policy.
+   * @returns {Promise<string>}
+   */
+  async function generatePasswordFromPolicy(){
+    try{
+      const policy = state.passwordPolicy || { hasPolicy:false, minLength:null, apiGenerateUrl:null, apiValidateUrl:null };
+      if (policy?.apiGenerateUrl){
+        const response = await browser.runtime.sendMessage({
+          type: "passwordPolicy:generate",
+          payload: { policy }
+        });
+        if (response?.ok && response.password){
+          return response.password;
+        }
+      }
+    }catch(err){
+      console.error('[NCSHARE-UI] password generate', err);
+    }
+    const targetLength = Math.max(getPolicyMinLength() || 12, 12);
+    return NCTalkPassword.generatePassword({
+      length: targetLength,
+      requireUpper: true,
+      requireLower: true,
+      requireDigit: true,
+      requireSymbol: true
+    });
+  }
+
+  /**
+   * Validate strong password rules for local fallback.
+   * @param {string} value
+   * @returns {boolean}
+   */
+  function isStrongPassword(value){
+    const pwd = String(value || '');
+    return pwd.length >= 12
+      && /[A-Z]/.test(pwd)
+      && /[a-z]/.test(pwd)
+      && /[0-9]/.test(pwd)
+      && /[!@#$%^&*()\-_=+\[\]{};:,.?]/.test(pwd);
+  }
+
+  /**
+   * Apply password toggle state to the UI.
+   * @param {boolean} enabled
+   */
+  function applyPasswordToggleState(enabled){
+    dom.passwordFields.classList.toggle('hidden', !enabled);
+    dom.passwordInput.disabled = !enabled;
+    dom.passwordGenerate.disabled = !enabled;
+    if (!enabled){
+      dom.passwordInput.value = '';
+    }
+  }
+  /**\r\n   * Apply the default share name to the input if empty.
    */
   function setDefaultShareName(){
     if (!dom.shareName.value){
@@ -328,18 +407,15 @@
   /**
    * Apply default permission and password/expire settings to the UI.
    */
-  function applyDefaultSecuritySettings(){
+  async function applyDefaultSecuritySettings(){
     dom.permCreate.checked = !!state.defaults.permCreate;
     dom.permWrite.checked = !!state.defaults.permWrite;
     dom.permDelete.checked = !!state.defaults.permDelete;
-    dom.passwordToggle.checked = !!state.defaults.passwordEnabled;
-    dom.passwordFields.classList.toggle('hidden', !dom.passwordToggle.checked);
-    if (dom.passwordToggle.checked){
-      if (!dom.passwordInput.value){
-        dom.passwordInput.value = NCTalkPassword.generatePassword();
-      }
-    }else{
-      dom.passwordInput.value = '';
+    const enabled = !!state.defaults.passwordEnabled;
+    dom.passwordToggle.checked = enabled;
+    applyPasswordToggleState(enabled);
+    if (enabled && !dom.passwordInput.value){
+      dom.passwordInput.value = await generatePasswordFromPolicy();
     }
     dom.expireToggle.checked = true;
     dom.expireFields.classList.remove('hidden');
@@ -351,7 +427,12 @@
    * @param {number} target
    */
   function updateStep(target){
+    const previousStep = state.currentStep;
     state.currentStep = Math.max(1, Math.min(TOTAL_STEPS, target));
+    if (dom.content){
+      const direction = state.currentStep < previousStep ? 'back' : 'forward';
+      dom.content.setAttribute('data-nav', direction);
+    }
     dom.steps.forEach((section) => {
       const value = parseInt(section.dataset.step, 10);
       section.classList.toggle('active', value === state.currentStep);
@@ -851,11 +932,23 @@
     if (!dom.passwordToggle.checked){
       return true;
     }
-    const pwd = dom.passwordInput.value || '';
-    if (pwd.length < 10 || !/[A-Z]/.test(pwd) || !/[a-z]/.test(pwd) || !/[!@#$%^&*()\-_=+\[\]{};:,.?]/.test(pwd)){
+    const raw = dom.passwordInput.value || '';
+    const pwd = raw.trim();
+    const minLength = getPolicyMinLength();
+    if (!pwd){
       setMessage(i18n('sharing_password_policy_error'), 'error');
       return false;
     }
+    if (minLength){
+      if (pwd.length < minLength){
+        setMessage(i18n('sharing_password_policy_error'), 'error');
+        return false;
+      }
+    }else if (!isStrongPassword(pwd)){
+      setMessage(i18n('sharing_password_policy_error'), 'error');
+      return false;
+    }
+    dom.passwordInput.value = pwd;
     return true;
   }
 
@@ -1185,4 +1278,19 @@
     return POPUP_CONTENT_HEIGHT;
   }
 })();
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 

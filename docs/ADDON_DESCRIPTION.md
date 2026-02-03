@@ -3,8 +3,8 @@
 ## Overview
 This add-on integrates Nextcloud Talk and Nextcloud Sharing into Thunderbird.
 - Sharing from the compose window with upload and share metadata
-- Talk room creation with lobby and moderator delegation
-- Calendar event integration via metadata and dialog injection
+- Talk room creation with lobby, moderator delegation, and optional invitee sync
+- Calendar event integration via metadata and dialog/tab injection
 - Central options for credentials and defaults
 - Debug logging across UI/background/experiment layers
 
@@ -26,6 +26,7 @@ The experiment registers window listeners and injects scripts to read and write 
 - Creates a dated share folder via DAV and uploads selected files
 - Creates a share via /ocs/v2.php/apps/files_sharing/api/v1/shares
 - Applies defaults for share name, permissions, password, and expiry date
+- Honors Nextcloud password policies (min length + generator API with secure fallback)
 - Updates share metadata (note, label) after upload
 - Handles duplicate names and remote path conflicts; surfaces errors from DAV/OCS
 
@@ -33,12 +34,14 @@ The experiment registers window listeners and injects scripts to read and write 
 - Checks Talk capabilities and core capabilities to decide event-conversation support
 - Creates public rooms via /ocs/v2.php/apps/spreed/api/v4/room
 - Optional lobby scheduling and listable settings
+- Optional auto-add of event invitees (Nextcloud users via system addressbook, others via e-mail)
 - Builds a description block with link, password, and help URL
 - Supports moderator delegation and participant promotion
+- Honors Nextcloud password policies (min length + generator API with secure fallback)
 
 ### Calendar
-- Injects a Talk button into the event dialog and iframe variants
-- Stores metadata in X-NCTALK-* properties (TOKEN, URL, LOBBY, START, EVENT, OBJECTID, DELEGATE, DELEGATE-NAME, DELEGATED)
+- Injects a Talk button into the event dialog and the tab editor (iframe variants)
+- Stores metadata in X-NCTALK-* properties (TOKEN, URL, LOBBY, START, EVENT, OBJECTID, ADD-PARTICIPANTS, DELEGATE, DELEGATE-NAME, DELEGATED, DELEGATE-READY)
 - Reads current title/location/description and applies updates back to the dialog
 - Persists lobby updates on calendar modifications (drag-and-drop or dialog edits) and handles cleanup on deletion
 
@@ -58,7 +61,7 @@ The experiment registers window listeners and injects scripts to read and write 
 - Base URL, user, and app password (manual) or Login Flow v2 (auto)
 - Debug mode for verbose logging
 - Sharing base path and default share name/permissions/password/expiry
-- Talk defaults: title, lobby, listable, room type (event vs normal)
+- Talk defaults: title, lobby, listable, room type (event vs normal), add invitees toggle
 Security notes:
 - Credentials are stored in browser.storage.local and used to build Basic auth headers
 - Debug logs may include URLs and metadata; treat logs as sensitive

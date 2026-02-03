@@ -20,11 +20,13 @@ Login-Flow V2, automatische Raumverfolgung sowie Debug-Logs in [NCBG], [NCUI], [
 - **ESR-ready** 
 Optimiert und getestet für Thunderbird ESR 140.X mit minimalem Experiment-Anteil.
 
-## Was ist neu in 2.2.4?
+## Was ist neu in 2.2.5?
 
-- Legal/Branding-Update: Umbenennung zu NC Connector for Thunderbird mit neuem App-Icon und Header.
-- Experiment-Cleanup für TB 140 (keine XUL-Includes, kein Window-Tracking, Shared-Utils nur im Dialogfenster geladen).
-- Hinweis: Die Add-on-ID wurde in Version 2.2.2 geaendert. Bitte Versionen <=2.2.1 deinstallieren, bevor 2.2.4 installiert wird.
+- Talk-Button jetzt auch im Tab-Editor verfügbar (nicht nur im Dialogfenster).
+- Optionales automatisches Hinzufügen der eingeladenen Teilnehmer in den Talk-Raum (Nextcloud-User via Systemadressbuch, sonst per E-Mail).
+- Live-Unterstützung der Nextcloud Passwort-Policy für Talk + Freigabe (Mindestlänge + Generator-API mit sicherem Fallback).
+- Einheitliches, modernisiertes UI für Talk Wizard, Freigabe Wizard und Einstellungen (Spacing, Buttons, Animationen).
+- Hinweis: Die Add-on-ID wurde in Version 2.2.2 geaendert. Bitte Versionen <=2.2.1 deinstallieren, bevor 2.2.5 installiert wird.
 
 ## Funktionsüberblick
 
@@ -50,7 +52,7 @@ Optimiert und getestet für Thunderbird ESR 140.X mit minimalem Experiment-Antei
 
 ## Installation
 1. Aktuelle XPI 
-`nc4tb-2.2.4.xpi` in Thunderbird installieren (Add-ons ? Zahnrad ? Add-on aus Datei installieren).
+`nc4tb-2.2.5.xpi` in Thunderbird installieren (Add-ons ? Zahnrad ? Add-on aus Datei installieren).
 2. Thunderbird neu starten.
 3. In den Add-on-Optionen Basis-URL, Benutzer und App-Passwort hinterlegen oder den Login Flow starten.
 

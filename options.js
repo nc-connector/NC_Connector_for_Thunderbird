@@ -30,6 +30,8 @@ const sharingDefaultExpireDaysInput = document.getElementById("sharingDefaultExp
 const talkDefaultTitleInput = document.getElementById("talkDefaultTitle");
 const talkDefaultLobbyInput = document.getElementById("talkDefaultLobby");
 const talkDefaultListableInput = document.getElementById("talkDefaultListable");
+const talkDefaultAddParticipantsInput = document.getElementById("talkDefaultAddParticipants");
+const talkDefaultPasswordInput = document.getElementById("talkDefaultPassword");
 const talkDefaultRoomTypeRadios = Array.from(document.querySelectorAll("input[name='talkDefaultRoomType']"));
 const shareBlockLangSelect = document.getElementById("shareBlockLang");
 const eventDescriptionLangSelect = document.getElementById("eventDescriptionLang");
@@ -83,6 +85,8 @@ async function load(){
     "talkDefaultTitle",
     "talkDefaultLobby",
     "talkDefaultListable",
+    "talkAddParticipantsDefaultEnabled",
+    "talkPasswordDefaultEnabled",
     "talkDefaultRoomType",
     "shareBlockLang",
     "eventDescriptionLang"
@@ -136,6 +140,16 @@ async function load(){
   if (talkDefaultListableInput){
     talkDefaultListableInput.checked = stored.talkDefaultListable !== undefined
       ? !!stored.talkDefaultListable
+      : true;
+  }
+  if (talkDefaultAddParticipantsInput){
+    talkDefaultAddParticipantsInput.checked = stored.talkAddParticipantsDefaultEnabled !== undefined
+      ? !!stored.talkAddParticipantsDefaultEnabled
+      : false;
+  }
+  if (talkDefaultPasswordInput){
+    talkDefaultPasswordInput.checked = stored.talkPasswordDefaultEnabled !== undefined
+      ? !!stored.talkPasswordDefaultEnabled
       : true;
   }
   if (shareBlockLangSelect){
@@ -226,6 +240,8 @@ async function save(){
   const talkDefaultTitle = (talkDefaultTitleInput?.value || "").trim() || DEFAULT_TALK_TITLE;
   const talkDefaultLobby = talkDefaultLobbyInput ? !!talkDefaultLobbyInput.checked : true;
   const talkDefaultListable = talkDefaultListableInput ? !!talkDefaultListableInput.checked : true;
+  const talkAddParticipantsDefaultEnabled = talkDefaultAddParticipantsInput ? !!talkDefaultAddParticipantsInput.checked : false;
+  const talkPasswordDefaultEnabled = talkDefaultPasswordInput ? !!talkDefaultPasswordInput.checked : true;
   const talkDefaultRoomType = getSelectedTalkDefaultRoomType();
   const shareBlockLang = normalizeLangChoice(shareBlockLangSelect?.value);
   const eventDescriptionLang = normalizeLangChoice(eventDescriptionLangSelect?.value);
@@ -246,6 +262,8 @@ async function save(){
     talkDefaultTitle,
     talkDefaultLobby,
     talkDefaultListable,
+    talkAddParticipantsDefaultEnabled,
+    talkPasswordDefaultEnabled,
     talkDefaultRoomType,
     shareBlockLang,
     eventDescriptionLang
@@ -296,20 +314,89 @@ load().catch((e) => {
 function initTabs(){
   const buttons = Array.from(document.querySelectorAll(".tab-btn"));
   const panels = Array.from(document.querySelectorAll(".tab-panel"));
+  const tabContainer = document.querySelector(".tabs");
+  const order = buttons.map((btn) => btn.dataset.tab).filter(Boolean);
+  let activeId = buttons.find((btn) => btn.classList.contains("active"))?.dataset.tab || order[0] || "";
+  /**
+   * Measure the tallest tab panel and set a shared min-height.
+   */
+  const measurePanels = () => {
+    if (!tabContainer || !panels.length){
+      return;
+    }
+    const snapshots = panels.map((panel) => ({
+      panel,
+      display: panel.style.display,
+      position: panel.style.position,
+      visibility: panel.style.visibility,
+      height: panel.style.height
+    }));
+    panels.forEach((panel) => {
+      panel.style.display = "block";
+      panel.style.position = "absolute";
+      panel.style.visibility = "hidden";
+      panel.style.height = "auto";
+    });
+    let maxHeight = 0;
+    panels.forEach((panel) => {
+      const rect = panel.getBoundingClientRect();
+      const height = Math.max(panel.scrollHeight || 0, rect.height || 0);
+      if (height > maxHeight){
+        maxHeight = height;
+      }
+    });
+    snapshots.forEach((entry) => {
+      entry.panel.style.display = entry.display;
+      entry.panel.style.position = entry.position;
+      entry.panel.style.visibility = entry.visibility;
+      entry.panel.style.height = entry.height;
+    });
+    if (maxHeight > 0){
+      tabContainer.style.setProperty("--tab-panel-min-height", `${Math.ceil(maxHeight)}px`);
+    }
+  };
   /**
    * Activate the selected tab and panel by id.
    * @param {string} id
    */
-  const activate = (id) => {
+  const activate = (id, { initial = false } = {}) => {
+    if (tabContainer && !initial && activeId && id){
+      const currentIndex = order.indexOf(activeId);
+      const nextIndex = order.indexOf(id);
+      if (currentIndex !== -1 && nextIndex !== -1){
+        tabContainer.setAttribute("data-nav", nextIndex < currentIndex ? "back" : "forward");
+      }
+    }
     buttons.forEach((btn) => {
       btn.classList.toggle("active", btn.dataset.tab === id);
     });
     panels.forEach((panel) => {
       panel.classList.toggle("active", panel.id === `tab-${id}`);
     });
+    activeId = id;
   };
   buttons.forEach((btn) => {
     btn.addEventListener("click", () => activate(btn.dataset.tab));
+  });
+  activate(activeId, { initial: true });
+  if (typeof window.requestAnimationFrame === "function"){
+    window.requestAnimationFrame(measurePanels);
+  }else{
+    window.setTimeout(measurePanels, 0);
+  }
+  window.addEventListener("load", () => {
+    if (typeof window.requestAnimationFrame === "function"){
+      window.requestAnimationFrame(measurePanels);
+    }else{
+      window.setTimeout(measurePanels, 0);
+    }
+  });
+  window.addEventListener("resize", () => {
+    if (typeof window.requestAnimationFrame === "function"){
+      window.requestAnimationFrame(measurePanels);
+    }else{
+      window.setTimeout(measurePanels, 0);
+    }
   });
 }
 

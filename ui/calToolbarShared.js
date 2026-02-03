@@ -23,6 +23,7 @@
   const TALK_PROP_START = "X-NCTALK-START";
   const TALK_PROP_EVENT = "X-NCTALK-EVENT";
   const TALK_PROP_OBJECT_ID = "X-NCTALK-OBJECTID";
+  const TALK_PROP_ADD_PARTICIPANTS = "X-NCTALK-ADD-PARTICIPANTS";
   const TALK_PROP_DELEGATE = "X-NCTALK-DELEGATE";
   const TALK_PROP_DELEGATE_NAME = "X-NCTALK-DELEGATE-NAME";
   const TALK_PROP_DELEGATED = "X-NCTALK-DELEGATED";
@@ -143,6 +144,13 @@
         pushDoc(iframe.contentDocument);
       }
     }catch(_){}
+    try{
+      // TB 140 (tab editor): calendar-item-iframe.xhtml is hosted in an iframe in the 3pane.
+      const tabIframe = doc.querySelector && doc.querySelector("iframe[src=\"chrome://calendar/content/calendar-item-iframe.xhtml\"]");
+      if (tabIframe?.contentDocument){
+        pushDoc(tabIframe.contentDocument);
+      }
+    }catch(_){ }
     return docs;
   }
 
@@ -283,7 +291,23 @@
    */
   function readTalkMetadataFromDocument(doc){
     try{
-      const item = getCalendarItem(doc);
+      let item = getCalendarItem(doc);
+      if (!item || typeof item.getProperty !== "function"){
+        try{
+          // TB 140: calendar-item-panel-iframe (dialog) and calendar-item-iframe.xhtml (tab) host the editor item.
+          const dialogIframe = doc?.getElementById && doc.getElementById("calendar-item-panel-iframe");
+          const tabIframe = doc?.querySelector && doc.querySelector("iframe[src=\"chrome://calendar/content/calendar-item-iframe.xhtml\"]");
+          const candidates = [dialogIframe?.contentDocument, tabIframe?.contentDocument];
+          for (const candidate of candidates){
+            if (!candidate) continue;
+            const candidateItem = getCalendarItem(candidate);
+            if (candidateItem && typeof candidateItem.getProperty === "function"){
+              item = candidateItem;
+              break;
+            }
+          }
+        }catch(_){ }
+      }
       if (!item || typeof item.getProperty !== "function"){
         return {};
       }
@@ -313,6 +337,10 @@
           return raw.trim().toLowerCase() === "event";
         })(),
         objectId: get(TALK_PROP_OBJECT_ID),
+        addParticipants: (() => {
+          const raw = get(TALK_PROP_ADD_PARTICIPANTS);
+          return raw == null ? null : parseBooleanProp(raw);
+        })(),
         delegateId: get(TALK_PROP_DELEGATE),
         delegateName: get(TALK_PROP_DELEGATE_NAME),
         delegated: (() => {
@@ -373,6 +401,7 @@
       setProp(TALK_PROP_EVENT, meta.eventConversation ? "event" : "standard");
     }
     if ("objectId" in meta) setProp(TALK_PROP_OBJECT_ID, meta.objectId);
+    if ("addParticipants" in meta) setProp(TALK_PROP_ADD_PARTICIPANTS, boolToProp(!!meta.addParticipants));
     if ("delegateId" in meta) setProp(TALK_PROP_DELEGATE, meta.delegateId);
     if ("delegateName" in meta) setProp(TALK_PROP_DELEGATE_NAME, meta.delegateName);
     if ("delegated" in meta) setProp(TALK_PROP_DELEGATED, boolToProp(!!meta.delegated));
@@ -496,6 +525,72 @@
     };
   }
 
+  /**
+   * Inject the Talk button into the TB 140 tab editor toolbar.
+   * @param {Document} doc
+   * @param {{label?:string, tooltip?:string, iconUrl?:string, onClick?:Function}} handlers
+   * @returns {boolean}
+   */
+  function injectTalkButtonIntoTabEditor(doc, handlers = {}){
+    if (!doc) return false;
+    if (doc.getElementById("ncTalkActionButton")) return true;
+    let actionContainer = doc.getElementById("event-tab-toolbar");
+    if (!actionContainer){
+      const topDoc = doc.defaultView?.top?.document;
+      if (topDoc && topDoc !== doc){
+        actionContainer = topDoc.getElementById("event-tab-toolbar");
+      }
+    }
+    if (!actionContainer) return false;
+    const useXul = typeof doc.createXULElement === "function";
+    const label = handlers.label || "Talk";
+    const tooltip = handlers.tooltip || label;
+    const iconUrl = handlers.iconUrl || "";
+    let btn = null;
+    if (useXul){
+      btn = doc.createXULElement("toolbarbutton");
+      btn.setAttribute("id", "ncTalkActionButton");
+      btn.setAttribute("class", "toolbarbutton-1");
+      btn.setAttribute("label", label);
+      btn.setAttribute("tooltiptext", tooltip);
+      if (iconUrl){
+        btn.setAttribute("image", iconUrl);
+      }
+    }else{
+      btn = doc.createElement("button");
+      btn.id = "ncTalkActionButton";
+      btn.type = "button";
+      btn.title = tooltip;
+      btn.className = "nc-talk-action-btn";
+      Object.assign(btn.style, {
+        display: "inline-flex",
+        alignItems: "center",
+        gap: "6px",
+        padding: "3px 10px"
+      });
+      if (iconUrl){
+        const img = doc.createElement("img");
+        img.alt = "";
+        img.width = 20;
+        img.height = 20;
+        img.src = iconUrl;
+        btn.appendChild(img);
+      }
+      const span = doc.createElement("span");
+      span.textContent = label;
+      btn.appendChild(span);
+    }
+    if (typeof handlers.onClick === "function"){
+      btn.addEventListener("click", (event) => {
+        event.preventDefault();
+        event.stopPropagation();
+        handlers.onClick();
+      });
+    }
+    actionContainer.appendChild(btn);
+    return true;
+  }
+
   globalScope.NCTalkCalUtils = {
     getCalendarItemFromDocument: getCalendarItem,
     safeString,
@@ -511,7 +606,20 @@
     writeTalkMetadataToDocument,
     setTalkMetadataOnWindow,
     getEventSnapshotFromWindow,
-    applyEventFieldsOnWindow
+    applyEventFieldsOnWindow,
+    injectTalkButtonIntoTabEditor
   };
 })();
+
+
+
+
+
+
+
+
+
+
+
+
 

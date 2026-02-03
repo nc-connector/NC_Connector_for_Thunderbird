@@ -18,6 +18,11 @@ const TALK_POPUP_WIDTH = 540;
 const TALK_POPUP_HEIGHT = 860;
 const SHARING_POPUP_WIDTH = 660;
 const SHARING_POPUP_HEIGHT = 760;
+const FALLBACK_PASSWORD_POLICY = {
+  hasPolicy: false,
+  minLength: null,
+  apiGenerateUrl: null
+};
 
 (async () => {
   try{
@@ -81,6 +86,148 @@ function shortId(value, max = 12){
     return str;
   }
   return str.slice(0, max) + "...";
+}
+
+/**
+ * Resolve a password policy URL against the base URL.
+ * @param {string} value
+ * @param {string} baseUrl
+ * @returns {string|null}
+ */
+function resolvePolicyUrl(value, baseUrl){
+  const raw = typeof value === "string" ? value.trim() : "";
+  if (!raw) return null;
+  try{
+    if (baseUrl){
+      return new URL(raw, baseUrl).toString();
+    }
+    return new URL(raw).toString();
+  }catch(_){
+    return null;
+  }
+}
+
+/**
+ * Normalize the password policy payload from capabilities.
+ * @param {object} policy
+ * @param {string} baseUrl
+ * @returns {{hasPolicy:boolean,minLength:number|null,apiGenerateUrl:string|null}}
+ */
+function normalizePasswordPolicy(policy, baseUrl){
+  if (!policy || typeof policy !== "object"){
+    return { ...FALLBACK_PASSWORD_POLICY };
+  }
+  const minRaw = policy.minLength ?? policy.min_length ?? policy.minimumLength ?? policy.minimum_length;
+  const minLength = Number.isFinite(Number(minRaw)) && Number(minRaw) > 0
+    ? Math.floor(Number(minRaw))
+    : null;
+  const generateRaw = policy?.api?.generate ?? policy?.api?.generateUrl ?? policy?.apiGenerateUrl ?? policy?.api?.generate_url;
+  const apiGenerateUrl = resolvePolicyUrl(generateRaw, baseUrl);
+  return {
+    hasPolicy: true,
+    minLength,
+    apiGenerateUrl
+  };
+}
+
+/**
+ * Fetch the live password policy from Nextcloud.
+ * @returns {Promise<{hasPolicy:boolean,minLength:number|null,apiGenerateUrl:string|null}>}
+ */
+  async function fetchPasswordPolicy(){
+    try{
+    const { baseUrl, user, appPass } = await NCCore.getOpts();
+    if (!baseUrl || !user || !appPass){
+      console.error("[NCBG] password policy missing credentials");
+      L("password policy fallback", { reason: "credentials_missing" });
+      return { ...FALLBACK_PASSWORD_POLICY };
+    }
+    if (typeof NCHostPermissions !== "undefined" && NCHostPermissions?.hasOriginPermission){
+      const ok = await NCHostPermissions.hasOriginPermission(baseUrl);
+      if (!ok){
+        console.error("[NCBG] password policy host permission missing", baseUrl);
+        L("password policy fallback", { reason: "permission_missing" });
+        return { ...FALLBACK_PASSWORD_POLICY };
+      }
+    }
+    const url = baseUrl + "/ocs/v2.php/cloud/capabilities?format=json";
+    const headers = {
+      "OCS-APIRequest": "true",
+      "Authorization": NCOcs.buildAuthHeader(user, appPass),
+      "Accept": "application/json"
+    };
+    const response = await NCOcs.ocsRequest({ url, method: "GET", headers, acceptJson: true });
+    if (!response.ok){
+      console.error("[NCBG] password policy fetch failed", response.errorMessage || response.status);
+      L("password policy fallback", { reason: "http_error", status: response.status });
+      return { ...FALLBACK_PASSWORD_POLICY };
+    }
+    const capabilities = response.data?.ocs?.data?.capabilities || {};
+    const policyRaw = capabilities.password_policy || capabilities.passwordPolicy || null;
+    if (!policyRaw || typeof policyRaw !== "object"){
+      L("password policy fallback", { reason: "policy_missing" });
+      return { ...FALLBACK_PASSWORD_POLICY };
+    }
+    const normalized = normalizePasswordPolicy(policyRaw, baseUrl);
+    L("password policy fetched", {
+      hasPolicy: normalized.hasPolicy,
+      minLength: normalized.minLength,
+      apiGenerateUrl: normalized.apiGenerateUrl || ""
+    });
+    return normalized;
+  }catch(err){
+    console.error("[NCBG] password policy fetch error", err);
+    L("password policy fallback", { reason: "exception" });
+    return { ...FALLBACK_PASSWORD_POLICY };
+  }
+}
+
+/**
+ * Request a generated password via the Nextcloud policy API.
+ * @param {object} policy
+ * @returns {Promise<{ok:boolean,password?:string,error?:string}>}
+ */
+async function generatePasswordViaPolicy(policy){
+  try{
+    const { baseUrl, user, appPass } = await NCCore.getOpts();
+    if (!baseUrl || !user || !appPass){
+      console.error("[NCBG] password generate missing credentials");
+      return { ok: false, error: "credentials_missing" };
+    }
+    if (typeof NCHostPermissions !== "undefined" && NCHostPermissions?.hasOriginPermission){
+      const ok = await NCHostPermissions.hasOriginPermission(baseUrl);
+      if (!ok){
+        console.error("[NCBG] password generate host permission missing", baseUrl);
+        return { ok: false, error: "permission_missing" };
+      }
+    }
+    const apiUrl = resolvePolicyUrl(policy?.apiGenerateUrl, baseUrl);
+    if (!apiUrl){
+      return { ok: false, error: "generate_url_missing" };
+    }
+    L("password generate request", { apiGenerateUrl: apiUrl });
+    const headers = {
+      "OCS-APIRequest": "true",
+      "Authorization": NCOcs.buildAuthHeader(user, appPass),
+      "Accept": "application/json"
+    };
+    const response = await NCOcs.ocsRequest({ url: apiUrl, method: "GET", headers, acceptJson: true });
+    if (!response.ok){
+      console.error("[NCBG] password generate failed", response.errorMessage || response.status);
+      return { ok: false, error: response.errorMessage || "http_error" };
+    }
+    const password = response.data?.ocs?.data?.password;
+    if (!password){
+      console.error("[NCBG] password generate missing password field");
+      return { ok: false, error: "password_missing" };
+    }
+    const generated = String(password);
+    L("password generate success", { length: generated.length });
+    return { ok: true, password: generated };
+  }catch(err){
+    console.error("[NCBG] password generate error", err);
+    return { ok: false, error: err?.message || String(err) };
+  }
 }
 
 
@@ -304,10 +451,13 @@ async function decodeAvatarPixels({ base64, mime } = {}){
 /**
  * Open the Talk dialog popup for a calendar window.
  */
-async function openTalkDialogWindow(windowId){
+async function openTalkDialogWindow(windowId, dialogOuterId){
   const url = new URL(browser.runtime.getURL("ui/talkDialog.html"));
   if (typeof windowId === "number"){
     url.searchParams.set("windowId", String(windowId));
+  }
+  if (typeof dialogOuterId === "number"){
+    url.searchParams.set("dialogOuterId", String(dialogOuterId));
   }
   await browser.windows.create({
     url: url.toString(),
@@ -315,6 +465,14 @@ async function openTalkDialogWindow(windowId){
     width: TALK_POPUP_WIDTH,
     height: TALK_POPUP_HEIGHT
   });
+}
+
+function attachDialogOuterId(payload, dialogOuterId){
+  if (typeof dialogOuterId !== "number"){
+    return payload || {};
+  }
+  const base = payload && typeof payload === "object" ? payload : {};
+  return Object.assign({}, base, { _dialogOuterId: dialogOuterId });
 }
 
 browser.runtime.onMessage.addListener(async (msg) => {
@@ -336,6 +494,13 @@ browser.runtime.onMessage.addListener(async (msg) => {
       }catch(_){ }
     }
     return { ok:true };
+  }
+  if (msg.type === "passwordPolicy:fetch"){
+    const policy = await fetchPasswordPolicy();
+    return { ok:true, policy };
+  }
+  if (msg.type === "passwordPolicy:generate"){
+    return await generatePasswordViaPolicy(msg?.payload?.policy || {});
   }
   if (msg.type === "talkMenu:newPublicSubmit"){
     try {
@@ -411,8 +576,9 @@ browser.runtime.onMessage.addListener(async (msg) => {
   }
   if (msg.type === "talk:openDialog"){
     const windowId = msg.windowId ?? msg?.payload?.windowId;
+    const dialogOuterId = msg.dialogOuterId ?? msg?.payload?.dialogOuterId;
     try{
-      await openTalkDialogWindow(windowId);
+      await openTalkDialogWindow(windowId, dialogOuterId);
       return { ok:true };
     }catch(e){
       return { ok:false, error: e?.message || String(e) };
@@ -420,6 +586,7 @@ browser.runtime.onMessage.addListener(async (msg) => {
   }
   if (msg.type === "talk:initDialog"){
     const windowId = msg.windowId ?? msg?.payload?.windowId;
+    const dialogOuterId = msg.dialogOuterId ?? msg?.payload?.dialogOuterId;
     if (typeof windowId !== "number"){
       return { ok:false, error: "windowId required" };
     }
@@ -427,7 +594,7 @@ browser.runtime.onMessage.addListener(async (msg) => {
       const response = await browser.calToolbar.invokeWindow({
         windowId,
         action: "ping",
-        payload: {}
+        payload: attachDialogOuterId({}, dialogOuterId)
       });
       return { ok:true, response };
     }catch(e){
@@ -436,6 +603,7 @@ browser.runtime.onMessage.addListener(async (msg) => {
   }
   if (msg.type === "talk:getEventSnapshot"){
     const windowId = msg.windowId ?? msg?.payload?.windowId;
+    const dialogOuterId = msg.dialogOuterId ?? msg?.payload?.dialogOuterId;
     if (typeof windowId !== "number"){
       return { ok:false, error: "windowId required" };
     }
@@ -443,7 +611,7 @@ browser.runtime.onMessage.addListener(async (msg) => {
       const response = await browser.calToolbar.invokeWindow({
         windowId,
         action: "getEventSnapshot",
-        payload: {}
+        payload: attachDialogOuterId({}, dialogOuterId)
       });
       return response;
     }catch(e){
@@ -452,6 +620,7 @@ browser.runtime.onMessage.addListener(async (msg) => {
   }
   if (msg.type === "talk:applyEventFields"){
     const windowId = msg.windowId ?? msg?.payload?.windowId;
+    const dialogOuterId = msg.dialogOuterId ?? msg?.payload?.dialogOuterId;
     if (typeof windowId !== "number"){
       return { ok:false, error: "windowId required" };
     }
@@ -466,7 +635,7 @@ browser.runtime.onMessage.addListener(async (msg) => {
       const response = await browser.calToolbar.invokeWindow({
         windowId,
         action: "applyEventFields",
-        payload: fields
+        payload: attachDialogOuterId(fields, dialogOuterId)
       });
       L("talk:applyEventFields response", {
         windowId,
@@ -513,6 +682,7 @@ browser.runtime.onMessage.addListener(async (msg) => {
   }
   if (msg.type === "talk:applyMetadata"){
     const windowId = msg.windowId ?? msg?.payload?.windowId;
+    const dialogOuterId = msg.dialogOuterId ?? msg?.payload?.dialogOuterId;
     if (typeof windowId !== "number"){
       return { ok:false, error: "windowId required" };
     }
@@ -521,7 +691,7 @@ browser.runtime.onMessage.addListener(async (msg) => {
       const response = await browser.calToolbar.invokeWindow({
         windowId,
         action: "setTalkMetadata",
-        payload: meta
+        payload: attachDialogOuterId(meta, dialogOuterId)
       });
       if (meta?.token){
         const updates = {};
@@ -545,6 +715,7 @@ browser.runtime.onMessage.addListener(async (msg) => {
   }
   if (msg.type === "talk:registerCleanup"){
     const windowId = msg.windowId ?? msg?.payload?.windowId;
+    const dialogOuterId = msg.dialogOuterId ?? msg?.payload?.dialogOuterId;
     if (typeof windowId !== "number"){
       return { ok:false, error: "windowId required" };
     }
@@ -557,7 +728,7 @@ browser.runtime.onMessage.addListener(async (msg) => {
       const response = await browser.calToolbar.invokeWindow({
         windowId,
         action: "registerCleanup",
-        payload: { token, info }
+        payload: attachDialogOuterId({ token, info }, dialogOuterId)
       });
       return response;
     }catch(e){
@@ -779,6 +950,135 @@ function unescapeIcalText(value){
     .replace(/\\n/gi, "\n")
     .replace(/\\,/g, ",")
     .replace(/\\;/g, ";");
+}
+
+/**
+ * Extract an e-mail address from a calendar address value.
+ * @param {string} value
+ * @returns {string}
+ */
+function extractEmailFromCalAddress(value){
+  if (!value) return "";
+  let cleaned = unescapeIcalText(value).trim();
+  if (!cleaned) return "";
+  const lower = cleaned.toLowerCase();
+  if (lower.startsWith("mailto:")){
+    cleaned = cleaned.slice(7).trim();
+  }
+  cleaned = cleaned.replace(/^<|>$/g, "");
+  const match = cleaned.match(/[^\s<>"]+@[^\s<>"]+/);
+  return match ? match[0] : "";
+}
+
+/**
+ * Extract attendee e-mail addresses from the first VEVENT in an iCal payload.
+ * @param {string} ical
+ * @returns {string[]}
+ */
+function extractIcalAttendees(ical){
+  if (!ical) return [];
+  const lines = unfoldIcal(ical).split(/\r?\n/);
+  let inEvent = false;
+  let eventIndex = 0;
+  const seen = new Map();
+  for (const line of lines){
+    if (line === "BEGIN:VEVENT"){
+      inEvent = true;
+      eventIndex++;
+      continue;
+    }
+    if (line === "END:VEVENT"){
+      if (inEvent && eventIndex === 1){
+        break;
+      }
+      inEvent = false;
+      continue;
+    }
+    if (!inEvent || eventIndex !== 1){
+      continue;
+    }
+    const parsed = parseIcalLine(line);
+    if (!parsed || parsed.name !== "ATTENDEE"){
+      continue;
+    }
+    const valueEmail = extractEmailFromCalAddress(parsed.value || "");
+    const paramEmail = extractEmailFromCalAddress(parsed.params?.EMAIL || "");
+    const email = valueEmail || paramEmail;
+    if (!email) continue;
+    const key = email.toLowerCase();
+    if (!seen.has(key)){
+      seen.set(key, email);
+    }
+  }
+  return Array.from(seen.values());
+}
+
+/**
+ * Add calendar attendees to a Talk room.
+ * @param {{token:string,ical:string}} payload
+ * @returns {Promise<{ok:boolean,total:number,added:number,failed:number}>}
+ */
+async function addInviteesToTalkRoom({ token, ical } = {}){
+  if (!token || !ical){
+    return { ok:false, total:0, added:0, failed:0 };
+  }
+  const attendees = extractIcalAttendees(ical);
+  if (!attendees.length){
+    L("invitees add skipped (no attendees)", { token: shortToken(token) });
+    return { ok:true, total:0, added:0, failed:0 };
+  }
+  let contacts = [];
+  try{
+    if (typeof getSystemAddressbookContacts === "function"){
+      contacts = await getSystemAddressbookContacts(false);
+    }
+  }catch(err){
+    console.error("[NCBG] system addressbook lookup failed", err);
+    contacts = [];
+  }
+  const emailToUserId = new Map();
+  for (const contact of contacts){
+    const emailLower = contact?.emailLower;
+    const id = contact?.id;
+    if (emailLower && id && !emailToUserId.has(emailLower)){
+      emailToUserId.set(emailLower, id);
+    }
+  }
+  let added = 0;
+  let failed = 0;
+  let users = 0;
+  let emails = 0;
+  for (const email of attendees){
+    const lower = email.toLowerCase();
+    const userId = emailToUserId.get(lower) || "";
+    const source = userId ? "users" : "emails";
+    const actorId = userId || email;
+    if (userId){
+      users += 1;
+    }else{
+      emails += 1;
+    }
+    try{
+      await addTalkParticipant({ token, actorId, source });
+      added += 1;
+    }catch(err){
+      failed += 1;
+      console.error("[NCBG] add participant failed", {
+        actor: actorId,
+        source,
+        error: err?.message || String(err)
+      });
+    }
+  }
+  L("invitees add result", {
+    token: shortToken(token),
+    total: attendees.length,
+    users,
+    emails,
+    added,
+    failed
+  });
+  return { ok: failed === 0, total: attendees.length, added, failed };
 }
 
 /**
@@ -1009,6 +1309,7 @@ function extractTalkMetadataFromIcal(ical){
       return raw.trim().toLowerCase() === "event";
     })(),
     objectId: props["X-NCTALK-OBJECTID"] || "",
+    addParticipants: parseBooleanProp(props["X-NCTALK-ADD-PARTICIPANTS"]),
     delegateId: props["X-NCTALK-DELEGATE"] || "",
     delegateName: props["X-NCTALK-DELEGATE-NAME"] || "",
     delegated: parseBooleanProp(props["X-NCTALK-DELEGATED"]),
@@ -1157,6 +1458,14 @@ async function handleCalendarItemUpsert(item){
       const shouldPersist = meta.startProp == null || Math.abs(meta.startFromDt - meta.startProp) >= 1;
       if (shouldPersist){
         await updateCalendarItemProps(item, { "X-NCTALK-START": String(Math.floor(meta.startFromDt)) });
+      }
+    }
+
+    if (meta.addParticipants === true){
+      try{
+        await addInviteesToTalkRoom({ token: meta.token, ical: item.item });
+      }catch(e){
+        console.error("[NCBG] add invitees failed", e);
       }
     }
 
@@ -1313,7 +1622,8 @@ browser.calToolbar.onUtilityRequest.addListener(async (payload = {}) => {
     openDialog: async () => {
       try{
         const windowId = payload?.windowId ?? null;
-        await openTalkDialogWindow(windowId);
+        const dialogOuterId = payload?.dialogOuterId ?? null;
+        await openTalkDialogWindow(windowId, dialogOuterId);
         return { ok:true };
       }catch(e){
         return { ok:false, error: e?.message || String(e) };

@@ -29,6 +29,7 @@
   };
 
   const ROOM_CLEANUP_KEY = "_nctalkRoomCleanup";
+  const TAB_LISTENER_KEY = "_nctalkTabListener";
 
   /**
    * Log helper for the event dialog bridge.
@@ -374,15 +375,35 @@
     }catch(_){}
   }
 
+  function isThreePaneWindow(win){
+    const windowType = win?.document?.documentElement?.getAttribute("windowtype") || "";
+    return windowType === "mail:3pane";
+  }
+
   /**
-   * Check if a window hosts the calendar event dialog.
+   * Resolve the current calendar tab editor iframe in the 3pane window.
    * @param {Window} win
-   * @returns {boolean}
+   * @returns {{iframe:HTMLIFrameElement}|null}
    */
-  function isEventDialogWindow(win){
-    const href = win?.location?.href || win?.document?.location?.href;
-    if (!href) return false;
-    return EVENT_DIALOG_URLS.some((url) => href.startsWith(url));
+  function getTabEditorContext(win){
+    const tabmail = win?.document?.getElementById("tabmail");
+    if (!tabmail || !tabmail.currentTabInfo) return null;
+    const tabInfo = tabmail.currentTabInfo;
+    // TB 140: calendarEvent is the dedicated tab mode for event editor.
+    if (tabInfo?.mode?.name !== "calendarEvent") return null;
+    let iframe = tabInfo.iframe || null;
+    if (!iframe && tabInfo.panel && typeof tabInfo.panel.querySelector === "function"){
+      iframe = tabInfo.panel.querySelector(
+        "iframe[src=\"chrome://calendar/content/calendar-item-iframe.xhtml\"]"
+      );
+    }
+    if (!iframe){
+      iframe = win.document.querySelector(
+        "iframe[src=\"chrome://calendar/content/calendar-item-iframe.xhtml\"]"
+      );
+    }
+    if (!iframe) return null;
+    return { iframe };
   }
 
   /**
@@ -398,17 +419,29 @@
     }
   }
 
+  function getDialogOuterId(){
+    const windowType = window?.document?.documentElement?.getAttribute("windowtype") || "";
+    if (windowType !== "Calendar:EventDialog" && windowType !== "Calendar:EventSummaryDialog"){
+      return null;
+    }
+    const outerId = window?.docShell?.outerWindowID ?? window?.windowUtils?.outerWindowID;
+    return typeof outerId === "number" ? outerId : null;
+  }
+
   /**
    * Find a suitable toolbar container for the injected button.
    * @param {Document} doc
+   * @param {"dialog"|"tab"} mode
    * @returns {Element|null}
    */
-  function findBar(doc){
-    try{
-      const candidates = doc.querySelector(".calendar-dialog-toolbar, .dialog-buttons, toolbar");
-      if (candidates) return candidates;
-    }catch(_){}
-    return doc.body || doc.documentElement || null;
+  function findBar(doc, mode){
+    if (!doc) return null;
+    if (mode === "tab"){
+      // TB 140: event-tab-toolbar is the dedicated toolbar for calendar tabs.
+      return doc.getElementById("event-tab-toolbar");
+    }
+    // TB 140: event-toolbar is the dedicated toolbar for the event dialog.
+    return doc.getElementById("event-toolbar");
   }
 
   /**
@@ -420,28 +453,43 @@
    * @returns {HTMLButtonElement}
    */
   function buildButton(doc, context, label, tooltip){
-    const btn = doc.createElement("button");
-    btn.id = "nctalk-mini-btn";
-    btn.type = "button";
-    btn.title = tooltip || i18n("ui_toolbar_tooltip");
-    Object.assign(btn.style, {
-      display: "inline-flex",
-      alignItems: "center",
-      gap: "6px",
-      padding: "3px 10px",
-      marginInlineStart: "8px",
-      marginInlineEnd: "0"
-    });
-    const img = doc.createElement("img");
-    img.alt = "";
-    img.width = 20;
-    img.height = 20;
-    const src = talkIconURL(20);
-    if (src) img.src = src;
-    const span = doc.createElement("span");
-    span.textContent = label || i18n("ui_insert_button_label");
-    btn.appendChild(img);
-    btn.appendChild(span);
+    const textLabel = label || i18n("ui_insert_button_label");
+    const textTooltip = tooltip || i18n("ui_toolbar_tooltip");
+    const icon = talkIconURL(20);
+    const isXul = typeof doc.createXULElement === "function";
+    let btn = null;
+    if (isXul){
+      btn = doc.createXULElement("toolbarbutton");
+      btn.setAttribute("id", "nctalk-mini-btn");
+      btn.setAttribute("class", "toolbarbutton-1");
+      btn.setAttribute("label", textLabel);
+      btn.setAttribute("tooltiptext", textTooltip);
+      if (icon){
+        btn.setAttribute("image", icon);
+      }
+    } else {
+      btn = doc.createElement("button");
+      btn.id = "nctalk-mini-btn";
+      btn.type = "button";
+      btn.title = textTooltip;
+      Object.assign(btn.style, {
+        display: "inline-flex",
+        alignItems: "center",
+        gap: "6px",
+        padding: "3px 10px",
+        marginInlineStart: "8px",
+        marginInlineEnd: "0"
+      });
+      const img = doc.createElement("img");
+      img.alt = "";
+      img.width = 20;
+      img.height = 20;
+      if (icon) img.src = icon;
+      const span = doc.createElement("span");
+      span.textContent = textLabel;
+      btn.appendChild(img);
+      btn.appendChild(span);
+    }
     ensureMenu(doc, context, btn);
     return btn;
   }
@@ -472,9 +520,11 @@
    * @returns {Promise<void>}
    */
   async function launchTalkPopup(context){
+    const dialogOuterId = getDialogOuterId();
     const response = await requestUtility(context, {
       type: "openDialog",
-      windowId: API.windowId || null
+      windowId: API.windowId || null,
+      dialogOuterId
     });
     if (!response?.ok){
       throw new Error(response?.error || "talk popup failed");
@@ -487,19 +537,85 @@
    * @param {object} context
    * @param {string} label
    * @param {string} tooltip
+   * @param {"dialog"|"tab"} mode
    * @returns {boolean}
    */
-  function inject(doc, context, label, tooltip){
+  function inject(doc, context, label, tooltip, mode){
     if (!doc) return false;
     if (doc.getElementById("nctalk-mini-btn")) return true;
-    const bar = findBar(doc);
+    const bar = findBar(doc, mode);
     if (!bar){
       err("toolbar injection skipped: no bar element");
       return false;
     }
     const btn = buildButton(doc, context, label, tooltip);
+    try{
+      const isXul = typeof doc.createXULElement === "function";
+      let spring = typeof bar.querySelector === "function"
+        ? bar.querySelector("toolbarspring, toolbarspacer, spacer, #spring, #nctalk-toolbar-spring")
+        : null;
+      if (!spring && isXul){
+        spring = doc.createXULElement("toolbarspring");
+        spring.setAttribute("id", "nctalk-toolbar-spring");
+        bar.appendChild(spring);
+      }
+      if (spring && spring.parentNode === bar){
+        bar.insertBefore(btn, spring.nextSibling);
+        return true;
+      }
+    }catch(e){
+      err(e);
+    }
     bar.appendChild(btn);
     return true;
+  }
+
+  function injectTabEditor(win, context, label, tooltip){
+    if (!isThreePaneWindow(win)) return false;
+    const tabCtx = getTabEditorContext(win);
+    if (!tabCtx) return false;
+    const attempt = () => inject(win.document, context, label, tooltip, "tab");
+    if (attempt()) return true;
+    const iframe = tabCtx.iframe;
+    if (!iframe) return false;
+    const doc = iframe.contentDocument;
+    if (doc && doc.readyState !== "loading"){
+      return attempt();
+    }
+    if (iframe.dataset.nctalkTabLoad === "1") return false;
+    iframe.dataset.nctalkTabLoad = "1";
+    iframe.addEventListener("load", () => {
+      delete iframe.dataset.nctalkTabLoad;
+      attempt();
+    }, { once:true });
+    return true;
+  }
+
+  function ensureTabListeners(win, context){
+    if (!isThreePaneWindow(win)) return;
+    const tabmail = win?.document?.getElementById("tabmail");
+    if (!tabmail || tabmail[TAB_LISTENER_KEY]) return;
+    const tabContainer = tabmail.tabContainer;
+    if (!tabContainer || typeof tabContainer.addEventListener !== "function"){
+      return;
+    }
+    const onTabChange = () => {
+      try{
+        injectTabEditor(win, context, STATE.label, STATE.tooltip);
+      }catch(e){
+        err(e);
+      }
+    };
+    tabmail[TAB_LISTENER_KEY] = onTabChange;
+    tabContainer.addEventListener("TabSelect", onTabChange);
+    tabContainer.addEventListener("TabOpen", onTabChange);
+    tabContainer.addEventListener("TabAttrModified", onTabChange);
+    win.addEventListener("unload", () => {
+      tabContainer.removeEventListener("TabSelect", onTabChange);
+      tabContainer.removeEventListener("TabOpen", onTabChange);
+      tabContainer.removeEventListener("TabAttrModified", onTabChange);
+      delete tabmail[TAB_LISTENER_KEY];
+    }, { once:true });
   }
 
   /**
@@ -510,37 +626,31 @@
    * @param {string} tooltip
    */
   function handle(win, context, label, tooltip){
-    if (!isEventDialogWindow(win)) return;
+    const handlers = {
+      label,
+      tooltip,
+      iconUrl: talkIconURL(20),
+      onClick: () => launchTalkPopup(context)
+    };
+    const href = win?.location?.href || win?.document?.location?.href || "";
+    if (href.startsWith("chrome://calendar/content/calendar-item-iframe.xhtml")){
+      try{
+        CalUtils.injectTalkButtonIntoTabEditor(win.document, handlers);
+      }catch(e){
+        err(e);
+      }
+      return;
+    }
+    if (!href || !EVENT_DIALOG_URLS.some((url) => href.startsWith(url))){
+      return;
+    }
     try{
-      inject(win.document, context, label, tooltip);
+      inject(win.document, context, label, tooltip, "dialog");
     }catch(e){
       err(e);
     }
-    const iframe = win.document.getElementById("calendar-item-panel-iframe");
-    if (iframe){
-      /**
-       * Inject after the inner iframe has loaded.
-       */
-      const run = () => {
-        try{
-          inject(iframe.contentDocument, context, label, tooltip);
-        }catch(e){
-          err(e);
-        }
-      };
-      if (iframe.contentDocument?.readyState === "complete"){
-        run();
-      }else{
-        iframe.addEventListener("load", run, { once:true });
-      }
-    }
   }
 
-  /**
-   * Register a cleanup hook for the current dialog.
-   * @param {object} payload
-   * @returns {Promise<{ok:boolean,error?:string}>}
-   */
   async function requestCleanup(payload = {}){
     const token = payload?.token;
     if (!token){
@@ -567,8 +677,12 @@
       await syncConfigState(API);
       updateBridgeState();
       handle(window, API, STATE.label, STATE.tooltip);
+      injectTabEditor(window, API, STATE.label, STATE.tooltip);
+      ensureTabListeners(window, API);
       const doc = window.document;
-      const innerDoc = doc.getElementById && doc.getElementById("calendar-item-panel-iframe")?.contentDocument;
+      const tabCtx = getTabEditorContext(window);
+      const innerDoc = tabCtx?.iframe?.contentDocument
+        || (doc.getElementById && doc.getElementById("calendar-item-panel-iframe")?.contentDocument);
       ensureTrackedFromMetadata(API, doc, innerDoc || doc);
     }catch(e){
       err(e);
@@ -588,4 +702,25 @@
   };
   window.NCTalkRegisterCleanup = requestCleanup;
 })();
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 

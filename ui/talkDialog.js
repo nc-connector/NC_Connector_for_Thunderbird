@@ -8,7 +8,7 @@
 
   const POPUP_CONTENT_WIDTH = 520;
   const MIN_CONTENT_HEIGHT = 0;
-  const CONTENT_MARGIN = 12;
+  const CONTENT_MARGIN = 0;
   let layoutObserver = null;
   const popupSizer = window.NCTalkPopupSizing?.createPopupSizer({
     fixedWidth: POPUP_CONTENT_WIDTH,
@@ -20,9 +20,13 @@
   const LOG_PREFIX = "[NCUI][Talk]";
   const params = new URLSearchParams(window.location.search);
   const windowId = parseInt(params.get("windowId") || "", 10);
+  const dialogOuterId = parseInt(params.get("dialogOuterId") || "", 10);
   const titleInput = document.getElementById("titleInput");
   const passwordInput = document.getElementById("passwordInput");
+  const passwordToggle = document.getElementById("passwordToggle");
+  const passwordFields = document.getElementById("passwordFields");
   const passwordGenerateBtn = document.getElementById("passwordGenerateBtn");
+  const addParticipantsToggle = document.getElementById("addParticipantsToggle");
   const lobbyToggle = document.getElementById("lobbyToggle");
   const listableToggle = document.getElementById("listableToggle");
   const roomTypeRadios = document.querySelectorAll('input[name="roomType"]');
@@ -73,8 +77,10 @@
 
   const state = {
     windowId: Number.isFinite(windowId) ? windowId : null,
+    dialogOuterId: Number.isFinite(dialogOuterId) ? dialogOuterId : null,
     metadata: null,
     event: null,
+    passwordPolicy: null,
     busy: false,
     delegate: {
       selected: null,
@@ -122,7 +128,15 @@
       }
     });
     passwordGenerateBtn?.addEventListener("click", handlePasswordGenerate);
+    passwordToggle?.addEventListener("change", handlePasswordToggle);
     initDelegateField();
+  }
+
+  function attachDialogOuterId(message){
+    if (typeof state.dialogOuterId !== "number"){
+      return message;
+    }
+    return Object.assign({}, message, { dialogOuterId: state.dialogOuterId });
   }
 
   /**
@@ -131,13 +145,14 @@
    */
   async function init(){
     try{
-      const check = await browser.runtime.sendMessage({
+      const check = await browser.runtime.sendMessage(attachDialogOuterId({
         type: "talk:initDialog",
         windowId: state.windowId
-      });
+      }));
       if (!check?.ok){
         throw new Error(check?.error || t("talk_error_init_failed"));
       }
+      await loadPasswordPolicy();
       await loadSnapshot();
     }catch(error){
       setMessage(error?.message || String(error), true);
@@ -153,7 +168,9 @@
       title: t("ui_default_title"),
       lobby: true,
       listable: true,
-      roomType: "event"
+      roomType: "event",
+      passwordEnabled: true,
+      addParticipantsEnabled: false
     };
     if (!browser?.storage?.local){
       return defaults;
@@ -163,7 +180,9 @@
         "talkDefaultTitle",
         "talkDefaultLobby",
         "talkDefaultListable",
-        "talkDefaultRoomType"
+        "talkAddParticipantsDefaultEnabled",
+        "talkDefaultRoomType",
+        "talkPasswordDefaultEnabled"
       ]);
       const rawTitle = (stored.talkDefaultTitle || "").trim();
       if (rawTitle){
@@ -174,6 +193,12 @@
       }
       if (typeof stored.talkDefaultListable === "boolean"){
         defaults.listable = stored.talkDefaultListable;
+      }
+      if (typeof stored.talkAddParticipantsDefaultEnabled === "boolean"){
+        defaults.addParticipantsEnabled = stored.talkAddParticipantsDefaultEnabled;
+      }
+      if (typeof stored.talkPasswordDefaultEnabled === "boolean"){
+        defaults.passwordEnabled = stored.talkPasswordDefaultEnabled;
       }
       if (stored.talkDefaultRoomType === "normal"){
         defaults.roomType = "normal";
@@ -187,15 +212,115 @@
   }
 
   /**
+   * Fetch the live password policy from Nextcloud.
+   * @returns {Promise<object>}
+   */
+  async function loadPasswordPolicy(){
+    try{
+      const response = await browser.runtime.sendMessage({ type: "passwordPolicy:fetch" });
+      if (response?.policy){
+        state.passwordPolicy = response.policy;
+      }else{
+        state.passwordPolicy = { hasPolicy:false, minLength:null, apiGenerateUrl:null, apiValidateUrl:null };
+      }
+    }catch(error){
+      console.error(LOG_PREFIX, "password policy fetch failed", error);
+      state.passwordPolicy = { hasPolicy:false, minLength:null, apiGenerateUrl:null, apiValidateUrl:null };
+    }
+    return state.passwordPolicy;
+  }
+
+  /**
+   * Read the minimum length from the active policy.
+   * @returns {number|null}
+   */
+  function getPolicyMinLength(){
+    const minLength = Number(state.passwordPolicy?.minLength);
+    return Number.isFinite(minLength) ? minLength : null;
+  }
+
+  /**
+   * Apply password toggle state to the UI.
+   * @param {boolean} enabled
+   */
+  function applyPasswordToggleState(enabled){
+    if (passwordFields){
+      passwordFields.classList.toggle("hidden", !enabled);
+    }
+    if (passwordInput){
+      passwordInput.disabled = !enabled;
+      if (!enabled){
+        passwordInput.value = "";
+      }
+    }
+    if (passwordGenerateBtn){
+      passwordGenerateBtn.disabled = !enabled;
+    }
+  }
+
+  /**
+   * Handle toggling password creation.
+   */
+  async function handlePasswordToggle(){
+    const enabled = !!passwordToggle?.checked;
+    applyPasswordToggleState(enabled);
+    if (enabled && passwordInput && !passwordInput.value){
+      passwordInput.value = await generatePasswordFromPolicy();
+    }
+  }
+
+  /**
+   * Generate a password using Nextcloud policy.
+   * @returns {Promise<string>}
+   */
+  async function generatePasswordFromPolicy(){
+    try{
+      const policy = state.passwordPolicy || { hasPolicy:false, minLength:null, apiGenerateUrl:null, apiValidateUrl:null };
+      if (policy?.apiGenerateUrl){
+        const response = await browser.runtime.sendMessage({
+          type: "passwordPolicy:generate",
+          payload: { policy }
+        });
+        if (response?.ok && response.password){
+          return response.password;
+        }
+      }
+    }catch(error){
+      console.error(LOG_PREFIX, "password generate failed", error);
+    }
+    const targetLength = Math.max(getPolicyMinLength() || 12, 12);
+    return NCTalkPassword.generatePassword({
+      length: targetLength,
+      requireUpper: true,
+      requireLower: true,
+      requireDigit: true,
+      requireSymbol: true
+    });
+  }
+
+  /**
+   * Validate strong password rules for local fallback.
+   * @param {string} value
+   * @returns {boolean}
+   */
+  function isStrongPassword(value){
+    const pwd = String(value || "");
+    return pwd.length >= 12
+      && /[A-Z]/.test(pwd)
+      && /[a-z]/.test(pwd)
+      && /[0-9]/.test(pwd)
+      && /[!@#$%^&*()\-_=+\[\]{};:,.?]/.test(pwd);
+  }
+  /**
    * Load the current event snapshot and populate the UI.
    * @returns {Promise<void>}
    */
   async function loadSnapshot(){
     try{
-      const response = await browser.runtime.sendMessage({
+      const response = await browser.runtime.sendMessage(attachDialogOuterId({
         type: "talk:getEventSnapshot",
         windowId: state.windowId
-      });
+      }));
       if (!response?.ok){
         throw new Error(response?.error || t("talk_error_snapshot_failed"));
       }
@@ -209,12 +334,26 @@
       const lobbyValue = state.metadata.lobbyEnabled;
       const listableValue = state.metadata.listable;
       const eventValue = state.metadata.eventConversation;
+      const addParticipantsValue = state.metadata.addParticipants;
       lobbyToggle.checked = lobbyValue == null ? !!defaults.lobby : !!lobbyValue;
       listableToggle.checked = listableValue == null ? !!defaults.listable : !!listableValue;
+      if (addParticipantsToggle){
+        addParticipantsToggle.checked = addParticipantsValue == null
+          ? !!defaults.addParticipantsEnabled
+          : !!addParticipantsValue;
+      }
       const eventMode = eventValue == null ? defaults.roomType !== "normal" : !!eventValue;
       roomTypeRadios.forEach((radio) => {
         radio.checked = radio.value === (eventMode ? "event" : "normal");
       });
+      if (passwordToggle){
+        const enabled = defaults.passwordEnabled !== false;
+        passwordToggle.checked = enabled;
+        applyPasswordToggleState(enabled);
+        if (enabled && passwordInput && !passwordInput.value){
+          passwordInput.value = await generatePasswordFromPolicy();
+        }
+      }
       hydrateDelegateFromMetadata(state.metadata);
       popupSizer?.scheduleSizeUpdate();
     }catch(error){
@@ -281,12 +420,16 @@
     const normalizedDelegateName = delegateId
       ? normalizeDelegateLabel(delegateSelection?.displayLabel || delegateId)
       : "";
+    const passwordEnabled = !!passwordToggle?.checked;
+    const passwordValue = passwordEnabled ? (passwordInput?.value || "").trim() : "";
+    const addParticipants = !!addParticipantsToggle?.checked;
     setDelegateAlertLabel(normalizedDelegateName || delegateId || state.delegate.alertLabel || delegateInput?.value);
     return {
       title: titleInput.value.trim(),
-      password: passwordInput.value.trim() || undefined,
+      password: passwordEnabled ? (passwordValue || undefined) : undefined,
       enableLobby: !!lobbyToggle.checked,
       enableListable: !!listableToggle.checked,
+      addParticipants,
       description: state.event?.description || "",
       startTimestamp: startTimestamp ?? null,
       eventConversation: type === "event",
@@ -300,11 +443,14 @@
   /**
    * Generate and insert a new password into the input.
    */
-  function handlePasswordGenerate(){
+  async function handlePasswordGenerate(){
     if (!passwordInput || state.busy){
       return;
     }
-    const generated = NCTalkPassword.generatePassword({ length: 10 });
+    if (!passwordToggle?.checked){
+      return;
+    }
+    const generated = await generatePasswordFromPolicy();
     passwordInput.value = generated;
     try{
       passwordInput.setSelectionRange(0, generated.length);
@@ -329,6 +475,7 @@
       lobbyEnabled: !!payload.enableLobby,
       startTimestamp: payload.startTimestamp ?? state.metadata?.startTimestamp ?? null,
       eventConversation: !!payload.eventConversation,
+      addParticipants: !!payload.addParticipants,
       objectId: payload.objectId || state.metadata?.objectId || null
     };
     if (payload.delegateId){
@@ -337,11 +484,11 @@
       metadata.delegated = delegationInfo.delegated || false;
       metadata.delegateReady = false;
     }
-    await browser.runtime.sendMessage({
+    await browser.runtime.sendMessage(attachDialogOuterId({
       type: "talk:applyMetadata",
       windowId: state.windowId,
       metadata
-    });
+    }));
     const description = await composeDescription(state.event?.description || "", result.url, payload.password);
     if (typeof state.windowId !== "number"){
       logDebug("missing windowId for talk:applyEventFields", {
@@ -354,7 +501,7 @@
       title: payload.title,
       hasDescription: !!description
     });
-    await browser.runtime.sendMessage({
+    await browser.runtime.sendMessage(attachDialogOuterId({
       type: "talk:applyEventFields",
       windowId: state.windowId,
       fields: {
@@ -362,7 +509,7 @@
         location: result.url,
         description
       }
-    });
+    }));
     await browser.runtime.sendMessage({
       type: "talk:trackRoom",
       token: result.token,
@@ -370,7 +517,7 @@
       eventConversation: metadata.eventConversation,
       startTimestamp: metadata.startTimestamp ?? null
     });
-    await browser.runtime.sendMessage({
+    await browser.runtime.sendMessage(attachDialogOuterId({
       type: "talk:registerCleanup",
       windowId: state.windowId,
       token: result.token,
@@ -379,7 +526,7 @@
         eventConversation: metadata.eventConversation,
         fallback: !!result.fallback
       }
-    });
+    }));
   }
 
   /**
@@ -417,29 +564,60 @@
     if (!passwordInput){
       return true;
     }
-    const raw = passwordInput.value || "";
-    const trimmed = raw.trim();
-    if (!trimmed){
+    if (!passwordToggle?.checked){
       passwordInput.value = "";
       return true;
     }
-    if (trimmed.length >= 5){
-      passwordInput.value = trimmed;
-      return true;
+    const raw = passwordInput.value || "";
+    const trimmed = raw.trim();
+    const minLength = getPolicyMinLength();
+    if (!trimmed){
+      await showInlineModal({
+        title: t("ui_password_error_title"),
+        message: t("talk_password_policy_error", [String(minLength || 12)]),
+        variant: "error",
+        buttons: [
+          { label: t("ui_button_ok"), role: "confirm", primary: true }
+        ]
+      });
+      try{
+        passwordInput.focus();
+      }catch(_){ }
+      return false;
     }
-    await showInlineModal({
-      title: t("ui_password_error_title"),
-      message: t("ui_password_error_text"),
-      variant: "error",
-      buttons: [
-        { label: t("ui_button_ok"), role: "confirm", primary: true }
-      ]
-    });
-    try{
-      passwordInput.focus();
-      passwordInput.setSelectionRange(0, raw.length);
-    }catch(_){ }
-    return false;
+    if (minLength){
+      if (trimmed.length < minLength){
+        await showInlineModal({
+          title: t("ui_password_error_title"),
+          message: t("talk_password_policy_error", [String(minLength)]),
+          variant: "error",
+          buttons: [
+            { label: t("ui_button_ok"), role: "confirm", primary: true }
+          ]
+        });
+        try{
+          passwordInput.focus();
+          passwordInput.setSelectionRange(0, raw.length);
+        }catch(_){ }
+        return false;
+      }
+    } else if (!isStrongPassword(trimmed)){
+      await showInlineModal({
+        title: t("ui_password_error_title"),
+        message: t("talk_password_policy_error", ["12"]),
+        variant: "error",
+        buttons: [
+          { label: t("ui_button_ok"), role: "confirm", primary: true }
+        ]
+      });
+      try{
+        passwordInput.focus();
+        passwordInput.setSelectionRange(0, raw.length);
+      }catch(_){ }
+      return false;
+    }
+    passwordInput.value = trimmed;
+    return true;
   }
 
   /**
@@ -653,33 +831,46 @@
           if (!item){
             return null;
           }
-          const email = typeof item.email === "string" ? item.email.trim() : "";
-          if (!emailPattern.test(email)){
+          const rawId = typeof item.id === "string" ? item.id.trim() : "";
+          const rawLabel = typeof item.label === "string" ? item.label.trim() : "";
+          const rawEmail = typeof item.email === "string" ? item.email.trim() : "";
+          const id = rawId || rawEmail || rawLabel;
+          if (!id){
             return null;
           }
-          const id = (item.id || email).trim();
-          const label = (item.label || item.id || email).trim();
+          const email = emailPattern.test(rawEmail) ? rawEmail : "";
+          const label = rawLabel || rawId || rawEmail || id;
+          const displayLabel = formatDelegateDisplay(label, email) || label || id;
           return {
             id,
             email,
             avatarDataUrl: item.avatarDataUrl || "",
-            displayLabel: formatDelegateDisplay(label, email),
-            initials: computeInitials(label || email)
+            displayLabel,
+            initials: computeInitials(label || id)
           };
         })
         .filter(Boolean);
-      state.delegate.suggestions = normalized;
-      state.delegate.activeIndex = normalized.length ? 0 : -1;
-      if (!normalized.length){
+      const termLower = trimmed.toLowerCase();
+      const filtered = termLower
+        ? normalized.filter((entry) => {
+          const idLower = entry.id.toLowerCase();
+          const labelLower = (entry.displayLabel || "").toLowerCase();
+          const emailLower = (entry.email || "").toLowerCase();
+          return idLower.includes(termLower) || labelLower.includes(termLower) || emailLower.includes(termLower);
+        })
+        : normalized;
+      state.delegate.suggestions = filtered;
+      state.delegate.activeIndex = filtered.length ? 0 : -1;
+      if (!filtered.length){
         updateDelegateStatus(trimmed
           ? t("ui_delegate_status_none_with_email")
           : t("ui_delegate_status_none_found"));
         hideDelegateDropdown(true);
         return;
       }
-      const summary = normalized.length === 1
+      const summary = filtered.length === 1
         ? t("ui_delegate_status_single")
-        : t("ui_delegate_status_many", [normalized.length]);
+        : t("ui_delegate_status_many", [filtered.length]);
       updateDelegateStatus(summary);
       renderDelegateDropdown();
     }catch(error){
@@ -1180,4 +1371,13 @@
     }catch(_){}
   }
 })();
+
+
+
+
+
+
+
+
+
 
