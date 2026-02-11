@@ -13,22 +13,23 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.release.tag_name }}
 
       - name: Build XPI (nc4tb-latest.xpi)
         run: |
+          set -euo pipefail
           mkdir -p build
           rm -f build/nc4tb-latest.xpi
-          zip -r build/nc4tb-latest.xpi . \
-            -x '.git/*' \
-            -x '.github/*' \
-            -x 'build/*' \
-            -x 'node_modules/*' \
-            -x '*.xpi' \
-            -x '*.zip' \
-            -x '*/.DS_Store'
+
+          # Only package the add-on payload (root files + required dirs)
+          zip -r -9 build/nc4tb-latest.xpi \
+            _locales experiments icons modules ui \
+            LICENSE.txt manifest.json options.html options.js README.md README.de.md
 
       - name: Upload asset to GitHub Release (overwrite)
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           gh release upload "${{ github.event.release.tag_name }}" build/nc4tb-latest.xpi --clobber
+
