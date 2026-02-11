@@ -229,15 +229,6 @@ Recommended pattern:
 - Use GitHub’s “latest release” redirect:
   - `https://github.com/nc-connector/NC_Connector_for_Thunderbird/releases/latest/download/nc4tb-latest.xpi`
 
-Important:
-- The asset name must be **the same in every release** (constant file name).
-- Practical approach: upload an additional release asset named:
-  - `nc4tb-latest.xpi`
-  alongside the versioned asset (e.g. `nc4tb-2.2.7.xpi`), ideally automated via GitHub Actions.
-
-Note about signing:
-- In production environments, prefer ATN (signed). A self-hosted XPI may require signing depending on your Thunderbird build and deployment constraints.
-
 ### 4.5 Example policies.json
 
 Example policy that force-installs NC Connector and keeps updates enabled:
