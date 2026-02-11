@@ -2,12 +2,12 @@
     "manifest_version":  2,
     "default_locale":  "de",
     "name":  "__MSG_extName__",
-    "version":  "2.2.5",
+    "version":  "2.2.7",
     "description":  "__MSG_extDescription__",
     "developer":  {
                      "name":  "Bastian Kleinschmidt"
                  },
-    "homepage_url":  "https://paypal.me/debaschdi",
+    "homepage_url":  "https://github.com/nc-connector/NC_Connector_for_Thunderbird",
     "browser_specific_settings":  {
                          "gecko":  {
                                        "id":  "{4a35421f-0906-439c-bff2-8eef39e2baee}",
@@ -37,32 +37,18 @@
                                    ]
                    },
     "compose_action":  {
-                          "default_title":  "__MSG_compose_sharing_title__",
-                          "default_icon":  {
-                                               "16":  "icons/app-16.png",
-                                               "32":  "icons/app-32.png"
-                                           }
-                      },
+                           "default_title":  "__MSG_compose_sharing_title__",
+                           "default_icon":  {
+                                                "16":  "icons/app-16.png",
+                                                "32":  "icons/app-32.png"
+                                            }
+                       },
     "options_ui":  {
                        "page":  "options.html",
                        "browser_style":  true,
                        "open_in_tab":  true
                    },
     "experiment_apis":  {
-                            "calToolbar":  {
-                                               "schema":  "experiments/calToolbar/schema.json",
-                                               "parent":  {
-                                                              "scopes":  [
-                                                                             "addon_parent"
-                                                                         ],
-                                                              "paths":  [
-                                                                            [
-                                                                                "calToolbar"
-                                                                            ]
-                                                                        ],
-                                                              "script":  "experiments/calToolbar/parent.js"
-                                                          }
-                                           },
                             "calendar_calendars":  {
                                                        "schema":  "experiments/calendar/schema/calendar-calendars.json",
                                                        "parent":  {
@@ -138,40 +124,23 @@
                                                                               ]
                                                                 }
                                                   },
-                            "calendarItemAction":  {
-                                                      "schema":  "experiments/calendar/schema/calendarItemAction.json",
-                                                      "parent":  {
-                                                                     "scopes":  [
-                                                                                    "addon_parent"
-                                                                                ],
-                                                                     "script":  "experiments/calendar/parent/ext-calendarItemAction.js",
-                                                                     "events":  [
-                                                                                    "startup"
-                                                                                ],
-                                                                     "paths":  [
-                                                                                   [
-                                                                                       "calendarItemAction"
-                                                                                   ]
-                                                                               ]
-                                                                 }
-                                                  },
-                            "calendarItemDetails":  {
-                                                       "schema":  "experiments/calendar/schema/calendarItemDetails.json",
-                                                       "parent":  {
-                                                                      "scopes":  [
-                                                                                     "addon_parent"
-                                                                                 ],
-                                                                      "script":  "experiments/calendar/parent/ext-calendarItemDetails.js",
-                                                                      "events":  [
-                                                                                     "startup"
-                                                                                 ],
-                                                                      "paths":  [
-                                                                                    [
-                                                                                        "calendarItemDetails"
-                                                                                    ]
-                                                                                ]
-                                                                  }
-                                                   }
+                            "ncCalToolbar":  {
+                                                "schema":  "experiments/ncCalToolbar/schema.json",
+                                                "parent":  {
+                                                               "scopes":  [
+                                                                              "addon_parent"
+                                                                          ],
+                                                               "script":  "experiments/ncCalToolbar/parent.js",
+                                                               "events":  [
+                                                                              "startup"
+                                                                          ],
+                                                               "paths":  [
+                                                                             [
+                                                                                 "ncCalToolbar"
+                                                                             ]
+                                                                         ]
+                                                           }
+                                            }
                         },
     "icons":  {
                   "16":  "icons/app-16.png",
@@ -180,5 +149,3 @@
                   "96":  "icons/app-96.png"
               }
 }
-
-

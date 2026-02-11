@@ -94,6 +94,7 @@ this.calendarItemAction = class extends ToolbarButtonAPI {
     super(extension, ExtensionParent.apiManager.global);
     this.manifest_name = "calendar_item_action";
     this.manifestName = "calendarItemAction";
+    this.moduleName = this.manifestName;
     this.windowURLs = [
       "chrome://messenger/content/messenger.xhtml",
       "chrome://calendar/content/calendar-event-dialog.xhtml"

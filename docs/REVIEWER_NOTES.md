@@ -123,21 +123,7 @@ It is intended to guide ongoing and future maintenance.
 
 ---
 
-## 10. Password Policies (Security)
-
-- Nextcloud password policies define **password structure**, not **password requirement**.
-- Users must always be able to:
-  - create Talk rooms
-  - create shares
-  **with or without a password**
-
-- When a password is requested by the user:
-  - Prefer Nextcloud’s server-side password generator API.
-  - Fallback to a strong local generator if needed.
-
----
-
-## 11. Logging & Stability
+## 10. Logging & Stability
 
 - Errors must be logged.
 - Silent failures are not acceptable.
@@ -145,7 +131,7 @@ It is intended to guide ongoing and future maintenance.
 
 ---
 
-## 12. General Reviewer Expectations
+## 11. General Reviewer Expectations
 
 - Code must be:
   - readable

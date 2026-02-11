@@ -6,30 +6,40 @@ See LICENSE.txt for details.
 <!doctype html>
 <meta charset="utf-8">
 <title data-i18n="options_title">Nextcloud Talk - Einstellungen</title>
+<link rel="stylesheet" href="ui/tbTheme.css">
 <style>
 :root{
-  --brand-blue:#0082C9;
+  --brand-blue:var(--tb-accent);
   --header-height:48px;
-  --control-height:38px;
-  --control-radius:10px;
+  --control-height:32px;
+  --control-radius:var(--tb-control-radius);
   --control-padding-x:12px;
   --content-max:760px;
 }
 body{
-  font:14px 'Segoe UI Variable','Segoe UI','Calibri','Trebuchet MS',sans-serif;
+  font:message-box;
   max-width:var(--content-max);
   margin:20px auto;
   line-height:1.45;
-  background:radial-gradient(120% 140% at 50% -20%,#ffffff 0%,#f3f6ff 55%,#e9effb 100%);
-  color:#1f1f1f;
+  background:var(--tb-bg);
+  color:var(--tb-text);
 }
 
-.hero{border-radius:12px; margin-bottom:18px; display:flex; justify-content:center; align-items:center; overflow:hidden; height:var(--header-height); background:var(--brand-blue);}
+.hero{
+  background:var(--brand-blue);
+  height:var(--header-height);
+  border-radius:var(--tb-radius);
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  overflow:hidden;
+  margin:0 0 14px 0;
+}
 .hero img{width:auto; height:100%; max-width:328px; display:block; object-fit:contain;}
-.tabs{border:1px solid #d7d7d7; border-radius:12px; overflow:hidden; box-shadow:0 18px 36px rgba(11,17,39,0.12); background:#fff; --tab-panel-min-height:auto;}
-.tab-list{display:flex; flex-wrap:wrap; border-bottom:1px solid #e1e1e1; background:#f7f8fa;}
+.tabs{border:1px solid var(--tb-border); border-radius:var(--tb-radius); overflow:hidden; box-shadow:none; background:var(--tb-surface); --tab-panel-min-height:auto;}
+.tab-list{display:flex; flex-wrap:wrap; border-bottom:1px solid var(--tb-border); background:var(--tb-surface-2);}
 .tab-list button{flex:1 1 120px; padding:10px; border:none; background:none; cursor:pointer; font-weight:600;}
-.tab-list button.active{background:#ffffff; border-bottom:3px solid var(--brand-blue);}
+.tab-list button.active{background:var(--tb-surface); border-bottom:3px solid var(--brand-blue);}
 .tab-panel{display:none; padding:20px; min-height:var(--tab-panel-min-height); will-change:transform,opacity;}
 .tab-panel.active{display:block; animation:tabEnterForward .22s ease-out;}
 .tabs[data-nav="back"] .tab-panel.active{animation-name:tabEnterBack;}
@@ -48,25 +58,31 @@ body{
 .row.row-inset{padding:0 14px;}
 .row > div{max-width:420px; width:100%;}
 .field-stack{display:flex; flex-direction:column; gap:6px; max-width:420px; width:100%;}
-input[type="url"], input[type="text"], input[type="password"], select{
+input[type="url"], input[type="text"], input[type="password"], input[type="number"], select{
   height:var(--control-height);
   padding:0 var(--control-padding-x);
-  border:1px solid #ccc;
+  border:1px solid var(--tb-border-strong);
   border-radius:var(--control-radius);
   width:100%;
   box-sizing:border-box;
-  background:#fff;
+  background:var(--tb-surface);
+  color:var(--tb-text);
+  font:inherit;
+}
+input[type="checkbox"],
+input[type="radio"]{
+  accent-color:var(--tb-accent);
 }
 footer{display:flex; gap:8px; margin-top:16px}
 #status{opacity:.8; font-size:12px}
 .donation{display:flex; flex-direction:column; gap:8px; margin-top:12px;}
-.donation-link{display:inline-flex; align-items:center; gap:10px; padding:8px 10px; border:1px solid #e0e0e0; border-radius:8px; text-decoration:none; color:inherit; background:#fafafa;}
-.donation-link:hover{background:#f0f7ff; border-color:var(--brand-blue);}
+.donation-link{display:inline-flex; align-items:center; gap:10px; padding:8px 10px; border:1px solid var(--tb-border); border-radius:var(--tb-radius); text-decoration:none; color:inherit; background:var(--tb-surface);}
+.donation-link:hover{background:var(--tb-surface-2); border-color:var(--brand-blue);}
 .donation-link img{width:24px; height:24px;}
 .about-list{list-style:none; padding-left:0; margin:0;}
 .about-list li{margin-bottom:6px;}
 .tabs h2{margin-top:0;}
-.auth-block{border:1px solid #d5d5d5; border-radius:8px; padding:14px; margin:14px 0;}
+.auth-block{border:1px solid var(--tb-border); border-radius:var(--tb-radius); padding:14px; margin:14px 0; background:var(--tb-surface);}
 .auth-block legend{font-weight:600; padding:0 4px;}
 .radio-option{display:flex; align-items:center; gap:8px; margin:6px 0;}
 .button-row{display:flex; flex-wrap:wrap; gap:10px; margin-top:12px;}
@@ -74,8 +90,9 @@ footer{display:flex; gap:8px; margin-top:16px}
   height:var(--control-height);
   padding:0 14px;
   border-radius:var(--control-radius);
-  border:1px solid #c7c7c7;
-  background:#f5f5f5;
+  border:1px solid var(--tb-border);
+  background:var(--tb-surface);
+  color:var(--tb-text);
 }
 #save{
   height:var(--control-height);
@@ -87,9 +104,29 @@ footer{display:flex; gap:8px; margin-top:16px}
 }
 .checklist{display:flex; flex-direction:column; gap:6px;}
 .checklist label{font-weight:400;}
-.hint{margin:6px 0 0 0; font-size:12px; color:#555;}
+.option-tooltip-wrap{position:relative;}
+.option-tooltip{
+  position:absolute;
+  left:0;
+  top:100%;
+  margin-top:6px;
+  border:1px solid var(--tb-border);
+  border-radius:10px;
+  padding:10px 12px;
+  background:var(--tb-bg);
+  box-shadow:var(--tb-shadow);
+  max-width:min(480px,calc(100vw - 48px));
+  display:none;
+  z-index:1000;
+}
+.option-tooltip-wrap:hover .option-tooltip,
+.option-tooltip-wrap:focus-within .option-tooltip{display:block;}
+.option-tooltip-title{font-weight:800; font-size:12px; margin:0 0 6px 0;}
+.option-tooltip-list{margin:0; padding-left:18px;}
+.option-tooltip-list li{margin:0 0 4px 0; font-size:12px; color:var(--tb-text);}
+.option-tooltip-list li:last-child{margin-bottom:0;}
+.hint{margin:6px 0 0 0; font-size:12px; color:var(--tb-muted);}
 </style>
-<h1 data-i18n="options_heading">Nextcloud Talk - Einstellungen</h1>
 <div class="hero">
   <img src="ui/assets/header-solid-blue-328x96.png" alt="NC Connector">
 </div>
@@ -164,16 +201,54 @@ footer{display:flex; gap:8px; margin-top:16px}
         <input id="talkDefaultTitle" type="text">
       </div>
       <div class="row">
-        <label for="talkDefaultLobby" data-i18n="options_talk_default_lobby_label">Lobby bis Startzeit aktiv</label>
+        <label for="talkDefaultLobby" class="option-tooltip-wrap">
+          <span data-i18n="options_talk_default_lobby_label">Lobby bis Startzeit aktiv</span>
+          <div class="option-tooltip" role="tooltip">
+            <div class="option-tooltip-title" data-i18n="talk_option_lobby_title">🚪 Lobby bis Startzeit</div>
+            <ul class="option-tooltip-list">
+              <li data-i18n="talk_option_lobby_line1">Teilnehmer landen vor Beginn in der Lobby (Warteraum) und können noch nicht in den Call</li>
+              <li data-i18n="talk_option_lobby_line2">⚠️ Erst ab der eingestellten Startzeit (oder wenn ein Moderator die Lobby beendet) ist der Beitritt möglich</li>
+              <li data-i18n="talk_option_lobby_line3">Ideal, damit niemand zu früh in Meeting/Webinar reinplatzt.</li>
+            </ul>
+          </div>
+        </label>
         <input id="talkDefaultLobby" type="checkbox">
       </div>
       <div class="row">
-        <label for="talkDefaultListable" data-i18n="options_talk_default_listable_label">In Suche anzeigen</label>
+        <label for="talkDefaultListable" class="option-tooltip-wrap">
+          <span data-i18n="options_talk_default_listable_label">In Suche anzeigen</span>
+          <div class="option-tooltip" role="tooltip">
+            <div class="option-tooltip-title" data-i18n="talk_option_listable_title">🔍 In Suche anzeigen</div>
+            <ul class="option-tooltip-list">
+              <li data-i18n="talk_option_listable_line1">Der Raum ist über die Talk-Suche auffindbar</li>
+              <li data-i18n="talk_option_listable_line2">⚠️ Erleichtert das Wiederfinden, ist aber für jeden Benutzer auffindbar.</li>
+            </ul>
+          </div>
+        </label>
         <input id="talkDefaultListable" type="checkbox">
       </div>
       <div class="row">
-        <label for="talkDefaultAddParticipants" data-i18n="options_talk_default_add_participants_label">Teilnehmer in den Raum hinzufügen</label>
-        <input id="talkDefaultAddParticipants" type="checkbox">
+        <label data-i18n="options_talk_default_add_participants_label">Teilnehmer in den Raum hinzufügen</label>
+        <div class="checklist">
+          <label class="option-tooltip-wrap"><input id="talkDefaultAddUsers" type="checkbox"> <span data-i18n="options_talk_default_add_users_label">Benutzer</span>
+            <div class="option-tooltip" role="tooltip">
+              <div class="option-tooltip-title" data-i18n="talk_option_add_users_title">👤 Benutzer hinzufügen</div>
+              <ul class="option-tooltip-list">
+                <li data-i18n="talk_option_add_users_line1">Interne Nextcloud-Benutzer werden direkt dem Raum hinzugefügt</li>
+                <li data-i18n="talk_option_add_users_line2">Der Raum ist sofort in Nextcloud Talk sichtbar</li>
+              </ul>
+            </div>
+          </label>
+          <label class="option-tooltip-wrap"><input id="talkDefaultAddGuests" type="checkbox"> <span data-i18n="options_talk_default_add_guests_label">Gäste</span>
+            <div class="option-tooltip" role="tooltip">
+              <div class="option-tooltip-title" data-i18n="talk_option_add_guests_title">🌍 Gäste hinzufügen</div>
+              <ul class="option-tooltip-list">
+                <li data-i18n="talk_option_add_guests_line1">Gäste werden ebenfalls direkt dem Raum hinzugefügt</li>
+                <li data-i18n="talk_option_add_guests_line2">⚠️ Sie erhalten eine separate (zusätzliche) E-Mail mit persönlichem Zugangslink</li>
+              </ul>
+            </div>
+          </label>
+        </div>
       </div>
       <div class="row">
         <label for="talkDefaultPassword" data-i18n="options_talk_default_password_label">Passwort setzen</label>
@@ -182,8 +257,30 @@ footer{display:flex; gap:8px; margin-top:16px}
       <div class="row">
         <label data-i18n="options_talk_default_roomtype_label">Raumtyp</label>
         <div class="checklist">
-          <label><input type="radio" name="talkDefaultRoomType" value="event"> <span data-i18n="options_talk_default_roomtype_event">Event-Konversation</span></label>
-          <label><input type="radio" name="talkDefaultRoomType" value="normal"> <span data-i18n="options_talk_default_roomtype_standard">Standard-Raum</span></label>
+          <label class="option-tooltip-wrap">
+            <input type="radio" name="talkDefaultRoomType" value="event">
+            <span data-i18n="options_talk_default_roomtype_event">Event-Konversation</span>
+            <div class="option-tooltip" role="tooltip">
+              <div class="option-tooltip-title" data-i18n="talk_roomtype_event_title">📅 Event-Unterhaltung</div>
+              <ul class="option-tooltip-list">
+                <li data-i18n="talk_roomtype_event_line1">Zeitlich begrenzt: für einen konkreten Termin oder Anlass</li>
+                <li data-i18n="talk_roomtype_event_line2">Spontan & leichtgewichtig: geeignet für Meetings, Schulungen oder Webinare</li>
+                <li data-i18n="talk_roomtype_event_line3">Selbstaufräumend: wird nach einiger Zeit automatisch entfernt</li>
+              </ul>
+            </div>
+          </label>
+          <label class="option-tooltip-wrap">
+            <input type="radio" name="talkDefaultRoomType" value="normal">
+            <span data-i18n="options_talk_default_roomtype_standard">Standard-Raum</span>
+            <div class="option-tooltip" role="tooltip">
+              <div class="option-tooltip-title" data-i18n="talk_roomtype_group_title">🗨️ Gruppenunterhaltung</div>
+              <ul class="option-tooltip-list">
+                <li data-i18n="talk_roomtype_group_line1">Dauerhaft: bleibt bestehen, bis sie aktiv gelöscht wird</li>
+                <li data-i18n="talk_roomtype_group_line2">Für den Alltag gemacht: ideal für Teams, Abteilungen, laufende Projekte und wiederkehrende Termine</li>
+                <li data-i18n="talk_roomtype_group_line3">Mit Verlauf: der gesamte Chat ist jederzeit nachvollziehbar</li>
+              </ul>
+            </div>
+          </label>
         </div>
       </div>
     </fieldset>
@@ -194,24 +291,14 @@ footer{display:flex; gap:8px; margin-top:16px}
       <div class="row">
         <label for="shareBlockLang" data-i18n="options_share_block_lang_label">Sprache im Freigabe-Block</label>
         <div>
-          <select id="shareBlockLang">
-            <option value="default" data-i18n="options_lang_default">Standard (UI)</option>
-            <option value="en" data-i18n="options_lang_en">English</option>
-            <option value="de" data-i18n="options_lang_de">Deutsch</option>
-            <option value="fr" data-i18n="options_lang_fr">Français</option>
-          </select>
+          <select id="shareBlockLang"></select>
           <p class="hint" data-i18n="options_share_block_lang_hint">Steuert die Sprache des eingefügten Freigabe-HTML-Blocks.</p>
         </div>
       </div>
       <div class="row">
         <label for="eventDescriptionLang" data-i18n="options_event_description_lang_label">Sprache im Talk-Beschreibungstext</label>
         <div>
-          <select id="eventDescriptionLang">
-            <option value="default" data-i18n="options_lang_default">Standard (UI)</option>
-            <option value="en" data-i18n="options_lang_en">English</option>
-            <option value="de" data-i18n="options_lang_de">Deutsch</option>
-            <option value="fr" data-i18n="options_lang_fr">Français</option>
-          </select>
+          <select id="eventDescriptionLang"></select>
           <p class="hint" data-i18n="options_event_description_lang_hint">Steuert die Sprache des Talk-Textblocks in Terminen.</p>
         </div>
       </div>
@@ -232,11 +319,12 @@ footer{display:flex; gap:8px; margin-top:16px}
       <li><strong data-i18n="options_about_copyright_label">Copyright:</strong> <span>2025 Bastian Kleinschmidt</span></li>
       <li><strong data-i18n="options_about_license_label">Lizenz:</strong> <a id="licenseLink" href="LICENSE.txt" target="_blank" rel="noopener" data-i18n="options_about_license_value">AGPL v3</a></li>
     </ul>
+    <p class="hint" data-i18n="options_about_support_note">Damit NC Connector for Thunderbird weiter kostenlos gepflegt und verbessert werden kann</p>
     <div class="donation">
       <strong data-i18n="options_about_support_heading">Unterstützen</strong>
-      <a class="donation-link" href="https://paypal.me/debaschdi" target="_blank" rel="noopener">
+      <a class="donation-link" href="https://www.paypal.com/donate/?hosted_button_id=FTZWNRNKVKUN6" target="_blank" rel="noopener">
         <img src="icons/paypal.svg" alt="">
-        <span data-i18n="options_support_link">PayPal: paypal.me/debaschdi</span>
+        <span data-i18n="options_support_link">PayPal: Spenden</span>
       </a>
     </div>
   </section>
@@ -246,6 +334,7 @@ footer{display:flex; gap:8px; margin-top:16px}
   <span id="status"></span>
 </footer>
 <script src="modules/i18n.js"></script>
+<script src="modules/i18nOverride.js"></script>
 <script src="modules/sharingStorage.js"></script>
 <script src="modules/hostPermissions.js"></script>
 <script src="modules/ocs.js"></script>

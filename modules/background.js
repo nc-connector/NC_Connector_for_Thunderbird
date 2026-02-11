@@ -8,6 +8,66 @@
  * Background script for Nextcloud Talk Direct.
  * Handles API calls (Talk + CardDAV), caching, and messaging utilities.
  */
+
+browser.ncCalToolbar?.onClicked?.addListener(async (snapshot) => {
+  L("ncCalToolbar.onClicked", {
+    calendarId: snapshot?.calendarId || "",
+    id: snapshot?.id || "",
+    type: snapshot?.type || "",
+    hasIcal: snapshot?.format === "ical" && typeof snapshot?.item === "string" && !!snapshot.item
+  });
+  try{
+    if (!snapshot || snapshot.format !== "ical" || typeof snapshot.item !== "string" || !snapshot.item){
+      console.error("[NCBG] ncCalToolbar.onClicked invalid snapshot");
+      return;
+    }
+
+    const contextId = createCalendarWizardContextId();
+    const context = setCalendarWizardContext(contextId, {
+      source: "ncCalToolbar",
+      editorRef: {
+        windowId: typeof snapshot.windowId === "number" ? snapshot.windowId : null,
+        dialogOuterId: typeof snapshot.dialogOuterId === "number" ? snapshot.dialogOuterId : null
+      },
+      item: {
+        id: snapshot.id || "",
+        calendarId: snapshot.calendarId || "",
+        type: snapshot.type || "event",
+        format: "ical",
+        item: snapshot.item
+      },
+      event: {},
+      metadata: {}
+    });
+    refreshCalendarWizardContextSnapshot(context);
+
+    const url = new URL(browser.runtime.getURL("ui/talkDialog.html"));
+    url.searchParams.set("contextId", contextId);
+    L("talk wizard open", {
+      contextId,
+      editorRef: context.editorRef || null,
+      calendarId: context.item?.calendarId || "",
+      itemId: context.item?.id || ""
+    });
+    await browser.windows.create({
+      type: "popup",
+      url: url.toString(),
+      width: TALK_POPUP_WIDTH,
+      height: TALK_POPUP_HEIGHT
+    });
+  }catch(e){
+    console.error("[NCBG] ncCalToolbar.onClicked error", e);
+  }
+});
+
+browser.ncCalToolbar?.onRoomCleanup?.addListener((event) => {
+  try{
+    handleNcCalToolbarRoomCleanup(event || {});
+  }catch(e){
+    console.error("[NCBG] ncCalToolbar.onRoomCleanup handler failed", e);
+  }
+});
+
 const ROOM_META_KEY = "nctalkRoomMeta";
 const EVENT_TOKEN_MAP_KEY = "nctalkEventTokenMap";
 let DEBUG_ENABLED = false;
@@ -18,6 +78,13 @@ const TALK_POPUP_WIDTH = 540;
 const TALK_POPUP_HEIGHT = 860;
 const SHARING_POPUP_WIDTH = 660;
 const SHARING_POPUP_HEIGHT = 760;
+const CALENDAR_WIZARD_CONTEXT_TTL_MS = 30 * 60 * 1000;
+const CALENDAR_WIZARD_CONTEXTS = new Map();
+const ROOM_CLEANUP_DELETE_DELAY_MS = 15 * 1000;
+const ROOM_CLEANUP_BY_TOKEN = new Map();
+const ROOM_CLEANUP_BY_EDITOR = new Map();
+const INVITEE_SYNC_IN_FLIGHT = new Set();
+const DELEGATION_IN_FLIGHT = new Set();
 const FALLBACK_PASSWORD_POLICY = {
   hasPolicy: false,
   minLength: null,
@@ -33,6 +100,18 @@ const FALLBACK_PASSWORD_POLICY = {
     DEBUG_ENABLED = !!stored.debugEnabled;
     ROOM_META = stored[ROOM_META_KEY] || {};
     EVENT_TOKEN_MAP = stored[EVENT_TOKEN_MAP_KEY] || {};
+    if (DEBUG_ENABLED){
+      try{
+        const manifest = browser.runtime.getManifest();
+        console.log("[NCBG] startup", {
+          version: manifest?.version || "",
+          hasApiNcCalToolbar: !!browser?.ncCalToolbar,
+          hasApiCalendarItems: !!browser?.calendar?.items
+        });
+      }catch(e){
+        console.error("[NCBG] startup manifest probe failed", e);
+      }
+    }
   }catch(_){ }
 })();
 browser.storage.onChanged.addListener((changes, area) => {
@@ -56,6 +135,123 @@ function L(...a){
   try{
     console.log("[NCBG]", ...a);
   }catch(_){ }
+}
+
+function makeRoomCleanupEditorKey(editorRef){
+  const ref = editorRef && typeof editorRef === "object" ? editorRef : {};
+  if (typeof ref.dialogOuterId === "number"){
+    return `dialog:${ref.dialogOuterId}`;
+  }
+  if (typeof ref.windowId === "number"){
+    return `window:${ref.windowId}`;
+  }
+  return "";
+}
+
+function removeRoomCleanupEntry(token, reason = ""){
+  if (!token) return;
+  const entry = ROOM_CLEANUP_BY_TOKEN.get(token);
+  if (!entry){
+    return;
+  }
+  if (entry.timerId){
+    try{
+      clearTimeout(entry.timerId);
+    }catch(_){ }
+    entry.timerId = null;
+  }
+  ROOM_CLEANUP_BY_TOKEN.delete(token);
+  if (entry.editorKey && ROOM_CLEANUP_BY_EDITOR.get(entry.editorKey) === token){
+    ROOM_CLEANUP_BY_EDITOR.delete(entry.editorKey);
+  }
+  L("room cleanup cleared", { token: shortToken(token), reason: reason || "" });
+}
+
+function scheduleRoomCleanupDelete(token, reason = "", delayMs = ROOM_CLEANUP_DELETE_DELAY_MS){
+  if (!token) return;
+  const entry = ROOM_CLEANUP_BY_TOKEN.get(token);
+  if (!entry){
+    L("room cleanup ignored (not pending)", { token: shortToken(token), reason: reason || "" });
+    return;
+  }
+  if (entry.timerId){
+    return;
+  }
+  const delay = Math.max(0, Number(delayMs) || 0);
+  entry.timerId = setTimeout(() => {
+    (async () => {
+      const current = ROOM_CLEANUP_BY_TOKEN.get(token);
+      if (!current){
+        return;
+      }
+      removeRoomCleanupEntry(token, `delete:${reason || ""}`);
+      try{
+        L("room cleanup delete", { token: shortToken(token), reason: reason || "" });
+        await deleteTalkRoom({ token });
+        await deleteRoomMeta(token);
+      }catch(e){
+        console.error("[NCBG] room cleanup delete failed", e);
+      }
+    })().catch((e) => console.error("[NCBG] room cleanup delete failed", e));
+  }, delay);
+  L("room cleanup scheduled", { token: shortToken(token), delayMs: delay, reason: reason || "" });
+}
+
+function handleNcCalToolbarRoomCleanup(event){
+  const token = typeof event?.token === "string" ? event.token.trim() : "";
+  const action = typeof event?.action === "string" ? event.action : "";
+  const reason = typeof event?.reason === "string" ? event.reason : "";
+  if (!token || !action){
+    return;
+  }
+  L("ncCalToolbar.onRoomCleanup", {
+    token: shortToken(token),
+    action,
+    reason
+  });
+  if (action === "persisted"){
+    removeRoomCleanupEntry(token, `persisted:${reason}`);
+    return;
+  }
+  if (action === "discarded"){
+    scheduleRoomCleanupDelete(token, reason || "discarded");
+    return;
+  }
+  if (action === "superseded"){
+    scheduleRoomCleanupDelete(token, reason || "superseded", 0);
+  }
+}
+
+function pruneCalendarWizardContexts(){
+  const cutoff = Date.now() - CALENDAR_WIZARD_CONTEXT_TTL_MS;
+  for (const [contextId, entry] of CALENDAR_WIZARD_CONTEXTS.entries()){
+    if (!entry || typeof entry.created !== "number" || entry.created < cutoff){
+      CALENDAR_WIZARD_CONTEXTS.delete(contextId);
+    }
+  }
+}
+
+function createCalendarWizardContextId(){
+  const rand = Math.random().toString(16).slice(2);
+  return `${Date.now()}-${rand}`;
+}
+
+function setCalendarWizardContext(contextId, entry){
+  pruneCalendarWizardContexts();
+  const next = Object.assign({}, entry || {}, { created: Date.now() });
+  CALENDAR_WIZARD_CONTEXTS.set(contextId, next);
+  return next;
+}
+
+function getCalendarWizardContext(contextId){
+  if (!contextId) return null;
+  pruneCalendarWizardContexts();
+  return CALENDAR_WIZARD_CONTEXTS.get(contextId) || null;
+}
+
+function deleteCalendarWizardContext(contextId){
+  if (!contextId) return;
+  CALENDAR_WIZARD_CONTEXTS.delete(contextId);
 }
 
 /**
@@ -253,6 +449,34 @@ browser.composeAction.onClicked.addListener(async (tab) => {
   }
 });
 
+function refreshCalendarWizardContextSnapshot(entry){
+  if (!entry?.item?.item){
+    return;
+  }
+  const ical = String(entry.item.item || "");
+  try{
+    entry.metadata = extractTalkMetadataFromIcal(ical) || {};
+  }catch(_){
+    entry.metadata = entry.metadata || {};
+  }
+  try{
+    const { props, dtStart, dtEnd } = parseIcalEventData(ical);
+    entry.event = {
+      title: props["SUMMARY"] || "",
+      location: props["LOCATION"] || "",
+      description: props["DESCRIPTION"] || "",
+      startTimestamp: parseIcalDateTime(dtStart?.value || "", dtStart?.tzid || null),
+      endTimestamp: parseIcalDateTime(dtEnd?.value || "", dtEnd?.tzid || null)
+    };
+  }catch(_){
+    entry.event = entry.event || {};
+  }
+}
+
+// Calendar event editor toolbar integration is provided via the minimal custom
+// experiment `ncCalToolbar` which inserts the button and delivers an iCal snapshot
+// on click.
+
 /**
  * Merge and persist room metadata for a Talk token.
  * @param {string} token
@@ -448,36 +672,10 @@ async function decodeAvatarPixels({ base64, mime } = {}){
   };
 }
 
-/**
- * Open the Talk dialog popup for a calendar window.
- */
-async function openTalkDialogWindow(windowId, dialogOuterId){
-  const url = new URL(browser.runtime.getURL("ui/talkDialog.html"));
-  if (typeof windowId === "number"){
-    url.searchParams.set("windowId", String(windowId));
-  }
-  if (typeof dialogOuterId === "number"){
-    url.searchParams.set("dialogOuterId", String(dialogOuterId));
-  }
-  await browser.windows.create({
-    url: url.toString(),
-    type: "popup",
-    width: TALK_POPUP_WIDTH,
-    height: TALK_POPUP_HEIGHT
-  });
-}
-
-function attachDialogOuterId(payload, dialogOuterId){
-  if (typeof dialogOuterId !== "number"){
-    return payload || {};
-  }
-  const base = payload && typeof payload === "object" ? payload : {};
-  return Object.assign({}, base, { _dialogOuterId: dialogOuterId });
-}
-
-browser.runtime.onMessage.addListener(async (msg) => {
+browser.runtime.onMessage.addListener((msg, sender) => {
   if (!msg || !msg.type) return;
-  L("msg", msg.type, { hasPayload: !!msg.payload });
+  return (async () => {
+    L("msg", msg.type, { hasPayload: !!msg.payload });
   if (msg.type === "debug:log"){
     const source = msg.payload?.source ? String(msg.payload.source) : "frontend";
     const text = msg.payload?.text ? String(msg.payload.text) : "";
@@ -488,7 +686,7 @@ browser.runtime.onMessage.addListener(async (msg) => {
     const channel = channelRaw.toUpperCase();
     const label = msg.payload?.label ? String(msg.payload.label) : source;
     const prefix = label ? `[${channel}][${label}]` : `[${channel}]`;
-    if (DEBUG_ENABLED || channel === "NCUI"){
+    if (DEBUG_ENABLED){
       try{
         console.log(prefix, text, ...extras);
       }catch(_){ }
@@ -574,77 +772,108 @@ browser.runtime.onMessage.addListener(async (msg) => {
       return { ok:false, error: e?.message || String(e) };
     }
   }
-  if (msg.type === "talk:openDialog"){
-    const windowId = msg.windowId ?? msg?.payload?.windowId;
-    const dialogOuterId = msg.dialogOuterId ?? msg?.payload?.dialogOuterId;
-    try{
-      await openTalkDialogWindow(windowId, dialogOuterId);
-      return { ok:true };
-    }catch(e){
-      return { ok:false, error: e?.message || String(e) };
-    }
-  }
   if (msg.type === "talk:initDialog"){
-    const windowId = msg.windowId ?? msg?.payload?.windowId;
-    const dialogOuterId = msg.dialogOuterId ?? msg?.payload?.dialogOuterId;
-    if (typeof windowId !== "number"){
-      return { ok:false, error: "windowId required" };
+    const contextId = msg.contextId ?? msg?.payload?.contextId;
+    if (!contextId){
+      return { ok:false, error: bgI18n("talk_error_context_id_missing") };
     }
-    try{
-      const response = await browser.calToolbar.invokeWindow({
-        windowId,
-        action: "ping",
-        payload: attachDialogOuterId({}, dialogOuterId)
-      });
-      return { ok:true, response };
-    }catch(e){
-      return { ok:false, error: e?.message || String(e) };
+    const context = getCalendarWizardContext(contextId);
+    if (!context){
+      return { ok:false, error: bgI18n("talk_error_context_reference") };
     }
+    refreshCalendarWizardContextSnapshot(context);
+    return { ok:true };
   }
   if (msg.type === "talk:getEventSnapshot"){
-    const windowId = msg.windowId ?? msg?.payload?.windowId;
-    const dialogOuterId = msg.dialogOuterId ?? msg?.payload?.dialogOuterId;
-    if (typeof windowId !== "number"){
-      return { ok:false, error: "windowId required" };
+    const contextId = msg.contextId ?? msg?.payload?.contextId;
+    if (!contextId){
+      return { ok:false, error: bgI18n("talk_error_context_id_missing") };
     }
-    try{
-      const response = await browser.calToolbar.invokeWindow({
-        windowId,
-        action: "getEventSnapshot",
-        payload: attachDialogOuterId({}, dialogOuterId)
-      });
-      return response;
-    }catch(e){
-      return { ok:false, error: e?.message || String(e) };
+    const context = getCalendarWizardContext(contextId);
+    if (!context){
+      return { ok:false, error: bgI18n("talk_error_context_reference") };
     }
+    refreshCalendarWizardContextSnapshot(context);
+    return {
+      ok:true,
+      event: context.event || {},
+      metadata: context.metadata || {}
+    };
   }
   if (msg.type === "talk:applyEventFields"){
-    const windowId = msg.windowId ?? msg?.payload?.windowId;
-    const dialogOuterId = msg.dialogOuterId ?? msg?.payload?.dialogOuterId;
-    if (typeof windowId !== "number"){
-      return { ok:false, error: "windowId required" };
+    const contextId = msg.contextId ?? msg?.payload?.contextId;
+    if (!contextId){
+      return { ok:false, error: bgI18n("talk_error_context_id_missing") };
+    }
+    const context = getCalendarWizardContext(contextId);
+    if (!context){
+      return { ok:false, error: bgI18n("talk_error_context_reference") };
     }
     const fields = msg.fields ?? msg?.payload?.fields ?? {};
     try{
-      L("talk:applyEventFields dispatch", {
-        windowId,
-        hasTitle: !!fields.title,
-        hasLocation: !!fields.location,
+      L("talk:applyEventFields", {
+        contextId,
+        calendarId: context.item?.calendarId || "",
+        itemId: context.item?.id || "",
+        hasTitle: typeof fields.title === "string",
+        hasLocation: typeof fields.location === "string",
         hasDescription: typeof fields.description === "string"
       });
-      const response = await browser.calToolbar.invokeWindow({
-        windowId,
-        action: "applyEventFields",
-        payload: attachDialogOuterId(fields, dialogOuterId)
+      const updates = {};
+      if (typeof fields.title === "string"){
+        updates["SUMMARY"] = fields.title;
+      }
+      if (typeof fields.location === "string"){
+        updates["LOCATION"] = fields.location;
+      }
+      if (typeof fields.description === "string"){
+        updates["DESCRIPTION"] = fields.description;
+      }
+      const baseIcal = context.item?.item || "";
+      const { ical } = applyIcalPropertyUpdates(baseIcal, updates);
+      context.item.item = ical;
+      refreshCalendarWizardContextSnapshot(context);
+
+      if (!browser?.ncCalToolbar?.applyEventFields){
+        console.error("[NCBG] ncCalToolbar.applyEventFields missing");
+        throw localizedError("talk_error_apply_failed");
+      }
+      const editor = context.editorRef || {};
+      const editorRef = {};
+      if (typeof editor.windowId === "number"){
+        editorRef.windowId = editor.windowId;
+      }
+      if (typeof editor.dialogOuterId === "number"){
+        editorRef.dialogOuterId = editor.dialogOuterId;
+      }
+      if (!Object.keys(editorRef).length){
+        throw new Error(bgI18n("talk_error_editor_context_missing"));
+      }
+      const fieldsPayload = {};
+      if (typeof fields.title === "string"){
+        fieldsPayload.title = fields.title;
+      }
+      if (typeof fields.location === "string"){
+        fieldsPayload.location = fields.location;
+      }
+      if (typeof fields.description === "string"){
+        fieldsPayload.description = fields.description;
+      }
+      const applyResponse = await browser.ncCalToolbar.applyEventFields({
+        editor: editorRef,
+        fields: fieldsPayload
       });
-      L("talk:applyEventFields response", {
-        windowId,
-        ok: response?.ok,
-        error: response?.error || ""
-      });
-      return response;
+      if (!applyResponse?.ok){
+        throw new Error(applyResponse?.error || bgI18n("talk_error_apply_failed"));
+      }
+      if ((typeof fields.title === "string" && applyResponse?.applied?.title !== true)
+        || (typeof fields.location === "string" && applyResponse?.applied?.location !== true)
+        || (typeof fields.description === "string" && applyResponse?.applied?.description !== true)){
+        throw new Error(bgI18n("talk_error_apply_failed"));
+      }
+      return { ok:true };
     }catch(e){
-      L("talk:applyEventFields error", e?.message || String(e));
+      L("talk:applyEventFields error", { contextId, error: e?.message || String(e) });
       return { ok:false, error: e?.message || String(e) };
     }
   }
@@ -681,43 +910,124 @@ browser.runtime.onMessage.addListener(async (msg) => {
     }
   }
   if (msg.type === "talk:applyMetadata"){
-    const windowId = msg.windowId ?? msg?.payload?.windowId;
-    const dialogOuterId = msg.dialogOuterId ?? msg?.payload?.dialogOuterId;
-    if (typeof windowId !== "number"){
-      return { ok:false, error: "windowId required" };
+    const contextId = msg.contextId ?? msg?.payload?.contextId;
+    if (!contextId){
+      return { ok:false, error: bgI18n("talk_error_context_id_missing") };
+    }
+    const context = getCalendarWizardContext(contextId);
+    if (!context){
+      return { ok:false, error: bgI18n("talk_error_context_reference") };
     }
     const meta = msg.metadata ?? msg?.payload?.metadata ?? {};
     try{
-      const response = await browser.calToolbar.invokeWindow({
-        windowId,
-        action: "setTalkMetadata",
-        payload: attachDialogOuterId(meta, dialogOuterId)
+      L("talk:applyMetadata", {
+        contextId,
+        calendarId: context.item?.calendarId || "",
+        itemId: context.item?.id || "",
+        hasToken: typeof meta?.token === "string" && !!meta.token,
+        hasUrl: typeof meta?.url === "string" && !!meta.url,
+        lobby: Object.prototype.hasOwnProperty.call(meta, "lobbyEnabled") ? !!meta.lobbyEnabled : null,
+        hasStart: typeof meta?.startTimestamp === "number" && Number.isFinite(meta.startTimestamp)
       });
-      if (meta?.token){
-        const updates = {};
-        if (Object.prototype.hasOwnProperty.call(meta, "lobbyEnabled")){
-          updates.lobbyEnabled = !!meta.lobbyEnabled;
-        }
-        if (Object.prototype.hasOwnProperty.call(meta, "eventConversation")){
-          updates.eventConversation = !!meta.eventConversation;
-        }
+      const updates = {};
+      if (Object.prototype.hasOwnProperty.call(meta, "token")){
+        updates["X-NCTALK-TOKEN"] = meta.token ? String(meta.token) : null;
+      }
+      if (Object.prototype.hasOwnProperty.call(meta, "url")){
+        updates["X-NCTALK-URL"] = meta.url ? String(meta.url) : null;
+      }
+      if (Object.prototype.hasOwnProperty.call(meta, "lobbyEnabled")){
+        updates["X-NCTALK-LOBBY"] = meta.lobbyEnabled ? "TRUE" : "FALSE";
+      }
+      if (Object.prototype.hasOwnProperty.call(meta, "startTimestamp")){
         if (typeof meta.startTimestamp === "number" && Number.isFinite(meta.startTimestamp)){
-          updates.startTimestamp = meta.startTimestamp;
-        }
-        if (Object.keys(updates).length){
-          await setRoomMeta(meta.token, updates);
+          updates["X-NCTALK-START"] = String(Math.floor(meta.startTimestamp));
+        }else{
+          updates["X-NCTALK-START"] = null;
         }
       }
-      return response;
+      if (Object.prototype.hasOwnProperty.call(meta, "eventConversation")){
+        updates["X-NCTALK-EVENT"] = meta.eventConversation ? "event" : "standard";
+      }
+      if (Object.prototype.hasOwnProperty.call(meta, "objectId")){
+        updates["X-NCTALK-OBJECTID"] = meta.objectId ? String(meta.objectId) : null;
+      }
+      const hasAddUsers = Object.prototype.hasOwnProperty.call(meta, "addUsers");
+      const hasAddGuests = Object.prototype.hasOwnProperty.call(meta, "addGuests");
+      if (hasAddUsers){
+        updates["X-NCTALK-ADD-USERS"] = meta.addUsers ? "TRUE" : "FALSE";
+      }
+      if (hasAddGuests){
+        updates["X-NCTALK-ADD-GUESTS"] = meta.addGuests ? "TRUE" : "FALSE";
+      }
+      if (hasAddUsers || hasAddGuests){
+        updates["X-NCTALK-ADD-PARTICIPANTS"] = (meta.addUsers || meta.addGuests) ? "TRUE" : "FALSE";
+      }else if (Object.prototype.hasOwnProperty.call(meta, "addParticipants")){
+        updates["X-NCTALK-ADD-PARTICIPANTS"] = meta.addParticipants ? "TRUE" : "FALSE";
+      }
+      if (Object.prototype.hasOwnProperty.call(meta, "delegateId")){
+        updates["X-NCTALK-DELEGATE"] = meta.delegateId ? String(meta.delegateId) : null;
+      }
+      if (Object.prototype.hasOwnProperty.call(meta, "delegateName")){
+        updates["X-NCTALK-DELEGATE-NAME"] = meta.delegateName ? String(meta.delegateName) : null;
+      }
+      if (Object.prototype.hasOwnProperty.call(meta, "delegated")){
+        updates["X-NCTALK-DELEGATED"] = meta.delegated ? "TRUE" : "FALSE";
+      }
+      if (meta?.delegateId && meta.delegated !== true){
+        updates["X-NCTALK-DELEGATE-READY"] = "TRUE";
+      }
+
+      const baseIcal = context.item?.item || "";
+      const { ical } = applyIcalPropertyUpdates(baseIcal, updates);
+      context.item.item = ical;
+      refreshCalendarWizardContextSnapshot(context);
+
+      if (!browser?.ncCalToolbar?.setItemProperties){
+        console.error("[NCBG] ncCalToolbar.setItemProperties missing");
+        throw localizedError("talk_error_apply_failed");
+      }
+      const editor = context.editorRef || {};
+      const editorRef = {};
+      if (typeof editor.windowId === "number"){
+        editorRef.windowId = editor.windowId;
+      }
+      if (typeof editor.dialogOuterId === "number"){
+        editorRef.dialogOuterId = editor.dialogOuterId;
+      }
+      if (!Object.keys(editorRef).length){
+        throw new Error(bgI18n("talk_error_editor_context_missing"));
+      }
+      const propResponse = await browser.ncCalToolbar.setItemProperties({
+        editor: editorRef,
+        properties: updates
+      });
+      if (!propResponse?.ok){
+        throw new Error(propResponse?.error || bgI18n("talk_error_apply_failed"));
+      }
+
+      if (meta?.token && context.item?.calendarId && context.item?.id){
+        await setEventTokenEntry(context.item.calendarId, context.item.id, { token: meta.token, url: meta.url || "" });
+      }
+      return { ok:true };
     }catch(e){
+      if (meta?.token){
+        try{
+          await deleteTalkRoom({ token: meta.token });
+          await deleteRoomMeta(meta.token);
+        }catch(_){}
+      }
       return { ok:false, error: e?.message || String(e) };
     }
   }
   if (msg.type === "talk:registerCleanup"){
-    const windowId = msg.windowId ?? msg?.payload?.windowId;
-    const dialogOuterId = msg.dialogOuterId ?? msg?.payload?.dialogOuterId;
-    if (typeof windowId !== "number"){
-      return { ok:false, error: "windowId required" };
+    const contextId = msg.contextId ?? msg?.payload?.contextId;
+    if (!contextId){
+      return { ok:false, error: bgI18n("talk_error_context_id_missing") };
+    }
+    const context = getCalendarWizardContext(contextId);
+    if (!context){
+      return { ok:false, error: bgI18n("talk_error_context_reference") };
     }
     const token = msg.token ?? msg?.payload?.token;
     if (!token){
@@ -725,12 +1035,43 @@ browser.runtime.onMessage.addListener(async (msg) => {
     }
     const info = msg.info ?? msg?.payload?.info ?? {};
     try{
-      const response = await browser.calToolbar.invokeWindow({
-        windowId,
-        action: "registerCleanup",
-        payload: attachDialogOuterId({ token, info }, dialogOuterId)
+      const editorRef = context.editorRef || {};
+      const editorKey = makeRoomCleanupEditorKey(editorRef);
+      if (!editorKey){
+        return { ok:false, error: bgI18n("talk_error_editor_context_missing") };
+      }
+
+      const previousToken = ROOM_CLEANUP_BY_EDITOR.get(editorKey);
+      if (previousToken && previousToken !== token){
+        scheduleRoomCleanupDelete(previousToken, "superseded", 0);
+      }
+
+      ROOM_CLEANUP_BY_EDITOR.set(editorKey, token);
+      ROOM_CLEANUP_BY_TOKEN.set(token, {
+        token,
+        editorKey,
+        info: info || {},
+        registered: Date.now(),
+        timerId: null
       });
-      return response;
+
+      if (!browser?.ncCalToolbar?.registerRoomCleanup){
+        console.error("[NCBG] ncCalToolbar.registerRoomCleanup missing");
+        removeRoomCleanupEntry(token, "registerRoomCleanup_missing");
+        return { ok:false, error: bgI18n("talk_error_apply_failed") };
+      }
+      const resp = await browser.ncCalToolbar.registerRoomCleanup({
+        editor: editorRef,
+        token
+      });
+      if (!resp?.ok){
+        console.error("[NCBG] ncCalToolbar.registerRoomCleanup failed", resp?.error || "");
+        removeRoomCleanupEntry(token, "registerRoomCleanup_failed");
+        return { ok:false, error: bgI18n("talk_error_apply_failed") };
+      }
+
+      deleteCalendarWizardContext(contextId);
+      return { ok:true };
     }catch(e){
       return { ok:false, error: e?.message || String(e) };
     }
@@ -800,6 +1141,7 @@ browser.runtime.onMessage.addListener(async (msg) => {
       return { ok:false, error: e?.message || String(e) };
     }
   }
+  })();
 });
 
 /**
@@ -953,6 +1295,42 @@ function unescapeIcalText(value){
 }
 
 /**
+ * Escape iCalendar TEXT values (RFC 5545) for writing.
+ * @param {any} value
+ * @returns {string}
+ */
+function escapeIcalText(value){
+  if (value == null) return "";
+  return String(value)
+    .replace(/\\/g, "\\\\")
+    .replace(/\r\n|\r|\n/g, "\\n")
+    .replace(/,/g, "\\,")
+    .replace(/;/g, "\\;");
+}
+
+/**
+ * Fold an iCalendar content line to 75 characters (approximation; RFC uses octets).
+ * @param {string} line
+ * @param {number} limit
+ * @returns {string}
+ */
+function foldIcalLine(line, limit = 75){
+  const raw = String(line || "");
+  if (!raw || raw.length <= limit){
+    return raw;
+  }
+  const out = [];
+  out.push(raw.slice(0, limit));
+  let pos = limit;
+  const contLimit = Math.max(1, limit - 1);
+  while (pos < raw.length){
+    out.push(raw.slice(pos, pos + contLimit));
+    pos += contLimit;
+  }
+  return out.join("\r\n ");
+}
+
+/**
  * Extract an e-mail address from a calendar address value.
  * @param {string} value
  * @returns {string}
@@ -1015,12 +1393,16 @@ function extractIcalAttendees(ical){
 
 /**
  * Add calendar attendees to a Talk room.
- * @param {{token:string,ical:string}} payload
+ * @param {{token:string,ical:string,addUsers?:boolean,addGuests?:boolean}} payload
  * @returns {Promise<{ok:boolean,total:number,added:number,failed:number}>}
  */
-async function addInviteesToTalkRoom({ token, ical } = {}){
+async function addInviteesToTalkRoom({ token, ical, addUsers = true, addGuests = true } = {}){
   if (!token || !ical){
     return { ok:false, total:0, added:0, failed:0 };
+  }
+  if (!addUsers && !addGuests){
+    L("invitees add skipped (disabled)", { token: shortToken(token) });
+    return { ok:true, total:0, added:0, failed:0 };
   }
   const attendees = extractIcalAttendees(ical);
   if (!attendees.length){
@@ -1048,6 +1430,8 @@ async function addInviteesToTalkRoom({ token, ical } = {}){
   let failed = 0;
   let users = 0;
   let emails = 0;
+  let skippedUsers = 0;
+  let skippedGuests = 0;
   for (const email of attendees){
     const lower = email.toLowerCase();
     const userId = emailToUserId.get(lower) || "";
@@ -1055,8 +1439,16 @@ async function addInviteesToTalkRoom({ token, ical } = {}){
     const actorId = userId || email;
     if (userId){
       users += 1;
+      if (!addUsers){
+        skippedUsers += 1;
+        continue;
+      }
     }else{
       emails += 1;
+      if (!addGuests){
+        skippedGuests += 1;
+        continue;
+      }
     }
     try{
       await addTalkParticipant({ token, actorId, source });
@@ -1073,8 +1465,12 @@ async function addInviteesToTalkRoom({ token, ical } = {}){
   L("invitees add result", {
     token: shortToken(token),
     total: attendees.length,
+    addUsers,
+    addGuests,
     users,
     emails,
+    skippedUsers,
+    skippedGuests,
     added,
     failed
   });
@@ -1294,6 +1690,15 @@ function extractTalkMetadataFromIcal(ical){
   const startFromDt = parseIcalDateTime(dtStart?.value || "", dtStart?.tzid || null);
   const endFromDt = parseIcalDateTime(dtEnd?.value || "", dtEnd?.tzid || null);
   const delegateReadyRaw = props["X-NCTALK-DELEGATE-READY"];
+  const addParticipantsLegacy = parseBooleanProp(props["X-NCTALK-ADD-PARTICIPANTS"]);
+  const hasAddUsers = Object.prototype.hasOwnProperty.call(props, "X-NCTALK-ADD-USERS");
+  const hasAddGuests = Object.prototype.hasOwnProperty.call(props, "X-NCTALK-ADD-GUESTS");
+  let addUsers = parseBooleanProp(props["X-NCTALK-ADD-USERS"]);
+  let addGuests = parseBooleanProp(props["X-NCTALK-ADD-GUESTS"]);
+  if (!hasAddUsers && !hasAddGuests && addParticipantsLegacy != null){
+    addUsers = addParticipantsLegacy;
+    addGuests = addParticipantsLegacy;
+  }
   return {
     token: link.token || "",
     url: link.url || "",
@@ -1309,7 +1714,8 @@ function extractTalkMetadataFromIcal(ical){
       return raw.trim().toLowerCase() === "event";
     })(),
     objectId: props["X-NCTALK-OBJECTID"] || "",
-    addParticipants: parseBooleanProp(props["X-NCTALK-ADD-PARTICIPANTS"]),
+    addUsers,
+    addGuests,
     delegateId: props["X-NCTALK-DELEGATE"] || "",
     delegateName: props["X-NCTALK-DELEGATE-NAME"] || "",
     delegated: parseBooleanProp(props["X-NCTALK-DELEGATED"]),
@@ -1326,13 +1732,16 @@ function extractTalkMetadataFromIcal(ical){
  */
 function applyIcalPropertyUpdates(ical, updates){
   if (!ical || !updates) return { ical, changed:false };
-  const updateKeys = Object.keys(updates).map((key) => key.toUpperCase());
-  if (!updateKeys.length) return { ical, changed:false };
   const updateMap = {};
-  updateKeys.forEach((key) => {
-    updateMap[key] = updates[key];
-  });
-  const lines = String(ical).split(/\r?\n/);
+  for (const [rawKey, rawValue] of Object.entries(updates)){
+    if (!rawKey) continue;
+    const key = String(rawKey).toUpperCase();
+    updateMap[key] = rawValue === undefined ? null : rawValue;
+  }
+  const updateKeys = Object.keys(updateMap);
+  if (!updateKeys.length) return { ical, changed:false };
+
+  const lines = unfoldIcal(ical).split(/\r?\n/);
   const result = [];
   const seen = {};
   let inEvent = false;
@@ -1343,18 +1752,20 @@ function applyIcalPropertyUpdates(ical, updates){
     if (line === "BEGIN:VEVENT"){
       inEvent = true;
       eventIndex++;
-      result.push(line);
+      result.push(foldIcalLine(line));
       continue;
     }
     if (line === "END:VEVENT" && inEvent && eventIndex === 1){
       for (const key of updateKeys){
         const value = updateMap[key];
-        if (!seen[key] && value != null){
-          result.push(`${key}:${value}`);
-          changed = true;
+        if (seen[key] || value == null){
+          continue;
         }
+        const nextLine = `${key}:${escapeIcalText(value)}`;
+        result.push(foldIcalLine(nextLine));
+        changed = true;
       }
-      result.push(line);
+      result.push(foldIcalLine(line));
       inEvent = false;
       continue;
     }
@@ -1367,15 +1778,19 @@ function applyIcalPropertyUpdates(ical, updates){
           changed = true;
           continue;
         }
-        const nextLine = `${parsed.name}:${nextValue}`;
-        if (nextLine !== line){
+        const idx = line.indexOf(":");
+        const left = idx >= 0 ? line.slice(0, idx) : parsed.name;
+        const currentUnescaped = unescapeIcalText(parsed.value || "");
+        const desired = String(nextValue);
+        if (currentUnescaped !== desired){
           changed = true;
         }
-        result.push(nextLine);
+        const nextLine = `${left}:${escapeIcalText(desired)}`;
+        result.push(foldIcalLine(nextLine));
         continue;
       }
     }
-    result.push(line);
+    result.push(foldIcalLine(line));
   }
   return { ical: result.join("\r\n"), changed };
 }
@@ -1421,6 +1836,7 @@ async function handleCalendarItemUpsert(item){
     if (!meta?.token){
       return;
     }
+    removeRoomCleanupEntry(meta.token, "calendar_upsert");
     await setEventTokenEntry(item.calendarId, item.id, { token: meta.token, url: meta.url });
 
     if (typeof meta.startTimestamp === "number" && meta.lobbyEnabled !== false){
@@ -1461,9 +1877,40 @@ async function handleCalendarItemUpsert(item){
       }
     }
 
-    if (meta.addParticipants === true){
+    if (meta.addUsers === true || meta.addGuests === true){
       try{
-        await addInviteesToTalkRoom({ token: meta.token, ical: item.item });
+        let canSync = true;
+        const delegateIdRaw = (meta.delegateId || "").trim();
+        if (meta.delegated === true && delegateIdRaw){
+          const { user: currentUserRaw } = await NCCore.getOpts();
+          const currentUser = (currentUserRaw || "").trim().toLowerCase();
+          const delegateId = delegateIdRaw.toLowerCase();
+          if (currentUser && delegateId && currentUser !== delegateId){
+            canSync = false;
+            L("invitee sync skipped (delegate mismatch)", {
+              token: shortToken(meta.token),
+              delegate: meta.delegateId || "",
+              currentUser: currentUserRaw || ""
+            });
+          }
+        }
+        if (canSync){
+          if (INVITEE_SYNC_IN_FLIGHT.has(meta.token)){
+            L("invitee sync skipped (inflight)", { token: shortToken(meta.token) });
+          }else{
+            INVITEE_SYNC_IN_FLIGHT.add(meta.token);
+            try{
+              await addInviteesToTalkRoom({
+                token: meta.token,
+                ical: item.item,
+                addUsers: meta.addUsers === true,
+                addGuests: meta.addGuests === true
+              });
+            }finally{
+              INVITEE_SYNC_IN_FLIGHT.delete(meta.token);
+            }
+          }
+        }
       }catch(e){
         console.error("[NCBG] add invitees failed", e);
       }
@@ -1472,16 +1919,27 @@ async function handleCalendarItemUpsert(item){
     const legacyMode = !meta.delegateReadyKnown;
     if (meta.delegateId && meta.delegated !== true){
       if (meta.delegateReady === true || legacyMode){
-        const result = await applyCalendarDelegation({
-          token: meta.token,
-          delegateId: meta.delegateId,
-          delegateName: meta.delegateName || meta.delegateId
-        });
-        if (result?.ok){
-          await updateCalendarItemProps(item, {
-            "X-NCTALK-DELEGATED": "TRUE",
-            "X-NCTALK-DELEGATE-READY": null
-          });
+        if (DELEGATION_IN_FLIGHT.has(meta.token)){
+          L("calendar delegation skipped (inflight)", { token: shortToken(meta.token) });
+        }else{
+          DELEGATION_IN_FLIGHT.add(meta.token);
+          try{
+            const result = await applyCalendarDelegation({
+              token: meta.token,
+              delegateId: meta.delegateId,
+              delegateName: meta.delegateName || meta.delegateId
+            });
+            if (result?.ok){
+              await updateCalendarItemProps(item, {
+                "X-NCTALK-DELEGATED": "TRUE",
+                "X-NCTALK-DELEGATE-READY": null
+              });
+            }
+          }catch(e){
+            console.error("[NCBG] calendar delegation failed", e);
+          }finally{
+            DELEGATION_IN_FLIGHT.delete(meta.token);
+          }
         }
       }
     }
@@ -1502,9 +1960,40 @@ async function handleCalendarItemRemoved(calendarId, id){
     if (!entry?.token){
       return;
     }
-    await deleteTalkRoom({ token: entry.token });
-    await deleteRoomMeta(entry.token);
-    await removeEventTokenEntry(calendarId, id);
+    const token = entry.token;
+    const meta = getRoomMeta(token) || {};
+    const delegateIdRaw = typeof meta.delegateId === "string" ? meta.delegateId.trim() : "";
+    if (meta.delegated === true && delegateIdRaw){
+      try{
+        const { user: currentUserRaw } = await NCCore.getOpts();
+        const currentUser = (currentUserRaw || "").trim().toLowerCase();
+        const delegateId = delegateIdRaw.toLowerCase();
+        if (currentUser && delegateId && currentUser !== delegateId){
+          L("calendar item removed: skip room delete (delegated)", {
+            token: shortToken(token),
+            delegate: delegateIdRaw,
+            currentUser: currentUserRaw || ""
+          });
+          await deleteRoomMeta(token);
+          await removeEventTokenEntry(calendarId, id);
+          return;
+        }
+      }catch(_){}
+    }
+
+    try{
+      await deleteTalkRoom({ token });
+    }catch(e){
+      const msg = e?.message || String(e);
+      if (/\b403\b/.test(msg)){
+        L("calendar item removed: room delete forbidden", { token: shortToken(token) });
+      }else{
+        console.error("[NCBG] calendar item removed: room delete failed", e);
+      }
+    }finally{
+      await deleteRoomMeta(token);
+      await removeEventTokenEntry(calendarId, id);
+    }
   }catch(e){
     console.error("[NCBG] calendar item removed handler failed", e);
   }
@@ -1523,137 +2012,12 @@ function startCalendarMonitor(){
   browser.calendar.items.onRemoved.addListener(handleCalendarItemRemoved);
 }
 
-browser.calToolbar.onCreateRequest.addListener(async (payload = {}) => {
-  L("calToolbar.onCreateRequest", {
-    title: payload?.title || "",
-    hasPassword: !!payload?.password,
-    enableLobby: !!payload?.enableLobby,
-    enableListable: !!payload?.enableListable,
-    eventConversation: !!payload?.eventConversation
-  });
-  try {
-    const out = await createTalkPublicRoom(payload);
-    return { ok:true, url: out.url, token: out.token, fallback: !!out.fallback, reason: out.reason };
-  } catch(e){
-    return { ok:false, error: e?.message || String(e) };
-  }
-});
-
-browser.calToolbar.onUtilityRequest.addListener(async (payload = {}) => {
-  const type = payload?.type || "";
-  L("calToolbar.onUtilityRequest", {
-    type,
-    token: payload?.token ? shortToken(payload.token) : "",
-    searchTerm: payload?.searchTerm || "",
-    delegate: payload?.newModerator || ""
-  });
-
-  const handlers = {
-    debugLog: async () => {
-      if (DEBUG_ENABLED){
-        const channel = String(payload?.channel || "NCDBG").toUpperCase();
-        const label = payload?.label ? String(payload.label) : "";
-        const prefix = label ? `[${channel}][${label}]` : `[${channel}]`;
-        const textLog = payload?.text ? String(payload.text) : "";
-        const extras = Array.isArray(payload?.details)
-          ? payload.details
-          : (payload?.details != null ? [payload.details] : []);
-        console.log(prefix, textLog, ...extras);
-      }
-      return { ok:true };
-    },
-    trackRoom: async () => {
-      if (!payload?.token){
-        return { ok:false, error: bgI18n("error_room_token_missing") };
-      }
-      const updates = {
-        lobbyEnabled: !!payload.lobbyEnabled,
-        eventConversation: !!payload.eventConversation
-      };
-      if (typeof payload?.startTimestamp === "number"){
-        updates.startTimestamp = payload.startTimestamp;
-      }
-      await setRoomMeta(payload.token, updates);
-      return { ok:true };
-    },
-    untrackRoom: async () => {
-      await deleteRoomMeta(payload?.token);
-      return { ok:true };
-    },
-    calendarUpdateLobby: async () => {
-      return await applyCalendarLobbyUpdate(payload);
-    },
-    getConfig: async () => {
-      const config = await NCCore.getOpts();
-      return { ok:true, config };
-    },
-    decodeAvatar: async () => {
-      try{
-        const result = await decodeAvatarPixels({ base64: payload?.base64, mime: payload?.mime });
-        return {
-          ok:true,
-          width: result.width,
-          height: result.height,
-          byteLength: result.byteLength,
-          pixels: result.pixels
-        };
-      }catch(err){
-        L("decodeAvatar utility error", err?.message || String(err));
-        throw err;
-      }
-    },
-    supportsEventConversation: async () => {
-      const info = await getEventConversationSupport();
-      return { ok:true, supported: info.supported, reason: info.reason || "" };
-    },
-    delegateModerator: async () => {
-      const result = await delegateRoomModerator(payload || {});
-      return { ok:true, result };
-    },
-    deleteRoom: async () => {
-      await deleteTalkRoom(payload || {});
-      await deleteRoomMeta(payload?.token);
-      return { ok:true };
-    },
-    searchUsers: async () => {
-      const users = await searchSystemAddressbook(payload || {});
-      return { ok:true, users };
-    },
-    openDialog: async () => {
-      try{
-        const windowId = payload?.windowId ?? null;
-        const dialogOuterId = payload?.dialogOuterId ?? null;
-        await openTalkDialogWindow(windowId, dialogOuterId);
-        return { ok:true };
-      }catch(e){
-        return { ok:false, error: e?.message || String(e) };
-      }
-    }
-  };
-
-  try{
-    const handler = handlers[type];
-    if (!handler){
-      return { ok:false, error: bgI18n("error_unknown_utility_request") };
-    }
-    return await handler();
-  }catch(e){
-    return { ok:false, error: e?.message || String(e) };
-  }
-});
-
-// *** IMPORTANT: initialize experiment on startup ***
+// *** IMPORTANT: initialize calendar monitor on startup ***
 (async () => {
   try{
-    const defaultLabel = bgI18n("ui_insert_button_label");
-    const defaultTooltip = bgI18n("ui_toolbar_tooltip");
     startCalendarMonitor();
-    const ok = await browser.calToolbar.init({ label: defaultLabel, tooltip: defaultTooltip });
-    if (!ok){
-      console.warn("[NCBG] experiment init returned falsy value");
-    }
   }catch(e){
-    console.error("[NCBG] init error", e);
+    console.error("[NCBG] calendar monitor init error", e);
   }
 })();
 

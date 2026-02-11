@@ -10,6 +10,7 @@
   const MIN_CONTENT_HEIGHT = 0;
   const CONTENT_MARGIN = 0;
   let layoutObserver = null;
+  const dialogRoot = document.querySelector(".dialog");
   const popupSizer = window.NCTalkPopupSizing?.createPopupSizer({
     fixedWidth: POPUP_CONTENT_WIDTH,
     minHeight: MIN_CONTENT_HEIGHT,
@@ -19,18 +20,22 @@
 
   const LOG_PREFIX = "[NCUI][Talk]";
   const params = new URLSearchParams(window.location.search);
-  const windowId = parseInt(params.get("windowId") || "", 10);
-  const dialogOuterId = parseInt(params.get("dialogOuterId") || "", 10);
+  const contextId = (params.get("contextId") || "").trim();
   const titleInput = document.getElementById("titleInput");
   const passwordInput = document.getElementById("passwordInput");
   const passwordToggle = document.getElementById("passwordToggle");
   const passwordFields = document.getElementById("passwordFields");
   const passwordGenerateBtn = document.getElementById("passwordGenerateBtn");
-  const addParticipantsToggle = document.getElementById("addParticipantsToggle");
+  const addUsersToggle = document.getElementById("addUsersToggle");
+  const addGuestsToggle = document.getElementById("addGuestsToggle");
   const lobbyToggle = document.getElementById("lobbyToggle");
   const listableToggle = document.getElementById("listableToggle");
-  const roomTypeRadios = document.querySelectorAll('input[name="roomType"]');
-  const dialogRoot = document.querySelector(".dialog");
+  const roomTypePicker = document.getElementById("roomTypePicker");
+  const roomTypeButton = document.getElementById("roomTypeButton");
+  const roomTypeButtonLabel = document.getElementById("roomTypeButtonLabel");
+  const roomTypeDropdown = document.getElementById("roomTypeDropdown");
+  const roomTypeValue = document.getElementById("roomTypeValue");
+  const roomTypeOptions = Array.from(document.querySelectorAll(".roomtype-option"));
   const delegateInput = document.getElementById("delegateInput");
   const delegateClearBtn = document.getElementById("delegateClearBtn");
   const delegateStatus = document.getElementById("delegateStatus");
@@ -76,11 +81,11 @@
   });
 
   const state = {
-    windowId: Number.isFinite(windowId) ? windowId : null,
-    dialogOuterId: Number.isFinite(dialogOuterId) ? dialogOuterId : null,
+    contextId: contextId || null,
     metadata: null,
     event: null,
     passwordPolicy: null,
+    debugEnabled: false,
     busy: false,
     delegate: {
       selected: null,
@@ -93,17 +98,31 @@
     }
   };
 
+  (async () => {
+    try{
+      const stored = await browser.storage.local.get(["debugEnabled"]);
+      state.debugEnabled = !!stored.debugEnabled;
+      logDebug("popup init", {
+        contextId: state.contextId || ""
+      });
+    }catch(_){ }
+  })();
+  try{
+    browser.storage.onChanged.addListener((changes, area) => {
+      if (area !== "local") return;
+      if (Object.prototype.hasOwnProperty.call(changes, "debugEnabled")){
+        state.debugEnabled = !!changes.debugEnabled.newValue;
+      }
+    });
+  }catch(_){ }
+
   if (passwordInput){
     passwordInput.setAttribute("placeholder", t("ui_create_password_placeholder"));
   }
 
-  logDebug("popup init", {
-    rawWindowId: params.get("windowId"),
-    parsedWindowId: state.windowId
-  });
   bindEvents();
-  if (!state.windowId){
-    setMessage(t("talk_error_window_id_missing"), true);
+  if (!state.contextId){
+    setMessage(t("talk_error_context_id_missing"), true);
   }else{
     init();
   }
@@ -129,14 +148,99 @@
     });
     passwordGenerateBtn?.addEventListener("click", handlePasswordGenerate);
     passwordToggle?.addEventListener("change", handlePasswordToggle);
+    initRoomTypePicker();
     initDelegateField();
   }
 
-  function attachDialogOuterId(message){
-    if (typeof state.dialogOuterId !== "number"){
-      return message;
+  function initRoomTypePicker(){
+    if (!roomTypePicker || !roomTypeButton || !roomTypeDropdown || !roomTypeValue){
+      return;
     }
-    return Object.assign({}, message, { dialogOuterId: state.dialogOuterId });
+
+    roomTypeButton.addEventListener("click", (event) => {
+      event.preventDefault();
+      if (state.busy){
+        return;
+      }
+      toggleRoomTypeDropdown();
+    });
+
+    roomTypeOptions.forEach((button) => {
+      button.addEventListener("click", (event) => {
+        event.preventDefault();
+        if (state.busy){
+          return;
+        }
+        setRoomTypeValue(button.dataset.value || "normal");
+        closeRoomTypeDropdown();
+        try{
+          roomTypeButton.focus();
+        }catch(_){ }
+      });
+    });
+
+    document.addEventListener("click", (event) => {
+      if (!roomTypePicker.contains(event.target)){
+        closeRoomTypeDropdown();
+      }
+    });
+
+    document.addEventListener("keydown", (event) => {
+      if (event.key === "Escape"){
+        closeRoomTypeDropdown();
+      }
+    });
+
+    setRoomTypeValue(roomTypeValue.value || "event", { closeDropdown:false });
+  }
+
+  function isRoomTypeDropdownOpen(){
+    return !!(roomTypeDropdown && roomTypeDropdown.hidden === false);
+  }
+
+  function openRoomTypeDropdown(){
+    if (!roomTypeDropdown){
+      return;
+    }
+    roomTypeDropdown.hidden = false;
+    roomTypeButton?.setAttribute("aria-expanded", "true");
+  }
+
+  function closeRoomTypeDropdown(){
+    if (!roomTypeDropdown){
+      return;
+    }
+    roomTypeDropdown.hidden = true;
+    roomTypeButton?.setAttribute("aria-expanded", "false");
+  }
+
+  function toggleRoomTypeDropdown(){
+    if (isRoomTypeDropdownOpen()){
+      closeRoomTypeDropdown();
+    }else{
+      openRoomTypeDropdown();
+    }
+  }
+
+  function setRoomTypeValue(value, options = {}){
+    const closeDropdown = options.closeDropdown !== false;
+    const normalized = value === "event" ? "event" : "normal";
+    if (roomTypeValue){
+      roomTypeValue.value = normalized;
+    }
+    if (roomTypeButtonLabel){
+      roomTypeButtonLabel.textContent = normalized === "event"
+        ? t("ui_create_mode_event")
+        : t("ui_create_mode_standard");
+    }
+    roomTypeOptions.forEach((button) => {
+      const selected = button.dataset.value === normalized;
+      button.dataset.selected = selected ? "true" : "false";
+      button.setAttribute("aria-selected", selected ? "true" : "false");
+    });
+    if (closeDropdown){
+      closeRoomTypeDropdown();
+    }
   }
 
   /**
@@ -145,10 +249,10 @@
    */
   async function init(){
     try{
-      const check = await browser.runtime.sendMessage(attachDialogOuterId({
+      const check = await browser.runtime.sendMessage({
         type: "talk:initDialog",
-        windowId: state.windowId
-      }));
+        contextId: state.contextId
+      });
       if (!check?.ok){
         throw new Error(check?.error || t("talk_error_init_failed"));
       }
@@ -170,7 +274,8 @@
       listable: true,
       roomType: "event",
       passwordEnabled: true,
-      addParticipantsEnabled: false
+      addUsersEnabled: false,
+      addGuestsEnabled: false
     };
     if (!browser?.storage?.local){
       return defaults;
@@ -180,6 +285,8 @@
         "talkDefaultTitle",
         "talkDefaultLobby",
         "talkDefaultListable",
+        "talkAddUsersDefaultEnabled",
+        "talkAddGuestsDefaultEnabled",
         "talkAddParticipantsDefaultEnabled",
         "talkDefaultRoomType",
         "talkPasswordDefaultEnabled"
@@ -194,8 +301,17 @@
       if (typeof stored.talkDefaultListable === "boolean"){
         defaults.listable = stored.talkDefaultListable;
       }
-      if (typeof stored.talkAddParticipantsDefaultEnabled === "boolean"){
-        defaults.addParticipantsEnabled = stored.talkAddParticipantsDefaultEnabled;
+      if (typeof stored.talkAddUsersDefaultEnabled === "boolean"){
+        defaults.addUsersEnabled = stored.talkAddUsersDefaultEnabled;
+      }
+      if (typeof stored.talkAddGuestsDefaultEnabled === "boolean"){
+        defaults.addGuestsEnabled = stored.talkAddGuestsDefaultEnabled;
+      }
+      if (typeof stored.talkAddParticipantsDefaultEnabled === "boolean"
+        && typeof stored.talkAddUsersDefaultEnabled !== "boolean"
+        && typeof stored.talkAddGuestsDefaultEnabled !== "boolean"){
+        defaults.addUsersEnabled = stored.talkAddParticipantsDefaultEnabled;
+        defaults.addGuestsEnabled = stored.talkAddParticipantsDefaultEnabled;
       }
       if (typeof stored.talkPasswordDefaultEnabled === "boolean"){
         defaults.passwordEnabled = stored.talkPasswordDefaultEnabled;
@@ -317,48 +433,79 @@
    */
   async function loadSnapshot(){
     try{
-      const response = await browser.runtime.sendMessage(attachDialogOuterId({
+      const response = await browser.runtime.sendMessage({
         type: "talk:getEventSnapshot",
-        windowId: state.windowId
-      }));
+        contextId: state.contextId
+      });
       if (!response?.ok){
         throw new Error(response?.error || t("talk_error_snapshot_failed"));
       }
       state.metadata = response.metadata || {};
       state.event = response.event || {};
       const defaults = await loadTalkDefaults();
-      const eventTitle = (state.event.title || "").trim();
-      const metaTitle = (state.metadata.title || "").trim();
-      const fallbackTitle = defaults.title || t("ui_default_title");
-      titleInput.value = eventTitle || metaTitle || fallbackTitle;
-      const lobbyValue = state.metadata.lobbyEnabled;
-      const listableValue = state.metadata.listable;
-      const eventValue = state.metadata.eventConversation;
-      const addParticipantsValue = state.metadata.addParticipants;
-      lobbyToggle.checked = lobbyValue == null ? !!defaults.lobby : !!lobbyValue;
-      listableToggle.checked = listableValue == null ? !!defaults.listable : !!listableValue;
-      if (addParticipantsToggle){
-        addParticipantsToggle.checked = addParticipantsValue == null
-          ? !!defaults.addParticipantsEnabled
-          : !!addParticipantsValue;
-      }
-      const eventMode = eventValue == null ? defaults.roomType !== "normal" : !!eventValue;
-      roomTypeRadios.forEach((radio) => {
-        radio.checked = radio.value === (eventMode ? "event" : "normal");
-      });
-      if (passwordToggle){
-        const enabled = defaults.passwordEnabled !== false;
-        passwordToggle.checked = enabled;
-        applyPasswordToggleState(enabled);
-        if (enabled && passwordInput && !passwordInput.value){
-          passwordInput.value = await generatePasswordFromPolicy();
-        }
-      }
-      hydrateDelegateFromMetadata(state.metadata);
+      applyDefaultsToUi(defaults, state.event, state.metadata);
       popupSizer?.scheduleSizeUpdate();
     }catch(error){
       setMessage(error?.message || String(error), true);
     }
+  }
+
+  function applyDefaultsToUi(defaults, event = null, metadata = null){
+    const effectiveDefaults = defaults || {
+      title: t("ui_default_title"),
+      lobby: true,
+      listable: true,
+      roomType: "event",
+      passwordEnabled: true,
+      addUsersEnabled: false,
+      addGuestsEnabled: false
+    };
+    const ev = event || {};
+    const meta = metadata || {};
+
+    const eventTitle = (ev.title || "").trim();
+    const metaTitle = (meta.title || "").trim();
+    const fallbackTitle = effectiveDefaults.title || t("ui_default_title");
+    if (titleInput){
+      titleInput.value = eventTitle || metaTitle || fallbackTitle;
+    }
+
+    const lobbyValue = meta.lobbyEnabled;
+    const listableValue = meta.listable;
+    const eventValue = meta.eventConversation;
+    const addUsersValue = meta.addUsers;
+    const addGuestsValue = meta.addGuests;
+    if (lobbyToggle){
+      lobbyToggle.checked = lobbyValue == null ? !!effectiveDefaults.lobby : !!lobbyValue;
+    }
+    if (listableToggle){
+      listableToggle.checked = listableValue == null ? !!effectiveDefaults.listable : !!listableValue;
+    }
+    if (addUsersToggle){
+      addUsersToggle.checked = addUsersValue == null
+        ? !!effectiveDefaults.addUsersEnabled
+        : !!addUsersValue;
+    }
+    if (addGuestsToggle){
+      addGuestsToggle.checked = addGuestsValue == null
+        ? !!effectiveDefaults.addGuestsEnabled
+        : !!addGuestsValue;
+    }
+    const eventMode = eventValue == null ? effectiveDefaults.roomType !== "normal" : !!eventValue;
+    setRoomTypeValue(eventMode ? "event" : "normal", { closeDropdown:false });
+      if (passwordToggle){
+        const enabled = effectiveDefaults.passwordEnabled !== false;
+        passwordToggle.checked = enabled;
+        applyPasswordToggleState(enabled);
+        if (enabled && passwordInput && !passwordInput.value && state.passwordPolicy){
+          generatePasswordFromPolicy().then((pwd) => {
+            if (pwd && passwordInput && !passwordInput.value){
+              passwordInput.value = pwd;
+            }
+          }).catch(() => {});
+        }
+      }
+      hydrateDelegateFromMetadata(meta);
   }
 
   /**
@@ -370,7 +517,7 @@
       return;
     }
     logDebug("handleOk start", {
-      windowId: state.windowId
+      contextId: state.contextId || ""
     });
     if (!(await ensureValidPassword())){
       return;
@@ -394,7 +541,7 @@
       }
       logDebug("createRoom success", {
         includeEvent: payload.eventConversation,
-        windowId: state.windowId
+        contextId: state.contextId || ""
       });
       await applyCreateResult(payload, response.result || {});
       window.close();
@@ -413,7 +560,7 @@
   function buildCreatePayload(){
     const startTimestamp = ensureUnixSeconds(state.event?.startTimestamp || state.metadata?.startTimestamp);
     const endTimestamp = ensureUnixSeconds(state.event?.endTimestamp || state.metadata?.endTimestamp || state.event?.startTimestamp);
-    const type = Array.from(roomTypeRadios).find((radio) => radio.checked)?.value || "normal";
+    const type = roomTypeValue?.value === "event" ? "event" : "normal";
     const objectMeta = buildEventObjectMetadata(startTimestamp, endTimestamp);
     const delegateId = delegateInput?.value.trim() || "";
     const delegateSelection = getDelegateSelectionPreview();
@@ -422,14 +569,16 @@
       : "";
     const passwordEnabled = !!passwordToggle?.checked;
     const passwordValue = passwordEnabled ? (passwordInput?.value || "").trim() : "";
-    const addParticipants = !!addParticipantsToggle?.checked;
+    const addUsers = !!addUsersToggle?.checked;
+    const addGuests = !!addGuestsToggle?.checked;
     setDelegateAlertLabel(normalizedDelegateName || delegateId || state.delegate.alertLabel || delegateInput?.value);
     return {
       title: titleInput.value.trim(),
       password: passwordEnabled ? (passwordValue || undefined) : undefined,
       enableLobby: !!lobbyToggle.checked,
       enableListable: !!listableToggle.checked,
-      addParticipants,
+      addUsers,
+      addGuests,
       description: state.event?.description || "",
       startTimestamp: startTimestamp ?? null,
       eventConversation: type === "event",
@@ -475,7 +624,8 @@
       lobbyEnabled: !!payload.enableLobby,
       startTimestamp: payload.startTimestamp ?? state.metadata?.startTimestamp ?? null,
       eventConversation: !!payload.eventConversation,
-      addParticipants: !!payload.addParticipants,
+      addUsers: !!payload.addUsers,
+      addGuests: !!payload.addGuests,
       objectId: payload.objectId || state.metadata?.objectId || null
     };
     if (payload.delegateId){
@@ -484,32 +634,38 @@
       metadata.delegated = delegationInfo.delegated || false;
       metadata.delegateReady = false;
     }
-    await browser.runtime.sendMessage(attachDialogOuterId({
+    const applyMetaResponse = await browser.runtime.sendMessage({
       type: "talk:applyMetadata",
-      windowId: state.windowId,
+      contextId: state.contextId,
       metadata
-    }));
+    });
+    if (!applyMetaResponse?.ok){
+      throw new Error(applyMetaResponse?.error || t("talk_error_apply_failed"));
+    }
     const description = await composeDescription(state.event?.description || "", result.url, payload.password);
-    if (typeof state.windowId !== "number"){
-      logDebug("missing windowId for talk:applyEventFields", {
-        windowId: state.windowId
+    if (!state.contextId){
+      logDebug("missing contextId for talk:applyEventFields", {
+        contextId: state.contextId
       });
-      throw new Error(t("talk_error_window_reference"));
+      throw new Error(t("talk_error_context_reference"));
     }
     logDebug("send talk:applyEventFields", {
-      windowId: state.windowId,
+      contextId: state.contextId,
       title: payload.title,
       hasDescription: !!description
     });
-    await browser.runtime.sendMessage(attachDialogOuterId({
+    const applyFieldsResponse = await browser.runtime.sendMessage({
       type: "talk:applyEventFields",
-      windowId: state.windowId,
+      contextId: state.contextId,
       fields: {
         title: payload.title,
         location: result.url,
         description
       }
-    }));
+    });
+    if (!applyFieldsResponse?.ok){
+      throw new Error(applyFieldsResponse?.error || t("talk_error_apply_failed"));
+    }
     await browser.runtime.sendMessage({
       type: "talk:trackRoom",
       token: result.token,
@@ -517,16 +673,19 @@
       eventConversation: metadata.eventConversation,
       startTimestamp: metadata.startTimestamp ?? null
     });
-    await browser.runtime.sendMessage(attachDialogOuterId({
+    const cleanupResponse = await browser.runtime.sendMessage({
       type: "talk:registerCleanup",
-      windowId: state.windowId,
+      contextId: state.contextId,
       token: result.token,
       info: {
         objectId: metadata.objectId || null,
         eventConversation: metadata.eventConversation,
         fallback: !!result.fallback
       }
-    }));
+    });
+    if (!cleanupResponse?.ok){
+      throw new Error(cleanupResponse?.error || t("talk_error_apply_failed"));
+    }
   }
 
   /**
@@ -1354,6 +1513,9 @@
    * @param {any} data
    */
   function logDebug(label, data){
+    if (!state.debugEnabled){
+      return;
+    }
     const details = data || "";
     try{
       console.log(LOG_PREFIX, label, details);

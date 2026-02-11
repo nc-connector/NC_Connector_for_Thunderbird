@@ -620,7 +620,7 @@
     const rows = [];
     rows.push(buildTableRow(await tShare(shareLang, "sharing_html_download_label"), downloadLink));
     if (result.password){
-      const badge = `<span style="display:inline-block;font-family:'Consolas','Courier New',monospace;padding:2px 6px;border:1px solid #c7c7c7;border-radius:3px;background-color:#f4f4f4;-ms-user-select:all;user-select:all;" ondblclick="try{window.getSelection().selectAllChildren(this);}catch(e){}" onclick="try{window.getSelection().selectAllChildren(this);}catch(e){}">${escapeHtml(result.password)}</span>`;
+      const badge = `<span style="display:inline-block;font-family:'Consolas','Courier New',monospace;padding:2px 6px;border:1px solid #c7c7c7;border-radius:3px;-ms-user-select:all;user-select:all;" ondblclick="try{window.getSelection().selectAllChildren(this);}catch(e){}" onclick="try{window.getSelection().selectAllChildren(this);}catch(e){}">${escapeHtml(result.password)}</span>`;
       rows.push(buildTableRow(await tShare(shareLang, "sharing_html_password_label"), badge));
     }
     if (result.expireDate){
@@ -630,26 +630,26 @@
     const nextcloudAnchor = `<a href="https://nextcloud.com/" style="color:#0082C9;text-decoration:none;">Nextcloud</a>`;
     const footer = (await tShare(shareLang, "sharing_html_footer", [nextcloudAnchor])) || "";
     return `
-<div style="font-family:Calibri,'Segoe UI',Arial,sans-serif;font-size:11pt;color:#1f1f1f;margin:16px 0;">
-  <table role="presentation" width="640" style="border-collapse:collapse;width:640px;margin:0;background-color:transparent;">
+<div style="font-family:Calibri,'Segoe UI',Arial,sans-serif;font-size:11pt;margin:16px 0;">
+  <table role="presentation" width="640" style="border-collapse:separate;border-spacing:0;width:640px;margin:0;background-color:transparent;border:1px solid #d7d7db;border-radius:8px;overflow:hidden;">
     <tr>
       <td style="padding:0;">
         <table role="presentation" width="640" style="border-collapse:collapse;width:640px;margin:0;background-color:transparent;">
           <tr>
             <td style="padding:0;background-color:#0082C9;text-align:center;height:32px;">
-              <a href="https://github.com/DeBaschdi/NC_Connector_for_Thunderbird/" style="display:inline-block;text-decoration:none;" target="_blank" rel="noopener">
+              <a href="https://github.com/nc-connector/NC_Connector_for_Thunderbird" style="display:inline-block;text-decoration:none;" target="_blank" rel="noopener">
                 <img alt="NC Connector" style="display:block;width:auto;height:32px;max-width:164px;object-fit:contain;border:0;margin:0 auto;" src="data:image/png;base64,${headerImage}" />
               </a>
             </td>
           </tr>
           </table>
-        <div style="padding:18px 0 12px 0;">
+        <div style="padding:18px 18px 12px 18px;">
           ${paragraphs.join("\n")}
           <table style="width:100%;border-collapse:collapse;margin-bottom:10px;">
             ${rows.join("\n")}
           </table>
         </div>
-        <div style="padding:10px 0 16px 0;font-size:9pt;font-style:italic;color:#555555;">
+        <div style="padding:10px 18px 16px 18px;font-size:9pt;font-style:italic;">
           ${footer}
         </div>
       </td>
@@ -669,7 +669,7 @@
       return "";
     }
     return `<tr>
-      <th style="text-align:left;width:12ch;vertical-align:top;padding:6px 10px 6px 0;color:#333333;">${escapeHtml(label)}</th>
+      <th style="text-align:left;width:12ch;vertical-align:top;padding:6px 10px 6px 0;">${escapeHtml(label)}</th>
       <td style="padding:6px 0;max-width:50ch;word-break:break-word;">${valueHtml}</td>
     </tr>`;
   }

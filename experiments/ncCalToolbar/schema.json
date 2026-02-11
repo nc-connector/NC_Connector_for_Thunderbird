@@ -1,0 +1,153 @@
+[
+  {
+    "namespace": "ncCalToolbar",
+    "description": "Adds a stable Nextcloud Talk button to the calendar event editor toolbars (dialog + tab) and reports clicks to the background.",
+    "types": [
+      {
+        "id": "ClickedCalendarItem",
+        "type": "object",
+        "properties": {
+          "windowId": { "type": "integer", "optional": true },
+          "dialogOuterId": { "type": "integer", "optional": true },
+          "calendarId": { "type": "string" },
+          "id": { "type": "string" },
+          "type": { "type": "string", "enum": ["event", "task"] },
+          "format": { "type": "string", "enum": ["ical"] },
+          "item": { "type": "string" }
+        }
+      },
+      {
+        "id": "EditorRef",
+        "type": "object",
+        "properties": {
+          "windowId": { "type": "integer", "optional": true },
+          "dialogOuterId": { "type": "integer", "optional": true }
+        }
+      },
+      {
+        "id": "EventFields",
+        "type": "object",
+        "properties": {
+          "title": { "type": "string", "optional": true },
+          "location": { "type": "string", "optional": true },
+          "description": { "type": "string", "optional": true }
+        }
+      },
+      {
+        "id": "PropertyUpdates",
+        "type": "object",
+        "additionalProperties": {
+          "choices": [
+            { "type": "string" },
+            { "type": "null" }
+          ]
+        }
+      },
+      {
+        "id": "ApplyEventFieldsResult",
+        "type": "object",
+        "properties": {
+          "ok": { "type": "boolean" },
+          "error": { "type": "string", "optional": true },
+          "applied": {
+            "type": "object",
+            "optional": true,
+            "properties": {
+              "title": { "type": "boolean", "optional": true },
+              "location": { "type": "boolean", "optional": true },
+              "description": { "type": "boolean", "optional": true }
+            }
+          }
+        }
+      },
+      {
+        "id": "SimpleResult",
+        "type": "object",
+        "properties": {
+          "ok": { "type": "boolean" },
+          "error": { "type": "string", "optional": true }
+        }
+      },
+      {
+        "id": "RoomCleanupEvent",
+        "type": "object",
+        "properties": {
+          "token": { "type": "string" },
+          "action": { "type": "string", "enum": ["discarded", "persisted", "superseded"] },
+          "reason": { "type": "string", "optional": true }
+        }
+      }
+    ],
+    "events": [
+      {
+        "name": "onClicked",
+        "type": "function",
+        "description": "Fired when the Nextcloud Talk toolbar button in the event editor is clicked. Includes an iCalendar snapshot of the currently edited item.",
+        "parameters": [
+          { "name": "snapshot", "$ref": "ClickedCalendarItem" }
+        ]
+      },
+      {
+        "name": "onRoomCleanup",
+        "type": "function",
+        "description": "Fired when the editor indicates that a Talk room should be kept or deleted (e.g. dialog saved vs. discarded).",
+        "parameters": [
+          { "name": "event", "$ref": "RoomCleanupEvent" }
+        ]
+      }
+    ],
+    "functions": [
+      {
+        "name": "applyEventFields",
+        "type": "function",
+        "async": true,
+        "description": "Apply event title/location/description into the currently edited calendar item (dialog or tab).",
+        "parameters": [
+          {
+            "name": "details",
+            "type": "object",
+            "properties": {
+              "editor": { "$ref": "EditorRef" },
+              "fields": { "$ref": "EventFields" }
+            }
+          }
+        ],
+        "returns": { "$ref": "ApplyEventFieldsResult" }
+      },
+      {
+        "name": "setItemProperties",
+        "type": "function",
+        "async": true,
+        "description": "Set or clear arbitrary calendar item properties (e.g. X-NCTALK-*) on the currently edited item.",
+        "parameters": [
+          {
+            "name": "details",
+            "type": "object",
+            "properties": {
+              "editor": { "$ref": "EditorRef" },
+              "properties": { "$ref": "PropertyUpdates" }
+            }
+          }
+        ],
+        "returns": { "$ref": "SimpleResult" }
+      },
+      {
+        "name": "registerRoomCleanup",
+        "type": "function",
+        "async": true,
+        "description": "Register cleanup hooks for the editor to signal whether a newly created Talk room was persisted (saved) or discarded (closed/canceled).",
+        "parameters": [
+          {
+            "name": "details",
+            "type": "object",
+            "properties": {
+              "editor": { "$ref": "EditorRef" },
+              "token": { "type": "string" }
+            }
+          }
+        ],
+        "returns": { "$ref": "SimpleResult" }
+      }
+    ]
+  }
+]

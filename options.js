@@ -30,14 +30,168 @@ const sharingDefaultExpireDaysInput = document.getElementById("sharingDefaultExp
 const talkDefaultTitleInput = document.getElementById("talkDefaultTitle");
 const talkDefaultLobbyInput = document.getElementById("talkDefaultLobby");
 const talkDefaultListableInput = document.getElementById("talkDefaultListable");
-const talkDefaultAddParticipantsInput = document.getElementById("talkDefaultAddParticipants");
+const talkDefaultAddUsersInput = document.getElementById("talkDefaultAddUsers");
+const talkDefaultAddGuestsInput = document.getElementById("talkDefaultAddGuests");
 const talkDefaultPasswordInput = document.getElementById("talkDefaultPassword");
 const talkDefaultRoomTypeRadios = Array.from(document.querySelectorAll("input[name='talkDefaultRoomType']"));
 const shareBlockLangSelect = document.getElementById("shareBlockLang");
 const eventDescriptionLangSelect = document.getElementById("eventDescriptionLang");
 const DEFAULT_SHARING_BASE = (typeof NCSharing !== "undefined" ? NCSharing.DEFAULT_BASE_PATH : "90 Freigaben - extern");
 let statusTimer = null;
-const LANG_OPTIONS = new Set(["default", "en", "de", "fr"]);
+const SUPPORTED_OVERRIDE_LOCALES = getSupportedOverrideLocales();
+const LANG_OPTIONS = new Set(["default", ...SUPPORTED_OVERRIDE_LOCALES]);
+initLanguageOverrideSelects();
+
+/**
+ * Read the list of supported locale folders for language override settings.
+ * @returns {string[]}
+ */
+function getSupportedOverrideLocales(){
+  try{
+    if (typeof NCI18nOverride !== "undefined" && Array.isArray(NCI18nOverride?.supportedLocales) && NCI18nOverride.supportedLocales.length){
+      return Array.from(new Set(NCI18nOverride.supportedLocales));
+    }
+  }catch(_){}
+  return ["en", "de", "fr"];
+}
+
+/**
+ * Initialize the language override selects in the advanced settings tab.
+ */
+function initLanguageOverrideSelects(){
+  const uiLang = getUiLanguage();
+  const displayNames = makeDisplayNames(uiLang);
+  const collator = makeCollator(uiLang);
+  const orderedLocales = orderOverrideLocales(SUPPORTED_OVERRIDE_LOCALES, displayNames, collator);
+  populateLanguageSelect(shareBlockLangSelect, orderedLocales, displayNames);
+  populateLanguageSelect(eventDescriptionLangSelect, orderedLocales, displayNames);
+}
+
+/**
+ * Get the UI language (BCP47) used for display names.
+ * @returns {string}
+ */
+function getUiLanguage(){
+  try{
+    if (typeof browser !== "undefined" && browser?.i18n?.getUILanguage){
+      return browser.i18n.getUILanguage() || "en";
+    }
+  }catch(_){}
+  return "en";
+}
+
+/**
+ * Convert a locale folder name to a BCP47 language tag.
+ * @param {string} locale
+ * @returns {string}
+ */
+function toBcp47Tag(locale){
+  return String(locale || "").replace(/_/g, "-");
+}
+
+/**
+ * Create an Intl.DisplayNames instance for language labels.
+ * @param {string} uiLang
+ * @returns {Intl.DisplayNames|null}
+ */
+function makeDisplayNames(uiLang){
+  if (typeof Intl === "undefined" || typeof Intl.DisplayNames !== "function"){
+    return null;
+  }
+  try{
+    return new Intl.DisplayNames([uiLang], { type: "language" });
+  }catch(_){
+    return null;
+  }
+}
+
+/**
+ * Create an Intl.Collator instance for locale-aware sorting.
+ * @param {string} uiLang
+ * @returns {Intl.Collator|null}
+ */
+function makeCollator(uiLang){
+  if (typeof Intl === "undefined" || typeof Intl.Collator !== "function"){
+    return null;
+  }
+  try{
+    return new Intl.Collator([uiLang], { sensitivity: "base", numeric: true });
+  }catch(_){
+    return null;
+  }
+}
+
+/**
+ * Get a localized display label for a locale.
+ * @param {string} locale
+ * @param {Intl.DisplayNames|null} displayNames
+ * @returns {string}
+ */
+function getLocaleLabel(locale, displayNames){
+  const tag = toBcp47Tag(locale);
+  if (displayNames){
+    try{
+      const label = displayNames.of(tag);
+      if (label){
+        return label;
+      }
+    }catch(_){}
+  }
+  return tag || String(locale || "");
+}
+
+/**
+ * Order locales with common languages first, then UI-sorted.
+ * @param {string[]} locales
+ * @param {Intl.DisplayNames|null} displayNames
+ * @param {Intl.Collator|null} collator
+ * @returns {string[]}
+ */
+function orderOverrideLocales(locales, displayNames, collator){
+  const list = Array.isArray(locales) ? locales.slice() : [];
+  const primary = ["en", "de", "fr"];
+  const prioritized = primary.filter((locale) => list.includes(locale));
+  const remaining = list.filter((locale) => !prioritized.includes(locale));
+  const labelCache = new Map();
+  const labelOf = (locale) => {
+    if (!labelCache.has(locale)){
+      labelCache.set(locale, getLocaleLabel(locale, displayNames));
+    }
+    return labelCache.get(locale);
+  };
+  remaining.sort((a, b) => {
+    const la = labelOf(a);
+    const lb = labelOf(b);
+    const cmp = collator ? collator.compare(la, lb) : String(la).localeCompare(String(lb));
+    return cmp !== 0 ? cmp : String(a).localeCompare(String(b));
+  });
+  return [...prioritized, ...remaining];
+}
+
+/**
+ * Populate a select element with default + supported override locales.
+ * @param {HTMLSelectElement|null} selectEl
+ * @param {string[]} locales
+ * @param {Intl.DisplayNames|null} displayNames
+ */
+function populateLanguageSelect(selectEl, locales, displayNames){
+  if (!selectEl){
+    return;
+  }
+  selectEl.textContent = "";
+
+  const defaultOption = document.createElement("option");
+  defaultOption.value = "default";
+  defaultOption.textContent = i18n("options_lang_default") || "default";
+  selectEl.appendChild(defaultOption);
+
+  locales.forEach((locale) => {
+    const option = document.createElement("option");
+    option.value = locale;
+    option.textContent = getLocaleLabel(locale, displayNames);
+    selectEl.appendChild(option);
+  });
+}
 
 /**
  * Show a transient status message in the options UI.
@@ -85,6 +239,8 @@ async function load(){
     "talkDefaultTitle",
     "talkDefaultLobby",
     "talkDefaultListable",
+    "talkAddUsersDefaultEnabled",
+    "talkAddGuestsDefaultEnabled",
     "talkAddParticipantsDefaultEnabled",
     "talkPasswordDefaultEnabled",
     "talkDefaultRoomType",
@@ -142,10 +298,15 @@ async function load(){
       ? !!stored.talkDefaultListable
       : true;
   }
-  if (talkDefaultAddParticipantsInput){
-    talkDefaultAddParticipantsInput.checked = stored.talkAddParticipantsDefaultEnabled !== undefined
-      ? !!stored.talkAddParticipantsDefaultEnabled
-      : false;
+  if (talkDefaultAddUsersInput){
+    talkDefaultAddUsersInput.checked = stored.talkAddUsersDefaultEnabled !== undefined
+      ? !!stored.talkAddUsersDefaultEnabled
+      : (stored.talkAddParticipantsDefaultEnabled !== undefined ? !!stored.talkAddParticipantsDefaultEnabled : false);
+  }
+  if (talkDefaultAddGuestsInput){
+    talkDefaultAddGuestsInput.checked = stored.talkAddGuestsDefaultEnabled !== undefined
+      ? !!stored.talkAddGuestsDefaultEnabled
+      : (stored.talkAddParticipantsDefaultEnabled !== undefined ? !!stored.talkAddParticipantsDefaultEnabled : false);
   }
   if (talkDefaultPasswordInput){
     talkDefaultPasswordInput.checked = stored.talkPasswordDefaultEnabled !== undefined
@@ -240,7 +401,9 @@ async function save(){
   const talkDefaultTitle = (talkDefaultTitleInput?.value || "").trim() || DEFAULT_TALK_TITLE;
   const talkDefaultLobby = talkDefaultLobbyInput ? !!talkDefaultLobbyInput.checked : true;
   const talkDefaultListable = talkDefaultListableInput ? !!talkDefaultListableInput.checked : true;
-  const talkAddParticipantsDefaultEnabled = talkDefaultAddParticipantsInput ? !!talkDefaultAddParticipantsInput.checked : false;
+  const talkAddUsersDefaultEnabled = talkDefaultAddUsersInput ? !!talkDefaultAddUsersInput.checked : false;
+  const talkAddGuestsDefaultEnabled = talkDefaultAddGuestsInput ? !!talkDefaultAddGuestsInput.checked : false;
+  const talkAddParticipantsDefaultEnabled = talkAddUsersDefaultEnabled || talkAddGuestsDefaultEnabled;
   const talkPasswordDefaultEnabled = talkDefaultPasswordInput ? !!talkDefaultPasswordInput.checked : true;
   const talkDefaultRoomType = getSelectedTalkDefaultRoomType();
   const shareBlockLang = normalizeLangChoice(shareBlockLangSelect?.value);
@@ -262,6 +425,8 @@ async function save(){
     talkDefaultTitle,
     talkDefaultLobby,
     talkDefaultListable,
+    talkAddUsersDefaultEnabled,
+    talkAddGuestsDefaultEnabled,
     talkAddParticipantsDefaultEnabled,
     talkPasswordDefaultEnabled,
     talkDefaultRoomType,
@@ -485,10 +650,17 @@ function setTalkDefaultRoomType(value){
 /**
  * Normalize a language selection to the supported list.
  * @param {string} value
- * @returns {"default"|"en"|"de"|"fr"}
+ * @returns {string}
  */
 function normalizeLangChoice(value){
-  const normalized = String(value || "default").toLowerCase();
+  const raw = String(value || "default").trim();
+  if (!raw || raw.toLowerCase() === "default"){
+    return "default";
+  }
+  let normalized = raw;
+  if (typeof NCI18nOverride !== "undefined" && typeof NCI18nOverride.normalizeLang === "function"){
+    normalized = NCI18nOverride.normalizeLang(raw);
+  }
   return LANG_OPTIONS.has(normalized) ? normalized : "default";
 }
 

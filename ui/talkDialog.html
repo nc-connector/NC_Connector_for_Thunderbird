@@ -6,20 +6,25 @@ See LICENSE.txt for details.
 <!doctype html>
 <meta charset="utf-8">
 <title data-i18n="talk_dialog_title">Nextcloud Talk</title>
+<link rel="stylesheet" href="tbTheme.css">
 <style>
 :root{
-  --brand-blue:#0082C9;
+  --brand-blue:var(--tb-accent);
   --header-height:48px;
-  --dialog-accent:var(--brand-blue);
-  --dialog-surface:#f4f6fd;
-  --dialog-outline:#d7dbeb;
-  --dialog-outline-strong:#c0c8e2;
-  --dialog-text:#1f1f1f;
-  --control-height:38px;
-  --control-radius:10px;
+  --dialog-accent:var(--tb-accent);
+  --dialog-surface:var(--tb-bg);
+  --dialog-outline:var(--tb-border);
+  --dialog-outline-strong:var(--tb-border-strong);
+  --dialog-text:var(--tb-text);
+  --dialog-gap:10px;
+  --dialog-pad-left:22px;
+  --dialog-pad-right:22px;
+  --control-height:32px;
+  --control-radius:var(--tb-control-radius);
   --control-padding-x:12px;
-  --content-max:480px;
-  --dialog-shadow:0 24px 48px rgba(11,17,39,0.18);
+  --control-action-width:132px;
+  --content-max:520px;
+  --dialog-shadow:var(--tb-shadow);
 }
 html,
 body{
@@ -28,14 +33,20 @@ body{
 body{
   margin:0;
   padding:0;
-  font:14px 'Segoe UI Variable','Segoe UI','Calibri','Trebuchet MS',sans-serif;
-  background:radial-gradient(120% 140% at 50% -20%,#ffffff 0%,#f3f6ff 55%,#e9effb 100%);
-  color:var(--dialog-text);
+  font:message-box;
+  background:var(--tb-bg);
+  color:var(--tb-text);
   min-height:0;
   box-sizing:border-box;
   display:flex;
   justify-content:center;
   align-items:flex-start;
+}
+input,
+button,
+select,
+textarea{
+  font:inherit;
 }
 @keyframes dialogEnter{
   from{opacity:0; transform:translateY(12px);}
@@ -51,13 +62,17 @@ body{
   width:100%;
   max-width:520px;
   margin:0 auto;
-  background:#fff;
-  border-radius:16px;
-  border:1px solid rgba(4,16,41,0.08);
-  box-shadow:var(--dialog-shadow);
+  background:var(--tb-bg);
+  border-radius:var(--tb-radius);
+  border:1px solid var(--tb-border);
+  box-shadow:none;
   display:flex;
   flex-direction:column;
   overflow:hidden;
+  box-sizing:border-box;
+  height:100%;
+  max-height:100%;
+  min-height:0;
   animation:dialogEnter .35s ease-out;
 }
 .dialog-hero{
@@ -77,21 +92,28 @@ body{
 }
 
 .dialog-content{
-  padding:18px 28px 22px;
+  padding:var(--dialog-gap) var(--dialog-pad-right) var(--dialog-gap) var(--dialog-pad-left);
   display:flex;
   flex-direction:column;
-  gap:18px;
-  background:var(--dialog-surface);
+  gap:var(--dialog-gap);
+  background:var(--tb-bg);
   max-width:var(--content-max);
   width:100%;
   margin:0 auto;
+  flex:1;
+  min-height:0;
+  overflow:auto;
+  box-sizing:border-box;
 }
 .section{
-  border:1px solid var(--dialog-outline);
-  border-radius:12px;
-  padding:16px 18px;
-  background:#fff;
-  box-shadow:0 6px 18px rgba(27,33,54,0.05);
+  border:1px solid var(--tb-border);
+  border-radius:var(--tb-radius);
+  padding:12px 14px;
+  background:var(--tb-surface);
+  box-shadow:none;
+}
+.section.delegate-section{
+  flex:0 0 auto;
 }
 .section label{
   display:block;
@@ -102,42 +124,53 @@ body{
   width:100%;
   height:var(--control-height);
   padding:0 var(--control-padding-x);
-  border:1px solid var(--dialog-outline-strong);
+  border:1px solid var(--tb-border-strong);
   border-radius:var(--control-radius);
-  background:#f8f9ff;
+  background:var(--tb-surface);
   box-sizing:border-box;
   transition:border-color .15s ease, box-shadow .15s ease, background .15s ease;
 }
 .section input[type="text"]:focus{
   border-color:var(--dialog-accent);
-  background:#fff;
+  background:var(--tb-surface);
   outline:none;
   box-shadow:0 0 0 3px rgba(0,130,201,0.15);
 }
 .section input[type="text"]::placeholder{
-  color:#8b90a5;
+  color:var(--tb-muted);
 }
 .section input[type="text"]:disabled{
-  background:#f0f1f7;
-  color:#8e8e8e;
+  background:var(--tb-surface-2);
+  color:var(--tb-muted);
 }
 .delegate-field{
   display:flex;
   flex-direction:column;
-  gap:6px;
+  gap:var(--dialog-gap);
+  position:relative;
+}
+.delegate-input-wrap{
   position:relative;
 }
 .delegate-input-row{
   display:flex;
-  gap:8px;
+  gap:10px;
   align-items:stretch;
+}
+.delegate-input-row input{
+  flex:1;
+  min-width:0;
 }
 .delegate-input-row button{
   height:var(--control-height);
   padding:0 14px;
+  width:var(--control-action-width);
+  flex:0 0 var(--control-action-width);
+  box-sizing:border-box;
+  white-space:nowrap;
   border-radius:var(--control-radius);
-  border:1px solid var(--dialog-outline-strong);
-  background:#fff;
+  border:1px solid var(--tb-border);
+  background:var(--tb-surface);
   color:var(--dialog-text);
   cursor:pointer;
   transition:border-color .15s ease,color .15s ease;
@@ -148,38 +181,35 @@ body{
 }
 .delegate-status{
   font-size:12px;
-  min-height:16px;
-  color:#5a5a5a;
+  color:var(--tb-muted);
+}
+.delegate-status:empty{
+  display:none;
 }
 .delegate-selected{
   display:flex;
   align-items:center;
-  gap:12px;
-  border-radius:12px;
-  padding:12px 14px;
-  background:#eef2ff;
-  border:1px solid rgba(0,130,201,0.25);
-  margin-top:8px;
-}
-.delegate-selected-description{
-  font-size:11px;
-  color:#4a4a4a;
-  margin-top:4px;
+  gap:10px;
+  border-radius:10px;
+  padding:8px 10px;
+  background:var(--tb-surface-2);
+  border:1px solid var(--tb-border);
 }
 .delegate-avatar{
-  width:40px;
-  height:40px;
+  width:32px;
+  height:32px;
   border-radius:50%;
-  background:#d1dbec;
+  background:var(--tb-surface);
+  border:1px solid var(--tb-border);
   display:flex;
   align-items:center;
   justify-content:center;
   align-items:flex-start;
   overflow:hidden;
-  flex:0 0 40px;
+  flex:0 0 32px;
   position:relative;
   font-weight:600;
-  color:#1f1f1f;
+  color:var(--tb-text);
 }
 .delegate-avatar img{
   width:100%;
@@ -188,47 +218,51 @@ body{
   display:none;
 }
 .delegate-avatar span{
-  font-size:14px;
+  font-size:12px;
 }
 .delegate-selected-text{
   display:flex;
   flex-direction:column;
-  gap:2px;
+  gap:1px;
   min-width:0;
 }
 .delegate-selected-title{
-  font-size:10px;
+  font-size:9px;
   text-transform:uppercase;
   letter-spacing:0.08em;
-  color:#5a5a5a;
+  color:var(--tb-muted);
 }
 .delegate-selected-name{
   font-size:13px;
   font-weight:600;
-  color:#1f1f1f;
-  word-break:break-word;
+  color:var(--tb-text);
+  overflow:hidden;
+  text-overflow:ellipsis;
+  white-space:nowrap;
 }
 .delegate-selected-meta{
-  font-size:12px;
-  color:#5a5a5a;
-  word-break:break-word;
+  font-size:11px;
+  color:var(--tb-muted);
+  overflow:hidden;
+  text-overflow:ellipsis;
+  white-space:nowrap;
 }
 .delegate-hint{
   font-size:11px;
-  color:#5a5a5a;
-  margin-top:6px;
+  color:var(--tb-muted);
+  margin-top:0;
 }
 .delegate-dropdown{
   position:absolute;
   left:0;
   right:0;
-  top:100%;
-  margin-top:4px;
-  background:#fff;
-  border:1px solid #c7c7c7;
+  bottom:100%;
+  margin-bottom:4px;
+  background:var(--tb-surface);
+  border:1px solid var(--tb-border);
   border-radius:10px;
-  box-shadow:0 16px 28px rgba(0,0,0,0.25);
-  max-height:240px;
+  box-shadow:var(--tb-shadow);
+  max-height:50vh;
   overflow-y:auto;
   display:none;
   z-index:1000;
@@ -239,20 +273,21 @@ body{
   align-items:center;
   padding:9px 12px;
   cursor:pointer;
-  border-bottom:1px solid rgba(0,0,0,0.04);
+  border-bottom:1px solid var(--tb-border);
 }
 .delegate-dropdown .row:last-child{
   border-bottom:none;
 }
 .delegate-dropdown .row:hover,
 .delegate-dropdown .row.active{
-  background:#eef3fb;
+  background:var(--tb-surface-2);
 }
 .delegate-dropdown .row-avatar{
   width:32px;
   height:32px;
   border-radius:50%;
-  background:#d1dbec;
+  background:var(--tb-surface);
+  border:1px solid var(--tb-border);
   display:flex;
   align-items:center;
   justify-content:center;
@@ -260,7 +295,7 @@ body{
   overflow:hidden;
   flex:0 0 32px;
   font-weight:600;
-  color:#1f1f1f;
+  color:var(--tb-text);
 }
 .delegate-dropdown .row-avatar img{
   width:100%;
@@ -277,12 +312,12 @@ body{
 .delegate-dropdown .row-text .primary{
   font-size:13px;
   font-weight:600;
-  color:#1f1f1f;
+  color:var(--tb-text);
   word-break:break-word;
 }
 .delegate-dropdown .row-text .secondary{
   font-size:12px;
-  color:#4d4d4d;
+  color:var(--tb-muted);
   word-break:break-word;
 }
 .password-row{
@@ -292,13 +327,18 @@ body{
 }
 .password-row input{
   flex:1;
+  min-width:0;
 }
 .password-row button{
   height:var(--control-height);
   padding:0 14px;
+  width:var(--control-action-width);
+  flex:0 0 var(--control-action-width);
+  box-sizing:border-box;
+  white-space:nowrap;
   border-radius:var(--control-radius);
-  border:1px solid var(--dialog-outline-strong);
-  background:#fff;
+  border:1px solid var(--tb-border);
+  background:var(--tb-surface);
   color:var(--dialog-text);
   cursor:pointer;
   transition:border-color .15s ease,color .15s ease,background .15s ease;
@@ -306,67 +346,188 @@ body{
 .password-row button:hover{
   border-color:var(--dialog-accent);
   color:var(--dialog-accent);
-  background:#f7f5ff;
+  background:var(--tb-surface-2);
 }
 .checkbox-row{
   display:flex;
   gap:8px;
   align-items:center;
-  margin:8px 0;
+  margin:4px 0;
+}
+.option-tooltip-wrap{
+  position:relative;
+}
+.option-tooltip{
+  position:absolute;
+  left:0;
+  top:100%;
+  margin-top:6px;
+  border:1px solid var(--tb-border);
+  border-radius:10px;
+  padding:10px 12px;
+  background:var(--tb-bg);
+  box-shadow:var(--tb-shadow);
+  max-width:min(480px,calc(100vw - 48px));
+  display:none;
+  z-index:1100;
+}
+.option-tooltip-wrap:hover .option-tooltip,
+.option-tooltip-wrap:focus-within .option-tooltip{
+  display:block;
+}
+.option-tooltip-title{
+  font-weight:800;
+  font-size:12px;
+  margin:0 0 6px 0;
+}
+.option-tooltip-list{
+  margin:0;
+  padding-left:18px;
+}
+.option-tooltip-list li{
+  margin:0 0 4px 0;
+  font-size:12px;
+  color:var(--tb-text);
+}
+.option-tooltip-list li:last-child{
+  margin-bottom:0;
 }
 .section-heading{
   font-weight:600;
   margin-bottom:6px;
 }
-.roomtype-grid{
-  display:grid;
-  grid-template-columns:120px 1fr;
-  gap:12px;
-  margin-top:6px;
+.roomtype-picker{
+  position:relative;
+  width:100%;
 }
-.field-label{
+.roomtype-button{
+  width:100%;
+  height:var(--control-height);
+  padding:0 var(--control-padding-x);
+  border:1px solid var(--tb-border-strong);
+  border-radius:var(--control-radius);
+  background:var(--tb-surface);
+  color:var(--tb-text);
+  box-sizing:border-box;
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:10px;
+  cursor:pointer;
+  transition:border-color .15s ease, box-shadow .15s ease, background .15s ease;
+}
+.roomtype-button:hover{
+  border-color:var(--dialog-accent);
+}
+.roomtype-button:focus{
+  border-color:var(--dialog-accent);
+  background:var(--tb-surface);
+  outline:none;
+  box-shadow:0 0 0 3px rgba(0,130,201,0.15);
+}
+.roomtype-button-label{
   font-weight:600;
-  padding-top:6px;
+  overflow:hidden;
+  text-overflow:ellipsis;
+  white-space:nowrap;
 }
-.roomtype-options{
+.roomtype-button-arrow{
+  color:var(--tb-muted);
+  flex:0 0 auto;
+}
+.roomtype-dropdown{
+  position:absolute;
+  top:100%;
+  left:0;
+  right:0;
+  margin-top:4px;
+  background:var(--tb-surface);
+  border:1px solid var(--tb-border);
+  border-radius:10px;
+  box-shadow:var(--tb-shadow);
+  overflow:hidden;
+  z-index:1000;
+}
+.roomtype-option{
+  width:100%;
+  text-align:left;
+  border:0;
+  background:transparent;
+  padding:10px 12px;
+  cursor:pointer;
   display:flex;
   flex-direction:column;
-  gap:10px;
+  gap:8px;
 }
-.radio-block{
+.roomtype-option:hover,
+.roomtype-option:focus{
+  background:var(--tb-surface-2);
+  outline:none;
+}
+.roomtype-option-main{
   display:flex;
+  align-items:center;
+  justify-content:space-between;
   gap:10px;
-  align-items:flex-start;
 }
-.radio-block input[type="radio"]{
-  margin-top:4px;
+.roomtype-option-label{
+  font-weight:600;
+  color:var(--tb-text);
 }
-.radio-title{
-  font-size:14px;
-  color:#1f1f1f;
+.roomtype-option-check{
+  visibility:hidden;
+  color:var(--dialog-accent);
+  font-weight:800;
 }
-.checkbox-row input[type="checkbox"],
-.radio-row input[type="radio"]{
+.roomtype-option[data-selected="true"] .roomtype-option-check{
+  visibility:visible;
+}
+.roomtype-tooltip{
+  display:none;
+  border:1px solid var(--tb-border);
+  border-radius:10px;
+  padding:10px 12px;
+  background:var(--tb-bg);
+  box-shadow:var(--tb-shadow);
+}
+.roomtype-option:hover .roomtype-tooltip,
+.roomtype-option:focus .roomtype-tooltip{
+  display:block;
+}
+.roomtype-tooltip-title{
+  font-weight:800;
+  font-size:12px;
+  margin:0 0 6px 0;
+}
+.roomtype-tooltip-list{
+  margin:0;
+  padding-left:18px;
+}
+.roomtype-tooltip-list li{
+  margin:0 0 4px 0;
+  font-size:12px;
+  color:var(--tb-text);
+}
+.roomtype-tooltip-list li:last-child{
+  margin-bottom:0;
+}
+.checkbox-row input[type="checkbox"]{
   accent-color:var(--dialog-accent);
 }
-.radio-row{
-  display:flex;
-  gap:18px;
-  align-items:center;
-}
 .footer{
-  border-top:1px solid #e1e1e1;
-  padding:16px 28px 22px;
+  border-top:1px solid var(--tb-border);
+  padding:var(--dialog-gap) var(--dialog-pad-right) var(--dialog-gap) var(--dialog-pad-left);
   display:flex;
   justify-content:flex-end;
   gap:12px;
-  background:#fff;
+  background:var(--tb-bg);
+  box-sizing:border-box;
 }
 .footer button{
   padding:8px 18px;
   border-radius:6px;
-  border:1px solid #c7c7c7;
-  background:#f5f5f5;
+  border:1px solid var(--tb-border);
+  background:var(--tb-surface);
   cursor:pointer;
 }
 .footer button.primary{
@@ -395,10 +556,10 @@ body{
 }
 .delegate-modal{
   width:min(420px,calc(100% - 32px));
-  background:#fff;
-  border-radius:14px;
-  border:1px solid rgba(10,30,70,0.12);
-  box-shadow:0 28px 60px rgba(8,20,48,0.35);
+  background:var(--tb-surface);
+  border-radius:var(--tb-radius);
+  border:1px solid var(--tb-border);
+  box-shadow:var(--tb-shadow);
   padding:22px 26px 20px;
   display:flex;
   flex-direction:column;
@@ -407,11 +568,11 @@ body{
 .delegate-modal-title{
   font-size:16px;
   font-weight:600;
-  color:#0d2a58;
+  color:var(--tb-text);
 }
 .delegate-modal-text{
-  font-size:14px;
-  color:#1f1f1f;
+  font-size:13px;
+  color:var(--tb-text);
   line-height:1.45;
 }
 .delegate-modal-actions{
@@ -422,9 +583,9 @@ body{
 .delegate-modal-actions button{
   padding:8px 20px;
   border-radius:8px;
-  border:1px solid #d0d4e4;
-  background:#f5f5fb;
-  color:#1f1f1f;
+  border:1px solid var(--tb-border);
+  background:var(--tb-surface-2);
+  color:var(--tb-text);
   cursor:pointer;
   transition:background .15s ease,border-color .15s ease,color .15s ease;
 }
@@ -434,7 +595,7 @@ body{
   color:#fff;
 }
 .delegate-modal-actions button.secondary{
-  background:#fff;
+  background:var(--tb-surface);
 }
 .delegate-modal-actions button:focus{
   outline:none;
@@ -458,6 +619,46 @@ body{
         <label for="titleInput" data-i18n="ui_create_title_label">Titel</label>
         <input id="titleInput" type="text">
       </div>
+      <div class="section roomtype-section">
+        <label for="roomTypeButton" data-i18n="ui_create_roomtype_label">Raumtyp</label>
+        <div class="roomtype-picker" id="roomTypePicker">
+          <button type="button" class="roomtype-button" id="roomTypeButton" aria-haspopup="listbox" aria-expanded="false">
+            <span class="roomtype-button-label" id="roomTypeButtonLabel" data-i18n="ui_create_mode_event">Event-Unterhaltung</span>
+            <span class="roomtype-button-arrow" aria-hidden="true">▾</span>
+          </button>
+          <div class="roomtype-dropdown" id="roomTypeDropdown" role="listbox" hidden>
+            <button type="button" class="roomtype-option" data-value="event" data-selected="true" role="option">
+              <div class="roomtype-option-main">
+                <span class="roomtype-option-label" data-i18n="ui_create_mode_event">Event-Unterhaltung</span>
+                <span class="roomtype-option-check" aria-hidden="true">✓</span>
+              </div>
+              <div class="roomtype-tooltip" role="tooltip">
+                <div class="roomtype-tooltip-title" data-i18n="talk_roomtype_event_title">📅 Event-Unterhaltung</div>
+                <ul class="roomtype-tooltip-list">
+                  <li data-i18n="talk_roomtype_event_line1">Zeitlich begrenzt: für einen konkreten Termin oder Anlass</li>
+                  <li data-i18n="talk_roomtype_event_line2">Spontan & leichtgewichtig: geeignet für Meetings, Schulungen oder Webinare</li>
+                  <li data-i18n="talk_roomtype_event_line3">Selbstaufräumend: wird nach einiger Zeit automatisch entfernt</li>
+                </ul>
+              </div>
+            </button>
+            <button type="button" class="roomtype-option" data-value="normal" data-selected="false" role="option">
+              <div class="roomtype-option-main">
+                <span class="roomtype-option-label" data-i18n="ui_create_mode_standard">Gruppenunterhaltung</span>
+                <span class="roomtype-option-check" aria-hidden="true">✓</span>
+              </div>
+              <div class="roomtype-tooltip" role="tooltip">
+                <div class="roomtype-tooltip-title" data-i18n="talk_roomtype_group_title">🗨️ Gruppenunterhaltung</div>
+                <ul class="roomtype-tooltip-list">
+                  <li data-i18n="talk_roomtype_group_line1">Dauerhaft: bleibt bestehen, bis sie aktiv gelöscht wird</li>
+                  <li data-i18n="talk_roomtype_group_line2">Für den Alltag gemacht: ideal für Teams, Abteilungen, laufende Projekte und wiederkehrende Termine</li>
+                  <li data-i18n="talk_roomtype_group_line3">Mit Verlauf: der gesamte Chat ist jederzeit nachvollziehbar</li>
+                </ul>
+              </div>
+            </button>
+          </div>
+          <input type="hidden" id="roomTypeValue" value="event">
+        </div>
+      </div>
       <div class="section password-section">
         <label class="checkbox-row">
           <input type="checkbox" id="passwordToggle">
@@ -470,42 +671,61 @@ body{
       </div>
       <div class="section section-options">
         <div class="section-heading" data-i18n="talk_section_settings">Optionen</div>
-        <label class="checkbox-row">
-          <input type="checkbox" id="addParticipantsToggle">
-          <span data-i18n="ui_create_add_participants_label">Teilnehmer in den Raum hinzufügen</span>
+        <label class="checkbox-row option-tooltip-wrap">
+          <input type="checkbox" id="addUsersToggle">
+          <span data-i18n="ui_create_add_users_label">Benutzer hinzufügen</span>
+          <div class="option-tooltip" role="tooltip">
+            <div class="option-tooltip-title" data-i18n="talk_option_add_users_title">👤 Benutzer hinzufügen</div>
+            <ul class="option-tooltip-list">
+              <li data-i18n="talk_option_add_users_line1">Interne Nextcloud-Benutzer werden direkt dem Raum hinzugefügt</li>
+              <li data-i18n="talk_option_add_users_line2">Der Raum ist sofort in Nextcloud Talk sichtbar</li>
+            </ul>
+          </div>
         </label>
-        <label class="checkbox-row">
+        <label class="checkbox-row option-tooltip-wrap">
+          <input type="checkbox" id="addGuestsToggle">
+          <span data-i18n="ui_create_add_guests_label">Gäste hinzufügen</span>
+          <div class="option-tooltip" role="tooltip">
+            <div class="option-tooltip-title" data-i18n="talk_option_add_guests_title">🌍 Gäste hinzufügen</div>
+            <ul class="option-tooltip-list">
+              <li data-i18n="talk_option_add_guests_line1">Gäste werden ebenfalls direkt dem Raum hinzugefügt</li>
+              <li data-i18n="talk_option_add_guests_line2">⚠️ Sie erhalten eine separate (zusätzliche) E-Mail mit persönlichem Zugangslink</li>
+            </ul>
+          </div>
+        </label>
+        <label class="checkbox-row option-tooltip-wrap">
           <input type="checkbox" id="lobbyToggle">
-          <span data-i18n="ui_create_lobby_label">Lobby bis Startzeit aktiv</span>
+          <span data-i18n="ui_create_lobby_label">Lobby bis Startzeit</span>
+          <div class="option-tooltip" role="tooltip">
+            <div class="option-tooltip-title" data-i18n="talk_option_lobby_title">🚪 Lobby bis Startzeit</div>
+            <ul class="option-tooltip-list">
+              <li data-i18n="talk_option_lobby_line1">Teilnehmer landen vor Beginn in der Lobby (Warteraum) und können noch nicht in den Call</li>
+              <li data-i18n="talk_option_lobby_line2">⚠️ Erst ab der eingestellten Startzeit (oder wenn ein Moderator die Lobby beendet) ist der Beitritt möglich</li>
+              <li data-i18n="talk_option_lobby_line3">Ideal, damit niemand zu früh in Meeting/Webinar reinplatzt.</li>
+            </ul>
+          </div>
         </label>
-        <label class="checkbox-row">
+        <label class="checkbox-row option-tooltip-wrap">
           <input type="checkbox" id="listableToggle" checked>
           <span data-i18n="ui_create_listable_label">In Suche anzeigen</span>
-        </label>
-        <div class="roomtype-grid">
-          <div class="field-label" data-i18n="ui_create_roomtype_label">Raumtyp</div>
-          <div class="roomtype-options">
-            <label class="radio-block">
-              <input type="radio" name="roomType" value="event" checked>
-              <div>
-                <div class="radio-title" data-i18n="ui_create_mode_event">Event-Konversation (Talk Raum an Termin binden)</div>
-              </div>
-            </label>
-            <label class="radio-block">
-              <input type="radio" name="roomType" value="normal">
-              <div>
-                <div class="radio-title" data-i18n="ui_create_mode_standard">Standard-Raum (eigenständig)</div>
-              </div>
-            </label>
+          <div class="option-tooltip" role="tooltip">
+            <div class="option-tooltip-title" data-i18n="talk_option_listable_title">🔍 In Suche anzeigen</div>
+            <ul class="option-tooltip-list">
+              <li data-i18n="talk_option_listable_line1">Der Raum ist über die Talk-Suche auffindbar</li>
+              <li data-i18n="talk_option_listable_line2">⚠️ Erleichtert das Wiederfinden, ist aber für jeden Benutzer auffindbar.</li>
+            </ul>
           </div>
-        </div>
+        </label>
       </div>
       <div class="section delegate-section">
         <label for="delegateInput" data-i18n="ui_create_moderator_label">Moderator (optional)</label>
         <div class="delegate-field">
-          <div class="delegate-input-row">
-            <input id="delegateInput" type="text" autocomplete="off" spellcheck="false">
-            <button type="button" id="delegateClearBtn" data-i18n="ui_button_clear">Leeren</button>
+          <div class="delegate-input-wrap">
+            <div class="delegate-input-row">
+              <input id="delegateInput" type="text" autocomplete="off" spellcheck="false">
+              <button type="button" id="delegateClearBtn" data-i18n="ui_button_clear">Leeren</button>
+            </div>
+            <div class="delegate-dropdown" id="delegateDropdown"></div>
           </div>
           <div class="delegate-status" id="delegateStatus"></div>
           <div class="delegate-selected" id="delegateSelected" hidden>
@@ -517,11 +737,9 @@ body{
               <div class="delegate-selected-title" data-i18n="ui_delegate_selected_title">Ausgewählt</div>
               <div class="delegate-selected-name" id="delegateSelectedName"></div>
               <div class="delegate-selected-meta" id="delegateSelectedMeta"></div>
-              <div class="delegate-selected-description" id="delegateSelectedDescription" data-i18n="ui_delegate_selected_description">Bei Angabe wird die Moderation nach Erstellung an diesen Benutzer übertragen und Sie verlassen den Raum.</div>
             </div>
           </div>
           <div class="delegate-hint" data-i18n="ui_create_moderator_hint">Moderator kann optional vorab gesetzt werden.</div>
-          <div class="delegate-dropdown" id="delegateDropdown"></div>
         </div>
       </div>
     </div>

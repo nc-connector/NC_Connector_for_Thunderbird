@@ -6,15 +6,24 @@ See LICENSE.txt for details.
 <!doctype html>
 <meta charset="utf-8">
 <title data-i18n="sharing_dialog_title">Nextcloud Freigabe</title>
+<link rel="stylesheet" href="tbTheme.css">
 <style>
 :root{
-  --brand-blue:#0082C9;
+  --brand-blue:var(--tb-accent);
   --header-height:48px;
-  --control-height:38px;
-  --control-radius:10px;
+  --dialog-accent:var(--tb-accent);
+  --dialog-surface:var(--tb-bg);
+  --dialog-outline:var(--tb-border);
+  --dialog-outline-strong:var(--tb-border-strong);
+  --dialog-text:var(--tb-text);
+  --dialog-gap:10px;
+  --dialog-pad-left:22px;
+  --dialog-pad-right:22px;
+  --control-height:32px;
+  --control-radius:var(--tb-control-radius);
   --control-padding-x:12px;
   --content-max:560px;
-  --dialog-shadow:0 24px 48px rgba(11,17,39,0.18);
+  --dialog-shadow:var(--tb-shadow);
 }
 html,
 body{
@@ -23,14 +32,20 @@ body{
 body{
   margin:0;
   padding:0;
-  background:radial-gradient(120% 140% at 50% -20%,#ffffff 0%,#f3f6ff 55%,#e9effb 100%);
-  font:14px 'Segoe UI Variable','Segoe UI','Calibri','Trebuchet MS',sans-serif;
-  color:#1f1f1f;
+  background:var(--tb-bg);
+  font:message-box;
+  color:var(--tb-text);
   min-height:0;
   box-sizing:border-box;
   display:flex;
   justify-content:center;
   align-items:flex-start;
+}
+input,
+button,
+select,
+textarea{
+  font:inherit;
 }
 @keyframes dialogEnter{
   from{opacity:0; transform:translateY(12px);}
@@ -50,14 +65,15 @@ body{
   height:100%;
   max-height:640px;
   margin:0 auto;
-  background:#fff;
-  border-radius:16px;
-  border:1px solid rgba(4,16,41,0.08);
-  box-shadow:var(--dialog-shadow);
+  background:var(--tb-bg);
+  border-radius:var(--tb-radius);
+  border:1px solid var(--tb-border);
+  box-shadow:none;
   display:flex;
   flex-direction:column;
   overflow:hidden;
   min-height:0;
+  box-sizing:border-box;
   animation:dialogEnter .35s ease-out;
 }
 .nc-dialog-hero{
@@ -78,24 +94,26 @@ body{
 
 .dialog-message{
   min-height:0;
-  padding:0 32px;
+  padding:0 var(--dialog-pad-right) 0 var(--dialog-pad-left);
   font-size:13px;
   display:flex;
   align-items:center;
+  box-sizing:border-box;
 }
 .dialog-message.error{color:#b00020;}
 .dialog-message.success{color:#11883a;}
 .nc-dialog-content{
-  padding:18px 28px 22px;
+  padding:var(--dialog-gap) var(--dialog-pad-right) var(--dialog-gap) var(--dialog-pad-left);
   flex:1;
   display:flex;
   flex-direction:column;
-  gap:18px;
-  background:#f7f8ff;
+  gap:var(--dialog-gap);
+  background:var(--dialog-surface);
   overflow:hidden;
   max-width:var(--content-max);
   width:100%;
   margin:0 auto;
+  box-sizing:border-box;
 }
 .wizard-step{
   display:none;
@@ -115,8 +133,9 @@ body{
   min-height:0;
 }
 .wizard-step h2{
-  margin:0 0 18px 0;
-  font-size:20px;
+  margin:0 0 var(--dialog-gap) 0;
+  font-size:14px;
+  font-weight:600;
 }
 .form-row{
   margin-bottom:18px;
@@ -131,29 +150,41 @@ input[type="text"],
 input[type="date"],
 input[type="password"],
 textarea{
-  border:1px solid #c7c7c7;
+  border:1px solid var(--dialog-outline-strong);
   border-radius:var(--control-radius);
   padding:0 var(--control-padding-x);
-  font-size:14px;
-  font-family:inherit;
   width:100%;
   box-sizing:border-box;
+  transition:border-color .15s ease, box-shadow .15s ease, background .15s ease;
 }
 input[type="text"],
 input[type="date"],
 input[type="password"]{
   height:var(--control-height);
-  background:#fff;
+  background:var(--tb-surface);
 }
 textarea{
   min-height:140px;
   padding:10px 12px;
+  background:var(--tb-surface);
+}
+input[type="text"]:focus,
+input[type="date"]:focus,
+input[type="password"]:focus,
+textarea:focus{
+  border-color:var(--dialog-accent);
+  background:var(--tb-surface);
+  outline:none;
+  box-shadow:0 0 0 3px rgba(0,130,201,0.15);
 }
 .checkbox-row{
   display:flex;
   align-items:center;
   gap:8px;
   margin:10px 0;
+}
+.checkbox-row input[type="checkbox"]{
+  accent-color:var(--dialog-accent);
 }
 .inline-field{
   display:flex;
@@ -170,17 +201,21 @@ textarea{
 .inline-field button{
   height:var(--control-height);
   padding:0 14px;
-  border:1px solid #c7c7c7;
+  border:1px solid var(--dialog-outline-strong);
   border-radius:var(--control-radius);
-  background:#f5f5f5;
+  background:var(--tb-surface);
+  color:var(--dialog-text);
   cursor:pointer;
+  transition:border-color .15s ease,color .15s ease,background .15s ease;
 }
 .inline-field button:hover{
-  background:#e6e6e6;
+  border-color:var(--dialog-accent);
+  color:var(--dialog-accent);
+  background:var(--tb-surface-2);
 }
 .base-path{
   font-size:13px;
-  color:#555;
+  color:var(--tb-muted);
   margin-bottom:12px;
 }
 .file-actions{
@@ -191,10 +226,17 @@ textarea{
 .file-actions button{
   height:var(--control-height);
   padding:0 14px;
-  border:1px solid #c7c7c7;
+  border:1px solid var(--dialog-outline-strong);
   border-radius:var(--control-radius);
-  background:#f5f5f5;
+  background:var(--tb-surface);
+  color:var(--dialog-text);
   cursor:pointer;
+  transition:border-color .15s ease,color .15s ease,background .15s ease;
+}
+.file-actions button:hover:not(:disabled){
+  border-color:var(--dialog-accent);
+  color:var(--dialog-accent);
+  background:var(--tb-surface-2);
 }
 .file-actions button:disabled{
   opacity:0.5;
@@ -208,7 +250,7 @@ textarea{
   min-height:0;
 }
 .file-table-wrapper{
-  border:1px solid #dcdcdc;
+  border:1px solid var(--tb-border);
   border-radius:8px;
   overflow:auto;
 }
@@ -217,22 +259,22 @@ table{
   border-collapse:collapse;
 }
 thead{
-  background:#f4f4f4;
+  background:var(--tb-surface-2);
   font-weight:600;
 }
 th,td{
   padding:10px;
-  border-bottom:1px solid #e4e4e4;
+  border-bottom:1px solid var(--tb-border);
   font-size:13px;
 }
 tbody tr.selected{
-  background:#e3f2fd;
+  background:rgba(0,130,201,0.12);
 }
 .empty-placeholder{
   padding:24px;
   text-align:center;
   font-size:13px;
-  color:#777;
+  color:var(--tb-muted);
 }
 .status-progress{
   display:flex;
@@ -247,7 +289,7 @@ tbody tr.selected{
 .status-progress .bar{
   flex:1;
   height:6px;
-  background:#cfe5ff;
+  background:var(--tb-surface-2);
   border-radius:4px;
   overflow:hidden;
 }
@@ -259,25 +301,25 @@ tbody tr.selected{
 }
 .status-text{
   font-size:12px;
-  color:#555;
+  color:var(--tb-muted);
   margin-top:8px;
 }
 .nc-dialog-footer{
-  border-top:1px solid #e0e0e0;
-  padding:16px 28px 22px;
-  background:#fff;
+  border-top:1px solid var(--tb-border);
+  padding:var(--dialog-gap) var(--dialog-pad-right) var(--dialog-gap) var(--dialog-pad-left);
+  background:var(--tb-bg);
   display:flex;
   justify-content:space-between;
   align-items:center;
+  box-sizing:border-box;
 }
 .nc-dialog-footer button{
-  height:var(--control-height);
-  padding:0 18px;
-  border-radius:var(--control-radius);
-  border:1px solid #c7c7c7;
-  background:#f3f3f3;
+  padding:8px 18px;
+  border-radius:6px;
+  border:1px solid var(--tb-border);
+  background:var(--tb-surface);
   cursor:pointer;
-  font-size:14px;
+  font:inherit;
 }
 .nc-dialog-footer button.primary{
   background:var(--brand-blue);
@@ -291,7 +333,7 @@ tbody tr.selected{
 .footer-left,
 .footer-right{
   display:flex;
-  gap:10px;
+  gap:12px;
 }
 @media (prefers-reduced-motion: reduce){
   .wizard-step.active{

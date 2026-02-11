@@ -1,0 +1,41 @@
+/**
+ * Copyright (c) 2025 Bastian Kleinschmidt
+ * Licensed under the GNU Affero General Public License v3.0.
+ * See LICENSE.txt for details.
+ */
+:root{
+  color-scheme:light dark;
+
+  /* Thunderbird-like neutral palette */
+  --tb-bg:#f9f9fb;
+  --tb-surface:#ffffff;
+  --tb-surface-2:#f0f0f4;
+  --tb-border:#d7d7db;
+  --tb-border-strong:#b1b1b3;
+  --tb-text:#15141a;
+  --tb-muted:#5b5b66;
+
+  /* Brand / accent */
+  --tb-accent:#0082C9;
+
+  /* Geometry */
+  --tb-radius:8px;
+  --tb-control-radius:4px;
+
+  /* Subtle elevation */
+  --tb-shadow:0 1px 2px rgba(0,0,0,0.10);
+}
+
+@media (prefers-color-scheme: dark){
+  :root{
+    --tb-bg:#2b2a33;
+    --tb-surface:#42414d;
+    --tb-surface-2:#363540;
+    --tb-border:#5b5b66;
+    --tb-border-strong:#7c7c86;
+    --tb-text:#fbfbfe;
+    --tb-muted:#cfcfd8;
+    --tb-shadow:0 1px 2px rgba(0,0,0,0.40);
+  }
+}
+

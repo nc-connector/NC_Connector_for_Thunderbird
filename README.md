@@ -1,4 +1,5 @@
-[English](README.md) | [Deutsch](README.de.md)
+[English](https://github.com/nc-connector/NC_Connector_for_Thunderbird/blob/main/README.md) | [Deutsch](https://github.com/nc-connector/NC_Connector_for_Thunderbird/blob/main/README.de.md)
+[Admin Guide](https://github.com/nc-connector/NC_Connector_for_Thunderbird/blob/main/docs/ADMIN.md) | [Development Guide](https://github.com/nc-connector/NC_Connector_for_Thunderbird/blob/main/docs/DEVELOPMENT.md)
 
 <div align="center" style="background:#0082C9; padding:1px 0;"><img src="ui/assets/header-solid-blue-1920x480.png" alt="Addon" height="80"></div>
 
@@ -10,23 +11,19 @@ This is a community project and is not an official Nextcloud GmbH product.
 ## Highlights
 
 - **One-click Nextcloud Talk**
-  Open an event, choose Nextcloud Talk, configure the room, and define a moderator. The wizard writes title/location/description (including help link) into the event.
+  Open an event, choose Nextcloud Talk, configure the room, and define a moderator. Optionally add invitees to the room (separately for internal Nextcloud users and external e-mail guests). The wizard writes title/location/description (including help link) into the event.
 - **Sharing deluxe**
   The "Add Nextcloud Share" button starts the sharing assistant with upload queue, password generator, expiration date, and note field. The finished share is inserted as formatted HTML into the email.
 - **Enterprise security**
   Lobby until start time, moderator delegation, automatic cleanup of unsaved events, required passwords, and expiration policies protect sensitive meetings and files.
 - **Seamless Nextcloud integration**
-  Login Flow V2, automatic room tracking, and debug logs in [NCBG], [NCUI], [NCSHARE] help with troubleshooting.
+  Login Flow V2, automatic room tracking, and debug logs in [NCBG], [NCUI][Talk], [NCUI][Sharing], [NCCalToolbar] help with troubleshooting.
 - **ESR-ready**
   Optimized and tested for Thunderbird ESR 140.X with a minimal experiment footprint.
 
-## Whats new in 2.2.5?
+## Changelog
 
-- Talk button now also available in the tab editor (not just the dialog window).
-- Optional auto-add of event invitees to the Talk room (Nextcloud users via system addressbook, others via e-mail).
-- Live Nextcloud password policy support for Talk + Sharing (min length + generator API with secure fallback).
-- Unified, modernized UI across Talk wizard, Sharing wizard, and settings (consistent spacing, buttons, animations).
-- Note: The add-on ID has changed in 2.2.2. Please uninstall versions <=2.2.1 before installing 2.2.5.
+See [`CHANGELOG.md`](https://github.com/nc-connector/NC_Connector_for_Thunderbird/blob/main/CHANGELOG.md).
 
 ## Feature overview
 
@@ -35,6 +32,9 @@ This is a community project and is not an official Nextcloud GmbH product.
 - Automatic insertion of title, location, and description (including help link and password) into the event.
 - Room tracking, lobby updates, delegation workflow, and cleanup if the event is discarded or moved.
 - Calendar changes (drag-and-drop or dialog edits) keep lobby/start time in sync on the server.
+- Optional invitee sync after saving the event:
+  - **Users:** internal Nextcloud users are added directly to the room.
+  - **Guests:** external e-mail guests are invited as guests (they may receive an additional invitation e-mail from Nextcloud).
 
 ### Nextcloud Sharing in the compose window
 - Four steps (share, expiration date, files, note) with a password-protected upload folder.
@@ -43,7 +43,7 @@ This is a community project and is not an official Nextcloud GmbH product.
 
 ### Administration & compliance
 - Login Flow V2 (app password is created automatically) and central options (base URL, debug mode, sharing paths, default values for Sharing/Talk).
-- Full internationalization (DE/EN/FR) and structured debug logs for support cases.
+- Full internationalization (see [`Translations.md`](https://github.com/nc-connector/NC_Connector_for_Thunderbird/blob/main/Translations.md)) and structured debug logs for support cases.
 
 ## System requirements
 - Thunderbird ESR 140.X (Windows/macOS/Linux)
@@ -51,12 +51,12 @@ This is a community project and is not an official Nextcloud GmbH product.
 - App password or Login Flow V2
 
 ## Installation
-1. Install the current XPI `nc4tb-2.2.5.xpi` in Thunderbird (Add-ons > Gear > Install Add-on From File).
+1. Install the current XPI `nc4tb-2.2.7.xpi` in Thunderbird (Add-ons > Gear > Install Add-on From File).
 2. Restart Thunderbird.
 3. In the add-on options, enter base URL, user, and app password or start the login flow.
 
 ## Support & feedback
-- **Troubleshooting:** Enable debug mode in the options; relevant logs appear as [NCUI][Talk], [NCUI][Sharing], [NCBG], [NCSHARE], [NCExp].
+- **Troubleshooting:** Enable debug mode in the options; relevant logs appear as [NCBG], [NCUI][Talk], [NCUI][Sharing], [NCCalToolbar] in Thunderbird’s developer console.
 
 Good luck with secure, professional work using NC Connector for Thunderbird!
 
