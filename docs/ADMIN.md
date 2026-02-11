@@ -261,9 +261,6 @@ Example policy that force-installs NC Connector and keeps updates enabled:
 
 ### 4.6 Example Ansible task (Linux)
 
-Your snippet is structurally correct, but remove the stray trailing quote (`"`) after the JSON.
-Here is a cleaned-up example:
-
 ```yaml
 - name: Thunderbird - force install nc4tb (always latest) via policies.json
   hosts: all
