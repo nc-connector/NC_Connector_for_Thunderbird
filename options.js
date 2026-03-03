@@ -6,11 +6,28 @@
 'use strict';
 const i18n = NCI18n.translate;
 const DEFAULT_SHARING_EXPIRE_DAYS = 7;
-const DEFAULT_SHARING_SHARE_NAME = i18n("sharing_share_default") || "Freigabename";
-const DEFAULT_TALK_TITLE = i18n("ui_default_title") || "Besprechung";
+const DEFAULT_SHARING_ATTACHMENT_THRESHOLD_MB = NCSharingStorage.DEFAULT_ATTACHMENT_THRESHOLD_MB;
+const DEFAULT_SHARING_SHARE_NAME = i18n("sharing_share_default") || "Share name";
+const DEFAULT_TALK_TITLE = i18n("ui_default_title") || "Meeting";
 const FALLBACK_POPUP_WIDTH = 520;
 const FALLBACK_POPUP_HEIGHT = 320;
 const SHARING_KEYS = NCSharingStorage.SHARING_KEYS;
+const normalizeAttachmentThresholdMb = NCSharingStorage.normalizeAttachmentThresholdMb;
+const OPTIONS_LOG_PREFIX = "[NCOPT]";
+const SEPARATE_PASSWORD_FEATURE_ENABLED = false;
+
+/**
+ * Log internal options-page errors.
+ * @param {string} scope
+ * @param {any} error
+ */
+function logOptionsError(scope, error){
+  try{
+    console.error(OPTIONS_LOG_PREFIX, scope, error);
+  }catch(logError){
+    console.error(OPTIONS_LOG_PREFIX, scope, error?.message || String(error), logError?.message || String(logError));
+  }
+}
 
 NCTalkDomI18n.translatePage(i18n, { titleKey: "options_title" });
 initTabs();
@@ -26,21 +43,37 @@ const sharingDefaultPermCreateInput = document.getElementById("sharingDefaultPer
 const sharingDefaultPermWriteInput = document.getElementById("sharingDefaultPermWrite");
 const sharingDefaultPermDeleteInput = document.getElementById("sharingDefaultPermDelete");
 const sharingDefaultPasswordInput = document.getElementById("sharingDefaultPassword");
+const sharingDefaultPasswordSeparateRow = document.getElementById("sharingDefaultPasswordSeparateRow");
+const sharingDefaultPasswordSeparateInput = document.getElementById("sharingDefaultPasswordSeparate");
 const sharingDefaultExpireDaysInput = document.getElementById("sharingDefaultExpireDays");
+const sharingAttachmentsAlwaysNcInput = document.getElementById("sharingAttachmentsAlwaysNc");
+const sharingAttachmentsAlwaysRow = document.getElementById("sharingAttachmentsAlwaysRow");
+const sharingAttachmentsOfferRow = document.getElementById("sharingAttachmentsOfferRow");
+const sharingAttachmentsOfferAboveEnabledInput = document.getElementById("sharingAttachmentsOfferAboveEnabled");
+const sharingAttachmentsOfferAboveMbInput = document.getElementById("sharingAttachmentsOfferAboveMb");
+const sharingAttachmentsLockBox = document.getElementById("sharingAttachmentsLock");
+const sharingAttachmentsLockText = document.getElementById("sharingAttachmentsLockText");
 const talkDefaultTitleInput = document.getElementById("talkDefaultTitle");
 const talkDefaultLobbyInput = document.getElementById("talkDefaultLobby");
 const talkDefaultListableInput = document.getElementById("talkDefaultListable");
 const talkDefaultAddUsersInput = document.getElementById("talkDefaultAddUsers");
 const talkDefaultAddGuestsInput = document.getElementById("talkDefaultAddGuests");
 const talkDefaultPasswordInput = document.getElementById("talkDefaultPassword");
-const talkDefaultRoomTypeRadios = Array.from(document.querySelectorAll("input[name='talkDefaultRoomType']"));
+const talkDefaultRoomTypePicker = document.getElementById("talkDefaultRoomTypePicker");
+const talkDefaultRoomTypeButton = document.getElementById("talkDefaultRoomTypeButton");
+const talkDefaultRoomTypeButtonLabel = document.getElementById("talkDefaultRoomTypeButtonLabel");
+const talkDefaultRoomTypeDropdown = document.getElementById("talkDefaultRoomTypeDropdown");
+const talkDefaultRoomTypeValueInput = document.getElementById("talkDefaultRoomType");
+const talkDefaultRoomTypeOptions = Array.from(document.querySelectorAll(".options-roomtype-option"));
 const shareBlockLangSelect = document.getElementById("shareBlockLang");
 const eventDescriptionLangSelect = document.getElementById("eventDescriptionLang");
-const DEFAULT_SHARING_BASE = (typeof NCSharing !== "undefined" ? NCSharing.DEFAULT_BASE_PATH : "90 Freigaben - extern");
+const DEFAULT_SHARING_BASE = (typeof NCSharing !== "undefined" ? NCSharing.DEFAULT_BASE_PATH : "90 Shares - external");
 let statusTimer = null;
+let composeAttachmentSettingsLocked = false;
 const SUPPORTED_OVERRIDE_LOCALES = getSupportedOverrideLocales();
 const LANG_OPTIONS = new Set(["default", ...SUPPORTED_OVERRIDE_LOCALES]);
 initLanguageOverrideSelects();
+initTalkDefaultRoomTypePicker();
 
 /**
  * Read the list of supported locale folders for language override settings.
@@ -51,7 +84,9 @@ function getSupportedOverrideLocales(){
     if (typeof NCI18nOverride !== "undefined" && Array.isArray(NCI18nOverride?.supportedLocales) && NCI18nOverride.supportedLocales.length){
       return Array.from(new Set(NCI18nOverride.supportedLocales));
     }
-  }catch(_){}
+  }catch(error){
+    logOptionsError("supported locales detection failed", error);
+  }
   return ["en", "de", "fr"];
 }
 
@@ -76,7 +111,9 @@ function getUiLanguage(){
     if (typeof browser !== "undefined" && browser?.i18n?.getUILanguage){
       return browser.i18n.getUILanguage() || "en";
     }
-  }catch(_){}
+  }catch(error){
+    logOptionsError("ui language detection failed", error);
+  }
   return "en";
 }
 
@@ -100,7 +137,8 @@ function makeDisplayNames(uiLang){
   }
   try{
     return new Intl.DisplayNames([uiLang], { type: "language" });
-  }catch(_){
+  }catch(error){
+    logOptionsError("Intl.DisplayNames init failed", error);
     return null;
   }
 }
@@ -116,7 +154,8 @@ function makeCollator(uiLang){
   }
   try{
     return new Intl.Collator([uiLang], { sensitivity: "base", numeric: true });
-  }catch(_){
+  }catch(error){
+    logOptionsError("Intl.Collator init failed", error);
     return null;
   }
 }
@@ -135,7 +174,9 @@ function getLocaleLabel(locale, displayNames){
       if (label){
         return label;
       }
-    }catch(_){}
+    }catch(error){
+      logOptionsError("locale label lookup failed", error);
+    }
   }
   return tag || String(locale || "");
 }
@@ -235,7 +276,11 @@ async function load(){
     SHARING_KEYS.defaultPermWrite,
     SHARING_KEYS.defaultPermDelete,
     SHARING_KEYS.defaultPassword,
+    SHARING_KEYS.defaultPasswordSeparate,
     SHARING_KEYS.defaultExpireDays,
+    SHARING_KEYS.attachmentsAlwaysConnector,
+    SHARING_KEYS.attachmentsOfferAboveEnabled,
+    SHARING_KEYS.attachmentsOfferAboveMb,
     "talkDefaultTitle",
     "talkDefaultLobby",
     "talkDefaultListable",
@@ -278,6 +323,10 @@ async function load(){
       ? !!storedPassword
       : true;
   }
+  if (sharingDefaultPasswordSeparateInput){
+    sharingDefaultPasswordSeparateInput.checked = false;
+  }
+  updateSharingPasswordState();
   if (sharingDefaultExpireDaysInput){
     const normalizedExpireDays = NCTalkTextUtils.normalizeExpireDays(
       stored[SHARING_KEYS.defaultExpireDays],
@@ -285,6 +334,21 @@ async function load(){
     );
     sharingDefaultExpireDaysInput.value = String(normalizedExpireDays);
   }
+  if (sharingAttachmentsAlwaysNcInput){
+    sharingAttachmentsAlwaysNcInput.checked = !!stored[SHARING_KEYS.attachmentsAlwaysConnector];
+  }
+  if (sharingAttachmentsOfferAboveEnabledInput){
+    sharingAttachmentsOfferAboveEnabledInput.checked = stored[SHARING_KEYS.attachmentsOfferAboveEnabled] !== undefined
+      ? !!stored[SHARING_KEYS.attachmentsOfferAboveEnabled]
+      : true;
+  }
+  if (sharingAttachmentsOfferAboveMbInput){
+    sharingAttachmentsOfferAboveMbInput.value = String(
+      normalizeAttachmentThresholdMb(stored[SHARING_KEYS.attachmentsOfferAboveMb])
+    );
+  }
+  await refreshComposeAttachmentConflictState();
+  updateAttachmentThresholdState();
   if (talkDefaultTitleInput){
     talkDefaultTitleInput.value = stored.talkDefaultTitle || DEFAULT_TALK_TITLE;
   }
@@ -325,6 +389,29 @@ async function load(){
 }
 
 /**
+ * Read Thunderbird compose big-attachment settings and update lock UI.
+ * @returns {Promise<void>}
+ */
+async function refreshComposeAttachmentConflictState(){
+  composeAttachmentSettingsLocked = false;
+  let thresholdMb = DEFAULT_SHARING_ATTACHMENT_THRESHOLD_MB;
+  const readApi = browser?.ncComposePrefs?.getBigAttachmentSettings;
+  if (typeof readApi === "function"){
+    const settings = await readApi();
+    composeAttachmentSettingsLocked = !!settings?.lockActive;
+    thresholdMb = normalizeAttachmentThresholdMb(settings?.thresholdMb);
+  }
+  if (sharingAttachmentsLockText){
+    sharingAttachmentsLockText.textContent = composeAttachmentSettingsLocked
+      ? i18n("options_sharing_attachments_lock_text", [String(thresholdMb)])
+      : "";
+  }
+  if (sharingAttachmentsLockBox){
+    sharingAttachmentsLockBox.hidden = !composeAttachmentSettingsLocked;
+  }
+}
+
+/**
  * Request optional host permission for the configured base URL.
  * @param {{allowPrompt?:boolean}} options
  * @returns {Promise<boolean>}
@@ -333,6 +420,21 @@ async function ensureOriginPermissionInteractive({ allowPrompt = true } = {}){
   const baseUrl = baseUrlInput?.value?.trim() || "";
   if (!baseUrl){
     return true;
+  }
+  let parsedBaseUrl = null;
+  try{
+    parsedBaseUrl = new URL(baseUrl);
+  }catch(error){
+    if (allowPrompt){
+      showStatus(i18n("error_baseurl_https_required"), true);
+    }
+    return false;
+  }
+  if (parsedBaseUrl.protocol !== "https:"){
+    if (allowPrompt){
+      showStatus(i18n("error_baseurl_https_required"), true);
+    }
+    return false;
   }
   if (typeof NCHostPermissions === "undefined" || !NCHostPermissions?.ensureOriginPermissionInteractive){
     return true;
@@ -357,7 +459,9 @@ async function openLoginUrl(url){
     try{
       await browser.windows.openDefaultBrowser(url);
       return true;
-    }catch(_){}
+    }catch(error){
+      logOptionsError("openDefaultBrowser failed", error);
+    }
   }
   try{
     const fallbackUrl = new URL(browser.runtime.getURL("ui/openUrlFallback.html"));
@@ -375,7 +479,9 @@ async function openLoginUrl(url){
       window.open(fallbackUrl.toString(), "_blank", "popup");
       return true;
     }
-  }catch(_){}
+  }catch(error){
+    logOptionsError("open login url fallback failed", error);
+  }
   return false;
 }
 
@@ -397,7 +503,11 @@ async function save(){
   const sharingDefaultPassword = sharingDefaultPasswordInput
     ? !!sharingDefaultPasswordInput.checked
     : true;
+  const sharingDefaultPasswordSeparate = false;
   const sharingDefaultExpireDays = NCTalkTextUtils.normalizeExpireDays(sharingDefaultExpireDaysInput?.value, DEFAULT_SHARING_EXPIRE_DAYS);
+  const sharingAttachmentsAlwaysConnector = !!sharingAttachmentsAlwaysNcInput?.checked;
+  const sharingAttachmentsOfferAboveEnabled = !!sharingAttachmentsOfferAboveEnabledInput?.checked;
+  const sharingAttachmentsOfferAboveMb = normalizeAttachmentThresholdMb(sharingAttachmentsOfferAboveMbInput?.value);
   const talkDefaultTitle = (talkDefaultTitleInput?.value || "").trim() || DEFAULT_TALK_TITLE;
   const talkDefaultLobby = talkDefaultLobbyInput ? !!talkDefaultLobbyInput.checked : true;
   const talkDefaultListable = talkDefaultListableInput ? !!talkDefaultListableInput.checked : true;
@@ -409,6 +519,9 @@ async function save(){
   const shareBlockLang = normalizeLangChoice(shareBlockLangSelect?.value);
   const eventDescriptionLang = normalizeLangChoice(eventDescriptionLangSelect?.value);
   const permissionOk = await ensureOriginPermissionInteractive();
+  if (!permissionOk){
+    return;
+  }
   await browser.storage.local.set({
     baseUrl,
     user,
@@ -421,7 +534,11 @@ async function save(){
     [SHARING_KEYS.defaultPermWrite]: sharingDefaultPermWrite,
     [SHARING_KEYS.defaultPermDelete]: sharingDefaultPermDelete,
     [SHARING_KEYS.defaultPassword]: sharingDefaultPassword,
+    [SHARING_KEYS.defaultPasswordSeparate]: sharingDefaultPasswordSeparate,
     [SHARING_KEYS.defaultExpireDays]: sharingDefaultExpireDays,
+    [SHARING_KEYS.attachmentsAlwaysConnector]: sharingAttachmentsAlwaysConnector,
+    [SHARING_KEYS.attachmentsOfferAboveEnabled]: sharingAttachmentsOfferAboveEnabled,
+    [SHARING_KEYS.attachmentsOfferAboveMb]: sharingAttachmentsOfferAboveMb,
     talkDefaultTitle,
     talkDefaultLobby,
     talkDefaultListable,
@@ -433,9 +550,6 @@ async function save(){
     shareBlockLang,
     eventDescriptionLang
   });
-  if (!permissionOk){
-    return;
-  }
   showStatus(i18n("options_status_saved"));
 }
 
@@ -443,10 +557,26 @@ document.getElementById("save").addEventListener("click", async () => {
   try{
     await save();
   }catch(e){
-    console.error(e);
+    logOptionsError("save failed", e);
     showStatus(e?.message || i18n("options_status_save_failed"), true);
   }
 });
+
+if (sharingAttachmentsOfferAboveEnabledInput){
+  sharingAttachmentsOfferAboveEnabledInput.addEventListener("change", () => {
+    updateAttachmentThresholdState();
+  });
+}
+if (sharingAttachmentsAlwaysNcInput){
+  sharingAttachmentsAlwaysNcInput.addEventListener("change", () => {
+    updateAttachmentThresholdState();
+  });
+}
+if (sharingDefaultPasswordInput){
+  sharingDefaultPasswordInput.addEventListener("change", () => {
+    updateSharingPasswordState();
+  });
+}
 
 const testButton = document.getElementById("testConnection");
 if (testButton){
@@ -459,7 +589,7 @@ if (testButton){
     try{
       await runConnectionTest({ showMissing: true });
     }catch(err){
-      console.error(err);
+      logOptionsError("test connection failed", err);
       showStatus(err?.message || i18n("options_test_failed"), true);
     }finally{
       button.disabled = false;
@@ -469,8 +599,17 @@ if (testButton){
 }
 
 load().catch((e) => {
-  console.error(e);
+  logOptionsError("options load failed", e);
   showStatus(e?.message || i18n("options_status_load_failed"), true);
+});
+
+window.addEventListener("focus", async () => {
+  try{
+    await refreshComposeAttachmentConflictState();
+    updateAttachmentThresholdState();
+  }catch(error){
+    logOptionsError("attachment lock refresh failed", error);
+  }
 });
 
 /**
@@ -575,7 +714,9 @@ function initAbout(){
     if (manifest?.version && versionEl){
       versionEl.textContent = manifest.version;
     }
-  }catch(_){}
+  }catch(error){
+    logOptionsError("about version lookup failed", error);
+  }
   const licenseLink = document.getElementById("licenseLink");
   if (licenseLink && browser?.runtime?.getURL){
     licenseLink.href = browser.runtime.getURL("LICENSE.txt");
@@ -628,23 +769,116 @@ function updateAuthModeUI(){
 }
 
 /**
+ * Initialize the Talk room type picker in options (same behavior as wizard).
+ */
+function initTalkDefaultRoomTypePicker(){
+  if (!talkDefaultRoomTypePicker || !talkDefaultRoomTypeButton || !talkDefaultRoomTypeDropdown || !talkDefaultRoomTypeValueInput){
+    return;
+  }
+
+  talkDefaultRoomTypeButton.addEventListener("click", (event) => {
+    event.preventDefault();
+    toggleTalkDefaultRoomTypeDropdown();
+  });
+
+  talkDefaultRoomTypeOptions.forEach((button) => {
+    button.addEventListener("click", (event) => {
+      event.preventDefault();
+      setTalkDefaultRoomType(button.dataset.value || "normal");
+      closeTalkDefaultRoomTypeDropdown();
+      talkDefaultRoomTypeButton.focus();
+    });
+  });
+
+  document.addEventListener("click", (event) => {
+    if (!talkDefaultRoomTypePicker.contains(event.target)){
+      closeTalkDefaultRoomTypeDropdown();
+    }
+  });
+
+  document.addEventListener("keydown", (event) => {
+    if (event.key === "Escape"){
+      closeTalkDefaultRoomTypeDropdown();
+    }
+  });
+
+  setTalkDefaultRoomType(talkDefaultRoomTypeValueInput.value || "event", { closeDropdown:false });
+}
+
+/**
+ * Check whether the room type dropdown is currently open.
+ * @returns {boolean}
+ */
+function isTalkDefaultRoomTypeDropdownOpen(){
+  return !!(talkDefaultRoomTypeDropdown && talkDefaultRoomTypeDropdown.hidden === false);
+}
+
+/**
+ * Open the room type dropdown.
+ */
+function openTalkDefaultRoomTypeDropdown(){
+  if (!talkDefaultRoomTypeDropdown){
+    return;
+  }
+  talkDefaultRoomTypeDropdown.hidden = false;
+  talkDefaultRoomTypeButton?.setAttribute("aria-expanded", "true");
+}
+
+/**
+ * Close the room type dropdown.
+ */
+function closeTalkDefaultRoomTypeDropdown(){
+  if (!talkDefaultRoomTypeDropdown){
+    return;
+  }
+  talkDefaultRoomTypeDropdown.hidden = true;
+  talkDefaultRoomTypeButton?.setAttribute("aria-expanded", "false");
+}
+
+/**
+ * Toggle room type dropdown visibility.
+ */
+function toggleTalkDefaultRoomTypeDropdown(){
+  if (isTalkDefaultRoomTypeDropdownOpen()){
+    closeTalkDefaultRoomTypeDropdown();
+  }else{
+    openTalkDefaultRoomTypeDropdown();
+  }
+}
+
+/**
  * Read the selected default Talk room type.
  * @returns {"normal"|"event"}
  */
 function getSelectedTalkDefaultRoomType(){
-  const checked = talkDefaultRoomTypeRadios.find((radio) => radio.checked);
-  return checked?.value === "normal" ? "normal" : "event";
+  const value = talkDefaultRoomTypeValueInput?.value;
+  return value === "normal" ? "normal" : "event";
 }
 
 /**
- * Apply the selected default Talk room type to the radio group.
+ * Apply the selected default Talk room type to the room type picker.
  * @param {string} value
+ * @param {{closeDropdown?:boolean}} options
  */
-function setTalkDefaultRoomType(value){
+function setTalkDefaultRoomType(value, options = {}){
+  const closeDropdown = options.closeDropdown !== false;
   const normalized = value === "normal" ? "normal" : "event";
-  talkDefaultRoomTypeRadios.forEach((radio) => {
-    radio.checked = radio.value === normalized;
+  if (talkDefaultRoomTypeValueInput){
+    talkDefaultRoomTypeValueInput.value = normalized;
+  }
+  if (talkDefaultRoomTypeButtonLabel){
+    talkDefaultRoomTypeButtonLabel.textContent = normalized === "event"
+      ? i18n("options_talk_default_roomtype_event")
+      : i18n("options_talk_default_roomtype_standard");
+  }
+  talkDefaultRoomTypeOptions.forEach((button) => {
+    const selected = button.dataset.value === normalized;
+    button.dataset.selected = selected ? "true" : "false";
+    button.setAttribute("aria-selected", selected ? "true" : "false");
   });
+  if (closeDropdown){
+    closeTalkDefaultRoomTypeDropdown();
+  }
 }
 
 /**
@@ -662,6 +896,53 @@ function normalizeLangChoice(value){
     normalized = NCI18nOverride.normalizeLang(raw);
   }
   return LANG_OPTIONS.has(normalized) ? normalized : "default";
+}
+
+/**
+ * Keep the "password in separate mail" default disabled in this release.
+ */
+function updateSharingPasswordState(){
+  if (!sharingDefaultPasswordSeparateInput){
+    return;
+  }
+  const passwordEnabled = !!sharingDefaultPasswordInput?.checked;
+  const separatePasswordEnabled = SEPARATE_PASSWORD_FEATURE_ENABLED && passwordEnabled;
+  sharingDefaultPasswordSeparateInput.disabled = !separatePasswordEnabled;
+  sharingDefaultPasswordSeparateInput.checked = false;
+  if (sharingDefaultPasswordSeparateRow){
+    sharingDefaultPasswordSeparateRow.classList.toggle("is-disabled", !separatePasswordEnabled);
+  }
+}
+
+/**
+ * Enable or disable the attachment threshold input based on checkbox state.
+ */
+function updateAttachmentThresholdState(){
+  if (!sharingAttachmentsAlwaysNcInput || !sharingAttachmentsOfferAboveEnabledInput || !sharingAttachmentsOfferAboveMbInput){
+    return;
+  }
+  if (sharingAttachmentsAlwaysRow){
+    sharingAttachmentsAlwaysRow.classList.toggle("is-disabled", composeAttachmentSettingsLocked);
+  }
+  if (sharingAttachmentsOfferRow){
+    sharingAttachmentsOfferRow.classList.toggle("is-disabled", composeAttachmentSettingsLocked);
+  }
+  if (sharingAttachmentsLockBox){
+    sharingAttachmentsLockBox.hidden = !composeAttachmentSettingsLocked;
+  }
+  sharingAttachmentsAlwaysNcInput.disabled = composeAttachmentSettingsLocked;
+  if (composeAttachmentSettingsLocked){
+    sharingAttachmentsOfferAboveEnabledInput.disabled = true;
+    sharingAttachmentsOfferAboveMbInput.disabled = true;
+    return;
+  }
+  const alwaysViaConnector = !!sharingAttachmentsAlwaysNcInput?.checked;
+  if (sharingAttachmentsOfferRow){
+    sharingAttachmentsOfferRow.classList.toggle("is-disabled", alwaysViaConnector);
+  }
+  sharingAttachmentsOfferAboveEnabledInput.disabled = alwaysViaConnector;
+  const thresholdEnabled = !alwaysViaConnector && !!sharingAttachmentsOfferAboveEnabledInput.checked;
+  sharingAttachmentsOfferAboveMbInput.disabled = !thresholdEnabled;
 }
 
   if (loginFlowButton){
@@ -705,7 +986,7 @@ function normalizeLangChoice(value){
         showStatus(response?.error || i18n("options_loginflow_failed"), true);
       }
     }catch(err){
-      console.error(err);
+      logOptionsError("login flow failed", err);
       showStatus(err?.message || i18n("options_loginflow_failed"), true);
     }finally{
       loginFlowInProgress = false;
@@ -748,7 +1029,7 @@ async function runConnectionTest({ showMissing = true } = {}){
     }
     return response;
   }catch(err){
-    console.error(err);
+    logOptionsError("testConnection runtime failed", err);
     showStatus(err?.message || i18n("options_test_failed"), true);
     return { ok:false, error: err?.message || String(err) };
   }

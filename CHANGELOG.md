@@ -4,6 +4,32 @@ All notable changes to **NC Connector for Thunderbird** will be documented in th
 
 This project targets **Thunderbird ESR 140.\***.
 
+## 2.2.8
+
+Release package version is **2.2.8**.
+Functional delta documented here corresponds to **2.2.7 -> 2.2.8** only.
+
+### Changed
+- `ncCalToolbar` was hardened for deterministic editor targeting in dialog and tab event editors.
+- Event write-back and cleanup paths were stabilized for open editors (including unsaved item flows).
+- Sharing wizard queue behavior was improved (active-row highlight, success colors, path-column handling).
+- Attachment upload flow was simplified in newly created share folders by removing redundant per-file pre-checks.
+- Remote cleanup behavior was tightened for wizard and compose flows when shares are not sent.
+- Error handling and debug logging were normalized to explicit, deterministic runtime logs.
+
+### Added
+- Attachment automation modes:
+  - always share attachments via NC Connector
+  - threshold-based prompt with deterministic user actions
+  - direct attachment-mode wizard start in step 3
+- Conflict lock for Thunderbird’s native “Upload for files larger than ...” setting with explicit user guidance.
+- Centralized i18n/runtime parity checks and parser contract checks in local tooling.
+
+### Disabled In This Release
+- **Send password in separate email** is intentionally disabled in options and sharing wizard.
+- The control stays visible but is grayed out with a “Coming soon (Pro feature)” tooltip.
+- Runtime guard keeps separate-password dispatch inactive even if legacy settings exist.
+
 ## 2.2.7
 
 ### Removed

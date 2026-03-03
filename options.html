@@ -5,7 +5,7 @@ See LICENSE.txt for details.
 -->
 <!doctype html>
 <meta charset="utf-8">
-<title data-i18n="options_title">Nextcloud Talk - Einstellungen</title>
+<title data-i18n="options_title">NC Connector for Thunderbird – Settings</title>
 <link rel="stylesheet" href="ui/tbTheme.css">
 <style>
 :root{
@@ -15,14 +15,18 @@ See LICENSE.txt for details.
   --control-radius:var(--tb-control-radius);
   --control-padding-x:12px;
   --content-max:760px;
+  --row-label-width:220px;
+  --row-control-max:420px;
 }
 body{
   font:message-box;
   max-width:var(--content-max);
   margin:20px auto;
+  padding-bottom:76px;
   line-height:1.45;
   background:var(--tb-bg);
   color:var(--tb-text);
+  box-sizing:border-box;
 }
 
 .hero{
@@ -54,9 +58,17 @@ body{
 @media (prefers-reduced-motion: reduce){
   .tab-panel.active{animation:none;}
 }
-.row{display:grid; grid-template-columns: 220px minmax(240px, 420px); gap:10px; align-items:start; margin:10px 0;}
+.row{display:grid; grid-template-columns:var(--row-label-width) minmax(240px, var(--row-control-max)); gap:10px; align-items:start; margin:10px 0;}
 .row.row-inset{padding:0 14px;}
-.row > div{max-width:420px; width:100%;}
+.row > div{max-width:var(--row-control-max); width:100%;}
+.row > input[type="checkbox"],
+.row > input[type="radio"]{
+  justify-self:start;
+  align-self:center;
+  width:18px;
+  height:18px;
+  margin:0;
+}
 .field-stack{display:flex; flex-direction:column; gap:6px; max-width:420px; width:100%;}
 input[type="url"], input[type="text"], input[type="password"], input[type="number"], select{
   height:var(--control-height);
@@ -73,8 +85,20 @@ input[type="checkbox"],
 input[type="radio"]{
   accent-color:var(--tb-accent);
 }
-footer{display:flex; gap:8px; margin-top:16px}
-#status{opacity:.8; font-size:12px}
+footer{
+  position:sticky;
+  bottom:0;
+  z-index:20;
+  display:flex;
+  align-items:center;
+  justify-content:flex-end;
+  gap:10px;
+  width:100%;
+  margin-top:16px;
+  padding:10px 0 0 0;
+  background:linear-gradient(to bottom, rgba(0,0,0,0), var(--tb-bg) 34%);
+}
+#status{opacity:.8; font-size:12px; margin-right:auto;}
 .donation{display:flex; flex-direction:column; gap:8px; margin-top:12px;}
 .donation-link{display:inline-flex; align-items:center; gap:10px; padding:8px 10px; border:1px solid var(--tb-border); border-radius:var(--tb-radius); text-decoration:none; color:inherit; background:var(--tb-surface);}
 .donation-link:hover{background:var(--tb-surface-2); border-color:var(--brand-blue);}
@@ -103,7 +127,136 @@ footer{display:flex; gap:8px; margin-top:16px}
   border-radius:var(--control-radius);
 }
 .checklist{display:flex; flex-direction:column; gap:6px;}
-.checklist label{font-weight:400;}
+.checklist label{display:flex; align-items:center; gap:8px; font-weight:400;}
+.boolean-control{display:flex; align-items:center; min-height:var(--control-height);}
+.checkbox-inline{display:inline-flex; align-items:center; gap:8px; font-weight:400;}
+.checkbox-inline input[type="number"]{width:72px; min-width:72px;}
+.row.is-disabled{opacity:.55;}
+#sharingDefaultPasswordSeparateRow.is-disabled{
+  opacity:1;
+}
+#sharingDefaultPasswordSeparateRow.is-disabled > label > span{
+  color:var(--tb-muted);
+}
+#sharingDefaultPasswordSeparateRow .option-tooltip{
+  z-index:1100;
+}
+.roomtype-picker{
+  position:relative;
+  width:100%;
+  max-width:var(--row-control-max);
+}
+.roomtype-button{
+  width:100%;
+  height:var(--control-height);
+  padding:0 var(--control-padding-x);
+  border:1px solid var(--tb-border-strong);
+  border-radius:var(--control-radius);
+  background:var(--tb-surface);
+  color:var(--tb-text);
+  box-sizing:border-box;
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:10px;
+  cursor:pointer;
+  transition:border-color .15s ease, box-shadow .15s ease, background .15s ease;
+}
+.roomtype-button:hover{
+  border-color:var(--brand-blue);
+}
+.roomtype-button:focus{
+  border-color:var(--brand-blue);
+  background:var(--tb-surface);
+  outline:none;
+  box-shadow:0 0 0 3px rgba(0,130,201,0.15);
+}
+.roomtype-button-label{
+  font-weight:600;
+  overflow:hidden;
+  text-overflow:ellipsis;
+  white-space:nowrap;
+}
+.roomtype-button-arrow{
+  color:var(--tb-muted);
+  flex:0 0 auto;
+}
+.roomtype-dropdown{
+  position:absolute;
+  top:100%;
+  left:0;
+  right:0;
+  margin-top:4px;
+  background:var(--tb-surface);
+  border:1px solid var(--tb-border);
+  border-radius:10px;
+  box-shadow:var(--tb-shadow);
+  overflow:hidden;
+  z-index:1000;
+}
+.roomtype-option{
+  width:100%;
+  text-align:left;
+  border:0;
+  background:transparent;
+  padding:10px 12px;
+  cursor:pointer;
+  display:flex;
+  flex-direction:column;
+  gap:8px;
+}
+.roomtype-option:hover,
+.roomtype-option:focus{
+  background:var(--tb-surface-2);
+  outline:none;
+}
+.roomtype-option-main{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:10px;
+}
+.roomtype-option-label{
+  font-weight:600;
+  color:var(--tb-text);
+}
+.roomtype-option-check{
+  visibility:hidden;
+  color:var(--brand-blue);
+  font-weight:800;
+}
+.roomtype-option[data-selected="true"] .roomtype-option-check{
+  visibility:visible;
+}
+.roomtype-tooltip{
+  display:none;
+  border:1px solid var(--tb-border);
+  border-radius:10px;
+  padding:10px 12px;
+  background:var(--tb-bg);
+  box-shadow:var(--tb-shadow);
+}
+.roomtype-option:hover .roomtype-tooltip,
+.roomtype-option:focus .roomtype-tooltip{
+  display:block;
+}
+.roomtype-tooltip-title{
+  font-weight:800;
+  font-size:12px;
+  margin:0 0 6px 0;
+}
+.roomtype-tooltip-list{
+  margin:0;
+  padding-left:18px;
+}
+.roomtype-tooltip-list li{
+  margin:0 0 4px 0;
+  font-size:12px;
+  color:var(--tb-text);
+}
+.roomtype-tooltip-list li:last-child{
+  margin-bottom:0;
+}
 .option-tooltip-wrap{position:relative;}
 .option-tooltip{
   position:absolute;
@@ -126,190 +279,305 @@ footer{display:flex; gap:8px; margin-top:16px}
 .option-tooltip-list li{margin:0 0 4px 0; font-size:12px; color:var(--tb-text);}
 .option-tooltip-list li:last-child{margin-bottom:0;}
 .hint{margin:6px 0 0 0; font-size:12px; color:var(--tb-muted);}
+.attachments-lock{
+  margin:10px 0 0 0;
+  padding:10px 12px;
+  border:1px solid var(--tb-border);
+  border-radius:var(--tb-radius);
+  background:var(--tb-surface-2);
+}
+.attachments-lock-title{
+  margin:0 0 6px 0;
+  font-weight:700;
+}
+.attachments-lock-text{
+  margin:0;
+  font-size:12px;
+}
+.attachments-lock-steps{
+  margin:8px 0 0 18px;
+  padding:0;
+}
+.attachments-lock-steps li{
+  margin:0 0 4px 0;
+  font-size:12px;
+}
+.attachments-lock-steps li:last-child{
+  margin-bottom:0;
+}
 </style>
 <div class="hero">
   <img src="ui/assets/header-solid-blue-328x96.png" alt="NC Connector">
 </div>
 <div class="tabs">
   <div class="tab-list" role="tablist">
-    <button type="button" class="tab-btn active" data-tab="general" data-i18n="options_tab_general">Allgemein</button>
+    <button type="button" class="tab-btn active" data-tab="general" data-i18n="options_tab_general">General</button>
     <button type="button" class="tab-btn" data-tab="sharing" data-i18n="options_tab_sharing">Sharing</button>
     <button type="button" class="tab-btn" data-tab="talklink" data-i18n="options_tab_talklink">Talk Link</button>
-    <button type="button" class="tab-btn" data-tab="advanced" data-i18n="options_tab_advanced">Erweitert</button>
+    <button type="button" class="tab-btn" data-tab="advanced" data-i18n="options_tab_advanced">Advanced</button>
     <button type="button" class="tab-btn" data-tab="debug" data-i18n="options_tab_debug">Debug</button>
-    <button type="button" class="tab-btn" data-tab="about" data-i18n="options_tab_about">Über</button>
+    <button type="button" class="tab-btn" data-tab="about" data-i18n="options_tab_about">About</button>
   </div>
   <section id="tab-general" class="tab-panel active">
     <div class="row"><label for="baseUrl" data-i18n="options_base_url_label">Nextcloud URL</label><input id="baseUrl" type="url" data-i18n-placeholder="options_base_url_placeholder" placeholder="https://cloud.example.com"></div>
     <fieldset class="auth-block">
-      <legend data-i18n="options_auth_heading">Authentifizierung</legend>
+      <legend data-i18n="options_auth_heading">Authentication</legend>
       <label class="radio-option">
         <input type="radio" name="authMode" id="authModeManual" value="manual" checked>
-        <span data-i18n="options_auth_manual">Manuell (Benutzername + App-Passwort eingeben)</span>
+        <span data-i18n="options_auth_manual">Manual (enter username + app password)</span>
       </label>
       <label class="radio-option">
         <input type="radio" name="authMode" id="authModeLogin" value="loginFlow">
-        <span data-i18n="options_auth_login">Login mit Nextcloud (App-Passwort automatisch holen)</span>
+        <span data-i18n="options_auth_login">Login with Nextcloud (fetch app password automatically)</span>
       </label>
       <div class="button-row">
-        <button id="loginFlowButton" type="button" data-i18n="options_loginflow_button">Login mit Nextcloud...</button>
-        <button id="testConnection" type="button" data-i18n="options_test_button">Verbindung testen</button>
+        <button id="loginFlowButton" type="button" data-i18n="options_loginflow_button">Login with Nextcloud...</button>
+        <button id="testConnection" type="button" data-i18n="options_test_button">Test connection</button>
       </div>
     </fieldset>
-    <div class="row"><label for="user" data-i18n="options_user_label">Benutzername</label><input id="user" type="text"></div>
-    <div class="row"><label for="appPass" data-i18n="options_app_pass_label">App-Passwort</label><input id="appPass" type="password"></div>
+    <div class="row"><label for="user" data-i18n="options_user_label">Username</label><input id="user" type="text"></div>
+    <div class="row"><label for="appPass" data-i18n="options_app_pass_label">App password</label><input id="appPass" type="password"></div>
   </section>
   <section id="tab-sharing" class="tab-panel">
     <div class="row row-inset">
-      <label for="sharingBase" data-i18n="options_sharing_base_label">Basisverzeichnis</label>
+      <label for="sharingBase" data-i18n="options_sharing_base_label">Base directory</label>
       <div class="field-stack">
         <input id="sharingBase" type="text">
-        <p class="hint" data-i18n="options_sharing_base_hint">Dateien werden unterhalb dieses Verzeichnisses abgelegt (z.B. "90 Freigaben - extern").</p>
+        <p class="hint" data-i18n="options_sharing_base_hint">Files are stored beneath this directory (e.g. "90 Shares - external").</p>
       </div>
     </div>
     <fieldset class="auth-block">
-      <legend data-i18n="options_sharing_defaults_heading">Default-Einstellungen</legend>
+      <legend data-i18n="options_sharing_defaults_heading">Default settings</legend>
       <div class="row">
-        <label for="sharingDefaultShareName" data-i18n="options_sharing_default_share_name_label">Freigabename</label>
+        <label for="sharingDefaultShareName" data-i18n="options_sharing_default_share_name_label">Share name</label>
         <div class="field-stack">
           <input id="sharingDefaultShareName" type="text">
         </div>
       </div>
       <div class="row">
-        <label data-i18n="options_sharing_default_permissions_label">Standard-Berechtigungen</label>
+        <label class="option-tooltip-wrap">
+          <span data-i18n="options_sharing_default_permissions_label">Default permissions</span>
+          <div class="option-tooltip" role="tooltip">
+            <div class="option-tooltip-title" data-i18n="options_sharing_permissions_tooltip_title">🛡️ Default permissions</div>
+            <ul class="option-tooltip-list">
+              <li data-i18n="options_sharing_permissions_tooltip_line1">These values are used as defaults for new shares.</li>
+              <li data-i18n="options_sharing_permissions_tooltip_line2">They can still be adjusted in the sharing wizard.</li>
+              <li data-i18n="options_sharing_permissions_tooltip_line3">In attachment mode, recipient permission is always read-only.</li>
+            </ul>
+          </div>
+        </label>
         <div class="checklist">
-          <label><input id="sharingDefaultPermCreate" type="checkbox"> <span data-i18n="options_sharing_default_perm_create">Hochladen/Erstellen</span></label>
-          <label><input id="sharingDefaultPermWrite" type="checkbox"> <span data-i18n="options_sharing_default_perm_write">Bearbeiten</span></label>
-          <label><input id="sharingDefaultPermDelete" type="checkbox"> <span data-i18n="options_sharing_default_perm_delete">Löschen</span></label>
+          <label><input id="sharingDefaultPermCreate" type="checkbox"> <span data-i18n="options_sharing_default_perm_create">Upload/Create</span></label>
+          <label><input id="sharingDefaultPermWrite" type="checkbox"> <span data-i18n="options_sharing_default_perm_write">Edit</span></label>
+          <label><input id="sharingDefaultPermDelete" type="checkbox"> <span data-i18n="options_sharing_default_perm_delete">Delete</span></label>
         </div>
       </div>
       <div class="row">
-        <label for="sharingDefaultPassword" data-i18n="options_sharing_default_password_label">Passwort setzen</label>
-        <input id="sharingDefaultPassword" type="checkbox">
+        <label for="sharingDefaultPassword" data-i18n="options_sharing_default_password_label">Set password</label>
+        <div class="boolean-control">
+          <input id="sharingDefaultPassword" type="checkbox">
+        </div>
+      </div>
+      <div class="row" id="sharingDefaultPasswordSeparateRow">
+        <label for="sharingDefaultPasswordSeparate" class="option-tooltip-wrap">
+          <span data-i18n="options_sharing_default_password_separate_label">Send password separately</span>
+          <div class="option-tooltip" role="tooltip">
+            <div class="option-tooltip-title" data-i18n="sharing_password_separate_tooltip_title">✉️ Send password separately</div>
+            <ul class="option-tooltip-list">
+              <li data-i18n="sharing_password_separate_tooltip_line1">The main share block does not include an inline password.</li>
+              <li data-i18n="sharing_password_separate_tooltip_line2">The password is sent in a follow-up email to the same recipients.</li>
+              <li data-i18n="sharing_password_separate_tooltip_line3">If auto-send fails, a manual fallback draft is opened.</li>
+            </ul>
+          </div>
+        </label>
+        <div class="boolean-control">
+          <input id="sharingDefaultPasswordSeparate" type="checkbox">
+        </div>
       </div>
       <div class="row">
-        <label for="sharingDefaultExpireDays" data-i18n="options_sharing_default_expire_days_label">Ablaufdatum (Tage)</label>
+        <label for="sharingDefaultExpireDays" data-i18n="options_sharing_default_expire_days_label">Expiration (days)</label>
         <input id="sharingDefaultExpireDays" type="number" min="1" step="1">
+      </div>
+    </fieldset>
+    <fieldset class="auth-block">
+      <legend data-i18n="options_sharing_attachments_heading">Attachments</legend>
+      <div class="row" id="sharingAttachmentsAlwaysRow">
+        <span aria-hidden="true"></span>
+        <label for="sharingAttachmentsAlwaysNc" class="checkbox-inline option-tooltip-wrap">
+          <input id="sharingAttachmentsAlwaysNc" type="checkbox">
+          <span data-i18n="options_sharing_attachments_always_label">Always handle attachments via NC Connector</span>
+          <div class="option-tooltip" role="tooltip">
+            <div class="option-tooltip-title" data-i18n="options_sharing_attachments_always_tooltip_title">📎 Always via NC Connector</div>
+            <ul class="option-tooltip-list">
+              <li data-i18n="options_sharing_attachments_always_tooltip_line1">New attachments are removed from the compose mail and processed via NC Connector.</li>
+              <li data-i18n="options_sharing_attachments_always_tooltip_line2">The sharing wizard opens directly in the file step.</li>
+              <li data-i18n="options_sharing_attachments_always_tooltip_line3">The final mail contains share links instead of physical attachments.</li>
+            </ul>
+          </div>
+        </label>
+      </div>
+      <div class="row" id="sharingAttachmentsOfferRow">
+        <span aria-hidden="true"></span>
+        <label for="sharingAttachmentsOfferAboveEnabled" class="checkbox-inline option-tooltip-wrap">
+          <input id="sharingAttachmentsOfferAboveEnabled" type="checkbox">
+          <span data-i18n="options_sharing_attachments_offer_label">Offer upload for files larger than</span>
+          <input id="sharingAttachmentsOfferAboveMb" type="number" min="1" step="1">
+          <span data-i18n="options_sharing_attachments_offer_suffix">MB</span>
+          <div class="option-tooltip" role="tooltip">
+            <div class="option-tooltip-title" data-i18n="options_sharing_attachments_offer_tooltip_title">📏 Attachment threshold</div>
+            <ul class="option-tooltip-list">
+              <li data-i18n="options_sharing_attachments_offer_tooltip_line1">The total size of all attachments is evaluated.</li>
+              <li data-i18n="options_sharing_attachments_offer_tooltip_line2">If exceeded, you can share via NC Connector or remove the last selected attachment batch.</li>
+              <li data-i18n="options_sharing_attachments_offer_tooltip_line3">The remove action returns the mail to a below-threshold state.</li>
+            </ul>
+          </div>
+        </label>
+      </div>
+      <div class="attachments-lock" id="sharingAttachmentsLock" hidden>
+        <p class="attachments-lock-title" data-i18n="options_sharing_attachments_lock_title">Attachment automation disabled</p>
+        <p class="attachments-lock-text" id="sharingAttachmentsLockText"></p>
+        <ol class="attachments-lock-steps">
+          <li data-i18n="options_sharing_attachments_lock_step1">Open Thunderbird Settings > Composition > Attachments.</li>
+          <li data-i18n="options_sharing_attachments_lock_step2">Disable "Upload for files larger than".</li>
+          <li data-i18n="options_sharing_attachments_lock_step3">Reopen these add-on settings.</li>
+        </ol>
       </div>
     </fieldset>
   </section>
   <section id="tab-talklink" class="tab-panel">
     <fieldset class="auth-block">
-      <legend data-i18n="options_talk_defaults_heading">Default-Einstellungen</legend>
+      <legend data-i18n="options_talk_defaults_heading">Default settings</legend>
       <div class="row">
-        <label for="talkDefaultTitle" data-i18n="options_talk_default_title_label">Titel</label>
+        <label for="talkDefaultTitle" data-i18n="options_talk_default_title_label">Title</label>
         <input id="talkDefaultTitle" type="text">
       </div>
       <div class="row">
         <label for="talkDefaultLobby" class="option-tooltip-wrap">
-          <span data-i18n="options_talk_default_lobby_label">Lobby bis Startzeit aktiv</span>
+          <span data-i18n="options_talk_default_lobby_label">Lobby until start time</span>
           <div class="option-tooltip" role="tooltip">
-            <div class="option-tooltip-title" data-i18n="talk_option_lobby_title">🚪 Lobby bis Startzeit</div>
+            <div class="option-tooltip-title" data-i18n="talk_option_lobby_title">🚪 Lobby until start time</div>
             <ul class="option-tooltip-list">
-              <li data-i18n="talk_option_lobby_line1">Teilnehmer landen vor Beginn in der Lobby (Warteraum) und können noch nicht in den Call</li>
-              <li data-i18n="talk_option_lobby_line2">⚠️ Erst ab der eingestellten Startzeit (oder wenn ein Moderator die Lobby beendet) ist der Beitritt möglich</li>
-              <li data-i18n="talk_option_lobby_line3">Ideal, damit niemand zu früh in Meeting/Webinar reinplatzt.</li>
+              <li data-i18n="talk_option_lobby_line1">Participants are placed in the lobby (waiting room) before the start and cannot join the call yet</li>
+              <li data-i18n="talk_option_lobby_line2">⚠️ Joining is only possible from the configured start time (or when a moderator ends the lobby)</li>
+              <li data-i18n="talk_option_lobby_line3">Ideal so nobody joins the meeting/webinar too early.</li>
             </ul>
           </div>
         </label>
-        <input id="talkDefaultLobby" type="checkbox">
+        <div class="boolean-control">
+          <input id="talkDefaultLobby" type="checkbox">
+        </div>
       </div>
       <div class="row">
         <label for="talkDefaultListable" class="option-tooltip-wrap">
-          <span data-i18n="options_talk_default_listable_label">In Suche anzeigen</span>
+          <span data-i18n="options_talk_default_listable_label">Show in search</span>
           <div class="option-tooltip" role="tooltip">
-            <div class="option-tooltip-title" data-i18n="talk_option_listable_title">🔍 In Suche anzeigen</div>
+            <div class="option-tooltip-title" data-i18n="talk_option_listable_title">🔍 Show in search</div>
             <ul class="option-tooltip-list">
-              <li data-i18n="talk_option_listable_line1">Der Raum ist über die Talk-Suche auffindbar</li>
-              <li data-i18n="talk_option_listable_line2">⚠️ Erleichtert das Wiederfinden, ist aber für jeden Benutzer auffindbar.</li>
+              <li data-i18n="talk_option_listable_line1">The room can be found via Talk search</li>
+              <li data-i18n="talk_option_listable_line2">⚠️ Makes it easier to find again, but is discoverable for all users.</li>
             </ul>
           </div>
         </label>
-        <input id="talkDefaultListable" type="checkbox">
+        <div class="boolean-control">
+          <input id="talkDefaultListable" type="checkbox">
+        </div>
       </div>
       <div class="row">
-        <label data-i18n="options_talk_default_add_participants_label">Teilnehmer in den Raum hinzufügen</label>
+        <label data-i18n="options_talk_default_add_participants_label">Add participants to the room</label>
         <div class="checklist">
-          <label class="option-tooltip-wrap"><input id="talkDefaultAddUsers" type="checkbox"> <span data-i18n="options_talk_default_add_users_label">Benutzer</span>
+          <label class="option-tooltip-wrap"><input id="talkDefaultAddUsers" type="checkbox"> <span data-i18n="options_talk_default_add_users_label">Users</span>
             <div class="option-tooltip" role="tooltip">
-              <div class="option-tooltip-title" data-i18n="talk_option_add_users_title">👤 Benutzer hinzufügen</div>
+              <div class="option-tooltip-title" data-i18n="talk_option_add_users_title">👤 Add users</div>
               <ul class="option-tooltip-list">
-                <li data-i18n="talk_option_add_users_line1">Interne Nextcloud-Benutzer werden direkt dem Raum hinzugefügt</li>
-                <li data-i18n="talk_option_add_users_line2">Der Raum ist sofort in Nextcloud Talk sichtbar</li>
+                <li data-i18n="talk_option_add_users_line1">Internal Nextcloud users are added directly to the room</li>
+                <li data-i18n="talk_option_add_users_line2">The room is immediately visible in Nextcloud Talk</li>
               </ul>
             </div>
           </label>
-          <label class="option-tooltip-wrap"><input id="talkDefaultAddGuests" type="checkbox"> <span data-i18n="options_talk_default_add_guests_label">Gäste</span>
+          <label class="option-tooltip-wrap"><input id="talkDefaultAddGuests" type="checkbox"> <span data-i18n="options_talk_default_add_guests_label">Guests</span>
             <div class="option-tooltip" role="tooltip">
-              <div class="option-tooltip-title" data-i18n="talk_option_add_guests_title">🌍 Gäste hinzufügen</div>
+              <div class="option-tooltip-title" data-i18n="talk_option_add_guests_title">🌍 Add guests</div>
               <ul class="option-tooltip-list">
-                <li data-i18n="talk_option_add_guests_line1">Gäste werden ebenfalls direkt dem Raum hinzugefügt</li>
-                <li data-i18n="talk_option_add_guests_line2">⚠️ Sie erhalten eine separate (zusätzliche) E-Mail mit persönlichem Zugangslink</li>
+                <li data-i18n="talk_option_add_guests_line1">Guests are also added directly to the room</li>
+                <li data-i18n="talk_option_add_guests_line2">⚠️ They will receive a separate (additional) email with a personal access link</li>
               </ul>
             </div>
           </label>
         </div>
       </div>
       <div class="row">
-        <label for="talkDefaultPassword" data-i18n="options_talk_default_password_label">Passwort setzen</label>
-        <input id="talkDefaultPassword" type="checkbox">
+        <label for="talkDefaultPassword" data-i18n="options_talk_default_password_label">Set password</label>
+        <div class="boolean-control">
+          <input id="talkDefaultPassword" type="checkbox">
+        </div>
       </div>
       <div class="row">
-        <label data-i18n="options_talk_default_roomtype_label">Raumtyp</label>
-        <div class="checklist">
-          <label class="option-tooltip-wrap">
-            <input type="radio" name="talkDefaultRoomType" value="event">
-            <span data-i18n="options_talk_default_roomtype_event">Event-Konversation</span>
-            <div class="option-tooltip" role="tooltip">
-              <div class="option-tooltip-title" data-i18n="talk_roomtype_event_title">📅 Event-Unterhaltung</div>
-              <ul class="option-tooltip-list">
-                <li data-i18n="talk_roomtype_event_line1">Zeitlich begrenzt: für einen konkreten Termin oder Anlass</li>
-                <li data-i18n="talk_roomtype_event_line2">Spontan & leichtgewichtig: geeignet für Meetings, Schulungen oder Webinare</li>
-                <li data-i18n="talk_roomtype_event_line3">Selbstaufräumend: wird nach einiger Zeit automatisch entfernt</li>
-              </ul>
-            </div>
-          </label>
-          <label class="option-tooltip-wrap">
-            <input type="radio" name="talkDefaultRoomType" value="normal">
-            <span data-i18n="options_talk_default_roomtype_standard">Standard-Raum</span>
-            <div class="option-tooltip" role="tooltip">
-              <div class="option-tooltip-title" data-i18n="talk_roomtype_group_title">🗨️ Gruppenunterhaltung</div>
-              <ul class="option-tooltip-list">
-                <li data-i18n="talk_roomtype_group_line1">Dauerhaft: bleibt bestehen, bis sie aktiv gelöscht wird</li>
-                <li data-i18n="talk_roomtype_group_line2">Für den Alltag gemacht: ideal für Teams, Abteilungen, laufende Projekte und wiederkehrende Termine</li>
-                <li data-i18n="talk_roomtype_group_line3">Mit Verlauf: der gesamte Chat ist jederzeit nachvollziehbar</li>
-              </ul>
-            </div>
-          </label>
+        <label for="talkDefaultRoomType" data-i18n="options_talk_default_roomtype_label">Room type</label>
+        <div class="roomtype-picker" id="talkDefaultRoomTypePicker">
+          <button type="button" class="roomtype-button" id="talkDefaultRoomTypeButton" aria-haspopup="listbox" aria-expanded="false">
+            <span class="roomtype-button-label" id="talkDefaultRoomTypeButtonLabel" data-i18n="options_talk_default_roomtype_event">Event conversation</span>
+            <span class="roomtype-button-arrow" aria-hidden="true">▾</span>
+          </button>
+          <div class="roomtype-dropdown" id="talkDefaultRoomTypeDropdown" role="listbox" hidden>
+            <button type="button" class="roomtype-option options-roomtype-option" data-value="event" data-selected="true" role="option">
+              <div class="roomtype-option-main">
+                <span class="roomtype-option-label" data-i18n="options_talk_default_roomtype_event">Event conversation</span>
+                <span class="roomtype-option-check" aria-hidden="true">✓</span>
+              </div>
+              <div class="roomtype-tooltip" role="tooltip">
+                <div class="roomtype-tooltip-title" data-i18n="talk_roomtype_event_title">📅 Event conversation</div>
+                <ul class="roomtype-tooltip-list">
+                  <li data-i18n="talk_roomtype_event_line1">Time-limited: for a specific appointment or occasion</li>
+                  <li data-i18n="talk_roomtype_event_line2">Spontaneous & lightweight: suitable for meetings, trainings or webinars</li>
+                  <li data-i18n="talk_roomtype_event_line3">Self-cleaning: removed automatically after some time</li>
+                </ul>
+              </div>
+            </button>
+            <button type="button" class="roomtype-option options-roomtype-option" data-value="normal" data-selected="false" role="option">
+              <div class="roomtype-option-main">
+                <span class="roomtype-option-label" data-i18n="options_talk_default_roomtype_standard">Group conversation</span>
+                <span class="roomtype-option-check" aria-hidden="true">✓</span>
+              </div>
+              <div class="roomtype-tooltip" role="tooltip">
+                <div class="roomtype-tooltip-title" data-i18n="talk_roomtype_group_title">🗨️ Group conversation</div>
+                <ul class="roomtype-tooltip-list">
+                  <li data-i18n="talk_roomtype_group_line1">Persistent: remains until it is actively deleted</li>
+                  <li data-i18n="talk_roomtype_group_line2">Everyday use: ideal for teams, departments, ongoing projects and recurring appointments</li>
+                  <li data-i18n="talk_roomtype_group_line3">With history: the entire chat can be reviewed at any time</li>
+                </ul>
+              </div>
+            </button>
+          </div>
+          <input type="hidden" id="talkDefaultRoomType" value="event">
         </div>
       </div>
     </fieldset>
   </section>
   <section id="tab-advanced" class="tab-panel">
     <fieldset class="auth-block">
-      <legend data-i18n="options_advanced_language_heading">Spracheinstellungen</legend>
+      <legend data-i18n="options_advanced_language_heading">Language overrides</legend>
       <div class="row">
-        <label for="shareBlockLang" data-i18n="options_share_block_lang_label">Sprache im Freigabe-Block</label>
+        <label for="shareBlockLang" data-i18n="options_share_block_lang_label">Language for sharing HTML block</label>
         <div>
           <select id="shareBlockLang"></select>
-          <p class="hint" data-i18n="options_share_block_lang_hint">Steuert die Sprache des eingefügten Freigabe-HTML-Blocks.</p>
+          <p class="hint" data-i18n="options_share_block_lang_hint">Controls the language of the inserted sharing HTML block.</p>
         </div>
       </div>
       <div class="row">
-        <label for="eventDescriptionLang" data-i18n="options_event_description_lang_label">Sprache im Talk-Beschreibungstext</label>
+        <label for="eventDescriptionLang" data-i18n="options_event_description_lang_label">Language for Talk description text</label>
         <div>
           <select id="eventDescriptionLang"></select>
-          <p class="hint" data-i18n="options_event_description_lang_hint">Steuert die Sprache des Talk-Textblocks in Terminen.</p>
+          <p class="hint" data-i18n="options_event_description_lang_hint">Controls the language of the Talk text block in events.</p>
         </div>
       </div>
     </fieldset>
   </section>
   <section id="tab-debug" class="tab-panel">
     <div class="row">
-      <label data-i18n="options_debug_label">Debug-Logging</label>
-      <label style="display:flex; align-items:center; gap:6px;">
+      <label data-i18n="options_debug_label">Debug logging</label>
+      <label class="checkbox-inline">
         <input id="debugEnabled" type="checkbox">
-        <span data-i18n="options_debug_hint">Konsole für Diagnosemeldungen verwenden</span>
+        <span data-i18n="options_debug_hint">Use console for diagnostic messages</span>
       </label>
     </div>
   </section>
@@ -317,28 +585,28 @@ footer{display:flex; gap:8px; margin-top:16px}
     <ul class="about-list">
       <li><strong data-i18n="options_about_version_label">Version:</strong> <span id="aboutVersion">–</span></li>
       <li><strong data-i18n="options_about_copyright_label">Copyright:</strong> <span>2025 Bastian Kleinschmidt</span></li>
-      <li><strong data-i18n="options_about_license_label">Lizenz:</strong> <a id="licenseLink" href="LICENSE.txt" target="_blank" rel="noopener" data-i18n="options_about_license_value">AGPL v3</a></li>
+      <li><strong data-i18n="options_about_license_label">License:</strong> <a id="licenseLink" href="LICENSE.txt" target="_blank" rel="noopener" data-i18n="options_about_license_value">AGPL v3</a></li>
     </ul>
-    <p class="hint" data-i18n="options_about_support_note">Damit NC Connector for Thunderbird weiter kostenlos gepflegt und verbessert werden kann</p>
+    <p class="hint" data-i18n="options_about_support_note">So NC Connector for Thunderbird can continue to be maintained and improved for free.</p>
     <div class="donation">
-      <strong data-i18n="options_about_support_heading">Unterstützen</strong>
+      <strong data-i18n="options_about_support_heading">Support</strong>
       <a class="donation-link" href="https://www.paypal.com/donate/?hosted_button_id=FTZWNRNKVKUN6" target="_blank" rel="noopener">
         <img src="icons/paypal.svg" alt="">
-        <span data-i18n="options_support_link">PayPal: Spenden</span>
+        <span data-i18n="options_support_link">PayPal: Donate</span>
       </a>
     </div>
   </section>
 </div>
 <footer>
-  <button id="save" data-i18n="options_save_button">Speichern</button>
   <span id="status"></span>
+  <button id="save" data-i18n="options_save_button">Save</button>
 </footer>
 <script src="modules/i18n.js"></script>
 <script src="modules/i18nOverride.js"></script>
 <script src="modules/sharingStorage.js"></script>
 <script src="modules/hostPermissions.js"></script>
 <script src="modules/ocs.js"></script>
-<script src="ui/textUtils.js"></script>
+<script src="modules/textUtils.js"></script>
 <script src="modules/ncSharing.js"></script>
 <script src="ui/domI18n.js"></script>
 <script src="options.js"></script>

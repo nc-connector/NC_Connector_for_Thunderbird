@@ -2,7 +2,7 @@
     "manifest_version":  2,
     "default_locale":  "de",
     "name":  "__MSG_extName__",
-    "version":  "2.2.7",
+    "version":  "2.2.8",
     "description":  "__MSG_extDescription__",
     "developer":  {
                      "name":  "Bastian Kleinschmidt"
@@ -17,10 +17,12 @@
                      },
     "permissions":  [
                         "storage",
-                        "compose"
+                        "compose",
+                        "compose.send",
+                        "notifications"
                     ],
     "optional_permissions":  [
-                                 "*://*/*"
+                                 "https://*/*"
                     ],
     "background":  {
                        "scripts":  [
@@ -29,10 +31,19 @@
                                        "modules/i18n.js",
                                        "modules/i18nOverride.js",
                                        "modules/sharingStorage.js",
+                                       "modules/textUtils.js",
+                                       "vendor/ical.js",
+                                       "modules/icalContract.js",
+                                       "modules/bgState.js",
                                        "modules/nccore.js",
                                        "modules/talkcore.js",
-                                       "ui/textUtils.js",
                                        "modules/ncSharing.js",
+                                       "modules/bgComposeAttachments.js",
+                                       "modules/bgComposeShareCleanup.js",
+                                       "modules/bgComposePasswordDispatch.js",
+                                       "modules/bgCompose.js",
+                                       "modules/bgCalendar.js",
+                                       "modules/bgRouter.js",
                                        "modules/background.js"
                                    ]
                    },
@@ -125,22 +136,36 @@
                                                                 }
                                                   },
                             "ncCalToolbar":  {
-                                                "schema":  "experiments/ncCalToolbar/schema.json",
-                                                "parent":  {
-                                                               "scopes":  [
-                                                                              "addon_parent"
-                                                                          ],
-                                                               "script":  "experiments/ncCalToolbar/parent.js",
-                                                               "events":  [
-                                                                              "startup"
-                                                                          ],
-                                                               "paths":  [
-                                                                             [
-                                                                                 "ncCalToolbar"
-                                                                             ]
-                                                                         ]
-                                                           }
-                                            }
+                                                 "schema":  "experiments/ncCalToolbar/schema.json",
+                                                 "parent":  {
+                                                                "scopes":  [
+                                                                               "addon_parent"
+                                                                           ],
+                                                                "script":  "experiments/ncCalToolbar/parent.js",
+                                                                "events":  [
+                                                                               "startup"
+                                                                           ],
+                                                                "paths":  [
+                                                                              [
+                                                                                  "ncCalToolbar"
+                                                                              ]
+                                                                          ]
+                                                            }
+                                             },
+                            "ncComposePrefs":  {
+                                                   "schema":  "experiments/ncComposePrefs/schema.json",
+                                                   "parent":  {
+                                                                  "scopes":  [
+                                                                                 "addon_parent"
+                                                                             ],
+                                                                  "script":  "experiments/ncComposePrefs/parent.js",
+                                                                  "paths":  [
+                                                                                [
+                                                                                    "ncComposePrefs"
+                                                                                ]
+                                                                            ]
+                                                              }
+                                               }
                         },
     "icons":  {
                   "16":  "icons/app-16.png",
@@ -149,3 +174,5 @@
                   "96":  "icons/app-96.png"
               }
 }
+
+

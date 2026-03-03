@@ -14,10 +14,12 @@ This is a community project and is not an official Nextcloud GmbH product.
   Open an event, choose Nextcloud Talk, configure the room, and define a moderator. Optionally add invitees to the room (separately for internal Nextcloud users and external e-mail guests). The wizard writes title/location/description (including help link) into the event.
 - **Sharing deluxe**
   The "Add Nextcloud Share" button starts the sharing assistant with upload queue, password generator, expiration date, and note field. The finished share is inserted as formatted HTML into the email.
+- **Attachment automation**
+  Optional compose rules can route attachments directly through NC Connector (always or above a configurable total-size threshold). If threshold is exceeded, users can either share via NC Connector or remove the last selected attachment batch.
 - **Enterprise security**
   Lobby until start time, moderator delegation, automatic cleanup of unsaved events, required passwords, and expiration policies protect sensitive meetings and files.
 - **Seamless Nextcloud integration**
-  Login Flow V2, automatic room tracking, and debug logs in [NCBG], [NCUI][Talk], [NCUI][Sharing], [NCCalToolbar] help with troubleshooting.
+  Login Flow V2, automatic room tracking, and debug logs in [NCBG], [NCUI][Talk], [NCUI][Sharing], and [ncCalToolbar] help with troubleshooting.
 - **ESR-ready**
   Optimized and tested for Thunderbird ESR 140.X with a minimal experiment footprint.
 
@@ -40,10 +42,24 @@ See [`CHANGELOG.md`](https://github.com/nc-connector/NC_Connector_for_Thunderbir
 - Four steps (share, expiration date, files, note) with a password-protected upload folder.
 - Upload queue with duplicate checks, progress display, and optional share without upload.
 - Automatic HTML blocks with link, password, expiration date, and optional note.
+- If a share was inserted but the compose tab is closed without successful send, the share folder is cleaned up automatically on the server.
+- Optional separate password delivery:
+  - default + wizard toggle: "Send password in separate email"
+  - only active when password protection is enabled
+  - main mail hides inline password and shows a separate-password notice
+  - password-only follow-up mail is sent automatically after the main compose send
+  - successful password-mail delivery triggers a desktop success notification
+- Optional attachment automation:
+  - "Always handle attachments via NC Connector"
+  - "Offer upload above X MB" based on total attachment size
+  - threshold prompt with explicit decision ("Share with NC Connector" or "Remove last selected attachments"); remove action deletes the last selected attachment batch
+  - attachment-mode wizard launch in step 3 with ZIP download links (`/s/<token>/download`)
+  - recipient permissions in attachment mode are enforced as read-only (independent of sharing defaults)
+  - automatic lock + guidance note in add-on settings if Thunderbird's own "Upload for files larger than" setting is active
 
 ### Administration & compliance
 - Login Flow V2 (app password is created automatically) and central options (base URL, debug mode, sharing paths, default values for Sharing/Talk).
-- Full internationalization (see [`Translations.md`](https://github.com/nc-connector/NC_Connector_for_Thunderbird/blob/main/Translations.md)) and structured debug logs for support cases.
+- Full internationalization (see [`Translations.md`](https://github.com/nc-connector/NC_Connector_for_Thunderbird/blob/main/Translations.md)) and structured debug logs for support cases, including attachment automation traces in `[NCBG]` and `[NCUI][Sharing]`.
 
 ## System requirements
 - Thunderbird ESR 140.X (Windows/macOS/Linux)
@@ -51,12 +67,12 @@ See [`CHANGELOG.md`](https://github.com/nc-connector/NC_Connector_for_Thunderbir
 - App password or Login Flow V2
 
 ## Installation
-1. Install the current XPI `nc4tb-2.2.7.xpi` in Thunderbird (Add-ons > Gear > Install Add-on From File).
+1. Install the current XPI release (for example `nc4tb-2.2.8.xpi`) in Thunderbird (Add-ons > Gear > Install Add-on From File).
 2. Restart Thunderbird.
 3. In the add-on options, enter base URL, user, and app password or start the login flow.
 
 ## Support & feedback
-- **Troubleshooting:** Enable debug mode in the options; relevant logs appear as [NCBG], [NCUI][Talk], [NCUI][Sharing], [NCCalToolbar] in Thunderbird’s developer console.
+- **Troubleshooting:** Enable debug mode in the options; relevant logs appear as [NCBG], [NCUI][Talk], [NCUI][Sharing], and [ncCalToolbar] in Thunderbird’s developer console.
 
 Good luck with secure, professional work using NC Connector for Thunderbird!
 
@@ -89,6 +105,8 @@ Good luck with secure, professional work using NC Connector for Thunderbird!
 | --- | --- |
 
 </details>
+
+
 
 
 
