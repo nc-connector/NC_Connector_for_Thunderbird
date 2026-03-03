@@ -24,8 +24,8 @@ jobs:
 
           # Only package the add-on payload (root files + required dirs)
           zip -r -9 build/nc4tb-latest.xpi \
-            _locales experiments icons modules ui \
-            LICENSE.txt manifest.json options.html options.js README.md README.de.md
+            _locales experiments icons modules ui docs vendor \
+            LICENSE.txt manifest.json options.html options.js README.md README.de.md VENDOR.md Translations.md CHANGELOG.md
 
       - name: Upload asset to GitHub Release (overwrite)
         env:
