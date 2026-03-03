@@ -5,11 +5,12 @@ See LICENSE.txt for details.
 -->
 <!doctype html>
 <meta charset="utf-8">
-<title data-i18n="sharing_dialog_title">Nextcloud Freigabe</title>
+<title data-i18n="sharing_dialog_title">Nextcloud Share</title>
 <link rel="stylesheet" href="tbTheme.css">
 <style>
 :root{
   --brand-blue:var(--tb-accent);
+  --status-green:#11883a;
   --header-height:48px;
   --dialog-accent:var(--tb-accent);
   --dialog-surface:var(--tb-bg);
@@ -114,6 +115,11 @@ textarea{
   width:100%;
   margin:0 auto;
   box-sizing:border-box;
+  opacity:1;
+  transition:opacity .08s ease-out;
+}
+.nc-dialog-content[data-wizard-ready="false"]{
+  opacity:0;
 }
 .wizard-step{
   display:none;
@@ -183,8 +189,58 @@ textarea:focus{
   gap:8px;
   margin:10px 0;
 }
+.checkbox-row.is-disabled{
+  color:var(--tb-muted);
+}
+#passwordSeparateRow.is-disabled{
+  opacity:1;
+}
+#passwordSeparateRow.is-disabled > span{
+  color:var(--tb-muted);
+}
 .checkbox-row input[type="checkbox"]{
   accent-color:var(--dialog-accent);
+}
+.option-tooltip-wrap{
+  position:relative;
+}
+.option-tooltip{
+  display:none;
+  position:absolute;
+  left:0;
+  top:100%;
+  margin-top:6px;
+  width:min(440px, calc(100vw - 48px));
+  border:1px solid var(--tb-border);
+  border-radius:10px;
+  padding:10px 12px;
+  background:var(--tb-bg);
+  box-shadow:var(--tb-shadow);
+  z-index:40;
+}
+#passwordSeparateRow .option-tooltip{
+  z-index:60;
+}
+.option-tooltip-wrap:hover .option-tooltip,
+.option-tooltip-wrap:focus-within .option-tooltip{
+  display:block;
+}
+.option-tooltip-title{
+  font-weight:800;
+  font-size:12px;
+  margin:0 0 6px 0;
+}
+.option-tooltip-list{
+  margin:0;
+  padding-left:18px;
+}
+.option-tooltip-list li{
+  margin:0 0 4px 0;
+  font-size:12px;
+  color:var(--tb-text);
+}
+.option-tooltip-list li:last-child{
+  margin-bottom:0;
 }
 .inline-field{
   display:flex;
@@ -252,11 +308,24 @@ textarea:focus{
 .file-table-wrapper{
   border:1px solid var(--tb-border);
   border-radius:8px;
-  overflow:auto;
+  overflow-y:auto;
+  overflow-x:hidden;
 }
 table{
   width:100%;
   border-collapse:collapse;
+}
+.file-table{
+  table-layout:fixed;
+}
+.file-table .col-path{
+  width:64%;
+}
+.file-table .col-type{
+  width:12%;
+}
+.file-table .col-status{
+  width:24%;
 }
 thead{
   background:var(--tb-surface-2);
@@ -266,9 +335,33 @@ th,td{
   padding:10px;
   border-bottom:1px solid var(--tb-border);
   font-size:13px;
+  vertical-align:middle;
 }
 tbody tr.selected{
   background:rgba(0,130,201,0.12);
+}
+tbody tr.uploading{
+  background:#0082C9;
+}
+tbody tr.uploading td{
+  color:#fff;
+}
+.path-cell{
+  overflow:hidden;
+}
+.path-scroll{
+  display:block;
+  width:100%;
+  overflow-x:auto;
+  overflow-y:hidden;
+  white-space:nowrap;
+  max-width:100%;
+}
+.type-cell{
+  white-space:nowrap;
+}
+.status-cell{
+  white-space:nowrap;
 }
 .empty-placeholder{
   padding:24px;
@@ -297,7 +390,17 @@ tbody tr.selected{
   display:block;
   height:100%;
   width:0;
-  background:var(--brand-blue);
+  background:var(--status-green);
+}
+tbody tr.uploading .status-progress .bar{
+  background:rgba(255,255,255,0.35);
+}
+tbody tr.uploading .status-progress .bar span{
+  background:var(--status-green);
+}
+.status-done{
+  color:var(--status-green);
+  font-weight:600;
 }
 .status-text{
   font-size:12px;
@@ -347,98 +450,116 @@ tbody tr.selected{
       <img src="assets/header-solid-blue-328x96.png" alt="NC Connector">
     </div>
     <div class="dialog-message" id="messageBar"></div>
-    <div class="nc-dialog-content">
+    <div class="nc-dialog-content" data-wizard-ready="false">
 <section class="wizard-step active" data-step="1">
-        <h2 data-i18n="sharing_heading_permissions">Freigabeeinstellungen</h2>
+        <h2 data-i18n="sharing_heading_permissions">Share settings</h2>
         <div class="form-row">
-          <label for="shareName" data-i18n="sharing_share_name_label">Freigabename</label>
-          <input id="shareName" type="text" data-i18n-placeholder="sharing_share_placeholder" placeholder="Freigabe">
+          <label for="shareName" data-i18n="sharing_share_name_label">Share name</label>
+          <input id="shareName" type="text" data-i18n-placeholder="sharing_share_placeholder" placeholder="e.g. Project X">
         </div>
         <label class="checkbox-row">
           <input type="checkbox" id="permRead" checked disabled>
-          <span data-i18n="sharing_permission_read">Lesen</span>
+          <span data-i18n="sharing_permission_read">Read</span>
         </label>
         <label class="checkbox-row">
           <input type="checkbox" id="permCreate">
-          <span data-i18n="sharing_permission_create">Erstellen</span>
+          <span data-i18n="sharing_permission_create">Upload</span>
         </label>
         <label class="checkbox-row">
           <input type="checkbox" id="permWrite">
-          <span data-i18n="sharing_permission_write">Bearbeiten</span>
+          <span data-i18n="sharing_permission_write">Modify</span>
         </label>
         <label class="checkbox-row">
           <input type="checkbox" id="permDelete">
-          <span data-i18n="sharing_permission_delete">Löschen</span>
+          <span data-i18n="sharing_permission_delete">Delete</span>
         </label>
         <label class="checkbox-row">
           <input type="checkbox" id="passwordToggle">
-          <span data-i18n="sharing_password_toggle">Freigabe-Passwort setzen</span>
+          <span data-i18n="sharing_password_toggle">Set password</span>
+        </label>
+        <label class="checkbox-row option-tooltip-wrap" id="passwordSeparateRow">
+          <input type="checkbox" id="passwordSeparateToggle">
+          <span data-i18n="sharing_password_separate_toggle">Send password in separate email</span>
+          <div class="option-tooltip" role="tooltip">
+            <div class="option-tooltip-title" data-i18n="sharing_password_separate_tooltip_title">✉️ Send password separately</div>
+            <ul class="option-tooltip-list">
+              <li data-i18n="sharing_password_separate_tooltip_line1">The main share block does not include an inline password.</li>
+              <li data-i18n="sharing_password_separate_tooltip_line2">The password is sent in a follow-up email to the same recipients.</li>
+              <li data-i18n="sharing_password_separate_tooltip_line3">If auto-send fails, a manual fallback draft is opened.</li>
+            </ul>
+          </div>
         </label>
         <div class="inline-field" id="passwordFields">
           <input id="passwordInput" type="text" autocomplete="new-password" placeholder="********">
-          <button type="button" id="passwordGenerate" data-i18n="sharing_password_generate">Generieren</button>
+          <button type="button" id="passwordGenerate" data-i18n="sharing_password_generate">Generate</button>
         </div>
       </section>
 
       <section class="wizard-step" data-step="2">
-        <h2 data-i18n="sharing_step_expire">Ablaufdatum</h2>
+        <h2 data-i18n="sharing_step_expire">Expiration date</h2>
         <label class="checkbox-row">
           <input type="checkbox" id="expireToggle" checked>
-          <span data-i18n="sharing_expire_toggle">Ablaufdatum setzen</span>
+          <span data-i18n="sharing_expire_toggle">Set expiration date</span>
         </label>
         <div class="inline-field" id="expireFields">
           <input type="date" id="expireDate">
         </div>
-        <div class="status-text" data-i18n="sharing_expire_hint">Nach Ablauf ist der Link nicht mehr abrufbar.</div>
+        <div class="status-text" data-i18n="sharing_expire_hint">After this date the link is no longer available.</div>
       </section>
 
       <section class="wizard-step" data-step="3">
-        <h2 data-i18n="sharing_step_files_title">Dateien oder Ordner auswählen</h2>
+        <h2 data-i18n="sharing_step_files_title">Select files or folders</h2>
+        <div class="status-text" id="attachmentModeInfo" hidden></div>
         <div class="base-path">
-          <span data-i18n="sharing_base_path_info">Basisverzeichnis:</span>
+          <span data-i18n="sharing_base_path_info">Base directory: $1</span>
           <strong id="basePathLabel"></strong>
         </div>
         <div class="file-actions">
-          <button type="button" id="addFilesBtn" data-i18n="sharing_button_add_files">Dateien hinzufügen...</button>
-          <button type="button" id="addFolderBtn" data-i18n="sharing_button_add_folder">Ordner hinzufügen...</button>
-          <button type="button" id="removeFileBtn" data-i18n="sharing_button_remove">Entfernen</button>
+          <button type="button" id="addFilesBtn" data-i18n="sharing_button_add_files">Add files...</button>
+          <button type="button" id="addFolderBtn" data-i18n="sharing_button_add_folder">Add folder...</button>
+          <button type="button" id="removeFileBtn" data-i18n="sharing_button_remove">Remove</button>
         </div>
         <div class="file-table-wrapper">
-          <table>
+          <table class="file-table">
+            <colgroup>
+              <col class="col-path">
+              <col class="col-type">
+              <col class="col-status">
+            </colgroup>
             <thead>
               <tr>
-                <th data-i18n="sharing_files_table_path">Pfad</th>
-                <th data-i18n="sharing_files_table_type">Typ</th>
+                <th data-i18n="sharing_files_table_path">Path</th>
+                <th data-i18n="sharing_files_table_type">Type</th>
                 <th data-i18n="sharing_files_table_status">Status</th>
               </tr>
             </thead>
             <tbody id="fileTableBody"></tbody>
           </table>
-          <div class="empty-placeholder" id="fileEmptyPlaceholder" data-i18n="sharing_files_empty">Keine Dateien ausgewählt.</div>
+          <div class="empty-placeholder" id="fileEmptyPlaceholder" data-i18n="sharing_files_empty">No files selected.</div>
         </div>
         <div class="status-text" id="uploadStatus"></div>
       </section>
 
       <section class="wizard-step" data-step="4">
-        <h2 data-i18n="sharing_step_note_heading">Notiz an Empfänger</h2>
+        <h2 data-i18n="sharing_step_note_heading">Note to recipient</h2>
         <label class="checkbox-row">
           <input type="checkbox" id="noteToggle">
-          <span data-i18n="sharing_note_toggle">Notiz für Empfänger hinzufügen</span>
+          <span data-i18n="sharing_note_toggle">Add note for recipients</span>
         </label>
         <div class="form-row hidden" id="noteFields">
-          <textarea id="noteInput" data-i18n-placeholder="sharing_note_placeholder" placeholder=""></textarea>
+          <textarea id="noteInput" data-i18n-placeholder="sharing_note_placeholder" placeholder="Optional message for recipients"></textarea>
         </div>
       </section>
     </div>
     <div class="nc-dialog-footer">
       <div class="footer-left">
-        <button type="button" id="backBtn" data-i18n="sharing_button_back">Zurück</button>
+        <button type="button" id="backBtn" data-i18n="sharing_button_back">Back</button>
         <button type="button" id="uploadBtn" data-i18n="sharing_button_upload">Upload</button>
       </div>
       <div class="footer-right">
-        <button type="button" id="nextBtn" data-i18n="sharing_button_next">Weiter</button>
-        <button type="button" class="primary" id="finishBtn" data-i18n="sharing_button_finish">Fertigstellen</button>
-        <button type="button" id="cancelBtn" data-i18n="sharing_button_cancel">Abbrechen</button>
+        <button type="button" id="nextBtn" data-i18n="sharing_button_next">Next</button>
+        <button type="button" class="primary" id="finishBtn" data-i18n="sharing_button_finish">Create share</button>
+        <button type="button" id="cancelBtn" data-i18n="sharing_button_cancel">Cancel</button>
       </div>
     </div>
   </div>
@@ -448,14 +569,15 @@ tbody tr.selected{
   <script src="../modules/i18nOverride.js"></script>
   <script src="../modules/sharingStorage.js"></script>
   <script src="../modules/ocs.js"></script>
-  <script src="textUtils.js"></script>
+  <script src="../modules/textUtils.js"></script>
   <script src="../modules/nccore.js"></script>
-  <script src="../modules/talkcore.js"></script>
   <script src="../modules/hostPermissions.js"></script>
   <script src="../modules/ncSharing.js"></script>
   <script src="popupSizing.js"></script>
   <script src="domI18n.js"></script>
   <script src="password.js"></script>
+  <script src="passwordPolicyClient.js"></script>
+  <script src="debugForwarder.js"></script>
   <script src="nextcloudSharingWizard.js"></script>
 </body>
 

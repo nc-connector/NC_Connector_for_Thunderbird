@@ -1,14 +1,24 @@
 [
   {
     "namespace": "ncCalToolbar",
-    "description": "Adds a stable Nextcloud Talk button to the calendar event editor toolbars (dialog + tab) and reports clicks to the background.",
+    "description": "Custom calendar editor toolbar bridge with deterministic editorId context and editor-targeted read/write APIs.",
     "types": [
       {
-        "id": "ClickedCalendarItem",
+        "id": "EditorId",
+        "type": "string",
+        "pattern": "^ed-[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
+      },
+      {
+        "id": "EditorType",
+        "type": "string",
+        "enum": ["dialog", "tab"]
+      },
+      {
+        "id": "CurrentItemSnapshot",
         "type": "object",
         "properties": {
-          "windowId": { "type": "integer", "optional": true },
-          "dialogOuterId": { "type": "integer", "optional": true },
+          "editorId": { "$ref": "EditorId" },
+          "editorType": { "$ref": "EditorType", "optional": true },
           "calendarId": { "type": "string" },
           "id": { "type": "string" },
           "type": { "type": "string", "enum": ["event", "task"] },
@@ -17,15 +27,7 @@
         }
       },
       {
-        "id": "EditorRef",
-        "type": "object",
-        "properties": {
-          "windowId": { "type": "integer", "optional": true },
-          "dialogOuterId": { "type": "integer", "optional": true }
-        }
-      },
-      {
-        "id": "EventFields",
+        "id": "CurrentItemFieldsUpdate",
         "type": "object",
         "properties": {
           "title": { "type": "string", "optional": true },
@@ -34,47 +36,32 @@
         }
       },
       {
-        "id": "PropertyUpdates",
+        "id": "CurrentItemPropertiesUpdate",
         "type": "object",
         "additionalProperties": {
-          "choices": [
-            { "type": "string" },
-            { "type": "null" }
-          ]
+          "choices": [{ "type": "string" }, { "type": "null" }]
         }
       },
       {
-        "id": "ApplyEventFieldsResult",
-        "type": "object",
-        "properties": {
-          "ok": { "type": "boolean" },
-          "error": { "type": "string", "optional": true },
-          "applied": {
-            "type": "object",
-            "optional": true,
-            "properties": {
-              "title": { "type": "boolean", "optional": true },
-              "location": { "type": "boolean", "optional": true },
-              "description": { "type": "boolean", "optional": true }
-            }
-          }
-        }
+        "id": "EditorClosedAction",
+        "type": "string",
+        "enum": ["persisted", "discarded", "superseded"],
+        "description": "persisted: emitted for dialogaccept or dialogextra1. discarded: emitted for dialogcancel, dialogextra2, or unload. superseded: tracked editorId was replaced by a new editorId for the same UI target."
       },
       {
-        "id": "SimpleResult",
-        "type": "object",
-        "properties": {
-          "ok": { "type": "boolean" },
-          "error": { "type": "string", "optional": true }
-        }
+        "id": "EditorClosedReason",
+        "type": "string",
+        "description": "Underlying UI signal that produced the close action.",
+        "enum": ["dialogaccept", "dialogextra1", "dialogcancel", "dialogextra2", "unload", "re-bound"]
       },
       {
-        "id": "RoomCleanupEvent",
+        "id": "TrackedEditorClosedInfo",
         "type": "object",
+        "description": "Lifecycle payload for one tracked editorId emitted by onTrackedEditorClosed.",
         "properties": {
-          "token": { "type": "string" },
-          "action": { "type": "string", "enum": ["discarded", "persisted", "superseded"] },
-          "reason": { "type": "string", "optional": true }
+          "editorId": { "$ref": "EditorId" },
+          "action": { "$ref": "EditorClosedAction" },
+          "reason": { "$ref": "EditorClosedReason", "optional": true }
         }
       }
     ],
@@ -82,71 +69,54 @@
       {
         "name": "onClicked",
         "type": "function",
-        "description": "Fired when the Nextcloud Talk toolbar button in the event editor is clicked. Includes an iCalendar snapshot of the currently edited item.",
-        "parameters": [
-          { "name": "snapshot", "$ref": "ClickedCalendarItem" }
-        ]
+        "description": "Fired when the ncCalToolbar button is clicked in an editor window and includes a deterministic editorId plus iCal snapshot.",
+        "parameters": [{ "name": "snapshot", "$ref": "CurrentItemSnapshot" }]
       },
       {
-        "name": "onRoomCleanup",
+        "name": "onTrackedEditorClosed",
         "type": "function",
-        "description": "Fired when the editor indicates that a Talk room should be kept or deleted (e.g. dialog saved vs. discarded).",
-        "parameters": [
-          { "name": "event", "$ref": "RoomCleanupEvent" }
-        ]
+        "description": "Fired for tracked editors only, after getCurrent() or updateCurrent() has been called for that editorId. Emitted once per tracked editorId. action reflects the exact close signal defined by EditorClosedAction and reason. No ordering guarantee relative to other calendar change notifications.",
+        "parameters": [{ "name": "info", "$ref": "TrackedEditorClosedInfo" }]
       }
     ],
     "functions": [
       {
-        "name": "applyEventFields",
+        "name": "getCurrent",
         "type": "function",
         "async": true,
-        "description": "Apply event title/location/description into the currently edited calendar item (dialog or tab).",
+        "description": "Get the current item for the editor identified by editorId. Returns null if that editor is no longer open or if no editable item can be resolved in that editor.",
         "parameters": [
           {
-            "name": "details",
+            "name": "options",
             "type": "object",
             "properties": {
-              "editor": { "$ref": "EditorRef" },
-              "fields": { "$ref": "EventFields" }
+              "editorId": { "$ref": "EditorId" },
+              "returnFormat": { "type": "string", "enum": ["ical"], "optional": true }
             }
           }
         ],
-        "returns": { "$ref": "ApplyEventFieldsResult" }
+        "returns": {
+          "choices": [{ "$ref": "CurrentItemSnapshot" }, { "type": "null" }]
+        }
       },
       {
-        "name": "setItemProperties",
+        "name": "updateCurrent",
         "type": "function",
         "async": true,
-        "description": "Set or clear arbitrary calendar item properties (e.g. X-NCTALK-*) on the currently edited item.",
+        "description": "Update the current item for the editor identified by editorId. Requires at least one update via fields or properties. All requested UI fields are resolved before writing starts. The operation is transactional across fields and properties: if a field write fails, field changes are rolled back; if a property write fails, applied properties are rolled back and previously applied field changes are rolled back as well. Throws if the editor cannot be resolved or if any requested field target is unavailable.",
         "parameters": [
           {
-            "name": "details",
+            "name": "updateOptions",
             "type": "object",
             "properties": {
-              "editor": { "$ref": "EditorRef" },
-              "properties": { "$ref": "PropertyUpdates" }
+              "editorId": { "$ref": "EditorId" },
+              "fields": { "$ref": "CurrentItemFieldsUpdate", "optional": true },
+              "properties": { "$ref": "CurrentItemPropertiesUpdate", "optional": true },
+              "returnFormat": { "type": "string", "enum": ["ical"], "optional": true }
             }
           }
         ],
-        "returns": { "$ref": "SimpleResult" }
-      },
-      {
-        "name": "registerRoomCleanup",
-        "type": "function",
-        "async": true,
-        "description": "Register cleanup hooks for the editor to signal whether a newly created Talk room was persisted (saved) or discarded (closed/canceled).",
-        "parameters": [
-          {
-            "name": "details",
-            "type": "object",
-            "properties": {
-              "editor": { "$ref": "EditorRef" },
-              "token": { "type": "string" }
-            }
-          }
-        ],
-        "returns": { "$ref": "SimpleResult" }
+        "returns": { "$ref": "CurrentItemSnapshot" }
       }
     ]
   }

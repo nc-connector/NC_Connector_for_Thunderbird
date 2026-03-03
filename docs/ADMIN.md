@@ -9,7 +9,7 @@ It covers:
 
 Related docs:
 - `docs/DEVELOPMENT.md` — developer/onboarding guide (message contracts, data model, flows)
-- `docs/REVIEWER_NOTES.md` — reviewer constraints (especially for experiments)
+- `docs/ATN_REVIEW_CHECKLIST_INTERNAL.md` — reviewer constraints (especially for experiments)
 
 ---
 
@@ -86,13 +86,25 @@ These defaults are used by the **Sharing Wizard** (compose window).
 
 | UI label | Storage key | Purpose |
 |---|---|---|
-| Base directory | `sharingBasePath` | Remote folder base path under which new share folders are created (e.g. `90 Freigaben - extern`) |
+| Base directory | `sharingBasePath` | Remote folder base path under which new share folders are created (e.g. `90 Shares - external`) |
 | Default share name | `sharingDefaultShareName` | Pre-fills the share name input |
 | Default permissions: Upload/Create | `sharingDefaultPermCreate` | Enables “upload/create” for the share |
 | Default permissions: Edit | `sharingDefaultPermWrite` | Enables editing for the share |
 | Default permissions: Delete | `sharingDefaultPermDelete` | Enables delete for the share |
 | Default: set password | `sharingDefaultPassword` | Pre-enables the password toggle in the wizard |
+| Default: send password in separate mail | `sharingDefaultPasswordSeparate` | Pre-enables the separate-password toggle in the wizard (only effective when password is enabled) |
 | Expiration (days) | `sharingDefaultExpireDays` | Default expiration time for new shares |
+| Always handle attachments via NC Connector | `sharingAttachmentsAlwaysConnector` | Immediately moves compose attachments into NC Connector share flow |
+| Offer upload for files larger than | `sharingAttachmentsOfferAboveEnabled` | Enables threshold-based decision popup in compose |
+| Threshold (MB) | `sharingAttachmentsOfferAboveMb` | Total attachment-size limit that triggers the popup |
+
+Attachment behavior details:
+- Threshold checks are based on **total compose attachment size** after each add action.
+- If the threshold is exceeded, users can choose to:
+  - share attachments via NC Connector, or
+  - remove the most recently selected attachment batch.
+- In attachment mode, the sharing wizard starts directly in file step and publishes a ZIP download link.
+- In attachment mode, recipient permissions are enforced as read-only (independent of default permission toggles).
 
 ### 2.3 Talk Link defaults
 
@@ -135,7 +147,8 @@ When enabled, logs appear with prefixes such as:
 - `[NCBG]` (background)
 - `[NCUI][Talk]` (Talk wizard UI)
 - `[NCUI][Sharing]` (Sharing wizard UI)
-- `[NCCalToolbar]` (calendar editor toolbar experiment)
+- `[ncCalToolbar]` (custom calendar editor toolbar/context bridge)
+- `[calendar.items]` (persisted calendar monitoring logs)
 
 ### 2.6 About & Support
 
@@ -229,6 +242,15 @@ Recommended pattern:
 - Use GitHub’s “latest release” redirect:
   - `https://github.com/nc-connector/NC_Connector_for_Thunderbird/releases/latest/download/nc4tb-latest.xpi`
 
+Important:
+- The asset name must be **the same in every release** (constant file name).
+- Practical approach: upload an additional release asset named:
+  - `nc4tb-latest.xpi`
+  alongside the versioned asset (e.g. `nc4tb-2.2.8.xpi`), ideally automated via GitHub Actions.
+
+Note about signing:
+- In production environments, prefer ATN (signed). A self-hosted XPI may require signing depending on your Thunderbird build and deployment constraints.
+
 ### 4.5 Example policies.json
 
 Example policy that force-installs NC Connector and keeps updates enabled:
@@ -251,6 +273,9 @@ Example policy that force-installs NC Connector and keeps updates enabled:
 ```
 
 ### 4.6 Example Ansible task (Linux)
+
+Your snippet is structurally correct, but remove the stray trailing quote (`"`) after the JSON.
+Here is a cleaned-up example:
 
 ```yaml
 - name: Thunderbird - force install nc4tb (always latest) via policies.json
@@ -318,3 +343,5 @@ If you need “preseeded” settings for many users, typical approaches are:
 - use a central onboarding guide and require users to complete Login Flow v2
 
 (A future enhancement could use `browser.storage.managed` to read admin-provided settings, but this is not implemented currently.)
+
+

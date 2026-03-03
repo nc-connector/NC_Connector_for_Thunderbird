@@ -1,0 +1,12 @@
+BEGIN:VCALENDAR
+PRODID:Microsoft Exchange Server 2010
+VERSION:2.0
+BEGIN:VEVENT
+UID:ol-evt-1
+DTSTART;TZID=W. Europe Standard Time:20260301T140000
+DTEND;TZID=W. Europe Standard Time:20260301T150000
+SUMMARY:Outlook Sync
+ATTENDEE;CN=Alpha User;ROLE=REQ-PARTICIPANT;RSVP=TRUE:mailto:alpha@example.com
+ATTENDEE;CN=Beta User;EMAIL=beta@example.com:mailto:beta@example.com
+END:VEVENT
+END:VCALENDAR

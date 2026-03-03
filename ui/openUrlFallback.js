@@ -15,7 +15,8 @@
   const i18n = (key, subs) => {
     try{
       return browser.i18n.getMessage(key, subs);
-    }catch(_){
+    }catch(error){
+      console.error("[NCUI][OpenUrlFallback] i18n lookup failed", { key, error });
       return "";
     }
   };
@@ -60,7 +61,9 @@
         setStatus("open_url_copied");
         return;
       }
-    }catch(_){}
+    }catch(error){
+      console.error("[NCUI][OpenUrlFallback] clipboard.writeText failed", error);
+    }
     try{
       if (urlInput){
         urlInput.focus();
@@ -72,7 +75,8 @@
       }else{
         setStatus("open_url_copy_failed", true);
       }
-    }catch(_){
+    }catch(error){
+      console.error("[NCUI][OpenUrlFallback] execCommand copy failed", error);
       setStatus("open_url_copy_failed", true);
     }
   }

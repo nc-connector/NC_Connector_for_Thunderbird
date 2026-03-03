@@ -1,0 +1,114 @@
+<!--
+Copyright (c) 2025 Bastian Kleinschmidt
+Licensed under the GNU Affero General Public License v3.0.
+See LICENSE.txt for details.
+-->
+<!doctype html>
+<meta charset="utf-8">
+<title data-i18n="sharing_attachment_prompt_title">Attachment limit exceeded</title>
+<link rel="stylesheet" href="tbTheme.css">
+<style>
+:root{
+  --brand-blue:var(--tb-accent);
+  --header-height:48px;
+  --control-height:32px;
+  --control-radius:var(--tb-control-radius);
+}
+html,
+body{
+  height:100%;
+}
+body{
+  margin:0;
+  padding:0;
+  font:message-box;
+  background:var(--tb-bg);
+  color:var(--tb-text);
+  display:flex;
+  justify-content:center;
+  align-items:flex-start;
+}
+.dialog{
+  width:100%;
+  max-width:560px;
+  min-height:100%;
+  border:1px solid var(--tb-border);
+  border-radius:var(--tb-radius);
+  background:var(--tb-bg);
+  box-sizing:border-box;
+  display:flex;
+  flex-direction:column;
+  overflow:hidden;
+}
+.hero{
+  background:var(--brand-blue);
+  height:var(--header-height);
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  overflow:hidden;
+}
+.hero img{
+  width:auto;
+  height:100%;
+  max-width:328px;
+  display:block;
+  object-fit:contain;
+}
+.content{
+  padding:16px 18px;
+  display:flex;
+  flex-direction:column;
+  gap:10px;
+}
+h1{
+  margin:0;
+  font-size:16px;
+}
+.reason{
+  margin:0;
+  color:var(--tb-text);
+  line-height:1.4;
+}
+.actions{
+  margin-top:auto;
+  border-top:1px solid var(--tb-border);
+  padding:12px 18px;
+  display:flex;
+  justify-content:flex-end;
+  gap:10px;
+}
+button{
+  height:var(--control-height);
+  padding:0 14px;
+  border:1px solid var(--tb-border);
+  border-radius:var(--control-radius);
+  background:var(--tb-surface);
+  color:var(--tb-text);
+  cursor:pointer;
+}
+button.primary{
+  background:var(--brand-blue);
+  border-color:var(--brand-blue);
+  color:#fff;
+}
+</style>
+<body>
+  <div class="dialog">
+    <div class="hero">
+      <img src="assets/header-solid-blue-328x96.png" alt="NC Connector">
+    </div>
+    <div class="content">
+      <h1 data-i18n="sharing_attachment_prompt_title">Attachment limit exceeded</h1>
+      <p class="reason" id="reasonText"></p>
+    </div>
+    <div class="actions">
+      <button type="button" id="removeLastBtn" data-i18n="sharing_attachment_prompt_remove_last">Remove last selected attachments</button>
+      <button type="button" class="primary" id="shareBtn" data-i18n="sharing_attachment_prompt_share">Share with NC Connector</button>
+    </div>
+  </div>
+  <script src="../modules/i18n.js"></script>
+  <script src="domI18n.js"></script>
+  <script src="../modules/textUtils.js"></script>
+  <script src="composeAttachmentPrompt.js"></script>
+</body>

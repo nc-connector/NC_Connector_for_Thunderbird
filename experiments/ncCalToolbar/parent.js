@@ -3,106 +3,815 @@
  * Licensed under the GNU Affero General Public License v3.0.
  * See LICENSE.txt for details.
  */
+"use strict";
 
-var { ExtensionCommon: { ExtensionAPI, EventManager, makeWidgetId } } =
-  ChromeUtils.importESModule("resource://gre/modules/ExtensionCommon.sys.mjs");
+var {
+  ExtensionCommon: { ExtensionAPI, EventManager, makeWidgetId },
+} = ChromeUtils.importESModule("resource://gre/modules/ExtensionCommon.sys.mjs");
+var {
+  ExtensionUtils: { ExtensionError },
+} = ChromeUtils.importESModule("resource://gre/modules/ExtensionUtils.sys.mjs");
 
-var { ExtensionSupport } = ChromeUtils.importESModule("resource:///modules/ExtensionSupport.sys.mjs");
+const EVENT_DIALOG_URL = "chrome://calendar/content/calendar-event-dialog.xhtml";
+const EVENT_TAB_IFRAME_URL = "chrome://calendar/content/calendar-item-iframe.xhtml";
+const MESSENGER_URL = "chrome://messenger/content/messenger.xhtml";
+const EVENT_PANEL_IFRAME_ID = "calendar-item-panel-iframe";
+const OPAQUE_EDITOR_ID_PATTERN =
+  /^ed-[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/;
+const BRIDGE_SYMBOL = Symbol("nc-cal-toolbar-editor-context-bridge");
+const TAB_EDITOR_MODES = new Set(["calendarEvent", "calendarTask"]);
+
+/**
+ * Create an opaque editor identifier.
+ * @returns {string}
+ */
+function createEditorId() {
+  const uuid = Services.uuid
+    .generateUUID()
+    .toString()
+    .slice(1, -1)
+    .toLowerCase();
+  return `ed-${uuid}`;
+}
+
+/**
+ * Maintains deterministic mapping between UI targets (dialog/tab) and opaque editor IDs.
+ */
+class EditorContextBridge {
+  /**
+   * @param {object} extension
+   */
+  constructor(extension) {
+    this.extension = extension;
+    this.targetToEditorId = new Map();
+    this.editorIdToTarget = new Map();
+  }
+
+  /**
+   * Validate and normalize an opaque editor identifier.
+   * @param {string} editorId
+   * @returns {string}
+   */
+  normalizeEditorId(editorId) {
+    if (typeof editorId != "string") {
+      return "";
+    }
+    const value = editorId.trim();
+    if (!value) {
+      return "";
+    }
+    return OPAQUE_EDITOR_ID_PATTERN.test(value) ? value : "";
+  }
+
+  /**
+   * Register a target and assign a stable editorId.
+   * @param {"tab"|"dialog"} kind
+   * @param {number} id
+   * @param {number} instanceId
+   * @returns {string}
+   */
+  _register(kind, id, instanceId = 0) {
+    if (
+      (kind != "tab" && kind != "dialog") ||
+      !Number.isInteger(id) ||
+      !Number.isInteger(instanceId)
+    ) {
+      return "";
+    }
+    const key = `${kind}:${id}:${instanceId}`;
+    const existing = this.targetToEditorId.get(key);
+    if (existing) {
+      return existing;
+    }
+    const editorId = createEditorId();
+    this.targetToEditorId.set(key, editorId);
+    this.editorIdToTarget.set(editorId, { key, kind, id, instanceId });
+    return editorId;
+  }
+
+  /**
+   * Register a tab-based editor target.
+   * @param {number} tabId
+   * @param {number} editorOuterId
+   * @returns {string}
+   */
+  registerTabTarget(tabId, editorOuterId = 0) {
+    return this._register("tab", tabId, editorOuterId);
+  }
+
+  /**
+   * Register a dialog-based editor target.
+   * @param {number} dialogOuterId
+   * @returns {string}
+   */
+  registerDialogTarget(dialogOuterId) {
+    return this._register("dialog", dialogOuterId, dialogOuterId);
+  }
+
+  /**
+   * Resolve an editorId back to its target mapping.
+   * @param {string} editorId
+   * @returns {{kind:"tab"|"dialog",id:number,instanceId:number}|null}
+   */
+  resolveTarget(editorId) {
+    const normalized = this.normalizeEditorId(editorId);
+    if (!normalized) {
+      return null;
+    }
+    const target = this.editorIdToTarget.get(normalized);
+    if (!target) {
+      return null;
+    }
+    return { kind: target.kind, id: target.id, instanceId: target.instanceId };
+  }
+
+  /**
+   * Release all bridge entries for one editorId.
+   * @param {string} editorId
+   */
+  releaseEditorId(editorId) {
+    const normalized = this.normalizeEditorId(editorId);
+    if (!normalized) {
+      return;
+    }
+    const target = this.editorIdToTarget.get(normalized);
+    if (!target) {
+      return;
+    }
+    this.editorIdToTarget.delete(normalized);
+    this.targetToEditorId.delete(target.key);
+  }
+
+  /**
+   * Clear bridge state and detach from extension context.
+   */
+  clear() {
+    this.targetToEditorId.clear();
+    this.editorIdToTarget.clear();
+    if (this.extension[BRIDGE_SYMBOL] == this) {
+      delete this.extension[BRIDGE_SYMBOL];
+    }
+  }
+}
+
+/**
+ * Get or create the editor context bridge bound to extension context.
+ * @param {object} extension
+ * @returns {EditorContextBridge}
+ */
+function getEditorBridge(extension) {
+  let bridge = extension[BRIDGE_SYMBOL];
+  if (!bridge || !(bridge instanceof EditorContextBridge)) {
+    bridge = new EditorContextBridge(extension);
+    extension[BRIDGE_SYMBOL] = bridge;
+  }
+  return bridge;
+}
 
 this.ncCalToolbar = class extends ExtensionAPI {
-  _roomCleanupKey() {
-    return "_ncCalToolbarRoomCleanup";
-  }
-
+  /**
+   * Register window listeners and initialize existing windows.
+   */
   onStartup() {
-    const listenerId = "ext-ncCalToolbar-" + this.extension.id;
-    this._listenerId = listenerId;
-
-    ExtensionSupport.registerWindowListener(listenerId, {
-      chromeURLs: [
-        "chrome://calendar/content/calendar-event-dialog.xhtml",
-        "chrome://messenger/content/messenger.xhtml"
-      ],
-      onLoadWindow: (window) => {
-        try {
-          this._ensureWindow(window);
-        } catch (e) {
-          console.error("[NCCalToolbar] ensure button failed", e);
-        }
-      }
-    });
-
-    // Also try to install into already open windows (e.g. hot reload during development).
-    for (const window of ExtensionSupport.openWindows) {
-      try {
-        if (
-          window.location?.href?.startsWith("chrome://calendar/content/calendar-event-dialog.xhtml") ||
-          window.location?.href?.startsWith("chrome://messenger/content/messenger.xhtml")
-        ) {
-          this._ensureWindow(window);
-        }
-      } catch (e) {
-        console.error("[NCCalToolbar] ensure button failed (openWindows)", e);
-      }
-    }
+    this._listenerId = "ext-ncCalToolbar-" + this.extension.id;
+    this._listenerRegistered = false;
+    this._startupRetryCount = 0;
+    this._startupRetryPending = false;
+    this._registerWindowListenerWhenReady();
   }
 
+  /**
+   * Unregister listeners and cleanup injected UI/hooks.
+   */
   onShutdown() {
-    if (this._listenerId) {
-      ExtensionSupport.unregisterWindowListener(this._listenerId);
+    const extensionSupport = this._getExtensionSupport();
+    if (this._listenerId && this._listenerRegistered && extensionSupport) {
+      extensionSupport.unregisterWindowListener(this._listenerId);
+      this._listenerRegistered = false;
+    } else if (this._listenerId && this._listenerRegistered && !extensionSupport) {
+      this._logError("shutdown: ExtensionSupport unavailable during unregister", null, {
+        listenerId: this._listenerId,
+      });
+      this._listenerRegistered = false;
     }
-    for (const window of ExtensionSupport.openWindows) {
+    if (this._listenerId) {
+      this._listenerId = null;
+    }
+    this._startupRetryPending = false;
+    this._startupRetryCount = 0;
+    const openWindows = extensionSupport?.openWindows || [];
+    for (const window of openWindows) {
       try {
         this._restoreMessengerHook(window);
-        this._cleanupRoomCleanupInWindow(window);
+      } catch (error) {
+        this._logError("shutdown: restore messenger hook failed", error, {
+          href: window?.location?.href || "",
+        });
+      }
+      try {
+        this._cleanupLifecycleInWindow(window);
+      } catch (error) {
+        this._logError("shutdown: cleanup lifecycle in window failed", error, {
+          href: window?.location?.href || "",
+        });
+      }
+      try {
         this._removeButton(window);
-      } catch (e) {
-        console.error("[NCCalToolbar] remove button failed", e);
+      } catch (error) {
+        this._logError("shutdown: remove button failed", error, {
+          href: window?.location?.href || "",
+        });
+      }
+    }
+    if (this._editorClosedListeners) {
+      this._editorClosedListeners.clear();
+    }
+    if (this._onClickedByContext) {
+      this._onClickedByContext = null;
+    }
+    if (this._clickedListeners) {
+      this._clickedListeners.clear();
+    }
+    if (this._onClosedByContext) {
+      this._onClosedByContext = null;
+    }
+    if (this._apiContextCloseByContext) {
+      this._apiContextCloseByContext = null;
+    }
+    if (this._editorBridge) {
+      this._editorBridge.clear();
+      this._editorBridge = null;
+    }
+  }
+
+  /**
+   * Return the global ExtensionSupport object if it is fully available.
+   * Uses the experiment global directly (no local module re-import).
+   * @returns {object|null}
+   */
+  _getExtensionSupport() {
+    const extensionSupport = globalThis.ExtensionSupport;
+    if (!extensionSupport) {
+      return null;
+    }
+    if (
+      typeof extensionSupport.registerWindowListener != "function" ||
+      typeof extensionSupport.unregisterWindowListener != "function" ||
+      !extensionSupport.openWindows
+    ) {
+      return null;
+    }
+    return extensionSupport;
+  }
+
+  /**
+   * Register the experiment window listener when ExtensionSupport becomes available.
+   * Avoids intermittent startup crashes when the global is not yet initialized.
+   */
+  _registerWindowListenerWhenReady() {
+    if (this._listenerRegistered || !this._listenerId) {
+      return;
+    }
+    const extensionSupport = this._getExtensionSupport();
+    if (!extensionSupport) {
+      this._startupRetryCount = Number(this._startupRetryCount || 0) + 1;
+      if (this._startupRetryCount == 1 || this._startupRetryCount % 10 == 0) {
+        this._logError("startup: ExtensionSupport unavailable, retry scheduled", null, {
+          attempt: this._startupRetryCount,
+        });
+      }
+      if (this._startupRetryCount >= 50) {
+        this._logError("startup: ExtensionSupport unavailable after retry limit", null, {
+          attempts: this._startupRetryCount,
+        });
+        return;
+      }
+      if (this._startupRetryPending) {
+        return;
+      }
+      this._startupRetryPending = true;
+      Services.tm.dispatchToMainThread(() => {
+        this._startupRetryPending = false;
+        this._registerWindowListenerWhenReady();
+      });
+      return;
+    }
+    extensionSupport.registerWindowListener(this._listenerId, {
+      chromeURLs: [EVENT_DIALOG_URL, MESSENGER_URL],
+      onLoadWindow: window => this._ensureWindow(window),
+    });
+    this._listenerRegistered = true;
+    this._startupRetryCount = 0;
+    for (const window of extensionSupport.openWindows) {
+      const href = window?.location?.href || "";
+      if (href.startsWith(EVENT_DIALOG_URL) || href.startsWith(MESSENGER_URL)) {
+        this._ensureWindow(window);
       }
     }
   }
 
+  /**
+   * Log experiment errors with a consistent prefix.
+   * @param {string} message
+   * @param {any} error
+   * @param {object|null} details
+   */
+  _logError(message, error, details = null) {
+    if (details) {
+      console.error(`[ncCalToolbar] ${message}`, details, error);
+      return;
+    }
+    console.error(`[ncCalToolbar] ${message}`, error);
+  }
+
+  /**
+   * Register context-scoped cleanup handler for this API surface.
+   * @param {object} context
+   */
+  _registerApiContextClose(context) {
+    if (!context || typeof context.callOnClose != "function") {
+      return;
+    }
+    if (!this._apiContextCloseByContext) {
+      this._apiContextCloseByContext = new WeakMap();
+    }
+    if (this._apiContextCloseByContext.has(context)) {
+      return;
+    }
+    const closer = {
+      close: () => this._onApiContextClose(context),
+    };
+    this._apiContextCloseByContext.set(context, closer);
+    context.callOnClose(closer);
+  }
+
+  /**
+   * Cleanup listeners and references bound to one extension API context.
+   * @param {object} context
+   */
+  _onApiContextClose(context) {
+    const clickListeners = this._onClickedByContext?.get(context) || null;
+    if (clickListeners) {
+      for (const listener of clickListeners) {
+        this._removeClickedListener(listener);
+      }
+      this._onClickedByContext.delete(context);
+    }
+
+    const listeners = this._onClosedByContext?.get(context) || null;
+    if (listeners) {
+      for (const listener of listeners) {
+        this._removeEditorClosedListener(listener);
+      }
+      this._onClosedByContext.delete(context);
+    }
+    this._apiContextCloseByContext?.delete(context);
+  }
+
+  /**
+   * Return the lazily initialized editor bridge.
+   * @returns {EditorContextBridge}
+   */
+  _bridge() {
+    if (!this._editorBridge) {
+      this._editorBridge = getEditorBridge(this.extension);
+    }
+    return this._editorBridge;
+  }
+
+  /**
+   * Compute extension-scoped button ID.
+   * @returns {string}
+   */
+  _buttonId() {
+    return `${makeWidgetId(this.extension.id)}-ncCalToolbar-button`;
+  }
+
+  /**
+   * Check whether a window is a calendar editor (dialog or tab iframe).
+   * @param {Window} window
+   * @returns {boolean}
+   */
+  _isEditorWindow(window) {
+    const href = window?.location?.href || "";
+    return href.startsWith(EVENT_DIALOG_URL) || href.startsWith(EVENT_TAB_IFRAME_URL);
+  }
+
+  /**
+   * Check whether a tabInfo references a calendar editor tab.
+   * @param {object} tabInfo
+   * @returns {boolean}
+   */
+  _isEditorTab(tabInfo) {
+    const mode = tabInfo?.mode?.name || "";
+    if (TAB_EDITOR_MODES.has(mode)) {
+      return true;
+    }
+    const win = tabInfo?.iframe?.contentWindow || tabInfo?.iframe?.contentDocument?.defaultView || null;
+    return this._isEditorWindow(win);
+  }
+
+  /**
+   * Resolve toolbar ID for dialog or messenger window.
+   * @param {Window} window
+   * @returns {string}
+   */
+  _toolbarId(window) {
+    const href = window?.location?.href || "";
+    if (href.startsWith(EVENT_DIALOG_URL)) {
+      return "event-toolbar";
+    }
+    if (href.startsWith(MESSENGER_URL)) {
+      return "event-tab-toolbar";
+    }
+    return "";
+  }
+
+  /**
+   * Get selected tabInfo from messenger tabmail.
+   * @param {Window} window
+   * @returns {object|null}
+   */
+  _selectedTabInfo(window) {
+    const tabmail = window?.tabmail || null;
+    const infos = Array.isArray(tabmail?.tabInfo) ? tabmail.tabInfo : [];
+    if (!infos.length) {
+      return null;
+    }
+    const index = tabmail?.tabContainer?.selectedIndex;
+    if (Number.isInteger(index) && index >= 0 && index < infos.length) {
+      return infos[index];
+    }
+    return tabmail.currentTabInfo || null;
+  }
+
+  /**
+   * Resolve managed tab id from tabInfo.
+   * @param {object} tabInfo
+   * @returns {number|null}
+   */
+  _managedTabId(tabInfo) {
+    const manager = this.extension?.tabManager;
+    if (!manager || typeof manager.getWrapper != "function") {
+      return null;
+    }
+    if (!this._isEditorTab(tabInfo)) {
+      return null;
+    }
+    try {
+      const id = manager.getWrapper(tabInfo)?.id;
+      return typeof id == "number" ? id : null;
+    } catch (error) {
+      this._logError("managed tab id resolution failed", error);
+      return null;
+    }
+  }
+
+  /**
+   * Resolve outer window ID for event dialog windows.
+   * @param {Window} window
+   * @returns {number|null}
+   */
+  _dialogOuterId(window) {
+    const windowType = window?.document?.documentElement?.getAttribute?.("windowtype") || "";
+    if (windowType != "Calendar:EventDialog" && windowType != "Calendar:EventSummaryDialog") {
+      return null;
+    }
+    const outerId = window?.docShell?.outerWindowID ?? window?.windowUtils?.outerWindowID;
+    return typeof outerId == "number" ? outerId : null;
+  }
+
+  /**
+   * Resolve generic editor outer window ID.
+   * @param {Window} window
+   * @returns {number|null}
+   */
+  _editorOuterId(window) {
+    const outerId = window?.docShell?.outerWindowID ?? window?.windowUtils?.outerWindowID;
+    return typeof outerId == "number" ? outerId : null;
+  }
+
+  /**
+   * Find tabInfo corresponding to an editor iframe window.
+   *
+   * Temporary ESR bridge:
+   * - This explicit iframe -> tabInfo correlation is required to derive a stable
+   *   editor identity for tab editors on ESR 140.
+   * - A manual window/context mapping already existed in add-on 2.2.7
+   *   (`windowId`/`dialogOuterId` based).
+   * - Reason for hardening in 2.2.8: in tab-editor flows, `windowId` could only
+   *   identify the 3-pane host window, while editor operations resolved through
+   *   selected `currentTabInfo`. After tab switches or with multiple open editor
+   *   tabs, this could target the wrong editor context.
+   * - In 2.2.8 this was tightened to opaque `editorId` mapping to achieve a
+   *   deterministic API contract aligned with upstream PR #65.
+   * - Remove this correlation once upstream calendar APIs provide the same
+   *   deterministic editor-targeting contract.
+   *
+   * @param {Window} window
+   * @returns {object|null}
+   */
+  _tabInfoForEditorWindow(window) {
+    if (!this._isEditorWindow(window)) {
+      return null;
+    }
+    const owner = window?.ownerGlobal || null;
+    if (!owner || owner.location?.href != MESSENGER_URL) {
+      return null;
+    }
+    const infos = owner.tabmail && Array.isArray(owner.tabmail.tabInfo) ? owner.tabmail.tabInfo : [];
+    for (const tabInfo of infos) {
+      if (!this._isEditorTab(tabInfo)) {
+        continue;
+      }
+      const tabWindow = tabInfo.iframe?.contentWindow || tabInfo.iframe?.contentDocument?.defaultView || null;
+      if (tabWindow == window) {
+        return tabInfo;
+      }
+    }
+    return null;
+  }
+
+  /**
+   * Resolve editorId for the selected editor tab from messenger context.
+   *
+   * Note:
+   * - This uses explicit tab/iframe resolution instead of generic active-tab
+   *   heuristics to keep click/context targeting deterministic.
+   * - The logic is intentionally scoped to calendar editor surfaces only.
+   *
+   * @param {Window} window
+   * @returns {string}
+   */
+  _tabEditorIdFromMessenger(window) {
+    if (window?.location?.href != MESSENGER_URL) {
+      return "";
+    }
+    const tabInfo = this._selectedTabInfo(window);
+    if (!this._isEditorTab(tabInfo)) {
+      return "";
+    }
+    const tabId = this._managedTabId(tabInfo);
+    if (typeof tabId != "number") {
+      return "";
+    }
+    const tabWindow = tabInfo?.iframe?.contentWindow || tabInfo?.iframe?.contentDocument?.defaultView || null;
+    const outerId = this._editorOuterId(tabWindow);
+    if (typeof outerId != "number") {
+      return "";
+    }
+    return this._bridge().registerTabTarget(tabId, outerId);
+  }
+
+  /**
+   * Resolve editorId for a known editor iframe window.
+   * @param {Window} window
+   * @returns {string}
+   */
+  _tabEditorIdFromEditorWindow(window) {
+    const tabInfo = this._tabInfoForEditorWindow(window);
+    if (!tabInfo) {
+      return "";
+    }
+    const tabId = this._managedTabId(tabInfo);
+    if (typeof tabId != "number") {
+      return "";
+    }
+    const tabWindow = tabInfo?.iframe?.contentWindow || tabInfo?.iframe?.contentDocument?.defaultView || null;
+    const outerId = this._editorOuterId(tabWindow);
+    if (typeof outerId != "number") {
+      return "";
+    }
+    return this._bridge().registerTabTarget(tabId, outerId);
+  }
+
+  /**
+   * Ensure dialog unload listener releases assigned editorId.
+   * @param {Window} window
+   * @param {string} editorId
+   */
+  _ensureDialogReleaseListener(window, editorId) {
+    if (!window || !editorId) {
+      return;
+    }
+    if (!this._dialogReleaseByWindow) {
+      this._dialogReleaseByWindow = new WeakMap();
+    }
+    const previous = this._dialogReleaseByWindow.get(window);
+    if (previous?.editorId == editorId) {
+      return;
+    }
+    if (previous?.onUnload) {
+      window.removeEventListener("unload", previous.onUnload, true);
+      this._bridge().releaseEditorId(previous.editorId);
+    }
+    const onUnload = () => {
+      this._bridge().releaseEditorId(editorId);
+      window.removeEventListener("unload", onUnload, true);
+      this._dialogReleaseByWindow.delete(window);
+    };
+    window.addEventListener("unload", onUnload, true);
+    this._dialogReleaseByWindow.set(window, { editorId, onUnload });
+  }
+
+  /**
+   * Resolve a currently open native editor window by editorId.
+   * @param {string} editorId
+   * @returns {Window|null}
+   */
+  _resolveEditorWindow(editorId) {
+    const bridge = this._bridge();
+    const normalized = bridge.normalizeEditorId(editorId);
+    if (!normalized) {
+      return null;
+    }
+    const target = bridge.resolveTarget(normalized);
+    if (!target) {
+      return null;
+    }
+    if (target.kind == "dialog") {
+      try {
+        const win = Services.wm.getOuterWindowWithId(target.id);
+        if (win && !win.closed && win.location?.href?.startsWith(EVENT_DIALOG_URL)) {
+          return win;
+        }
+      } catch (error) {
+        this._logError("resolve dialog editor window failed", error, {
+          editorId: normalized,
+          targetId: target.id,
+        });
+      }
+      bridge.releaseEditorId(normalized);
+      return null;
+    }
+    if (target.kind == "tab") {
+      const manager = this.extension?.tabManager;
+      if (!manager || typeof manager.get != "function") {
+        bridge.releaseEditorId(normalized);
+        return null;
+      }
+      try {
+        const nativeTab = manager.get(target.id)?.nativeTab || null;
+        if (!this._isEditorTab(nativeTab)) {
+          bridge.releaseEditorId(normalized);
+          return null;
+        }
+        const win = nativeTab.iframe?.contentWindow || nativeTab.iframe?.contentDocument?.defaultView || null;
+        if (!this._isEditorWindow(win) || win.closed) {
+          bridge.releaseEditorId(normalized);
+          return null;
+        }
+        if (target.instanceId > 0 && this._editorOuterId(win) != target.instanceId) {
+          bridge.releaseEditorId(normalized);
+          return null;
+        }
+        return win;
+      } catch (error) {
+        this._logError("resolve tab editor window failed", error, {
+          editorId: normalized,
+          tabId: target.id,
+          instanceId: target.instanceId,
+        });
+        bridge.releaseEditorId(normalized);
+        return null;
+      }
+    }
+    bridge.releaseEditorId(normalized);
+    return null;
+  }
+
+  /**
+   * Build click context with deterministic editorId.
+   * @param {Window} window
+   * @returns {{editorType:"dialog"|"tab",editorId:string}|null}
+   */
+  _clickContext(window) {
+    const href = window?.location?.href || "";
+    if (href == MESSENGER_URL) {
+      const editorId = this._tabEditorIdFromMessenger(window);
+      return editorId ? { editorType: "tab", editorId } : null;
+    }
+    if (href == EVENT_DIALOG_URL) {
+      const tabEditorId = this._tabEditorIdFromEditorWindow(window);
+      if (tabEditorId) {
+        return { editorType: "tab", editorId: tabEditorId };
+      }
+      const outerId = this._dialogOuterId(window);
+      if (typeof outerId != "number") {
+        return null;
+      }
+      const editorId = this._bridge().registerDialogTarget(outerId);
+      if (!editorId) {
+        return null;
+      }
+      this._ensureDialogReleaseListener(window, editorId);
+      return { editorType: "dialog", editorId };
+    }
+    return null;
+  }
+
+  /**
+   * Resolve edited calendar item from editor window context.
+   * @param {Window} window
+   * @returns {object|null}
+   */
+  _getEditedItem(window) {
+    if (!this._isEditorWindow(window)) {
+      return null;
+    }
+    const fromWindow = win => {
+      if (!win) {
+        return null;
+      }
+      if (win.calendarItem) {
+        return win.calendarItem;
+      }
+      if (win.gEvent?.event) {
+        return win.gEvent.event;
+      }
+      const arg0 = Array.isArray(win.arguments) ? win.arguments[0] : null;
+      return arg0?.calendarItem || arg0?.calendarEvent || null;
+    };
+    const direct = fromWindow(window);
+    if (direct) {
+      return direct;
+    }
+    const panelWindow =
+      window.document?.getElementById(EVENT_PANEL_IFRAME_ID)?.contentWindow ||
+      window.document?.getElementById(EVENT_PANEL_IFRAME_ID)?.contentDocument?.defaultView ||
+      null;
+    return fromWindow(panelWindow);
+  }
+
+  /**
+   * Build API snapshot payload from a calendar item.
+   * @param {object} item
+   * @param {string} editorId
+   * @param {"dialog"|"tab"|""} editorType
+   * @returns {object|null}
+   */
+  _snapshotItem(item, editorId, editorType = "") {
+    if (!item) {
+      return null;
+    }
+    const ical = typeof item.icalString == "string" ? item.icalString : String(item.icalString || "");
+    if (!ical) {
+      return null;
+    }
+    const snapshot = {
+      editorId,
+      calendarId: item.calendar?.id ? String(item.calendar.id) : "",
+      id: item.id ? String(item.id) : "",
+      type: typeof item.isTodo == "function" && item.isTodo() ? "task" : "event",
+      format: "ical",
+      item: ical,
+    };
+    if (editorType == "tab" || editorType == "dialog") {
+      snapshot.editorType = editorType;
+    }
+    return snapshot;
+  }
+
+  /**
+   * Initialize supported window by installing hooks and button.
+   * @param {Window} window
+   */
   _ensureWindow(window) {
     if (!window || !window.location) {
       return;
     }
-    if (window.location.href.startsWith("chrome://messenger/content/messenger.xhtml")) {
+    if (window.location.href.startsWith(MESSENGER_URL)) {
       this._ensureMessengerHook(window);
     }
     this._ensureButton(window);
   }
 
+  /**
+   * Hook messenger panel-load method to re-ensure toolbar button.
+   * @param {Window} window
+   */
   _ensureMessengerHook(window) {
-    if (!window || !window.location) {
+    if (window?.location?.href != MESSENGER_URL) {
       return;
     }
-    if (!window.location.href.startsWith("chrome://messenger/content/messenger.xhtml")) {
+    if (window._ncCalToolbarOrigOnLoadCalendarItemPanel || typeof window.onLoadCalendarItemPanel != "function") {
       return;
     }
-    if (window._ncCalToolbarOrigOnLoadCalendarItemPanel) {
-      return;
-    }
-    if (typeof window.onLoadCalendarItemPanel !== "function") {
-      return;
-    }
-    const orig = window.onLoadCalendarItemPanel;
-    window._ncCalToolbarOrigOnLoadCalendarItemPanel = orig;
+    const original = window.onLoadCalendarItemPanel;
+    window._ncCalToolbarOrigOnLoadCalendarItemPanel = original;
     window.onLoadCalendarItemPanel = (...args) => {
-      const res = orig.apply(window, args);
-      try {
-        this._ensureButton(window);
-      } catch (e) {
-        console.error("[NCCalToolbar] ensure button failed (onLoadCalendarItemPanel)", e);
-      }
-      return res;
+      const result = original.apply(window, args);
+      this._ensureButton(window);
+      return result;
     };
   }
 
+  /**
+   * Restore original messenger panel-load hook.
+   * @param {Window} window
+   */
   _restoreMessengerHook(window) {
-    if (!window || !window.location) {
-      return;
-    }
-    if (!window.location.href.startsWith("chrome://messenger/content/messenger.xhtml")) {
+    if (window?.location?.href != MESSENGER_URL) {
       return;
     }
     if (window._ncCalToolbarOrigOnLoadCalendarItemPanel) {
@@ -111,635 +820,635 @@ this.ncCalToolbar = class extends ExtensionAPI {
     }
   }
 
-  _cleanupRoomCleanupTarget(targetWin) {
-    if (!targetWin) {
-      return;
-    }
-    const key = this._roomCleanupKey();
-    const state = targetWin[key];
-    if (!state || !Array.isArray(state.cleanup)) {
-      targetWin[key] = null;
-      return;
-    }
-    while (state.cleanup.length) {
-      const fn = state.cleanup.pop();
-      try {
-        fn();
-      } catch (_e) {}
-    }
-    targetWin[key] = null;
-  }
-
-  _cleanupRoomCleanupInWindow(window) {
-    if (!window || !window.location) {
-      return;
-    }
-    if (window.location.href.startsWith("chrome://calendar/content/calendar-event-dialog.xhtml")) {
-      this._cleanupRoomCleanupTarget(window);
-      return;
-    }
-    if (!window.location.href.startsWith("chrome://messenger/content/messenger.xhtml")) {
-      return;
-    }
-    const tabmail = window.tabmail;
-    const tabInfoList = tabmail && Array.isArray(tabmail.tabInfo) ? tabmail.tabInfo : [];
-    for (const tabInfo of tabInfoList) {
-      try {
-        if (tabInfo?.mode?.name !== "calendarEvent") {
-          continue;
-        }
-        const targetWin = tabInfo.iframe?.contentWindow || tabInfo.iframe?.contentDocument?.defaultView || null;
-        this._cleanupRoomCleanupTarget(targetWin);
-      } catch (e) {
-        console.error("[NCCalToolbar] cleanup room state failed", e);
-      }
-    }
-  }
-
-  _buttonId() {
-    const widgetId = makeWidgetId(this.extension.id);
-    return `${widgetId}-ncCalToolbar-button`;
-  }
-
-  _toolbarIdForWindow(window) {
-    if (!window || !window.location) {
-      return null;
-    }
-    if (window.location.href.startsWith("chrome://calendar/content/calendar-event-dialog.xhtml")) {
-      return "event-toolbar";
-    }
-    if (window.location.href.startsWith("chrome://messenger/content/messenger.xhtml")) {
-      return "event-tab-toolbar";
-    }
-    return null;
-  }
-
-  _getEditedItemForWindow(window) {
-    if (!window || !window.location) {
-      return null;
-    }
-    if (window.location.href.startsWith("chrome://calendar/content/calendar-event-dialog.xhtml")) {
-      const fromWindow = (win) => {
-        if (!win) {
-          return null;
-        }
-        // TB 140 dialog editor: the edited item is typically exposed on the dialog window.
-        if (win.calendarItem) {
-          return win.calendarItem;
-        }
-        // Some editor flows use gEvent.event.
-        if (win.gEvent?.event) {
-          return win.gEvent.event;
-        }
-        // Some editor flows pass the item via window.arguments[0].
-        const arg0 = Array.isArray(win.arguments) ? win.arguments[0] : null;
-        if (arg0?.calendarItem) {
-          return arg0.calendarItem;
-        }
-        if (arg0?.calendarEvent) {
-          return arg0.calendarEvent;
-        }
-        return null;
-      };
-
-      // Prefer the dialog window itself, then fall back to the embedded panel iframe.
-      const direct = fromWindow(window);
-      if (direct) {
-        return direct;
-      }
-      const panelIframe = window.document?.getElementById?.("calendar-item-panel-iframe") || null;
-      const panelWin = panelIframe?.contentWindow || panelIframe?.contentDocument?.defaultView || null;
-      return fromWindow(panelWin);
-    }
-    if (window.location.href.startsWith("chrome://messenger/content/messenger.xhtml")) {
-      const tabInfo = window.tabmail?.currentTabInfo || null;
-      // Only act in the calendar event editor tab mode.
-      if (tabInfo?.mode?.name !== "calendarEvent") {
-        return null;
-      }
-      return tabInfo.iframe?.contentWindow?.calendarItem || null;
-    }
-    return null;
-  }
-
-  _getCleanupTargetWindow(window) {
-    if (!window || !window.location) {
-      return null;
-    }
-    if (window.location.href.startsWith("chrome://calendar/content/calendar-event-dialog.xhtml")) {
-      return window;
-    }
-    if (window.location.href.startsWith("chrome://messenger/content/messenger.xhtml")) {
-      const tabInfo = window.tabmail?.currentTabInfo || null;
-      if (tabInfo?.mode?.name !== "calendarEvent") {
-        return null;
-      }
-      return tabInfo.iframe?.contentWindow || tabInfo.iframe?.contentDocument?.defaultView || null;
-    }
-    return null;
-  }
-
-  _getDialogOuterId(window) {
-    try {
-      const windowType = window?.document?.documentElement?.getAttribute?.("windowtype") || "";
-      if (windowType !== "Calendar:EventDialog" && windowType !== "Calendar:EventSummaryDialog") {
-        return null;
-      }
-      const outerId = window?.docShell?.outerWindowID ?? window?.windowUtils?.outerWindowID;
-      return typeof outerId === "number" ? outerId : null;
-    } catch (e) {
-      console.error("[NCCalToolbar] get dialog outer id failed", e);
-      return null;
-    }
-  }
-
-  _isWindowManagerType(windowType) {
-    switch (windowType) {
-      case "mail:3pane":
-      case "msgcompose":
-      case "mail:messageWindow":
-      case "mail:extensionPopup":
-        return true;
-      default:
-        return false;
-    }
-  }
-
-  _getManagedWindowId(window) {
-    try {
-      const manager = this.extension?.windowManager;
-      if (!manager || typeof manager.getWrapper !== "function") {
-        return null;
-      }
-      const windowType = window?.document?.documentElement?.getAttribute?.("windowtype") || "";
-      if (!this._isWindowManagerType(windowType)) {
-        return null;
-      }
-      const wrapper = manager.getWrapper(window);
-      const id = wrapper?.id;
-      return typeof id === "number" ? id : null;
-    } catch (e) {
-      console.error("[NCCalToolbar] get managed window id failed", e);
-      return null;
-    }
-  }
-
-  _makeSnapshotFromItem(window, item) {
-    if (!item) {
-      return null;
-    }
-    const windowId = this._getManagedWindowId(window);
-    const dialogOuterId = this._getDialogOuterId(window);
-    const calendarId = item.calendar?.id ? String(item.calendar.id) : "";
-    const id = item.id ? String(item.id) : "";
-    const isTask = typeof item.isTodo === "function" ? item.isTodo() : false;
-    const type = isTask ? "task" : "event";
-    const ical = typeof item.icalString === "string" ? item.icalString : String(item.icalString || "");
-
-    if (!ical) {
-      return null;
-    }
-    const snapshot = { calendarId, id, type, format: "ical", item: ical };
-    if (typeof windowId === "number") {
-      snapshot.windowId = windowId;
-    }
-    if (typeof dialogOuterId === "number") {
-      snapshot.dialogOuterId = dialogOuterId;
-    }
-    return snapshot;
-  }
-
-  _fireRoomCleanupEvent(evt) {
-    if (typeof this._fireRoomCleanup !== "function") {
-      return;
-    }
-    try {
-      this._fireRoomCleanup(evt);
-    } catch (e) {
-      console.error("[NCCalToolbar] onRoomCleanup fire failed", e);
-    }
-  }
-
-  _registerRoomCleanup(targetWin, token) {
-    if (!targetWin || !token) {
-      return { ok: false, error: "invalid_args" };
-    }
-    const key = this._roomCleanupKey();
-    let state = targetWin[key];
-    if (!state) {
-      state = { token: null, cleanup: [] };
-      targetWin[key] = state;
-    }
-
-    const cleanupState = () => this._cleanupRoomCleanupTarget(targetWin);
-
-    const addListener = (type, handler, options) => {
-      try {
-        targetWin.addEventListener(type, handler, options);
-        state.cleanup.push(() => {
-          try {
-            targetWin.removeEventListener(type, handler, options);
-          } catch (_e) {}
-        });
-      } catch (e) {
-        console.error("[NCCalToolbar] registerRoomCleanup addListener failed", e);
-      }
-    };
-
-    if (state.token && state.token !== token) {
-      this._fireRoomCleanupEvent({
-        token: state.token,
-        action: "superseded",
-        reason: "re-registered"
-      });
-      cleanupState();
-      state = { token: null, cleanup: [] };
-      targetWin[key] = state;
-    } else {
-      cleanupState();
-      state = { token: null, cleanup: [] };
-      targetWin[key] = state;
-    }
-
-    state.token = token;
-
-    const emitOnce = (action, reason) => {
-      const current = state.token;
-      if (!current) {
-        return;
-      }
-      state.token = null;
-      this._fireRoomCleanupEvent({ token: current, action, reason: reason || "" });
-      cleanupState();
-    };
-
-    // Dialog editor: we can detect "saved" (dialogaccept) vs "discarded" (unload/cancel).
-    const isDialog = !!(targetWin.location?.href || "").startsWith("chrome://calendar/content/calendar-event-dialog.xhtml");
-    if (isDialog) {
-      addListener("dialogaccept", () => emitOnce("persisted", "dialogaccept"), true);
-      addListener("dialogextra1", () => emitOnce("persisted", "dialogextra1"), true);
-      addListener("dialogcancel", () => emitOnce("discarded", "dialogcancel"), true);
-      addListener("dialogextra2", () => emitOnce("discarded", "dialogextra2"), true);
-    }
-
-    // "unload" covers both dialog and tab editor close.
-    addListener("unload", () => emitOnce("discarded", "unload"), true);
-
-    return { ok: true };
-  }
-
-  _collectEventDocs(window) {
-    const docs = [];
-    const pushDoc = (doc) => {
-      if (!doc || docs.includes(doc)) {
-        return;
-      }
-      docs.push(doc);
-    };
-
-    try {
-      pushDoc(window?.document || null);
-    } catch (_e) {}
-
-    try {
-      if (window?.location?.href?.startsWith("chrome://calendar/content/calendar-event-dialog.xhtml")) {
-        const iframe = window.document?.getElementById?.("calendar-item-panel-iframe") || null;
-        pushDoc(iframe?.contentDocument || null);
-      }
-    } catch (_e) {}
-
-    try {
-      if (window?.location?.href?.startsWith("chrome://messenger/content/messenger.xhtml")) {
-        const tabInfo = window.tabmail?.currentTabInfo || null;
-        if (tabInfo?.mode?.name !== "calendarEvent") {
-          return docs;
-        }
-        pushDoc(tabInfo.iframe?.contentDocument || null);
-      }
-    } catch (_e) {}
-
-    return docs;
-  }
-
-  _findField(docs, selectors) {
-    for (const doc of docs) {
-      if (!doc || typeof doc.querySelector !== "function") {
-        continue;
-      }
-      for (const selector of selectors) {
-        try {
-          const element = doc.querySelector(selector);
-          if (element) {
-            return element;
-          }
-        } catch (_e) {}
-      }
-    }
-    return null;
-  }
-
-  _findDescriptionFieldInDocs(docs) {
-    for (const doc of docs) {
-      try {
-        // TB 140: #item-description is the dedicated identifier. If changed in future TB, add a second selector and annotate the TB version.
-        const host = doc.querySelector?.("editor#item-description") || null;
-        let target = null;
-        if (host) {
-          target = host.inputField || host.contentDocument?.body || host;
-        }
-        if (!target) {
-          // Future fallback (only if needed): "textarea#item-description"
-          const fallback = doc.querySelector?.("textarea#item-description") || null;
-          if (fallback) {
-            target = fallback;
-          }
-        }
-        if (target) {
-          return target;
-        }
-      } catch (_e) {}
-    }
-    return null;
-  }
-
-  _dispatchInputEvent(field) {
-    if (!field) {
-      return;
-    }
-    try {
-      const doc = field.ownerDocument || field.document;
-      const win = doc?.defaultView;
-      if (win) {
-        field.dispatchEvent(new win.Event("input", { bubbles: true }));
-      }
-    } catch (_e) {}
-  }
-
-  _setFieldValue(field, value, opts = {}) {
-    if (!field) {
-      return;
-    }
-    const doc = field.ownerDocument || field.document || field.contentDocument || null;
-    const execPreferred = opts.preferExec === true;
-
-    const tryExecCommand = () => {
-      if (!doc || typeof doc.execCommand !== "function") {
-        return false;
-      }
-      try {
-        field.focus?.();
-        doc.execCommand("selectAll", false, null);
-        doc.execCommand("insertText", false, value);
-        return true;
-      } catch (_e) {
-        return false;
-      }
-    };
-
-    if (execPreferred && tryExecCommand()) {
-      this._dispatchInputEvent(field);
-      return;
-    }
-
-    if ("value" in field) {
-      try {
-        field.focus?.();
-      } catch (_e) {}
-      field.value = value;
-      this._dispatchInputEvent(field);
-      return;
-    }
-
-    if ((field.isContentEditable || field.tagName?.toLowerCase?.() === "body") && tryExecCommand()) {
-      this._dispatchInputEvent(field);
-      return;
-    }
-
-    if (field.textContent !== undefined) {
-      field.textContent = value;
-      this._dispatchInputEvent(field);
-    }
-  }
-
-  _resolveEditorWindow(editor) {
-    const ref = editor && typeof editor === "object" ? editor : {};
-    const dialogOuterId = ref.dialogOuterId;
-    const windowId = ref.windowId;
-
-    if (typeof dialogOuterId === "number") {
-      if (typeof Services === "undefined" || !Services?.wm?.getOuterWindowWithId) {
-        return null;
-      }
-      try {
-        const win = Services.wm.getOuterWindowWithId(dialogOuterId);
-        return win && !win.closed ? win : null;
-      } catch (e) {
-        console.error("[NCCalToolbar] resolve dialog window failed", e);
-        return null;
-      }
-    }
-
-    if (typeof windowId === "number") {
-      const manager = this.extension?.windowManager;
-      if (!manager || typeof manager.get !== "function") {
-        return null;
-      }
-      try {
-        const winObj = manager.get(windowId);
-        const win = winObj?.window || null;
-        return win && !win.closed ? win : null;
-      } catch (e) {
-        console.error("[NCCalToolbar] resolve windowId failed", e);
-        return null;
-      }
-    }
-
-    return null;
-  }
-
+  /**
+   * Ensure toolbar button exists in target editor toolbar.
+   * @param {Window} window
+   */
   _ensureButton(window) {
-    const toolbarId = this._toolbarIdForWindow(window);
+    const toolbarId = this._toolbarId(window);
     if (!toolbarId) {
       return;
     }
-    const { document } = window;
-    const toolbar = document.getElementById(toolbarId);
+    const toolbar = window.document.getElementById(toolbarId);
     if (!toolbar) {
-      // In the event dialog, wait briefly for the toolbar to appear.
-      if (window.location?.href?.startsWith("chrome://calendar/content/calendar-event-dialog.xhtml")) {
+      if ((window.location?.href || "").startsWith(EVENT_DIALOG_URL)) {
         const observer = new window.MutationObserver(() => {
-          try {
-            observer.disconnect();
-          } catch (e) {
-            console.error("[NCCalToolbar] observer disconnect failed", e);
-          }
-          try {
-            this._ensureButton(window);
-          } catch (e) {
-            console.error("[NCCalToolbar] ensure button failed (observer)", e);
-          }
+          observer.disconnect();
+          this._ensureButton(window);
         });
-        observer.observe(document.documentElement, { childList: true, subtree: true });
-        window.setTimeout(() => {
-          try {
-            observer.disconnect();
-          } catch (e) {
-            console.error("[NCCalToolbar] observer disconnect failed (timeout)", e);
-          }
-        }, 5000);
+        observer.observe(window.document.documentElement, { childList: true, subtree: true });
+        window.setTimeout(() => observer.disconnect(), 5000);
       }
       return;
     }
-
     const buttonId = this._buttonId();
-    if (document.getElementById(buttonId)) {
+    if (window.document.getElementById(buttonId)) {
       return;
     }
-
-    const button = document.createXULElement("toolbarbutton");
+    const button = window.document.createXULElement("toolbarbutton");
     button.id = buttonId;
     button.setAttribute("class", "toolbarbutton-1");
     button.setAttribute("label", this.extension.localize("__MSG_ui_insert_button_label__"));
     button.setAttribute("tooltiptext", this.extension.localize("__MSG_ui_insert_button_label__"));
     button.setAttribute("type", "button");
     button.setAttribute("image", this.extension.getURL("icons/app-16.png"));
-
     button.addEventListener("command", () => {
-      try {
-        const item = this._getEditedItemForWindow(window);
-        const snapshot = this._makeSnapshotFromItem(window, item);
-        if (!snapshot) {
-          console.error("[NCCalToolbar] click without editable item snapshot");
-          return;
-        }
-        if (typeof this._fireClicked === "function") {
-          this._fireClicked(snapshot);
-        }
-      } catch (e) {
-        console.error("[NCCalToolbar] click handler failed", e);
+      const click = this._clickContext(window);
+      if (!click) {
+        console.error("[ncCalToolbar] click ignored: could not resolve editor context");
+        return;
       }
+      const editorWindow = this._resolveEditorWindow(click.editorId);
+      if (!editorWindow) {
+        console.error("[ncCalToolbar] click ignored: target editor not resolvable");
+        return;
+      }
+      const snapshot = this._snapshotItem(this._getEditedItem(editorWindow), click.editorId, click.editorType);
+      if (!snapshot) {
+        console.error("[ncCalToolbar] click ignored: no editable item");
+        return;
+      }
+      this._emitClicked(snapshot);
     });
-
-    // Place the button rightmost.
     toolbar.appendChild(button);
   }
 
+  /**
+   * Remove injected toolbar button from one window.
+   * @param {Window} window
+   */
   _removeButton(window) {
-    if (!window || !window.document) {
-      return;
-    }
-    const id = this._buttonId();
-    const node = window.document.getElementById(id);
+    const node = window?.document?.getElementById(this._buttonId()) || null;
     if (node) {
       node.remove();
     }
   }
 
+  /**
+   * Register one onClicked listener.
+   * @param {(snapshot:object) => void} listener
+   */
+  _addClickedListener(listener) {
+    if (!this._clickedListeners) {
+      this._clickedListeners = new Set();
+    }
+    this._clickedListeners.add(listener);
+  }
+
+  /**
+   * Unregister one onClicked listener.
+   * @param {(snapshot:object) => void} listener
+   */
+  _removeClickedListener(listener) {
+    this._clickedListeners?.delete(listener);
+  }
+
+  /**
+   * Emit one click snapshot to active onClicked listeners.
+   * @param {object} snapshot
+   */
+  _emitClicked(snapshot) {
+    for (const listener of this._clickedListeners || []) {
+      try {
+        listener(snapshot);
+      } catch (e) {
+        console.error("[ncCalToolbar] onClicked listener failed", e);
+      }
+    }
+  }
+
+  /**
+   * Register one onTrackedEditorClosed listener.
+   * @param {(info:object) => void} listener
+   */
+  _addEditorClosedListener(listener) {
+    if (!this._editorClosedListeners) {
+      this._editorClosedListeners = new Set();
+    }
+    this._editorClosedListeners.add(listener);
+  }
+
+  /**
+   * Unregister one onTrackedEditorClosed listener.
+   * @param {(info:object) => void} listener
+   */
+  _removeEditorClosedListener(listener) {
+    this._editorClosedListeners?.delete(listener);
+  }
+
+  /**
+   * Emit onTrackedEditorClosed payload to active listeners.
+   * @param {object} info
+   */
+  _emitEditorClosed(info) {
+    for (const listener of this._editorClosedListeners || []) {
+      try {
+        listener(info);
+      } catch (e) {
+        console.error("[ncCalToolbar] onTrackedEditorClosed listener failed", e);
+      }
+    }
+  }
+
+  /**
+   * Cleanup lifecycle bookkeeping for one tracked target.
+   * @param {Window} target
+   */
+  _cleanupLifecycleState(target) {
+    if (!target) {
+      return;
+    }
+    if (!this._editorLifecycleByTarget) {
+      this._editorLifecycleByTarget = new WeakMap();
+    }
+    const state = this._editorLifecycleByTarget.get(target);
+    if (!state) {
+      return;
+    }
+    this._editorLifecycleByTarget.delete(target);
+    if (state.editorId) {
+      this._bridge().releaseEditorId(state.editorId);
+    }
+    while (state.cleanup.length) {
+      const fn = state.cleanup.pop();
+      try {
+        fn();
+      } catch (error) {
+        this._logError("lifecycle cleanup callback failed", error, {
+          editorId: state.editorId || "",
+        });
+      }
+    }
+  }
+
+  /**
+   * Cleanup lifecycle bookkeeping for all tracked targets in one window.
+   * @param {Window} window
+   */
+  _cleanupLifecycleInWindow(window) {
+    const href = window?.location?.href || "";
+    if (href.startsWith(EVENT_DIALOG_URL)) {
+      this._cleanupLifecycleState(window);
+      return;
+    }
+    if (!href.startsWith(MESSENGER_URL)) {
+      return;
+    }
+    const infos = window.tabmail && Array.isArray(window.tabmail.tabInfo) ? window.tabmail.tabInfo : [];
+    for (const tabInfo of infos) {
+      if (!this._isEditorTab(tabInfo)) {
+        continue;
+      }
+      const target = tabInfo.iframe?.contentWindow || tabInfo.iframe?.contentDocument?.defaultView || null;
+      this._cleanupLifecycleState(target);
+    }
+  }
+
+  /**
+   * Attach close lifecycle listeners for one editor target.
+   * @param {Window} window
+   * @param {string} editorId
+   */
+  _ensureLifecycleWatch(window, editorId) {
+    if (!this._isEditorWindow(window)) {
+      return;
+    }
+    const normalized = this._bridge().normalizeEditorId(editorId);
+    if (!normalized) {
+      return;
+    }
+    if (!this._editorLifecycleByTarget) {
+      this._editorLifecycleByTarget = new WeakMap();
+    }
+    const previous = this._editorLifecycleByTarget.get(window);
+    if (previous && previous.editorId == normalized) {
+      return;
+    }
+    if (previous) {
+      this._emitEditorClosed({
+        editorId: previous.editorId || "",
+        action: "superseded",
+        reason: "re-bound",
+      });
+      this._cleanupLifecycleState(window);
+    }
+    const state = { editorId: normalized, cleanup: [], closed: false };
+    this._editorLifecycleByTarget.set(window, state);
+
+    const emitOnce = (action, reason) => {
+      if (state.closed) {
+        return;
+      }
+      state.closed = true;
+      const info = { editorId: normalized, action };
+      if (reason) {
+        info.reason = reason;
+      }
+      this._emitEditorClosed(info);
+      this._cleanupLifecycleState(window);
+    };
+    const add = (type, handler, options) => {
+      window.addEventListener(type, handler, options);
+      state.cleanup.push(() => window.removeEventListener(type, handler, options));
+    };
+    if ((window.location?.href || "").startsWith(EVENT_DIALOG_URL)) {
+      add("dialogaccept", () => emitOnce("persisted", "dialogaccept"), true);
+      add("dialogextra1", () => emitOnce("persisted", "dialogextra1"), true);
+      add("dialogcancel", () => emitOnce("discarded", "dialogcancel"), true);
+      add("dialogextra2", () => emitOnce("discarded", "dialogextra2"), true);
+    }
+    add("unload", () => emitOnce("discarded", "unload"), true);
+  }
+
+  /**
+   * Ensure target editor window is still open.
+   * @param {Window} window
+   * @param {string} operation
+   */
+  _assertWindowOpen(window, operation) {
+    if (!window || window.closed) {
+      throw new ExtensionError(`Editor window closed during ${operation}`);
+    }
+  }
+
+  /**
+   * Collect all relevant editor documents (main + panel iframe).
+   * @param {Window} window
+   * @returns {Document[]}
+   */
+  _editorDocs(window) {
+    const docs = [window?.document].filter(Boolean);
+    const panelDoc = window?.document?.getElementById(EVENT_PANEL_IFRAME_ID)?.contentDocument || null;
+    if (panelDoc) {
+      docs.push(panelDoc);
+    }
+    return docs;
+  }
+
+  /**
+   * Resolve writable element for an editor field.
+   * @param {Window} window
+   * @param {"title"|"location"|"description"} key
+   * @returns {{kind:"value"|"html-body",element:any}}
+   */
+  _resolveWritableField(window, key) {
+    const idMap = {
+      title: "item-title",
+      location: "item-location",
+      description: "item-description",
+    };
+    const id = idMap[key];
+    for (const doc of this._editorDocs(window)) {
+      const host = doc.getElementById(id);
+      if (!host) {
+        continue;
+      }
+      if (key == "description") {
+        const inputField = host.inputField || null;
+        if (inputField && "value" in inputField) {
+          return { kind: "value", element: inputField };
+        }
+        if ("value" in host) {
+          return { kind: "value", element: host };
+        }
+        const body = host.contentDocument?.body || null;
+        if (body) {
+          return { kind: "html-body", element: body };
+        }
+      } else if ("value" in host) {
+        return { kind: "value", element: host };
+      }
+    }
+    console.error("[ncCalToolbar] field resolution failed", { field: key, elementId: id });
+    throw new ExtensionError(`Could not resolve writable ${key} field`);
+  }
+
+  /**
+   * Read current value from resolved field target.
+   * @param {{kind:string,element:any}|undefined} target
+   * @returns {string}
+   */
+  _readField(target) {
+    if (!target?.element) {
+      return "";
+    }
+    if (target.kind == "value") {
+      return String(target.element.value ?? "");
+    }
+    return String(target.element.textContent ?? "");
+  }
+
+  /**
+   * Dispatch input event to notify editor UI of value changes.
+   * @param {any} element
+   */
+  _dispatchInputEvent(element) {
+    if (!element) {
+      return;
+    }
+    const doc = element.ownerDocument || element.document;
+    const win = doc?.defaultView;
+    if (win) {
+      element.dispatchEvent(new win.Event("input", { bubbles: true }));
+    }
+  }
+
+  /**
+   * Write a value into one resolved editor field.
+   * @param {{kind:string,element:any}} target
+   * @param {string} value
+   */
+  _writeField(target, value) {
+    if (!target?.element) {
+      throw new ExtensionError("Resolved editor field is not writable");
+    }
+    if (target.kind == "value") {
+      target.element.focus?.();
+      target.element.value = value;
+      this._dispatchInputEvent(target.element);
+      return;
+    }
+    const doc = target.element.ownerDocument || null;
+    if (!doc || typeof doc.execCommand != "function") {
+      throw new ExtensionError("Could not write description field");
+    }
+    target.element.focus?.();
+    doc.execCommand("selectAll", false, null);
+    const insertOk = doc.execCommand("insertText", false, value);
+    if (!insertOk && String(target.element.textContent ?? "") != String(value ?? "")) {
+      throw new ExtensionError("Could not write description field");
+    }
+    this._dispatchInputEvent(target.element);
+  }
+
+  /**
+   * Snapshot current property values before mutation.
+   * @param {object} item
+   * @param {object} properties
+   * @returns {Record<string, string|null>}
+   */
+  _snapshotProperties(item, properties) {
+    const out = {};
+    for (const name of Object.keys(properties || {})) {
+      if (!name || typeof name != "string") {
+        throw new ExtensionError("Property names must be non-empty strings");
+      }
+      try {
+        const current = item.getProperty(name);
+        out[name] = current == null ? null : String(current);
+      } catch (error) {
+        this._logError("property snapshot failed", error, { property: name });
+        throw new ExtensionError(`Could not snapshot property ${name}`);
+      }
+    }
+    return out;
+  }
+
+  /**
+   * Apply iCal property updates to the edited item.
+   * @param {object} item
+   * @param {object} properties
+   * @returns {string[]}
+   */
+  _applyProperties(item, properties) {
+    const names = [];
+    for (const [name, value] of Object.entries(properties || {})) {
+      if (!name || typeof name != "string") {
+        throw new ExtensionError("Property names must be non-empty strings");
+      }
+      try {
+        if (value == null) {
+          if (typeof item.deleteProperty == "function") {
+            item.deleteProperty(name);
+          } else {
+            item.setProperty(name, "");
+          }
+        } else {
+          item.setProperty(name, String(value));
+        }
+        names.push(name);
+      } catch (error) {
+        this._logError("property update failed", error, { property: name });
+        throw new ExtensionError(`Could not update property ${name}`);
+      }
+    }
+    return names;
+  }
+
+  /**
+   * Roll back previously applied iCal property updates.
+   * @param {object} item
+   * @param {Record<string, string|null>} snapshot
+   * @param {string[]} names
+   */
+  _rollbackProperties(item, snapshot, names) {
+    for (let i = names.length - 1; i >= 0; i--) {
+      const name = names[i];
+      const previous = Object.prototype.hasOwnProperty.call(snapshot, name) ? snapshot[name] : null;
+      try {
+        if (previous == null) {
+          if (typeof item.deleteProperty == "function") {
+            item.deleteProperty(name);
+          } else {
+            item.setProperty(name, "");
+          }
+        } else {
+          item.setProperty(name, String(previous));
+        }
+      } catch (error) {
+        this._logError("property rollback failed", error, { property: name });
+        throw new ExtensionError(`Could not rollback property ${name}`);
+      }
+    }
+  }
+
+  /**
+   * Expose the ncCalToolbar experiment API.
+   * @param {object} context
+   * @returns {object}
+   */
   getAPI(context) {
+    this._registerApiContextClose(context);
     return {
       ncCalToolbar: {
         onClicked: new EventManager({
           context,
           name: "ncCalToolbar.onClicked",
-          register: (fire) => {
-            this._fireClicked = (snapshot) => fire.async(snapshot);
-            return () => {
-              this._fireClicked = null;
-            };
-          }
-        }).api(),
-        onRoomCleanup: new EventManager({
-          context,
-          name: "ncCalToolbar.onRoomCleanup",
-          register: (fire) => {
-            this._fireRoomCleanup = (evt) => fire.async(evt);
-            return () => {
-              this._fireRoomCleanup = null;
-            };
-          }
-        }).api(),
-        applyEventFields: async (details) => {
-          const editor = details?.editor || {};
-          const fields = details?.fields || {};
-          const win = this._resolveEditorWindow(editor);
-          if (!win) {
-            return { ok: false, error: "target_window_unavailable" };
-          }
-          const docs = this._collectEventDocs(win);
-          const titleField = this._findField(docs, ["#item-title"]);
-          const locationField = this._findField(docs, ["#item-location"]);
-          const descField = this._findDescriptionFieldInDocs(docs);
-
-          if (typeof fields.title === "string" && titleField) {
-            this._setFieldValue(titleField, fields.title);
-          }
-          if (typeof fields.location === "string" && locationField) {
-            this._setFieldValue(locationField, fields.location);
-          }
-          if (typeof fields.description === "string" && descField) {
-            this._setFieldValue(descField, fields.description, { preferExec: true });
-          }
-
-          return {
-            ok: true,
-            applied: {
-              title: !!titleField && typeof fields.title === "string",
-              location: !!locationField && typeof fields.location === "string",
-              description: !!descField && typeof fields.description === "string"
+          register: fire => {
+            const listener = snapshot => fire.sync(snapshot);
+            this._addClickedListener(listener);
+            if (!this._onClickedByContext) {
+              this._onClickedByContext = new WeakMap();
             }
-          };
-        },
-        setItemProperties: async (details) => {
-          const editor = details?.editor || {};
-          const properties = details?.properties && typeof details.properties === "object" ? details.properties : {};
-          const win = this._resolveEditorWindow(editor);
-          if (!win) {
-            return { ok: false, error: "target_window_unavailable" };
-          }
-          const item = this._getEditedItemForWindow(win);
-          if (!item || typeof item.setProperty !== "function") {
-            return { ok: false, error: "no_calendar_item" };
-          }
-
-          const setProp = (name, value) => {
-            try {
-              if (value == null || value === "") {
-                if (typeof item.deleteProperty === "function") {
-                  item.deleteProperty(name);
-                } else {
-                  item.setProperty(name, "");
-                }
-              } else {
-                item.setProperty(name, String(value));
+            let contextListeners = this._onClickedByContext.get(context);
+            if (!contextListeners) {
+              contextListeners = new Set();
+              this._onClickedByContext.set(context, contextListeners);
+            }
+            contextListeners.add(listener);
+            return () => {
+              this._removeClickedListener(listener);
+              const listeners = this._onClickedByContext?.get(context);
+              if (!listeners) {
+                return;
               }
-            } catch (_e) {}
-          };
+              listeners.delete(listener);
+              if (!listeners.size) {
+                this._onClickedByContext.delete(context);
+              }
+            };
+          },
+        }).api(),
 
-          for (const [name, value] of Object.entries(properties)) {
-            if (!name) {
-              continue;
+        onTrackedEditorClosed: new EventManager({
+          context,
+          name: "ncCalToolbar.onTrackedEditorClosed",
+          register: fire => {
+            const listener = info => fire.sync(info);
+            this._addEditorClosedListener(listener);
+            if (!this._onClosedByContext) {
+              this._onClosedByContext = new WeakMap();
             }
-            setProp(name, value);
+            let contextListeners = this._onClosedByContext.get(context);
+            if (!contextListeners) {
+              contextListeners = new Set();
+              this._onClosedByContext.set(context, contextListeners);
+            }
+            contextListeners.add(listener);
+            return () => {
+              this._removeEditorClosedListener(listener);
+              const listeners = this._onClosedByContext?.get(context);
+              if (!listeners) {
+                return;
+              }
+              listeners.delete(listener);
+              if (!listeners.size) {
+                this._onClosedByContext.delete(context);
+              }
+            };
+          },
+        }).api(),
+
+        getCurrent: async options => {
+          const editorId = this._bridge().normalizeEditorId(options?.editorId);
+          if (!editorId) {
+            throw new ExtensionError("editorId must be a non-empty opaque editor identifier");
           }
-          return { ok: true };
+          const window = this._resolveEditorWindow(editorId);
+          if (!window) {
+            return null;
+          }
+          const item = this._getEditedItem(window);
+          if (!item) {
+            return null;
+          }
+          this._ensureLifecycleWatch(window, editorId);
+          return this._snapshotItem(item, editorId);
         },
-        registerRoomCleanup: async (details) => {
-          const editor = details?.editor || {};
-          const token = (details?.token || "").trim();
-          if (!token) {
-            return { ok: false, error: "token_missing" };
+
+        updateCurrent: async updateOptions => {
+          const editorId = this._bridge().normalizeEditorId(updateOptions?.editorId);
+          if (!editorId) {
+            throw new ExtensionError("editorId must be a non-empty opaque editor identifier");
           }
-          const win = this._resolveEditorWindow(editor);
-          if (!win) {
-            return { ok: false, error: "target_window_unavailable" };
+          const window = this._resolveEditorWindow(editorId);
+          if (!window) {
+            throw new ExtensionError("Could not resolve target editor window");
           }
-          const target = this._getCleanupTargetWindow(win);
-          if (!target) {
-            return { ok: false, error: "no_editor_context" };
+          const item = this._getEditedItem(window);
+          if (!item) {
+            throw new ExtensionError("Could not find current editor item");
           }
-          return this._registerRoomCleanup(target, token);
-        }
-      }
+          this._ensureLifecycleWatch(window, editorId);
+
+          const fields =
+            updateOptions?.fields && typeof updateOptions.fields == "object"
+              ? updateOptions.fields
+              : {};
+          const properties =
+            updateOptions?.properties && typeof updateOptions.properties == "object"
+              ? updateOptions.properties
+              : {};
+          if (!Object.keys(fields).length && !Object.keys(properties).length) {
+            throw new ExtensionError("updateCurrent requires at least one field or property update");
+          }
+
+          this._assertWindowOpen(window, "updateCurrent");
+          const targets = {};
+          for (const key of ["title", "location", "description"]) {
+            if (typeof fields[key] == "string") {
+              targets[key] = this._resolveWritableField(window, key);
+            }
+          }
+          const beforeFields = {
+            title: this._readField(targets.title),
+            location: this._readField(targets.location),
+            description: this._readField(targets.description),
+          };
+          const appliedFields = { title: false, location: false, description: false };
+
+          try {
+            for (const key of ["title", "location", "description"]) {
+              if (typeof fields[key] == "string") {
+                this._writeField(targets[key], fields[key]);
+                appliedFields[key] = true;
+              }
+            }
+          } catch (fieldError) {
+            this._logError("updateCurrent field write failed", fieldError, {
+              editorId,
+            });
+            for (const key of ["description", "location", "title"]) {
+              if (!appliedFields[key]) {
+                continue;
+              }
+              try {
+                this._writeField(targets[key], beforeFields[key] ?? "");
+              } catch (rollbackError) {
+                this._logError("updateCurrent field rollback failed", rollbackError, {
+                  editorId,
+                  field: key,
+                });
+              }
+            }
+            throw fieldError;
+          }
+
+          const beforeProps = this._snapshotProperties(item, properties);
+          let appliedProps = [];
+          try {
+            appliedProps = this._applyProperties(item, properties);
+          } catch (propertyError) {
+            this._logError("updateCurrent property write failed", propertyError, {
+              editorId,
+            });
+            try {
+              this._rollbackProperties(item, beforeProps, appliedProps);
+            } catch (rollbackError) {
+              this._logError("updateCurrent property rollback failed", rollbackError, {
+                editorId,
+              });
+            }
+            try {
+              for (const key of ["description", "location", "title"]) {
+                if (appliedFields[key]) {
+                  this._writeField(targets[key], beforeFields[key] ?? "");
+                }
+              }
+            } catch (rollbackFieldError) {
+              this._logError("updateCurrent field rollback failed", rollbackFieldError, {
+                editorId,
+              });
+            }
+            throw propertyError;
+          }
+
+          return this._snapshotItem(item, editorId);
+        },
+      },
     };
   }
 };
+
+
+

@@ -125,7 +125,10 @@
     const url = global.browser.runtime.getURL(`_locales/${normalized}/messages.json`);
     const promise = fetch(url)
       .then((res) => (res.ok ? res.json() : {}))
-      .catch(() => ({}))
+      .catch((error) => {
+        console.error("[NCI18nOverride] load locale failed", { lang: normalized, error });
+        return {};
+      })
       .then((data) => {
         const value = data && typeof data === "object" ? data : {};
         cache.set(normalized, value);
@@ -174,7 +177,8 @@
     if (!message && global?.browser?.i18n?.getMessage){
       try{
         message = global.browser.i18n.getMessage(key, substitutions);
-      }catch(_){
+      }catch(error){
+        console.error("[NCI18nOverride] browser.i18n.getMessage failed", { key, error });
         message = "";
       }
     }

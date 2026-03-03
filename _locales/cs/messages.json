@@ -1,331 +1,828 @@
 {
-  "extName": { "message": "NC Connector for Thunderbird" },
-  "extDescription": { "message": "Nextcloud Talk a soubory plynule integrovány do Thunderbirdu" },
-  "ui_button_ok": { "message": "OK" },
-  "ui_button_cancel": { "message": "Zrušit" },
-  "ui_button_apply": { "message": "Použít" },
-  "ui_button_apply_progress": { "message": "Aplikuje se..." },
-  "ui_button_create_progress": { "message": "Vytváří se..." },
-  "ui_button_clear": { "message": "Vymazat" },
-  "ui_insert_button_label": { "message": "Vložit odkaz na Talk" },
-  "ui_create_heading": { "message": "Vytvořit veřejnou konverzaci" },
-  "ui_create_title_label": { "message": "Název" },
-  "ui_create_add_participants_label": { "message": "Přidat účastníky do místnosti" },
-  "ui_create_add_users_label": { "message": "Přidat uživatele" },
-  "ui_create_add_guests_label": { "message": "Přidat hosty" },
-  "ui_create_password_label": { "message": "Heslo (volitelné)" },
-  "talk_password_policy_error": { "message": "Heslo musí mít alespoň $1 znaků." },
-  "ui_create_password_placeholder": { "message": "Volitelné" },
-  "ui_password_generate_label": { "message": "Generovat" },
-  "ui_password_error_title": { "message": "Zkontrolovat heslo" },
-  "ui_password_error_text": { "message": "Zadejte alespoň 5 znaků." },
-  "ui_create_lobby_label": { "message": "Čekárna do začátku" },
-  "ui_create_listable_label": { "message": "Zobrazit ve vyhledávání" },
-  "talk_option_add_users_title": { "message": "👤 Přidat uživatele" },
-  "talk_option_add_users_line1": { "message": "Interní uživatelé Nextcloudu budou přidáni přímo do místnosti" },
-  "talk_option_add_users_line2": { "message": "Místnost je okamžitě viditelná v Nextcloud Talk" },
-  "talk_option_add_guests_title": { "message": "🌍 Přidat hosty" },
-  "talk_option_add_guests_line1": { "message": "Hosté budou také přidáni přímo do místnosti" },
-  "talk_option_add_guests_line2": { "message": "⚠️ Dostanou samostatný (další) e-mail s osobním přístupovým odkazem" },
-  "talk_option_listable_title": { "message": "🔍 Zobrazit ve vyhledávání" },
-  "talk_option_listable_line1": { "message": "Místnost lze najít pomocí vyhledávání v Talk" },
-  "talk_option_listable_line2": { "message": "⚠️ Usnadňuje opětovné nalezení, ale je dohledatelná pro všechny uživatele." },
-  "talk_option_lobby_title": { "message": "🚪 Čekárna do začátku" },
-  "talk_option_lobby_line1": { "message": "Účastníci před začátkem skončí v čekárně (lobby) a zatím se nemohou připojit k hovoru" },
-  "talk_option_lobby_line2": { "message": "⚠️ Připojení je možné až od nastaveného času začátku (nebo když moderátor ukončí čekárnu)" },
-  "talk_option_lobby_line3": { "message": "Ideální, aby nikdo nevstoupil do schůzky/webináře příliš brzy." },
-  "ui_create_roomtype_label": { "message": "Typ místnosti" },
-  "ui_create_mode_event": { "message": "Konverzace události" },
-  "ui_create_mode_standard": { "message": "Skupinová konverzace" },
-  "ui_create_mode_event_short": { "message": "Událost" },
-  "ui_create_mode_standard_short": { "message": "Standard" },
-  "ui_create_mode_unsupported": { "message": "Konverzace události nejsou serverem podporovány." },
-  "talk_roomtype_group_title": { "message": "🗨️ Skupinová konverzace" },
-  "talk_roomtype_group_line1": { "message": "Trvalá: zůstane, dokud ji ručně nesmažete" },
-  "talk_roomtype_group_line2": { "message": "Pro každodenní použití: ideální pro týmy, oddělení, průběžné projekty a opakované schůzky" },
-  "talk_roomtype_group_line3": { "message": "S historií: celý chat lze kdykoli zpětně prohlédnout" },
-  "talk_roomtype_event_title": { "message": "📅 Konverzace události" },
-  "talk_roomtype_event_line1": { "message": "Časově omezená: pro konkrétní schůzku nebo příležitost" },
-  "talk_roomtype_event_line2": { "message": "Spontánní a lehká: vhodná pro schůzky, školení nebo webináře" },
-  "talk_roomtype_event_line3": { "message": "Samočisticí: po určité době se automaticky odstraní" },
-  "ui_create_moderator_label": { "message": "Moderátor (volitelné)" },
-  "ui_create_moderator_placeholder": { "message": "Zadejte uživatelské jméno" },
-  "ui_create_moderator_hint": { "message": "Pokud je uvedeno, moderování se po vytvoření převede na tohoto uživatele a vy místnost opustíte." },
-  "ui_delegate_selected_title": { "message": "Vybráno" },
-  "ui_delegate_selected_description": { "message": "Pokud je uvedeno, moderování se po vytvoření převede na tohoto uživatele a vy místnost opustíte." },
-  "ui_delegate_status_searching": { "message": "Hledání..." },
-  "ui_delegate_status_loading": { "message": "Načítání uživatelů..." },
-  "ui_delegate_status_none_with_email": { "message": "Žádné shody." },
-  "ui_delegate_status_none_found": { "message": "Nenalezeni žádní uživatelé." },
-  "ui_delegate_status_single": { "message": "1 shoda." },
-  "ui_delegate_status_many": { "message": "$1 shod." },
-  "ui_delegate_status_error": { "message": "Vyhledávání uživatelů selhalo." },
-  "ui_create_password_short": { "message": "Heslo musí mít alespoň 5 znaků." },
-  "ui_create_send_failed": { "message": "Odeslání do skriptu na pozadí selhalo:\n$1" },
-  "ui_create_no_handler": { "message": "Není zaregistrován žádný obslužný modul Nextcloud Talk. Načtěte doplněk znovu." },
-  "ui_create_unknown_error": { "message": "Neznámá chyba při vytváření konverzace." },
-  "ui_create_failed": { "message": "Nepodařilo se vytvořit Nextcloud Talk:\n$1\nZkontrolujte nastavení." },
-  "ui_moderator_transfer_failed": { "message": "Nepodařilo se převést moderátora." },
-  "ui_moderator_transfer_failed_with_reason": { "message": "Nepodařilo se převést moderátora:\n$1" },
-  "ui_alert_title": { "message": "Nextcloud Talk" },
-  "ui_alert_room_created": { "message": "Místnost Talk \"$1\" byla vytvořena." },
-  "ui_alert_link_inserted": { "message": "Odkaz Talk vložen:\n$1" },
-  "ui_alert_location_missing": { "message": "(Poznámka: Pole Umístění nebylo automaticky vyplněno.)" },
-  "ui_alert_event_fallback": { "message": "Poznámka: Server nepodporuje konverzace události. Byla vytvořena skupinová konverzace." },
-  "ui_alert_generic_fallback": { "message": "(Poznámka: Byl vytvořen náhradní odkaz bez podpory API.)" },
-  "ui_alert_reason": { "message": "Důvod: $1" },
-  "ui_alert_pending_delegation": { "message": "Moderátor bude převeden při uložení/odeslání na: $1." },
-  "ui_alert_delegation_done": { "message": "Moderátor převeden na: $1." },
-  "ui_delegate_modal_title": { "message": "Převod moderátora" },
-  "ui_alert_delegation_removed": { "message": "Byli jste odstraněni z konverzace." },
-  "ui_alert_password_protected": { "message": "Poznámka: Tato konverzace je chráněna heslem." },
-  "ui_prompt_base_url": { "message": "Základní URL Nextcloud (např. https://cloud.example.com):" },
-  "ui_prompt_title": { "message": "Název nové veřejné konverzace:" },
-  "ui_default_title": { "message": "Schůzka" },
-  "ui_description_heading": { "message": "Nextcloud Talk" },
-  "ui_description_join_label": { "message": "Připojte se ke schůzce nyní:" },
-  "ui_description_password_line": { "message": "Heslo: $1" },
-  "ui_description_help_label": { "message": "Potřebujete pomoc?" },
-  "ui_description_help_url": { "message": "https://docs.nextcloud.com/server/latest/user_manual/en/talk/join_a_call_or_chat_as_guest.html" },
-  "talk_dialog_title": { "message": "Nextcloud Talk" },
-  "talk_dialog_heading": { "message": "Nextcloud Talk" },
-  "talk_dialog_placeholder": { "message": "Toto samostatné rozhraní je ve vývoji. Pokračujte v používání vloženého dialogu Talk, dokud nebude migrace dokončena." },
-  "talk_dialog_close": { "message": "Zavřít" },
-  "talk_dialog_missing_window": { "message": "Nepodařilo se zjistit kontext okna kalendáře." },
-  "talk_dialog_ready": { "message": "Dialog inicializován." },
-  "talk_error_window_id_missing": { "message": "Chybí reference okna." },
-  "talk_error_context_id_missing": { "message": "Chybí kontext události." },
-  "talk_error_init_failed": { "message": "Inicializace dialogu selhala." },
-  "talk_error_snapshot_failed": { "message": "Nepodařilo se přečíst data události." },
-  "talk_status_loading_event": { "message": "Načítání události z editoru…" },
-  "talk_error_editor_context_missing": { "message": "Nepodařilo se rozpoznat právě upravovanou událost. Ujistěte se, že je editor události otevřen, a zkuste to znovu." },
-  "talk_error_create_failed": { "message": "Vytvoření místnosti selhalo." },
-  "talk_error_title_missing": { "message": "Zadejte název." },
-  "talk_error_create_missing_data": { "message": "Chybí data místnosti." },
-  "talk_error_window_reference": { "message": "Chybí reference okna." },
-  "talk_error_context_reference": { "message": "Chybí kontext události." },
-  "talk_error_apply_failed": { "message": "Nepodařilo se použít změny na událost." },
-  "talk_section_event": { "message": "Událost" },
-  "talk_field_start": { "message": "Začátek" },
-  "talk_field_end": { "message": "Konec" },
-  "talk_field_location": { "message": "Umístění" },
-  "talk_field_description": { "message": "Popis" },
-  "talk_section_settings": { "message": "Nastavení Talk" },
-  "talk_section_room": { "message": "Místnost Talk" },
-  "talk_field_token": { "message": "Token" },
-  "talk_field_url": { "message": "Odkaz" },
-  "talk_field_lobby": { "message": "Čekárna" },
-  "talk_field_start_epoch": { "message": "Časové razítko začátku" },
-  "talk_password_toggle_label": { "message": "Nastavit heslo" },
-  "talk_dialog_legacy": { "message": "Otevřít starý dialog" },
-  "talk_button_apply_fields": { "message": "Použít pole" },
-  "talk_button_create_room": { "message": "Vytvořit místnost Talk" },
-  "talk_dialog_fields_saved": { "message": "Pole byla aktualizována." },
-  "talk_dialog_fields_error": { "message": "Pole se nepodařilo aktualizovat." },
-  "open_url_title": { "message": "Otevřít odkaz" },
-  "open_url_heading": { "message": "Otevřít odkaz v prohlížeči" },
-  "open_url_instructions": { "message": "Zkopírujte níže uvedenou URL a vložte ji do výchozího prohlížeče." },
-  "open_url_copy": { "message": "Kopírovat URL" },
-  "open_url_close": { "message": "Zavřít" },
-  "open_url_copied": { "message": "URL zkopírována do schránky." },
-  "open_url_copy_failed": { "message": "Kopírování selhalo. Zkopírujte URL ručně." },
-  "talk_value_enabled": { "message": "Povoleno" },
-  "talk_value_disabled": { "message": "Zakázáno" },
-  "ui_toolbar_tooltip": { "message": "Nextcloud Talk" },
-  "error_canvas_support_missing": { "message": "Chybí podpora canvas." },
-  "error_invalid_base64_length": { "message": "Neplatná délka Base64." },
-  "error_invalid_base64_data": { "message": "Neplatná data Base64." },
-  "error_avatar_load_failed": { "message": "Avatar se nepodařilo načíst." },
-
-  "error_avatar_data_missing": { "message": "Chybí data avatara." },
-  "error_canvas_context_missing": { "message": "Kontext canvas není dostupný." },
-  "error_image_decode_failed": { "message": "Obrázek se nepodařilo dekódovat." },
-  "error_image_size_unknown": { "message": "Nepodařilo se zjistit velikost obrázku." },
-  "error_image_load_failed": { "message": "Obrázek se nepodařilo načíst." },
-  "error_pixel_data_missing": { "message": "Data pixelů nejsou dostupná." },
-  "error_credentials_missing": { "message": "Chybí přihlašovací údaje k Nextcloud (v nastavení doplňku)." },
-  "error_host_permission_missing": { "message": "Přístup ke konfiguraci Nextcloud nebyl povolen." },
-  "error_system_addressbook_failed": { "message": "Nepodařilo se načíst systémový adresář: $1" },
-  "error_lobby_set_failed": { "message": "Nepodařilo se nastavit čekárnu: $1" },
-  "error_lobby_set_failed_short": { "message": "Nepodařilo se nastavit čekárnu." },
-  "error_room_create_failed": { "message": "Místnost se nepodařilo vytvořit." },
-  "error_token_missing_in_response": { "message": "V odpovědi OCS není token." },
-  "error_room_token_missing": { "message": "Chybí token místnosti." },
-  "error_room_delete_failed": { "message": "Místnost se nepodařilo smazat: $1" },
-  "error_lobby_no_permission": { "message": "Nemáte oprávnění změnit čekárnu (HTTP 403)." },
-  "error_lobby_update_failed": { "message": "Aktualizace čekárny selhala (HTTP $1)." },
-  "error_ocs": { "message": "Chyba OCS: $1" },
-  "error_token_or_actor_missing": { "message": "Chybí token místnosti nebo ID účastníka." },
-  "error_participant_add_failed": { "message": "Nepodařilo se přidat účastníka: $1" },
-  "error_moderator_id_missing": { "message": "Chybí ID moderátora." },
-  "error_moderator_set_failed": { "message": "Nepodařilo se nastavit moderátora: $1" },
-  "error_leave_failed": { "message": "Opuštění místnosti selhalo: $1" },
-  "error_delegation_data_missing": { "message": "Chybí data delegování." },
-  "error_moderator_target_missing": { "message": "ID moderátora je prázdné." },
-  "error_participant_not_found": { "message": "Účastník nebyl nalezen, zkontrolujte pravopis." },
-  "error_users_load_failed": { "message": "Nepodařilo se načíst uživatele." },
-  "error_unknown_utility_request": { "message": "Neznámý požadavek nástroje." },
-  "options_title": { "message": "NC Connector for Thunderbird – Nastavení" },
-  "options_heading": { "message": "NC Connector for Thunderbird – Nastavení" },
-  "options_base_url_label": { "message": "URL Nextcloud" },
-  "options_base_url_placeholder": { "message": "https://cloud.example.com" },
-  "options_user_label": { "message": "Uživatelské jméno" },
-  "options_app_pass_label": { "message": "Heslo aplikace" },
-  "options_debug_label": { "message": "Ladicí protokolování" },
-  "options_debug_hint": { "message": "Použijte konzoli pro diagnostické zprávy" },
-  "options_support_link": { "message": "PayPal: Přispět" },
-  "options_save_button": { "message": "Uložit" },
-  "options_status_saved": { "message": "Uloženo." },
-  "options_status_save_failed": { "message": "Uložení selhalo." },
-  "options_status_load_failed": { "message": "Nepodařilo se načíst nastavení." },
-  "options_test_button": { "message": "Otestovat připojení" },
-  "options_test_running": { "message": "Testování připojení..." },
-  "options_test_success": { "message": "Připojení úspěšné." },
-  "options_test_failed": { "message": "Připojení selhalo." },
-  "options_test_failed_auth": { "message": "Uživatelské jméno nebo heslo aplikace je neplatné." },
-  "options_test_missing": { "message": "Nejprve zadejte URL, uživatelské jméno a heslo aplikace." },
-  "options_permission_required": { "message": "Pro pokračování povolte přístup k této instanci Nextcloud." },
-  "options_tab_general": { "message": "Obecné" },
-  "options_tab_sharing": { "message": "Sdílení" },
-  "options_tab_talklink": { "message": "Odkaz Talk" },
-  "options_tab_advanced": { "message": "Pokročilé" },
-  "options_tab_debug": { "message": "Debug" },
-  "options_tab_about": { "message": "O doplňku" },
-  "options_placeholder_sharing": { "message": "Konfigurace bude brzy k dispozici." },
-  "options_placeholder_advanced": { "message": "Nastavení bude brzy k dispozici." },
-  "options_advanced_language_heading": { "message": "Přepsání jazyka" },
-  "options_share_block_lang_label": { "message": "Jazyk HTML bloku sdílení" },
-  "options_share_block_lang_hint": { "message": "Určuje jazyk vloženého HTML bloku sdílení." },
-  "options_event_description_lang_label": { "message": "Jazyk popisu Talk" },
-  "options_event_description_lang_hint": { "message": "Určuje jazyk textového bloku Talk v událostech." },
-  "options_lang_default": { "message": "Výchozí (UI)" },
-  "options_lang_en": { "message": "Angličtina" },
-  "options_lang_de": { "message": "Němčina" },
-  "options_lang_fr": { "message": "Francouzština" },
-  "options_about_version_label": { "message": "Verze:" },
-  "options_about_copyright_label": { "message": "Copyright:" },
-  "options_about_license_label": { "message": "Licence:" },
-  "options_about_license_value": { "message": "AGPL v3" },
-  "options_about_support_note": { "message": "Aby mohl být NC Connector for Thunderbird i nadále zdarma udržován a vylepšován." },
-  "options_about_support_heading": { "message": "Podpora" },
-  "options_auth_heading": { "message": "Ověření" },
-  "options_auth_manual": { "message": "Ruční (zadejte uživatelské jméno + heslo aplikace)" },
-  "options_auth_login": { "message": "Přihlásit se do Nextcloud (získat heslo aplikace automaticky)" },
-  "options_loginflow_button": { "message": "Přihlásit se do Nextcloud..." },
-  "options_loginflow_starting": { "message": "Spouští se přihlášení..." },
-  "options_loginflow_browser": { "message": "Prohlížeč byl otevřen. Potvrďte přihlášení v Nextcloud..." },
-  "options_loginflow_success": { "message": "Přihlášení úspěšné. Heslo aplikace zkopírováno." },
-  "options_loginflow_failed": { "message": "Přihlášení do Nextcloud selhalo." },
-  "options_loginflow_missing": { "message": "Nejprve zadejte URL serveru." },
-  "compose_sharing_title": { "message": "Přidat sdílení Nextcloud" },
-  "options_sharing_base_label": { "message": "Základní adresář" },
-  "options_sharing_base_hint": { "message": "Soubory jsou ukládány pod tento adresář (např. \"90 Freigaben - extern\")." },
-  "options_sharing_defaults_heading": { "message": "Výchozí nastavení" },
-  "options_sharing_default_share_name_label": { "message": "Název sdílení" },
-  "options_sharing_default_permissions_label": { "message": "Výchozí oprávnění" },
-  "options_sharing_default_perm_create": { "message": "Nahrát/Vytvořit" },
-  "options_sharing_default_perm_write": { "message": "Upravit" },
-  "options_sharing_default_perm_delete": { "message": "Smazat" },
-  "options_sharing_default_password_label": { "message": "Nastavit heslo" },
-  "options_sharing_default_expire_days_label": { "message": "Vypršení (dny)" },
-  "options_talk_defaults_heading": { "message": "Výchozí nastavení" },
-  "options_talk_default_title_label": { "message": "Název" },
-  "options_talk_default_lobby_label": { "message": "Čekárna do začátku" },
-  "options_talk_default_listable_label": { "message": "Zobrazit ve vyhledávání" },
-  "options_talk_default_add_participants_label": { "message": "Přidat účastníky do místnosti" },
-  "options_talk_default_add_users_label": { "message": "Uživatelé" },
-  "options_talk_default_add_guests_label": { "message": "Hosté" },
-  "options_talk_default_password_label": { "message": "Nastavit heslo" },
-  "options_talk_default_roomtype_label": { "message": "Typ místnosti" },
-  "options_talk_default_roomtype_event": { "message": "Konverzace události" },
-  "options_talk_default_roomtype_standard": { "message": "Skupinová konverzace" },
-  "sharing_wizard_title": { "message": "Sdílení Nextcloud" },
-  "sharing_header_hint": { "message": "NC Connector for Thunderbird" },
-  "sharing_step_general": { "message": "Sdílení" },
-  "sharing_share_name_label": { "message": "Název sdílení" },
-  "sharing_share_placeholder": { "message": "např. Projekt X" },
-  "sharing_share_default": { "message": "Název sdílení" },
-  "sharing_base_path_label": { "message": "Základní adresář" },
-  "sharing_base_path_hint": { "message": "Soubory jsou ukládány pod tento adresář." },
-  "sharing_allow_upload_label": { "message": "Příjemci mohou nahrát své vlastní soubory" },
-  "sharing_step_security": { "message": "Oprávnění" },
-  "sharing_permission_read": { "message": "Čtení" },
-  "sharing_permission_create": { "message": "Nahrát" },
-  "sharing_permission_write": { "message": "Upravit" },
-  "sharing_permission_delete": { "message": "Smazat" },
-  "sharing_password_toggle": { "message": "Nastavit heslo" },
-  "sharing_password_label": { "message": "Heslo" },
-  "sharing_password_generate": { "message": "Generovat" },
-  "sharing_expire_toggle": { "message": "Nastavit datum vypršení platnosti" },
-  "sharing_expire_label": { "message": "Datum vypršení platnosti" },
-  "sharing_step_files": { "message": "Soubory" },
-  "sharing_files_hint": { "message": "Přidejte soubory nebo složky, které mají být nahrány." },
-  "sharing_add_files": { "message": "Vybrat soubory..." },
-  "sharing_clear_files": { "message": "Vymazat seznam" },
-  "sharing_allow_empty_label": { "message": "Pokračovat bez souborů (sdílet pouze nahrávací složku)" },
-  "sharing_step_note": { "message": "Poznámka a dokončení" },
-  "sharing_note_toggle": { "message": "Přidat poznámku pro příjemce" },
-  "sharing_note_label": { "message": "Poznámka" },
-  "sharing_note_placeholder": { "message": "Volitelná zpráva pro příjemce" },
-  "sharing_summary_share": { "message": "Název sdílení" },
-  "sharing_summary_folder": { "message": "Složka" },
-  "sharing_summary_permissions": { "message": "Oprávnění" },
-  "sharing_progress_label": { "message": "Vytváření sdílení..." },
-  "sharing_button_back": { "message": "Zpět" },
-  "sharing_button_cancel": { "message": "Zrušit" },
-  "sharing_button_next": { "message": "Další" },
-  "sharing_button_finish": { "message": "Vytvořit sdílení" },
-  "sharing_status_preparing": { "message": "Příprava nahrávání..." },
-  "sharing_status_uploading": { "message": "Nahrávání $3 ($1 / $2)..." },
-  "sharing_status_creating": { "message": "Vytváření veřejného odkazu..." },
-  "sharing_status_done": { "message": "Sdílení bylo úspěšně vloženo." },
-  "sharing_status_error": { "message": "Došlo k chybě." },
-  "sharing_error_share_name": { "message": "Zadejte název sdílení." },
-  "sharing_error_password_missing": { "message": "Zadejte heslo." },
-  "sharing_error_expire_missing": { "message": "Zvolte datum vypršení platnosti." },
-  "sharing_error_no_files": { "message": "Přidejte alespoň jeden soubor nebo povolte možnost pokračovat bez souborů." },
-  "sharing_error_missing_config": { "message": "Nepodařilo se zjistit okno pro psaní zprávy." },
-  "sharing_error_insert_failed": { "message": "Nepodařilo se vložit sdílení do zprávy." },
-  "sharing_html_intro": { "message": "Chci sdílet soubory bezpečně a chránit vaše soukromí. Klikněte na odkaz níže pro stažení souborů." },
-  "sharing_html_password_label": { "message": "Heslo" },
-  "sharing_html_expire_label": { "message": "Datum vypršení platnosti" },
-  "sharing_html_permissions_label": { "message": "Vaše oprávnění" },
-  "sharing_html_download_label": { "message": "Odkaz ke stažení" },
-  "sharing_html_footer": { "message": "$1 je řešení pro bezpečný e-mail a výměnu souborů." },
-  "sharing_dialog_title": { "message": "Sdílení Nextcloud" },
-  "sharing_heading_permissions": { "message": "Nastavení sdílení" },
-  "sharing_step_expire": { "message": "Datum vypršení platnosti" },
-  "sharing_expire_hint": { "message": "Po tomto datu už odkaz nebude dostupný." },
-  "sharing_step_files_title": { "message": "Vybrat soubory nebo složky" },
-  "sharing_base_path_info": { "message": "Základní adresář: $1" },
-  "sharing_files_table_path": { "message": "Cesta" },
-  "sharing_files_table_type": { "message": "Typ" },
-  "sharing_files_table_status": { "message": "Stav" },
-  "sharing_button_add_files": { "message": "Přidat soubory..." },
-  "sharing_button_add_folder": { "message": "Přidat složku..." },
-  "sharing_button_remove": { "message": "Odebrat" },
-  "sharing_button_upload": { "message": "Nahrát" },
-  "sharing_files_empty": { "message": "Nejsou vybrány žádné soubory." },
-  "sharing_file_type_file": { "message": "Soubor" },
-  "sharing_file_type_folder": { "message": "Složka" },
-  "sharing_status_waiting": { "message": "Čeká" },
-  "sharing_status_done_row": { "message": "Hotovo" },
-  "sharing_status_error_row": { "message": "Chyba" },
-  "sharing_status_ready": { "message": "Nahrávání dokončeno." },
-  "sharing_status_uploading_bulk": { "message": "Nahrávají se soubory..." },
-  "sharing_message_invalid_share_name": { "message": "Zadejte název sdílení." },
-  "sharing_message_no_files": { "message": "Přidejte alespoň jeden soubor." },
-  "sharing_confirm_no_files_title": { "message": "Sdílení bez nahrání" },
-  "sharing_confirm_no_files_message": { "message": "Do tohoto sdílení nebyly přidány žádné soubory ani složky. Příjemci mohou nahrát pouze své vlastní soubory. Chcete pokračovat?" },
-  "sharing_error_upload_required": { "message": "Před pokračováním nahrajte soubory." },
-  "sharing_step_note_heading": { "message": "Poznámka pro příjemce" },
-  "sharing_status_inserting": { "message": "Vkládání HTML bloku..." },
-  "sharing_status_checking_folder": { "message": "Kontrola dostupnosti složky..." },
-  "sharing_error_folder_exists": { "message": "Složka sdílení s tímto názvem již existuje. Zvolte jiný název." },
-  "sharing_prompt_rename_duplicate": { "message": "Soubor \"$1\" již existuje ve frontě. Zadejte nový název." },
-  "sharing_prompt_rename_existing": { "message": "Soubor \"$1\" již existuje na serveru. Zadejte nový název." },
-  "sharing_message_rename_cancelled": { "message": "Nahrávání bylo zrušeno, protože nebyl zadán náhradní název." },
-  "sharing_password_policy_error": { "message": "Heslo musí obsahovat alespoň 10 znaků, včetně velkých a malých písmen a speciálního znaku." },
-  "sharing_html_intro_line": { "message": "Chci sdílet soubory bezpečně a chránit vaše soukromí. Klikněte na odkaz níže pro stažení souborů." },
-  "sharing_html_footer_line": { "message": "Nextcloud je řešení pro bezpečný e-mail a výměnu dat." }
+  "extName": {
+    "message": "NC Connector for Thunderbird"
+  },
+  "extDescription": {
+    "message": "Nextcloud Talk a soubory plynule integrovány do Thunderbirdu"
+  },
+  "ui_button_ok": {
+    "message": "OK"
+  },
+  "ui_button_cancel": {
+    "message": "Zrušit"
+  },
+  "ui_button_create_progress": {
+    "message": "Vytváří se..."
+  },
+  "ui_button_clear": {
+    "message": "Vymazat"
+  },
+  "ui_insert_button_label": {
+    "message": "Vložit odkaz na Talk"
+  },
+  "ui_create_title_label": {
+    "message": "Název"
+  },
+  "ui_create_add_users_label": {
+    "message": "Přidat uživatele"
+  },
+  "ui_create_add_guests_label": {
+    "message": "Přidat hosty"
+  },
+  "talk_password_policy_error": {
+    "message": "Heslo musí mít alespoň $1 znaků."
+  },
+  "ui_create_password_placeholder": {
+    "message": "Volitelné"
+  },
+  "ui_password_generate_label": {
+    "message": "Generovat"
+  },
+  "ui_password_error_title": {
+    "message": "Zkontrolovat heslo"
+  },
+  "ui_create_lobby_label": {
+    "message": "Čekárna do začátku"
+  },
+  "ui_create_listable_label": {
+    "message": "Zobrazit ve vyhledávání"
+  },
+  "talk_option_add_users_title": {
+    "message": "👤 Přidat uživatele"
+  },
+  "talk_option_add_users_line1": {
+    "message": "Interní uživatelé Nextcloudu budou přidáni přímo do místnosti"
+  },
+  "talk_option_add_users_line2": {
+    "message": "Místnost je okamžitě viditelná v Nextcloud Talk"
+  },
+  "talk_option_add_guests_title": {
+    "message": "🌍 Přidat hosty"
+  },
+  "talk_option_add_guests_line1": {
+    "message": "Hosté budou také přidáni přímo do místnosti"
+  },
+  "talk_option_add_guests_line2": {
+    "message": "⚠️ Dostanou samostatný (další) e-mail s osobním přístupovým odkazem"
+  },
+  "talk_option_listable_title": {
+    "message": "🔍 Zobrazit ve vyhledávání"
+  },
+  "talk_option_listable_line1": {
+    "message": "Místnost lze najít pomocí vyhledávání v Talk"
+  },
+  "talk_option_listable_line2": {
+    "message": "⚠️ Usnadňuje opětovné nalezení, ale je dohledatelná pro všechny uživatele."
+  },
+  "talk_option_lobby_title": {
+    "message": "🚪 Čekárna do začátku"
+  },
+  "talk_option_lobby_line1": {
+    "message": "Účastníci před začátkem skončí v čekárně (lobby) a zatím se nemohou připojit k hovoru"
+  },
+  "talk_option_lobby_line2": {
+    "message": "⚠️ Připojení je možné až od nastaveného času začátku (nebo když moderátor ukončí čekárnu)"
+  },
+  "talk_option_lobby_line3": {
+    "message": "Ideální, aby nikdo nevstoupil do schůzky/webináře příliš brzy."
+  },
+  "ui_create_roomtype_label": {
+    "message": "Typ místnosti"
+  },
+  "ui_create_mode_event": {
+    "message": "Konverzace události"
+  },
+  "ui_create_mode_standard": {
+    "message": "Skupinová konverzace"
+  },
+  "talk_roomtype_group_title": {
+    "message": "🗨️ Skupinová konverzace"
+  },
+  "talk_roomtype_group_line1": {
+    "message": "Trvalá: zůstane, dokud ji ručně nesmažete"
+  },
+  "talk_roomtype_group_line2": {
+    "message": "Pro každodenní použití: ideální pro týmy, oddělení, průběžné projekty a opakované schůzky"
+  },
+  "talk_roomtype_group_line3": {
+    "message": "S historií: celý chat lze kdykoli zpětně prohlédnout"
+  },
+  "talk_roomtype_event_title": {
+    "message": "📅 Konverzace události"
+  },
+  "talk_roomtype_event_line1": {
+    "message": "Časově omezená: pro konkrétní schůzku nebo příležitost"
+  },
+  "talk_roomtype_event_line2": {
+    "message": "Spontánní a lehká: vhodná pro schůzky, školení nebo webináře"
+  },
+  "talk_roomtype_event_line3": {
+    "message": "Samočisticí: po určité době se automaticky odstraní"
+  },
+  "ui_create_moderator_label": {
+    "message": "Moderátor (volitelné)"
+  },
+  "ui_create_moderator_hint": {
+    "message": "Pokud je uvedeno, moderování se po vytvoření převede na tohoto uživatele a vy místnost opustíte."
+  },
+  "ui_delegate_selected_title": {
+    "message": "Vybráno"
+  },
+  "ui_delegate_selected_description": {
+    "message": "Pokud je uvedeno, moderování se po vytvoření převede na tohoto uživatele a vy místnost opustíte."
+  },
+  "ui_delegate_status_searching": {
+    "message": "Hledání..."
+  },
+  "ui_delegate_status_loading": {
+    "message": "Načítání uživatelů..."
+  },
+  "ui_delegate_status_none_with_email": {
+    "message": "Žádné shody."
+  },
+  "ui_delegate_status_none_found": {
+    "message": "Nenalezeni žádní uživatelé."
+  },
+  "ui_delegate_status_single": {
+    "message": "1 shoda."
+  },
+  "ui_delegate_status_many": {
+    "message": "$1 shod."
+  },
+  "ui_delegate_status_error": {
+    "message": "Vyhledávání uživatelů selhalo."
+  },
+  "ui_create_failed": {
+    "message": "Nepodařilo se vytvořit Nextcloud Talk:\n$1\nZkontrolujte nastavení."
+  },
+  "ui_alert_pending_delegation": {
+    "message": "Moderátor bude převeden při uložení/odeslání na: $1."
+  },
+  "ui_delegate_modal_title": {
+    "message": "Převod moderátora"
+  },
+  "ui_default_title": {
+    "message": "Schůzka"
+  },
+  "ui_description_heading": {
+    "message": "Nextcloud Talk"
+  },
+  "ui_description_join_label": {
+    "message": "Připojte se ke schůzce nyní:"
+  },
+  "ui_description_password_line": {
+    "message": "Heslo: $1"
+  },
+  "ui_description_help_label": {
+    "message": "Potřebujete pomoc?"
+  },
+  "ui_description_help_url": {
+    "message": "https://docs.nextcloud.com/server/latest/user_manual/en/talk/join_a_call_or_chat_as_guest.html"
+  },
+  "talk_dialog_title": {
+    "message": "Nextcloud Talk"
+  },
+  "talk_dialog_close": {
+    "message": "Zavřít"
+  },
+  "talk_error_context_id_missing": {
+    "message": "Chybí kontext události."
+  },
+  "talk_error_init_failed": {
+    "message": "Inicializace dialogu selhala."
+  },
+  "talk_error_snapshot_failed": {
+    "message": "Nepodařilo se přečíst data události."
+  },
+  "talk_error_editor_context_missing": {
+    "message": "Nepodařilo se rozpoznat právě upravovanou událost. Ujistěte se, že je editor události otevřen, a zkuste to znovu."
+  },
+  "talk_error_create_failed": {
+    "message": "Vytvoření místnosti selhalo."
+  },
+  "talk_error_title_missing": {
+    "message": "Zadejte název."
+  },
+  "talk_error_create_missing_data": {
+    "message": "Chybí data místnosti."
+  },
+  "talk_error_context_reference": {
+    "message": "Chybí kontext události."
+  },
+  "talk_error_apply_failed": {
+    "message": "Nepodařilo se použít změny na událost."
+  },
+  "talk_section_settings": {
+    "message": "Nastavení Talk"
+  },
+  "talk_password_toggle_label": {
+    "message": "Nastavit heslo"
+  },
+  "talk_button_create_room": {
+    "message": "Vytvořit místnost Talk"
+  },
+  "open_url_title": {
+    "message": "Otevřít odkaz"
+  },
+  "open_url_heading": {
+    "message": "Otevřít odkaz v prohlížeči"
+  },
+  "open_url_instructions": {
+    "message": "Zkopírujte níže uvedenou URL a vložte ji do výchozího prohlížeče."
+  },
+  "open_url_copy": {
+    "message": "Kopírovat URL"
+  },
+  "open_url_close": {
+    "message": "Zavřít"
+  },
+  "open_url_copied": {
+    "message": "URL zkopírována do schránky."
+  },
+  "open_url_copy_failed": {
+    "message": "Kopírování selhalo. Zkopírujte URL ručně."
+  },
+  "error_credentials_missing": {
+    "message": "Chybí přihlašovací údaje k Nextcloud (v nastavení doplňku)."
+  },
+  "error_baseurl_https_required": {
+    "message": "Použijte prosím URL Nextcloud s HTTPS."
+  },
+  "error_host_permission_missing": {
+    "message": "Přístup ke konfiguraci Nextcloud nebyl povolen."
+  },
+  "error_system_addressbook_failed": {
+    "message": "Nepodařilo se načíst systémový adresář: $1"
+  },
+  "error_lobby_set_failed": {
+    "message": "Nepodařilo se nastavit čekárnu: $1"
+  },
+  "error_lobby_set_failed_short": {
+    "message": "Nepodařilo se nastavit čekárnu."
+  },
+  "error_room_create_failed": {
+    "message": "Místnost se nepodařilo vytvořit."
+  },
+  "error_token_missing_in_response": {
+    "message": "V odpovědi OCS není token."
+  },
+  "error_room_token_missing": {
+    "message": "Chybí token místnosti."
+  },
+  "error_room_delete_failed": {
+    "message": "Místnost se nepodařilo smazat: $1"
+  },
+  "error_lobby_no_permission": {
+    "message": "Nemáte oprávnění změnit čekárnu (HTTP 403)."
+  },
+  "error_lobby_update_failed": {
+    "message": "Aktualizace čekárny selhala (HTTP $1)."
+  },
+  "error_ocs": {
+    "message": "Chyba OCS: $1"
+  },
+  "error_token_or_actor_missing": {
+    "message": "Chybí token místnosti nebo ID účastníka."
+  },
+  "error_participant_add_failed": {
+    "message": "Nepodařilo se přidat účastníka: $1"
+  },
+  "error_moderator_id_missing": {
+    "message": "Chybí ID moderátora."
+  },
+  "error_moderator_set_failed": {
+    "message": "Nepodařilo se nastavit moderátora: $1"
+  },
+  "error_leave_failed": {
+    "message": "Opuštění místnosti selhalo: $1"
+  },
+  "error_delegation_data_missing": {
+    "message": "Chybí data delegování."
+  },
+  "error_moderator_target_missing": {
+    "message": "ID moderátora je prázdné."
+  },
+  "error_participant_not_found": {
+    "message": "Účastník nebyl nalezen, zkontrolujte pravopis."
+  },
+  "error_unknown_utility_request": {
+    "message": "Neznámý požadavek nástroje."
+  },
+  "options_title": {
+    "message": "NC Connector for Thunderbird – Nastavení"
+  },
+  "options_base_url_label": {
+    "message": "URL Nextcloud"
+  },
+  "options_base_url_placeholder": {
+    "message": "https://cloud.example.com"
+  },
+  "options_user_label": {
+    "message": "Uživatelské jméno"
+  },
+  "options_app_pass_label": {
+    "message": "Heslo aplikace"
+  },
+  "options_debug_label": {
+    "message": "Ladicí protokolování"
+  },
+  "options_debug_hint": {
+    "message": "Použijte konzoli pro diagnostické zprávy"
+  },
+  "options_support_link": {
+    "message": "PayPal: Přispět"
+  },
+  "options_save_button": {
+    "message": "Uložit"
+  },
+  "options_status_saved": {
+    "message": "Uloženo."
+  },
+  "options_status_save_failed": {
+    "message": "Uložení selhalo."
+  },
+  "options_status_load_failed": {
+    "message": "Nepodařilo se načíst nastavení."
+  },
+  "options_test_button": {
+    "message": "Otestovat připojení"
+  },
+  "options_test_running": {
+    "message": "Testování připojení..."
+  },
+  "options_test_success": {
+    "message": "Připojení úspěšné."
+  },
+  "options_test_failed": {
+    "message": "Připojení selhalo."
+  },
+  "options_test_failed_auth": {
+    "message": "Uživatelské jméno nebo heslo aplikace je neplatné."
+  },
+  "options_test_missing": {
+    "message": "Nejprve zadejte URL, uživatelské jméno a heslo aplikace."
+  },
+  "options_permission_required": {
+    "message": "Pro pokračování povolte přístup k této instanci Nextcloud."
+  },
+  "options_tab_general": {
+    "message": "Obecné"
+  },
+  "options_tab_sharing": {
+    "message": "Sdílení"
+  },
+  "options_tab_talklink": {
+    "message": "Odkaz Talk"
+  },
+  "options_tab_advanced": {
+    "message": "Pokročilé"
+  },
+  "options_tab_debug": {
+    "message": "Debug"
+  },
+  "options_tab_about": {
+    "message": "O doplňku"
+  },
+  "options_advanced_language_heading": {
+    "message": "Přepsání jazyka"
+  },
+  "options_share_block_lang_label": {
+    "message": "Jazyk HTML bloku sdílení"
+  },
+  "options_share_block_lang_hint": {
+    "message": "Určuje jazyk vloženého HTML bloku sdílení."
+  },
+  "options_event_description_lang_label": {
+    "message": "Jazyk popisu Talk"
+  },
+  "options_event_description_lang_hint": {
+    "message": "Určuje jazyk textového bloku Talk v událostech."
+  },
+  "options_lang_default": {
+    "message": "Výchozí (UI)"
+  },
+  "options_about_version_label": {
+    "message": "Verze:"
+  },
+  "options_about_copyright_label": {
+    "message": "Copyright:"
+  },
+  "options_about_license_label": {
+    "message": "Licence:"
+  },
+  "options_about_license_value": {
+    "message": "AGPL v3"
+  },
+  "options_about_support_note": {
+    "message": "Aby mohl být NC Connector for Thunderbird i nadále zdarma udržován a vylepšován."
+  },
+  "options_about_support_heading": {
+    "message": "Podpora"
+  },
+  "options_auth_heading": {
+    "message": "Ověření"
+  },
+  "options_auth_manual": {
+    "message": "Ruční (zadejte uživatelské jméno + heslo aplikace)"
+  },
+  "options_auth_login": {
+    "message": "Přihlásit se do Nextcloud (získat heslo aplikace automaticky)"
+  },
+  "options_loginflow_button": {
+    "message": "Přihlásit se do Nextcloud..."
+  },
+  "options_loginflow_starting": {
+    "message": "Spouští se přihlášení..."
+  },
+  "options_loginflow_browser": {
+    "message": "Prohlížeč byl otevřen. Potvrďte přihlášení v Nextcloud..."
+  },
+  "options_loginflow_success": {
+    "message": "Přihlášení úspěšné. Heslo aplikace zkopírováno."
+  },
+  "options_loginflow_failed": {
+    "message": "Přihlášení do Nextcloud selhalo."
+  },
+  "options_loginflow_missing": {
+    "message": "Nejprve zadejte URL serveru."
+  },
+  "compose_sharing_title": {
+    "message": "Přidat sdílení Nextcloud"
+  },
+  "options_sharing_base_label": {
+    "message": "Základní adresář"
+  },
+  "options_sharing_base_hint": {
+    "message": "Soubory jsou ukládány pod tento adresář (např. \"90 Freigaben - extern\")."
+  },
+  "options_sharing_defaults_heading": {
+    "message": "Výchozí nastavení"
+  },
+  "options_sharing_default_share_name_label": {
+    "message": "Název sdílení"
+  },
+  "options_sharing_default_permissions_label": {
+    "message": "Výchozí oprávnění"
+  },
+  "options_sharing_default_perm_create": {
+    "message": "Nahrát/Vytvořit"
+  },
+  "options_sharing_default_perm_write": {
+    "message": "Upravit"
+  },
+  "options_sharing_default_perm_delete": {
+    "message": "Smazat"
+  },
+  "options_sharing_default_password_label": {
+    "message": "Nastavit heslo"
+  },
+  "options_sharing_default_expire_days_label": {
+    "message": "Vypršení (dny)"
+  },
+  "options_sharing_attachments_heading": {
+    "message": "Přílohy"
+  },
+  "options_sharing_attachments_always_label": {
+    "message": "Přílohy vždy zpracovat přes NC Connector"
+  },
+  "options_sharing_attachments_offer_label": {
+    "message": "Nabídnout nahrání pro soubory větší než"
+  },
+  "options_sharing_attachments_offer_suffix": {
+    "message": "MB"
+  },
+  "options_talk_defaults_heading": {
+    "message": "Výchozí nastavení"
+  },
+  "options_talk_default_title_label": {
+    "message": "Název"
+  },
+  "options_talk_default_lobby_label": {
+    "message": "Čekárna do začátku"
+  },
+  "options_talk_default_listable_label": {
+    "message": "Zobrazit ve vyhledávání"
+  },
+  "options_talk_default_add_participants_label": {
+    "message": "Přidat účastníky do místnosti"
+  },
+  "options_talk_default_add_users_label": {
+    "message": "Uživatelé"
+  },
+  "options_talk_default_add_guests_label": {
+    "message": "Hosté"
+  },
+  "options_talk_default_password_label": {
+    "message": "Nastavit heslo"
+  },
+  "options_talk_default_roomtype_label": {
+    "message": "Typ místnosti"
+  },
+  "options_talk_default_roomtype_event": {
+    "message": "Konverzace události"
+  },
+  "options_talk_default_roomtype_standard": {
+    "message": "Skupinová konverzace"
+  },
+  "sharing_share_name_label": {
+    "message": "Název sdílení"
+  },
+  "sharing_share_placeholder": {
+    "message": "např. Projekt X"
+  },
+  "sharing_share_default": {
+    "message": "Název sdílení"
+  },
+  "sharing_permission_read": {
+    "message": "Čtení"
+  },
+  "sharing_permission_create": {
+    "message": "Nahrát"
+  },
+  "sharing_permission_write": {
+    "message": "Upravit"
+  },
+  "sharing_permission_delete": {
+    "message": "Smazat"
+  },
+  "sharing_password_toggle": {
+    "message": "Nastavit heslo"
+  },
+  "sharing_password_generate": {
+    "message": "Generovat"
+  },
+  "sharing_expire_toggle": {
+    "message": "Nastavit datum vypršení platnosti"
+  },
+  "sharing_note_toggle": {
+    "message": "Přidat poznámku pro příjemce"
+  },
+  "sharing_note_placeholder": {
+    "message": "Volitelná zpráva pro příjemce"
+  },
+  "sharing_button_back": {
+    "message": "Zpět"
+  },
+  "sharing_button_cancel": {
+    "message": "Zrušit"
+  },
+  "sharing_button_next": {
+    "message": "Další"
+  },
+  "sharing_button_finish": {
+    "message": "Vytvořit sdílení"
+  },
+  "sharing_status_creating": {
+    "message": "Vytváření veřejného odkazu..."
+  },
+  "sharing_status_error": {
+    "message": "Došlo k chybě."
+  },
+  "sharing_error_insert_failed": {
+    "message": "Nepodařilo se vložit sdílení do zprávy."
+  },
+  "sharing_html_password_label": {
+    "message": "Heslo"
+  },
+  "sharing_html_expire_label": {
+    "message": "Datum vypršení platnosti"
+  },
+  "sharing_html_permissions_label": {
+    "message": "Vaše oprávnění"
+  },
+  "sharing_html_download_label": {
+    "message": "Odkaz ke stažení"
+  },
+  "sharing_html_footer": {
+    "message": "$1 je řešení pro bezpečný e-mail a výměnu souborů."
+  },
+  "sharing_dialog_title": {
+    "message": "Sdílení Nextcloud"
+  },
+  "sharing_heading_permissions": {
+    "message": "Nastavení sdílení"
+  },
+  "sharing_step_expire": {
+    "message": "Datum vypršení platnosti"
+  },
+  "sharing_expire_hint": {
+    "message": "Po tomto datu už odkaz nebude dostupný."
+  },
+  "sharing_step_files_title": {
+    "message": "Vybrat soubory nebo složky"
+  },
+  "sharing_base_path_info": {
+    "message": "Základní adresář: $1"
+  },
+  "sharing_files_table_path": {
+    "message": "Cesta"
+  },
+  "sharing_files_table_type": {
+    "message": "Typ"
+  },
+  "sharing_files_table_status": {
+    "message": "Stav"
+  },
+  "sharing_button_add_files": {
+    "message": "Přidat soubory..."
+  },
+  "sharing_button_add_folder": {
+    "message": "Přidat složku..."
+  },
+  "sharing_button_remove": {
+    "message": "Odebrat"
+  },
+  "sharing_button_upload": {
+    "message": "Nahrát"
+  },
+  "sharing_files_empty": {
+    "message": "Nejsou vybrány žádné soubory."
+  },
+  "sharing_file_type_file": {
+    "message": "Soubor"
+  },
+  "sharing_status_waiting": {
+    "message": "Čeká"
+  },
+  "sharing_status_done_row": {
+    "message": "Hotovo"
+  },
+  "sharing_status_error_row": {
+    "message": "Chyba"
+  },
+  "sharing_status_ready": {
+    "message": "Nahrávání dokončeno."
+  },
+  "sharing_status_uploading_bulk": {
+    "message": "Nahrávají se soubory..."
+  },
+  "sharing_message_invalid_share_name": {
+    "message": "Zadejte název sdílení."
+  },
+  "sharing_message_no_files": {
+    "message": "Přidejte alespoň jeden soubor."
+  },
+  "sharing_confirm_no_files_title": {
+    "message": "Sdílení bez nahrání"
+  },
+  "sharing_confirm_no_files_message": {
+    "message": "Do tohoto sdílení nebyly přidány žádné soubory ani složky. Příjemci mohou nahrát pouze své vlastní soubory. Chcete pokračovat?"
+  },
+  "sharing_error_upload_required": {
+    "message": "Před pokračováním nahrajte soubory."
+  },
+  "sharing_step_note_heading": {
+    "message": "Poznámka pro příjemce"
+  },
+  "sharing_status_inserting": {
+    "message": "Vkládání HTML bloku..."
+  },
+  "sharing_status_checking_folder": {
+    "message": "Kontrola dostupnosti složky..."
+  },
+  "sharing_error_folder_exists": {
+    "message": "Složka sdílení s tímto názvem již existuje. Zvolte jiný název."
+  },
+  "sharing_prompt_rename_duplicate": {
+    "message": "Soubor \"$1\" již existuje ve frontě. Zadejte nový název."
+  },
+  "sharing_message_rename_cancelled": {
+    "message": "Nahrávání bylo zrušeno, protože nebyl zadán náhradní název."
+  },
+  "sharing_password_policy_error": {
+    "message": "Heslo musí obsahovat alespoň 10 znaků, včetně velkých a malých písmen a speciálního znaku."
+  },
+  "sharing_html_intro_line": {
+    "message": "Chci sdílet soubory bezpečně a chránit vaše soukromí. Klikněte na odkaz níže pro stažení souborů."
+  },
+  "sharing_attachment_prompt_title": {
+    "message": "Překročen limit příloh"
+  },
+  "sharing_attachment_prompt_reason": {
+    "message": "Celková velikost příloh je $1 a překračuje nastavený limit $2. Naposledy přidáno: \"$3\" ($4)."
+  },
+  "sharing_attachment_prompt_share": {
+    "message": "Sdílet přes NC Connector"
+  },
+  "sharing_attachment_prompt_remove_last": {
+    "message": "Odebrat naposledy vybrané přílohy"
+  },
+  "sharing_attachment_prompt_last_unknown": {
+    "message": "Neznámá příloha"
+  },
+  "sharing_attachment_mode_reason_threshold": {
+    "message": "Limit příloh překročen: $1 > $2. Naposledy přidáno: \"$3\" ($4). Tyto přílohy budou sdíleny přes NC Connector."
+  },
+  "sharing_attachment_mode_reason_always": {
+    "message": "Režim příloh je aktivní. Vybrané přílohy budou sdíleny přes NC Connector."
+  },
+  "options_sharing_attachments_lock_title": {
+    "message": "Automatizace příloh je deaktivována"
+  },
+  "options_sharing_attachments_lock_text": {
+    "message": "V Thunderbirdu je zapnutá možnost „Nahrávat soubory větší než“ ($1 MB). To je v konfliktu s automatizací příloh NC Connectoru. Níže uvedené možnosti příloh jsou uzamčeny."
+  },
+  "options_sharing_attachments_lock_step1": {
+    "message": "Otevřete Nastavení Thunderbirdu > Psaní > Přílohy."
+  },
+  "options_sharing_attachments_lock_step2": {
+    "message": "Vypněte „Nahrávat soubory větší než“."
+  },
+  "options_sharing_attachments_lock_step3": {
+    "message": "Znovu otevřete tato nastavení doplňku."
+  },
+  "sharing_attachment_automation_locked_error": {
+    "message": "V Thunderbirdu je zapnutá možnost „Nahrávat soubory větší než“ ($1 MB). To je v konfliktu s automatizací příloh NC Connectoru. Níže uvedené možnosti příloh jsou uzamčeny."
+  },
+  "options_sharing_default_password_separate_label": {
+    "message": "Odeslat heslo samostatně"
+  },
+  "sharing_password_separate_toggle": {
+    "message": "Odeslat heslo v samostatném e-mailu"
+  },
+  "sharing_html_password_separate_hint": {
+    "message": "Heslo bude odesláno v samostatném e-mailu."
+  },
+  "sharing_html_password_mail_intro": {
+    "message": "Zde je vaše heslo k odeslanému sdílenému odkazu."
+  },
+  "sharing_password_mail_subject": {
+    "message": "Heslo ke sdílenému odkazu"
+  },
+  "sharing_password_mail_subject_with_label": {
+    "message": "Heslo ke sdílenému odkazu: $1"
+  },
+  "options_sharing_permissions_tooltip_title": {
+    "message": "🛡️ Default permissions"
+  },
+  "options_sharing_permissions_tooltip_line1": {
+    "message": "These values are used as defaults for new shares."
+  },
+  "options_sharing_permissions_tooltip_line2": {
+    "message": "They can still be adjusted in the sharing wizard."
+  },
+  "options_sharing_permissions_tooltip_line3": {
+    "message": "In attachment mode, recipient permission is always read-only."
+  },
+  "sharing_password_separate_tooltip_title": {
+    "message": "Coming soon (Pro feature)"
+  },
+  "sharing_password_separate_tooltip_line1": {
+    "message": "This option is disabled in this release."
+  },
+  "sharing_password_separate_tooltip_line2": {
+    "message": "Password delivery in a separate email will be available in a future Pro release."
+  },
+  "sharing_password_separate_tooltip_line3": {
+    "message": "For now, the password is included in the main share block."
+  },
+  "options_sharing_attachments_always_tooltip_title": {
+    "message": "📎 Always via NC Connector"
+  },
+  "options_sharing_attachments_always_tooltip_line1": {
+    "message": "New attachments are removed from the compose mail and processed via NC Connector."
+  },
+  "options_sharing_attachments_always_tooltip_line2": {
+    "message": "The sharing wizard opens directly in the file step."
+  },
+  "options_sharing_attachments_always_tooltip_line3": {
+    "message": "The final mail contains share links instead of physical attachments."
+  },
+  "options_sharing_attachments_offer_tooltip_title": {
+    "message": "📏 Attachment threshold"
+  },
+  "options_sharing_attachments_offer_tooltip_line1": {
+    "message": "The total size of all attachments is evaluated."
+  },
+  "options_sharing_attachments_offer_tooltip_line2": {
+    "message": "If exceeded, you can share via NC Connector or remove the last selected attachment batch."
+  },
+  "options_sharing_attachments_offer_tooltip_line3": {
+    "message": "The remove action returns the mail to a below-threshold state."
+  },
+  "talk_option_moderator_title": {
+    "message": "👑 Moderator delegation"
+  },
+  "talk_option_moderator_line1": {
+    "message": "The selected user is promoted after room creation."
+  },
+  "talk_option_moderator_line2": {
+    "message": "On successful delegation, the creator leaves the room."
+  },
+  "talk_option_moderator_line3": {
+    "message": "If delegation fails, room ownership remains with the creator."
+  },
+  "sharing_password_mail_notify_title": {
+    "message": "NC Connector"
+  },
+  "sharing_password_mail_notify_success": {
+    "message": "Password email sent to $1 recipient(s)."
+  },
+  "sharing_password_mail_notify_failure": {
+    "message": "Automatic password email failed for $1 recipient(s). Manual send mail was opened."
+  },
+  "sharing_password_mail_notify_manual_required": {
+    "message": "Automaticke odeslani hesla selhalo. Odeslete prosim heslo rucne pomoci otevrene sablony."
+  }
 }
+

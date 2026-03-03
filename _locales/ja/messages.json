@@ -1,331 +1,828 @@
 {
-  "extName": { "message": "NC Connector for Thunderbird" },
-  "extDescription": { "message": "Nextcloud Talk と Files を Thunderbird にシームレスに統合" },
-  "ui_button_ok": { "message": "OK" },
-  "ui_button_cancel": { "message": "キャンセル" },
-  "ui_button_apply": { "message": "適用" },
-  "ui_button_apply_progress": { "message": "適用中..." },
-  "ui_button_create_progress": { "message": "作成中..." },
-  "ui_button_clear": { "message": "クリア" },
-  "ui_insert_button_label": { "message": "Talk リンクを挿入" },
-  "ui_create_heading": { "message": "公開会話を作成" },
-  "ui_create_title_label": { "message": "タイトル" },
-  "ui_create_add_participants_label": { "message": "参加者をルームに追加" },
-  "ui_create_add_users_label": { "message": "ユーザーを追加" },
-  "ui_create_add_guests_label": { "message": "ゲストを追加" },
-  "ui_create_password_label": { "message": "パスワード（任意）" },
-  "talk_password_policy_error": { "message": "パスワードは少なくとも $1 文字以上である必要があります。" },
-  "ui_create_password_placeholder": { "message": "任意" },
-  "ui_password_generate_label": { "message": "生成" },
-  "ui_password_error_title": { "message": "パスワードを確認" },
-  "ui_password_error_text": { "message": "5 文字以上入力してください。" },
-  "ui_create_lobby_label": { "message": "開始時刻までロビー" },
-  "ui_create_listable_label": { "message": "検索に表示" },
-  "talk_option_add_users_title": { "message": "👤 ユーザーを追加" },
-  "talk_option_add_users_line1": { "message": "Nextcloud の内部ユーザーをルームに直接追加します" },
-  "talk_option_add_users_line2": { "message": "ルームはすぐに Nextcloud Talk に表示されます" },
-  "talk_option_add_guests_title": { "message": "🌍 ゲストを追加" },
-  "talk_option_add_guests_line1": { "message": "ゲストもルームに直接追加されます" },
-  "talk_option_add_guests_line2": { "message": "⚠️ 個人用アクセスリンク付きの追加メールが送信されます" },
-  "talk_option_listable_title": { "message": "🔍 検索に表示" },
-  "talk_option_listable_line1": { "message": "ルームは Talk の検索で見つけられます" },
-  "talk_option_listable_line2": { "message": "⚠️ 見つけやすくなりますが、すべてのユーザーが検索できます。" },
-  "talk_option_lobby_title": { "message": "🚪 開始時刻までロビー" },
-  "talk_option_lobby_line1": { "message": "開始前は参加者がロビー（待機室）に入り、通話にはまだ参加できません" },
-  "talk_option_lobby_line2": { "message": "⚠️ 設定した開始時刻以降（またはモデレーターがロビーを終了した後）に参加できます" },
-  "talk_option_lobby_line3": { "message": "会議/ウェビナーに早く入りすぎるのを防ぐのに最適です。" },
-  "ui_create_roomtype_label": { "message": "ルームタイプ" },
-  "ui_create_mode_event": { "message": "イベント会話" },
-  "ui_create_mode_standard": { "message": "グループ会話" },
-  "ui_create_mode_event_short": { "message": "イベント" },
-  "ui_create_mode_standard_short": { "message": "標準" },
-  "ui_create_mode_unsupported": { "message": "イベント会話はサーバーでサポートされていません。" },
-  "talk_roomtype_group_title": { "message": "🗨️ グループ会話" },
-  "talk_roomtype_group_line1": { "message": "継続: 手動で削除するまで残ります" },
-  "talk_roomtype_group_line2": { "message": "日常向け: チーム、部署、進行中のプロジェクト、定期的な予定に最適です" },
-  "talk_roomtype_group_line3": { "message": "履歴あり: チャット全体をいつでも確認できます" },
-  "talk_roomtype_event_title": { "message": "📅 イベント会話" },
-  "talk_roomtype_event_line1": { "message": "期間限定: 特定の予定や目的のため" },
-  "talk_roomtype_event_line2": { "message": "手軽: 会議、研修、ウェビナーに適しています" },
-  "talk_roomtype_event_line3": { "message": "自動整理: しばらくすると自動的に削除されます" },
-  "ui_create_moderator_label": { "message": "モデレーター（任意）" },
-  "ui_create_moderator_placeholder": { "message": "ユーザー名を入力" },
-  "ui_create_moderator_hint": { "message": "指定すると、作成後にモデレーションがこのユーザーに移譲され、ルームから退出します。" },
-  "ui_delegate_selected_title": { "message": "選択済み" },
-  "ui_delegate_selected_description": { "message": "指定すると、作成後にモデレーションがこのユーザーに移譲され、ルームから退出します。" },
-  "ui_delegate_status_searching": { "message": "検索中..." },
-  "ui_delegate_status_loading": { "message": "ユーザーを読み込み中..." },
-  "ui_delegate_status_none_with_email": { "message": "一致するものがありません。" },
-  "ui_delegate_status_none_found": { "message": "ユーザーが見つかりません。" },
-  "ui_delegate_status_single": { "message": "1 件一致しました。" },
-  "ui_delegate_status_many": { "message": "$1 件一致しました。" },
-  "ui_delegate_status_error": { "message": "ユーザー検索に失敗しました。" },
-  "ui_create_password_short": { "message": "パスワードは少なくとも 5 文字以上である必要があります。" },
-  "ui_create_send_failed": { "message": "バックグラウンドスクリプトへの送信に失敗しました:\n$1" },
-  "ui_create_no_handler": { "message": "Nextcloud Talk のハンドラーが登録されていません。アドオンを再読み込みしてください。" },
-  "ui_create_unknown_error": { "message": "会話の作成中に不明なエラーが発生しました。" },
-  "ui_create_failed": { "message": "Nextcloud Talk を作成できませんでした:\n$1\n設定を確認してください。" },
-  "ui_moderator_transfer_failed": { "message": "モデレーターの移譲に失敗しました。" },
-  "ui_moderator_transfer_failed_with_reason": { "message": "モデレーターの移譲に失敗しました:\n$1" },
-  "ui_alert_title": { "message": "Nextcloud Talk" },
-  "ui_alert_room_created": { "message": "Talk ルーム \"$1\" を作成しました。" },
-  "ui_alert_link_inserted": { "message": "Talk リンクを挿入しました:\n$1" },
-  "ui_alert_location_missing": { "message": "(注: 場所フィールドは自動入力されませんでした。)" },
-  "ui_alert_event_fallback": { "message": "注: サーバーはイベント会話をサポートしていません。グループ会話を作成しました。" },
-  "ui_alert_generic_fallback": { "message": "(注: API サポートなしの代替リンクを作成しました。)" },
-  "ui_alert_reason": { "message": "理由: $1" },
-  "ui_alert_pending_delegation": { "message": "保存/送信時にモデレーターが次へ移譲されます: $1." },
-  "ui_alert_delegation_done": { "message": "モデレーターを次へ移譲しました: $1." },
-  "ui_delegate_modal_title": { "message": "モデレーターの移譲" },
-  "ui_alert_delegation_removed": { "message": "会話から削除されました。" },
-  "ui_alert_password_protected": { "message": "注: この会話はパスワードで保護されています。" },
-  "ui_prompt_base_url": { "message": "Nextcloud のベース URL（例: https://cloud.example.com）:" },
-  "ui_prompt_title": { "message": "新しい公開会話のタイトル:" },
-  "ui_default_title": { "message": "ミーティング" },
-  "ui_description_heading": { "message": "Nextcloud Talk" },
-  "ui_description_join_label": { "message": "今すぐミーティングに参加:" },
-  "ui_description_password_line": { "message": "パスワード: $1" },
-  "ui_description_help_label": { "message": "ヘルプが必要ですか？" },
-  "ui_description_help_url": { "message": "https://docs.nextcloud.com/server/latest/user_manual/en/talk/join_a_call_or_chat_as_guest.html" },
-  "talk_dialog_title": { "message": "Nextcloud Talk" },
-  "talk_dialog_heading": { "message": "Nextcloud Talk" },
-  "talk_dialog_placeholder": { "message": "このスタンドアロンのインターフェースは開発中です。移行が完了するまで、埋め込みの Talk ダイアログを引き続き使用してください。" },
-  "talk_dialog_close": { "message": "閉じる" },
-  "talk_dialog_missing_window": { "message": "カレンダーウィンドウのコンテキストを検出できませんでした。" },
-  "talk_dialog_ready": { "message": "ダイアログを初期化しました。" },
-  "talk_error_window_id_missing": { "message": "ウィンドウ参照がありません。" },
-  "talk_error_context_id_missing": { "message": "イベントのコンテキストがありません。" },
-  "talk_error_init_failed": { "message": "ダイアログの初期化に失敗しました。" },
-  "talk_error_snapshot_failed": { "message": "イベントデータを読み取れませんでした。" },
-  "talk_status_loading_event": { "message": "エディターからイベントを読み込み中…" },
-  "talk_error_editor_context_missing": { "message": "現在編集中のイベントを検出できませんでした。イベントエディターが開いていることを確認して、もう一度お試しください。" },
-  "talk_error_create_failed": { "message": "ルームの作成に失敗しました。" },
-  "talk_error_title_missing": { "message": "タイトルを入力してください。" },
-  "talk_error_create_missing_data": { "message": "ルームデータがありません。" },
-  "talk_error_window_reference": { "message": "ウィンドウ参照がありません。" },
-  "talk_error_context_reference": { "message": "イベントのコンテキストがありません。" },
-  "talk_error_apply_failed": { "message": "イベントに変更を適用できませんでした。" },
-  "talk_section_event": { "message": "イベント" },
-  "talk_field_start": { "message": "開始" },
-  "talk_field_end": { "message": "終了" },
-  "talk_field_location": { "message": "場所" },
-  "talk_field_description": { "message": "説明" },
-  "talk_section_settings": { "message": "Talk 設定" },
-  "talk_section_room": { "message": "Talk ルーム" },
-  "talk_field_token": { "message": "トークン" },
-  "talk_field_url": { "message": "リンク" },
-  "talk_field_lobby": { "message": "ロビー" },
-  "talk_field_start_epoch": { "message": "開始タイムスタンプ" },
-  "talk_password_toggle_label": { "message": "パスワードを設定" },
-  "talk_dialog_legacy": { "message": "旧ダイアログを開く" },
-  "talk_button_apply_fields": { "message": "フィールドを適用" },
-  "talk_button_create_room": { "message": "Talk ルームを作成" },
-  "talk_dialog_fields_saved": { "message": "フィールドを更新しました。" },
-  "talk_dialog_fields_error": { "message": "フィールドを更新できませんでした。" },
-  "open_url_title": { "message": "リンクを開く" },
-  "open_url_heading": { "message": "ブラウザーでリンクを開く" },
-  "open_url_instructions": { "message": "下の URL をコピーして、既定のブラウザーに貼り付けてください。" },
-  "open_url_copy": { "message": "URL をコピー" },
-  "open_url_close": { "message": "閉じる" },
-  "open_url_copied": { "message": "URL をクリップボードにコピーしました。" },
-  "open_url_copy_failed": { "message": "コピーに失敗しました。URL を手動でコピーしてください。" },
-  "talk_value_enabled": { "message": "有効" },
-  "talk_value_disabled": { "message": "無効" },
-  "ui_toolbar_tooltip": { "message": "Nextcloud Talk" },
-  "error_canvas_support_missing": { "message": "Canvas のサポートがありません。" },
-  "error_invalid_base64_length": { "message": "Base64 の長さが無効です。" },
-  "error_invalid_base64_data": { "message": "Base64 データが無効です。" },
-  "error_avatar_load_failed": { "message": "アバターを読み込めませんでした。" },
-
-  "error_avatar_data_missing": { "message": "アバターデータがありません。" },
-  "error_canvas_context_missing": { "message": "Canvas コンテキストを利用できません。" },
-  "error_image_decode_failed": { "message": "画像をデコードできませんでした。" },
-  "error_image_size_unknown": { "message": "画像サイズを特定できませんでした。" },
-  "error_image_load_failed": { "message": "画像を読み込めませんでした。" },
-  "error_pixel_data_missing": { "message": "ピクセルデータを利用できません。" },
-  "error_credentials_missing": { "message": "Nextcloud の資格情報がありません（アドオンの設定）。" },
-  "error_host_permission_missing": { "message": "設定された Nextcloud インスタンスへのアクセスが許可されていません。" },
-  "error_system_addressbook_failed": { "message": "システムアドレス帳を読み込めませんでした: $1" },
-  "error_lobby_set_failed": { "message": "ロビーを設定できませんでした: $1" },
-  "error_lobby_set_failed_short": { "message": "ロビーを設定できませんでした。" },
-  "error_room_create_failed": { "message": "ルームを作成できませんでした。" },
-  "error_token_missing_in_response": { "message": "OCS 応答にトークンがありません。" },
-  "error_room_token_missing": { "message": "ルームトークンがありません。" },
-  "error_room_delete_failed": { "message": "ルームを削除できませんでした: $1" },
-  "error_lobby_no_permission": { "message": "ロビーを変更する権限がありません（HTTP 403）。" },
-  "error_lobby_update_failed": { "message": "ロビーの更新に失敗しました（HTTP $1）。" },
-  "error_ocs": { "message": "OCS エラー: $1" },
-  "error_token_or_actor_missing": { "message": "ルームトークンまたは参加者 ID がありません。" },
-  "error_participant_add_failed": { "message": "参加者を追加できませんでした: $1" },
-  "error_moderator_id_missing": { "message": "モデレーター ID がありません。" },
-  "error_moderator_set_failed": { "message": "モデレーターを設定できませんでした: $1" },
-  "error_leave_failed": { "message": "ルームから退出できませんでした: $1" },
-  "error_delegation_data_missing": { "message": "移譲データがありません。" },
-  "error_moderator_target_missing": { "message": "モデレーター ID が空です。" },
-  "error_participant_not_found": { "message": "参加者が見つかりません。スペルを確認してください。" },
-  "error_users_load_failed": { "message": "ユーザーを読み込めませんでした。" },
-  "error_unknown_utility_request": { "message": "不明なユーティリティ要求です。" },
-  "options_title": { "message": "NC Connector for Thunderbird – 設定" },
-  "options_heading": { "message": "NC Connector for Thunderbird – 設定" },
-  "options_base_url_label": { "message": "Nextcloud URL" },
-  "options_base_url_placeholder": { "message": "https://cloud.example.com" },
-  "options_user_label": { "message": "ユーザー名" },
-  "options_app_pass_label": { "message": "アプリパスワード" },
-  "options_debug_label": { "message": "デバッグログ" },
-  "options_debug_hint": { "message": "診断メッセージをコンソールに出力します" },
-  "options_support_link": { "message": "PayPal: 寄付" },
-  "options_save_button": { "message": "保存" },
-  "options_status_saved": { "message": "保存しました。" },
-  "options_status_save_failed": { "message": "保存に失敗しました。" },
-  "options_status_load_failed": { "message": "設定を読み込めませんでした。" },
-  "options_test_button": { "message": "接続をテスト" },
-  "options_test_running": { "message": "接続をテスト中..." },
-  "options_test_success": { "message": "接続に成功しました。" },
-  "options_test_failed": { "message": "接続に失敗しました。" },
-  "options_test_failed_auth": { "message": "ユーザー名またはアプリパスワードが無効です。" },
-  "options_test_missing": { "message": "先に URL、ユーザー名、アプリパスワードを入力してください。" },
-  "options_permission_required": { "message": "続行するには、この Nextcloud インスタンスへのアクセスを許可してください。" },
-  "options_tab_general": { "message": "一般" },
-  "options_tab_sharing": { "message": "共有" },
-  "options_tab_talklink": { "message": "Talk リンク" },
-  "options_tab_advanced": { "message": "詳細" },
-  "options_tab_debug": { "message": "デバッグ" },
-  "options_tab_about": { "message": "情報" },
-  "options_placeholder_sharing": { "message": "設定は近日対応予定です。" },
-  "options_placeholder_advanced": { "message": "設定は近日対応予定です。" },
-  "options_advanced_language_heading": { "message": "言語の上書き" },
-  "options_share_block_lang_label": { "message": "共有 HTML ブロックの言語" },
-  "options_share_block_lang_hint": { "message": "挿入される共有 HTML ブロックの言語を設定します。" },
-  "options_event_description_lang_label": { "message": "Talk 説明テキストの言語" },
-  "options_event_description_lang_hint": { "message": "イベント内の Talk テキストブロックの言語を設定します。" },
-  "options_lang_default": { "message": "既定（UI）" },
-  "options_lang_en": { "message": "英語" },
-  "options_lang_de": { "message": "ドイツ語" },
-  "options_lang_fr": { "message": "フランス語" },
-  "options_about_version_label": { "message": "バージョン:" },
-  "options_about_copyright_label": { "message": "著作権:" },
-  "options_about_license_label": { "message": "ライセンス:" },
-  "options_about_license_value": { "message": "AGPL v3" },
-  "options_about_support_note": { "message": "NC Connector for Thunderbird を今後も無料で保守・改善できるようにするため。" },
-  "options_about_support_heading": { "message": "サポート" },
-  "options_auth_heading": { "message": "認証" },
-  "options_auth_manual": { "message": "手動（ユーザー名 + アプリパスワード）" },
-  "options_auth_login": { "message": "Nextcloud でログイン（アプリパスワードを自動取得）" },
-  "options_loginflow_button": { "message": "Nextcloud でログイン..." },
-  "options_loginflow_starting": { "message": "ログインフローを開始中..." },
-  "options_loginflow_browser": { "message": "ブラウザーを開きました。Nextcloud でログインを確認してください..." },
-  "options_loginflow_success": { "message": "ログインに成功しました。アプリパスワードをコピーしました。" },
-  "options_loginflow_failed": { "message": "Nextcloud でのログインに失敗しました。" },
-  "options_loginflow_missing": { "message": "先にサーバー URL を入力してください。" },
-  "compose_sharing_title": { "message": "Nextcloud 共有を追加" },
-  "options_sharing_base_label": { "message": "ベースディレクトリ" },
-  "options_sharing_base_hint": { "message": "ファイルはこのディレクトリ配下に保存されます（例: \"90 Freigaben - extern\"）。" },
-  "options_sharing_defaults_heading": { "message": "既定の設定" },
-  "options_sharing_default_share_name_label": { "message": "共有名" },
-  "options_sharing_default_permissions_label": { "message": "既定の権限" },
-  "options_sharing_default_perm_create": { "message": "アップロード/作成" },
-  "options_sharing_default_perm_write": { "message": "編集" },
-  "options_sharing_default_perm_delete": { "message": "削除" },
-  "options_sharing_default_password_label": { "message": "パスワードを設定" },
-  "options_sharing_default_expire_days_label": { "message": "有効期限（日）" },
-  "options_talk_defaults_heading": { "message": "既定の設定" },
-  "options_talk_default_title_label": { "message": "タイトル" },
-  "options_talk_default_lobby_label": { "message": "開始時刻までロビー" },
-  "options_talk_default_listable_label": { "message": "検索に表示" },
-  "options_talk_default_add_participants_label": { "message": "参加者をルームに追加" },
-  "options_talk_default_add_users_label": { "message": "ユーザー" },
-  "options_talk_default_add_guests_label": { "message": "ゲスト" },
-  "options_talk_default_password_label": { "message": "パスワードを設定" },
-  "options_talk_default_roomtype_label": { "message": "ルームタイプ" },
-  "options_talk_default_roomtype_event": { "message": "イベント会話" },
-  "options_talk_default_roomtype_standard": { "message": "グループ会話" },
-  "sharing_wizard_title": { "message": "Nextcloud 共有" },
-  "sharing_header_hint": { "message": "NC Connector for Thunderbird" },
-  "sharing_step_general": { "message": "共有" },
-  "sharing_share_name_label": { "message": "共有名" },
-  "sharing_share_placeholder": { "message": "例: プロジェクト X" },
-  "sharing_share_default": { "message": "共有名" },
-  "sharing_base_path_label": { "message": "ベースディレクトリ" },
-  "sharing_base_path_hint": { "message": "ファイルはこのディレクトリ配下に保存されます。" },
-  "sharing_allow_upload_label": { "message": "受信者は自分のファイルをアップロードできます" },
-  "sharing_step_security": { "message": "権限" },
-  "sharing_permission_read": { "message": "読み取り" },
-  "sharing_permission_create": { "message": "アップロード" },
-  "sharing_permission_write": { "message": "変更" },
-  "sharing_permission_delete": { "message": "削除" },
-  "sharing_password_toggle": { "message": "パスワードを設定" },
-  "sharing_password_label": { "message": "パスワード" },
-  "sharing_password_generate": { "message": "生成" },
-  "sharing_expire_toggle": { "message": "有効期限日を設定" },
-  "sharing_expire_label": { "message": "有効期限日" },
-  "sharing_step_files": { "message": "ファイル" },
-  "sharing_files_hint": { "message": "アップロードするファイルまたはフォルダーを追加してください。" },
-  "sharing_add_files": { "message": "ファイルを選択..." },
-  "sharing_clear_files": { "message": "リストをクリア" },
-  "sharing_allow_empty_label": { "message": "ファイルなしで続行（アップロード用フォルダーのみ共有）" },
-  "sharing_step_note": { "message": "メモと完了" },
-  "sharing_note_toggle": { "message": "受信者へのメモを追加" },
-  "sharing_note_label": { "message": "メモ" },
-  "sharing_note_placeholder": { "message": "受信者への任意メッセージ" },
-  "sharing_summary_share": { "message": "共有名" },
-  "sharing_summary_folder": { "message": "フォルダー" },
-  "sharing_summary_permissions": { "message": "権限" },
-  "sharing_progress_label": { "message": "共有を作成中..." },
-  "sharing_button_back": { "message": "戻る" },
-  "sharing_button_cancel": { "message": "キャンセル" },
-  "sharing_button_next": { "message": "次へ" },
-  "sharing_button_finish": { "message": "共有を作成" },
-  "sharing_status_preparing": { "message": "アップロードを準備中..." },
-  "sharing_status_uploading": { "message": "$3 をアップロード中 ($1 / $2)..." },
-  "sharing_status_creating": { "message": "公開リンクを作成中..." },
-  "sharing_status_done": { "message": "共有を正常に挿入しました。" },
-  "sharing_status_error": { "message": "エラーが発生しました。" },
-  "sharing_error_share_name": { "message": "共有名を入力してください。" },
-  "sharing_error_password_missing": { "message": "パスワードを入力してください。" },
-  "sharing_error_expire_missing": { "message": "有効期限日を選択してください。" },
-  "sharing_error_no_files": { "message": "少なくとも 1 つのファイルを追加するか、ファイルなしで続行するオプションを有効にしてください。" },
-  "sharing_error_missing_config": { "message": "作成ウィンドウを検出できませんでした。" },
-  "sharing_error_insert_failed": { "message": "メッセージに共有を挿入できませんでした。" },
-  "sharing_html_intro": { "message": "ファイルを安全に共有し、あなたのプライバシーを保護したいと思います。以下のリンクをクリックしてファイルをダウンロードしてください。" },
-  "sharing_html_password_label": { "message": "パスワード" },
-  "sharing_html_expire_label": { "message": "有効期限日" },
-  "sharing_html_permissions_label": { "message": "あなたの権限" },
-  "sharing_html_download_label": { "message": "ダウンロードリンク" },
-  "sharing_html_footer": { "message": "$1 は安全なメールとファイル交換のソリューションです。" },
-  "sharing_dialog_title": { "message": "Nextcloud 共有" },
-  "sharing_heading_permissions": { "message": "共有設定" },
-  "sharing_step_expire": { "message": "有効期限日" },
-  "sharing_expire_hint": { "message": "この日付以降、リンクは利用できません。" },
-  "sharing_step_files_title": { "message": "ファイルまたはフォルダーを選択" },
-  "sharing_base_path_info": { "message": "ベースディレクトリ: $1" },
-  "sharing_files_table_path": { "message": "パス" },
-  "sharing_files_table_type": { "message": "種類" },
-  "sharing_files_table_status": { "message": "状態" },
-  "sharing_button_add_files": { "message": "ファイルを追加..." },
-  "sharing_button_add_folder": { "message": "フォルダーを追加..." },
-  "sharing_button_remove": { "message": "削除" },
-  "sharing_button_upload": { "message": "アップロード" },
-  "sharing_files_empty": { "message": "ファイルが選択されていません。" },
-  "sharing_file_type_file": { "message": "ファイル" },
-  "sharing_file_type_folder": { "message": "フォルダー" },
-  "sharing_status_waiting": { "message": "待機中" },
-  "sharing_status_done_row": { "message": "完了" },
-  "sharing_status_error_row": { "message": "エラー" },
-  "sharing_status_ready": { "message": "アップロードが完了しました。" },
-  "sharing_status_uploading_bulk": { "message": "ファイルをアップロード中..." },
-  "sharing_message_invalid_share_name": { "message": "共有名を入力してください。" },
-  "sharing_message_no_files": { "message": "少なくとも 1 つのファイルを追加してください。" },
-  "sharing_confirm_no_files_title": { "message": "アップロードなしで共有" },
-  "sharing_confirm_no_files_message": { "message": "この共有にはファイルまたはフォルダーが追加されていません。受信者は自分のファイルのみアップロードできます。続行しますか？" },
-  "sharing_error_upload_required": { "message": "続行する前にファイルをアップロードしてください。" },
-  "sharing_step_note_heading": { "message": "受信者へのメモ" },
-  "sharing_status_inserting": { "message": "HTML ブロックを挿入中..." },
-  "sharing_status_checking_folder": { "message": "フォルダーの利用可否を確認中..." },
-  "sharing_error_folder_exists": { "message": "この名前の共有フォルダーは既に存在します。別の名前を選択してください。" },
-  "sharing_prompt_rename_duplicate": { "message": "ファイル \"$1\" は既にキューに存在します。新しい名前を入力してください。" },
-  "sharing_prompt_rename_existing": { "message": "ファイル \"$1\" はサーバーに既に存在します。新しい名前を入力してください。" },
-  "sharing_message_rename_cancelled": { "message": "置換名が指定されなかったため、アップロードはキャンセルされました。" },
-  "sharing_password_policy_error": { "message": "パスワードは大文字と小文字、特殊文字を含む 10 文字以上である必要があります。" },
-  "sharing_html_intro_line": { "message": "ファイルを安全に共有し、あなたのプライバシーを保護したいと思います。以下のリンクをクリックしてファイルをダウンロードしてください。" },
-  "sharing_html_footer_line": { "message": "Nextcloud は安全なメールとデータ交換のソリューションです。" }
+  "extName": {
+    "message": "NC Connector for Thunderbird"
+  },
+  "extDescription": {
+    "message": "Nextcloud Talk と Files を Thunderbird にシームレスに統合"
+  },
+  "ui_button_ok": {
+    "message": "OK"
+  },
+  "ui_button_cancel": {
+    "message": "キャンセル"
+  },
+  "ui_button_create_progress": {
+    "message": "作成中..."
+  },
+  "ui_button_clear": {
+    "message": "クリア"
+  },
+  "ui_insert_button_label": {
+    "message": "Talk リンクを挿入"
+  },
+  "ui_create_title_label": {
+    "message": "タイトル"
+  },
+  "ui_create_add_users_label": {
+    "message": "ユーザーを追加"
+  },
+  "ui_create_add_guests_label": {
+    "message": "ゲストを追加"
+  },
+  "talk_password_policy_error": {
+    "message": "パスワードは少なくとも $1 文字以上である必要があります。"
+  },
+  "ui_create_password_placeholder": {
+    "message": "任意"
+  },
+  "ui_password_generate_label": {
+    "message": "生成"
+  },
+  "ui_password_error_title": {
+    "message": "パスワードを確認"
+  },
+  "ui_create_lobby_label": {
+    "message": "開始時刻までロビー"
+  },
+  "ui_create_listable_label": {
+    "message": "検索に表示"
+  },
+  "talk_option_add_users_title": {
+    "message": "👤 ユーザーを追加"
+  },
+  "talk_option_add_users_line1": {
+    "message": "Nextcloud の内部ユーザーをルームに直接追加します"
+  },
+  "talk_option_add_users_line2": {
+    "message": "ルームはすぐに Nextcloud Talk に表示されます"
+  },
+  "talk_option_add_guests_title": {
+    "message": "🌍 ゲストを追加"
+  },
+  "talk_option_add_guests_line1": {
+    "message": "ゲストもルームに直接追加されます"
+  },
+  "talk_option_add_guests_line2": {
+    "message": "⚠️ 個人用アクセスリンク付きの追加メールが送信されます"
+  },
+  "talk_option_listable_title": {
+    "message": "🔍 検索に表示"
+  },
+  "talk_option_listable_line1": {
+    "message": "ルームは Talk の検索で見つけられます"
+  },
+  "talk_option_listable_line2": {
+    "message": "⚠️ 見つけやすくなりますが、すべてのユーザーが検索できます。"
+  },
+  "talk_option_lobby_title": {
+    "message": "🚪 開始時刻までロビー"
+  },
+  "talk_option_lobby_line1": {
+    "message": "開始前は参加者がロビー（待機室）に入り、通話にはまだ参加できません"
+  },
+  "talk_option_lobby_line2": {
+    "message": "⚠️ 設定した開始時刻以降（またはモデレーターがロビーを終了した後）に参加できます"
+  },
+  "talk_option_lobby_line3": {
+    "message": "会議/ウェビナーに早く入りすぎるのを防ぐのに最適です。"
+  },
+  "ui_create_roomtype_label": {
+    "message": "ルームタイプ"
+  },
+  "ui_create_mode_event": {
+    "message": "イベント会話"
+  },
+  "ui_create_mode_standard": {
+    "message": "グループ会話"
+  },
+  "talk_roomtype_group_title": {
+    "message": "🗨️ グループ会話"
+  },
+  "talk_roomtype_group_line1": {
+    "message": "継続: 手動で削除するまで残ります"
+  },
+  "talk_roomtype_group_line2": {
+    "message": "日常向け: チーム、部署、進行中のプロジェクト、定期的な予定に最適です"
+  },
+  "talk_roomtype_group_line3": {
+    "message": "履歴あり: チャット全体をいつでも確認できます"
+  },
+  "talk_roomtype_event_title": {
+    "message": "📅 イベント会話"
+  },
+  "talk_roomtype_event_line1": {
+    "message": "期間限定: 特定の予定や目的のため"
+  },
+  "talk_roomtype_event_line2": {
+    "message": "手軽: 会議、研修、ウェビナーに適しています"
+  },
+  "talk_roomtype_event_line3": {
+    "message": "自動整理: しばらくすると自動的に削除されます"
+  },
+  "ui_create_moderator_label": {
+    "message": "モデレーター（任意）"
+  },
+  "ui_create_moderator_hint": {
+    "message": "指定すると、作成後にモデレーションがこのユーザーに移譲され、ルームから退出します。"
+  },
+  "ui_delegate_selected_title": {
+    "message": "選択済み"
+  },
+  "ui_delegate_selected_description": {
+    "message": "指定すると、作成後にモデレーションがこのユーザーに移譲され、ルームから退出します。"
+  },
+  "ui_delegate_status_searching": {
+    "message": "検索中..."
+  },
+  "ui_delegate_status_loading": {
+    "message": "ユーザーを読み込み中..."
+  },
+  "ui_delegate_status_none_with_email": {
+    "message": "一致するものがありません。"
+  },
+  "ui_delegate_status_none_found": {
+    "message": "ユーザーが見つかりません。"
+  },
+  "ui_delegate_status_single": {
+    "message": "1 件一致しました。"
+  },
+  "ui_delegate_status_many": {
+    "message": "$1 件一致しました。"
+  },
+  "ui_delegate_status_error": {
+    "message": "ユーザー検索に失敗しました。"
+  },
+  "ui_create_failed": {
+    "message": "Nextcloud Talk を作成できませんでした:\n$1\n設定を確認してください。"
+  },
+  "ui_alert_pending_delegation": {
+    "message": "保存/送信時にモデレーターが次へ移譲されます: $1."
+  },
+  "ui_delegate_modal_title": {
+    "message": "モデレーターの移譲"
+  },
+  "ui_default_title": {
+    "message": "ミーティング"
+  },
+  "ui_description_heading": {
+    "message": "Nextcloud Talk"
+  },
+  "ui_description_join_label": {
+    "message": "今すぐミーティングに参加:"
+  },
+  "ui_description_password_line": {
+    "message": "パスワード: $1"
+  },
+  "ui_description_help_label": {
+    "message": "ヘルプが必要ですか？"
+  },
+  "ui_description_help_url": {
+    "message": "https://docs.nextcloud.com/server/latest/user_manual/en/talk/join_a_call_or_chat_as_guest.html"
+  },
+  "talk_dialog_title": {
+    "message": "Nextcloud Talk"
+  },
+  "talk_dialog_close": {
+    "message": "閉じる"
+  },
+  "talk_error_context_id_missing": {
+    "message": "イベントのコンテキストがありません。"
+  },
+  "talk_error_init_failed": {
+    "message": "ダイアログの初期化に失敗しました。"
+  },
+  "talk_error_snapshot_failed": {
+    "message": "イベントデータを読み取れませんでした。"
+  },
+  "talk_error_editor_context_missing": {
+    "message": "現在編集中のイベントを検出できませんでした。イベントエディターが開いていることを確認して、もう一度お試しください。"
+  },
+  "talk_error_create_failed": {
+    "message": "ルームの作成に失敗しました。"
+  },
+  "talk_error_title_missing": {
+    "message": "タイトルを入力してください。"
+  },
+  "talk_error_create_missing_data": {
+    "message": "ルームデータがありません。"
+  },
+  "talk_error_context_reference": {
+    "message": "イベントのコンテキストがありません。"
+  },
+  "talk_error_apply_failed": {
+    "message": "イベントに変更を適用できませんでした。"
+  },
+  "talk_section_settings": {
+    "message": "Talk 設定"
+  },
+  "talk_password_toggle_label": {
+    "message": "パスワードを設定"
+  },
+  "talk_button_create_room": {
+    "message": "Talk ルームを作成"
+  },
+  "open_url_title": {
+    "message": "リンクを開く"
+  },
+  "open_url_heading": {
+    "message": "ブラウザーでリンクを開く"
+  },
+  "open_url_instructions": {
+    "message": "下の URL をコピーして、既定のブラウザーに貼り付けてください。"
+  },
+  "open_url_copy": {
+    "message": "URL をコピー"
+  },
+  "open_url_close": {
+    "message": "閉じる"
+  },
+  "open_url_copied": {
+    "message": "URL をクリップボードにコピーしました。"
+  },
+  "open_url_copy_failed": {
+    "message": "コピーに失敗しました。URL を手動でコピーしてください。"
+  },
+  "error_credentials_missing": {
+    "message": "Nextcloud の資格情報がありません（アドオンの設定）。"
+  },
+  "error_baseurl_https_required": {
+    "message": "HTTPS の Nextcloud URL を使用してください。"
+  },
+  "error_host_permission_missing": {
+    "message": "設定された Nextcloud インスタンスへのアクセスが許可されていません。"
+  },
+  "error_system_addressbook_failed": {
+    "message": "システムアドレス帳を読み込めませんでした: $1"
+  },
+  "error_lobby_set_failed": {
+    "message": "ロビーを設定できませんでした: $1"
+  },
+  "error_lobby_set_failed_short": {
+    "message": "ロビーを設定できませんでした。"
+  },
+  "error_room_create_failed": {
+    "message": "ルームを作成できませんでした。"
+  },
+  "error_token_missing_in_response": {
+    "message": "OCS 応答にトークンがありません。"
+  },
+  "error_room_token_missing": {
+    "message": "ルームトークンがありません。"
+  },
+  "error_room_delete_failed": {
+    "message": "ルームを削除できませんでした: $1"
+  },
+  "error_lobby_no_permission": {
+    "message": "ロビーを変更する権限がありません（HTTP 403）。"
+  },
+  "error_lobby_update_failed": {
+    "message": "ロビーの更新に失敗しました（HTTP $1）。"
+  },
+  "error_ocs": {
+    "message": "OCS エラー: $1"
+  },
+  "error_token_or_actor_missing": {
+    "message": "ルームトークンまたは参加者 ID がありません。"
+  },
+  "error_participant_add_failed": {
+    "message": "参加者を追加できませんでした: $1"
+  },
+  "error_moderator_id_missing": {
+    "message": "モデレーター ID がありません。"
+  },
+  "error_moderator_set_failed": {
+    "message": "モデレーターを設定できませんでした: $1"
+  },
+  "error_leave_failed": {
+    "message": "ルームから退出できませんでした: $1"
+  },
+  "error_delegation_data_missing": {
+    "message": "移譲データがありません。"
+  },
+  "error_moderator_target_missing": {
+    "message": "モデレーター ID が空です。"
+  },
+  "error_participant_not_found": {
+    "message": "参加者が見つかりません。スペルを確認してください。"
+  },
+  "error_unknown_utility_request": {
+    "message": "不明なユーティリティ要求です。"
+  },
+  "options_title": {
+    "message": "NC Connector for Thunderbird – 設定"
+  },
+  "options_base_url_label": {
+    "message": "Nextcloud URL"
+  },
+  "options_base_url_placeholder": {
+    "message": "https://cloud.example.com"
+  },
+  "options_user_label": {
+    "message": "ユーザー名"
+  },
+  "options_app_pass_label": {
+    "message": "アプリパスワード"
+  },
+  "options_debug_label": {
+    "message": "デバッグログ"
+  },
+  "options_debug_hint": {
+    "message": "診断メッセージをコンソールに出力します"
+  },
+  "options_support_link": {
+    "message": "PayPal: 寄付"
+  },
+  "options_save_button": {
+    "message": "保存"
+  },
+  "options_status_saved": {
+    "message": "保存しました。"
+  },
+  "options_status_save_failed": {
+    "message": "保存に失敗しました。"
+  },
+  "options_status_load_failed": {
+    "message": "設定を読み込めませんでした。"
+  },
+  "options_test_button": {
+    "message": "接続をテスト"
+  },
+  "options_test_running": {
+    "message": "接続をテスト中..."
+  },
+  "options_test_success": {
+    "message": "接続に成功しました。"
+  },
+  "options_test_failed": {
+    "message": "接続に失敗しました。"
+  },
+  "options_test_failed_auth": {
+    "message": "ユーザー名またはアプリパスワードが無効です。"
+  },
+  "options_test_missing": {
+    "message": "先に URL、ユーザー名、アプリパスワードを入力してください。"
+  },
+  "options_permission_required": {
+    "message": "続行するには、この Nextcloud インスタンスへのアクセスを許可してください。"
+  },
+  "options_tab_general": {
+    "message": "一般"
+  },
+  "options_tab_sharing": {
+    "message": "共有"
+  },
+  "options_tab_talklink": {
+    "message": "Talk リンク"
+  },
+  "options_tab_advanced": {
+    "message": "詳細"
+  },
+  "options_tab_debug": {
+    "message": "デバッグ"
+  },
+  "options_tab_about": {
+    "message": "情報"
+  },
+  "options_advanced_language_heading": {
+    "message": "言語の上書き"
+  },
+  "options_share_block_lang_label": {
+    "message": "共有 HTML ブロックの言語"
+  },
+  "options_share_block_lang_hint": {
+    "message": "挿入される共有 HTML ブロックの言語を設定します。"
+  },
+  "options_event_description_lang_label": {
+    "message": "Talk 説明テキストの言語"
+  },
+  "options_event_description_lang_hint": {
+    "message": "イベント内の Talk テキストブロックの言語を設定します。"
+  },
+  "options_lang_default": {
+    "message": "既定（UI）"
+  },
+  "options_about_version_label": {
+    "message": "バージョン:"
+  },
+  "options_about_copyright_label": {
+    "message": "著作権:"
+  },
+  "options_about_license_label": {
+    "message": "ライセンス:"
+  },
+  "options_about_license_value": {
+    "message": "AGPL v3"
+  },
+  "options_about_support_note": {
+    "message": "NC Connector for Thunderbird を今後も無料で保守・改善できるようにするため。"
+  },
+  "options_about_support_heading": {
+    "message": "サポート"
+  },
+  "options_auth_heading": {
+    "message": "認証"
+  },
+  "options_auth_manual": {
+    "message": "手動（ユーザー名 + アプリパスワード）"
+  },
+  "options_auth_login": {
+    "message": "Nextcloud でログイン（アプリパスワードを自動取得）"
+  },
+  "options_loginflow_button": {
+    "message": "Nextcloud でログイン..."
+  },
+  "options_loginflow_starting": {
+    "message": "ログインフローを開始中..."
+  },
+  "options_loginflow_browser": {
+    "message": "ブラウザーを開きました。Nextcloud でログインを確認してください..."
+  },
+  "options_loginflow_success": {
+    "message": "ログインに成功しました。アプリパスワードをコピーしました。"
+  },
+  "options_loginflow_failed": {
+    "message": "Nextcloud でのログインに失敗しました。"
+  },
+  "options_loginflow_missing": {
+    "message": "先にサーバー URL を入力してください。"
+  },
+  "compose_sharing_title": {
+    "message": "Nextcloud 共有を追加"
+  },
+  "options_sharing_base_label": {
+    "message": "ベースディレクトリ"
+  },
+  "options_sharing_base_hint": {
+    "message": "ファイルはこのディレクトリ配下に保存されます（例: \"90 Freigaben - extern\"）。"
+  },
+  "options_sharing_defaults_heading": {
+    "message": "既定の設定"
+  },
+  "options_sharing_default_share_name_label": {
+    "message": "共有名"
+  },
+  "options_sharing_default_permissions_label": {
+    "message": "既定の権限"
+  },
+  "options_sharing_default_perm_create": {
+    "message": "アップロード/作成"
+  },
+  "options_sharing_default_perm_write": {
+    "message": "編集"
+  },
+  "options_sharing_default_perm_delete": {
+    "message": "削除"
+  },
+  "options_sharing_default_password_label": {
+    "message": "パスワードを設定"
+  },
+  "options_sharing_default_expire_days_label": {
+    "message": "有効期限（日）"
+  },
+  "options_sharing_attachments_heading": {
+    "message": "添付ファイル"
+  },
+  "options_sharing_attachments_always_label": {
+    "message": "添付ファイルは常に NC Connector 経由で処理する"
+  },
+  "options_sharing_attachments_offer_label": {
+    "message": "次より大きいファイルでアップロードを提案する"
+  },
+  "options_sharing_attachments_offer_suffix": {
+    "message": "MB"
+  },
+  "options_talk_defaults_heading": {
+    "message": "既定の設定"
+  },
+  "options_talk_default_title_label": {
+    "message": "タイトル"
+  },
+  "options_talk_default_lobby_label": {
+    "message": "開始時刻までロビー"
+  },
+  "options_talk_default_listable_label": {
+    "message": "検索に表示"
+  },
+  "options_talk_default_add_participants_label": {
+    "message": "参加者をルームに追加"
+  },
+  "options_talk_default_add_users_label": {
+    "message": "ユーザー"
+  },
+  "options_talk_default_add_guests_label": {
+    "message": "ゲスト"
+  },
+  "options_talk_default_password_label": {
+    "message": "パスワードを設定"
+  },
+  "options_talk_default_roomtype_label": {
+    "message": "ルームタイプ"
+  },
+  "options_talk_default_roomtype_event": {
+    "message": "イベント会話"
+  },
+  "options_talk_default_roomtype_standard": {
+    "message": "グループ会話"
+  },
+  "sharing_share_name_label": {
+    "message": "共有名"
+  },
+  "sharing_share_placeholder": {
+    "message": "例: プロジェクト X"
+  },
+  "sharing_share_default": {
+    "message": "共有名"
+  },
+  "sharing_permission_read": {
+    "message": "読み取り"
+  },
+  "sharing_permission_create": {
+    "message": "アップロード"
+  },
+  "sharing_permission_write": {
+    "message": "変更"
+  },
+  "sharing_permission_delete": {
+    "message": "削除"
+  },
+  "sharing_password_toggle": {
+    "message": "パスワードを設定"
+  },
+  "sharing_password_generate": {
+    "message": "生成"
+  },
+  "sharing_expire_toggle": {
+    "message": "有効期限日を設定"
+  },
+  "sharing_note_toggle": {
+    "message": "受信者へのメモを追加"
+  },
+  "sharing_note_placeholder": {
+    "message": "受信者への任意メッセージ"
+  },
+  "sharing_button_back": {
+    "message": "戻る"
+  },
+  "sharing_button_cancel": {
+    "message": "キャンセル"
+  },
+  "sharing_button_next": {
+    "message": "次へ"
+  },
+  "sharing_button_finish": {
+    "message": "共有を作成"
+  },
+  "sharing_status_creating": {
+    "message": "公開リンクを作成中..."
+  },
+  "sharing_status_error": {
+    "message": "エラーが発生しました。"
+  },
+  "sharing_error_insert_failed": {
+    "message": "メッセージに共有を挿入できませんでした。"
+  },
+  "sharing_html_password_label": {
+    "message": "パスワード"
+  },
+  "sharing_html_expire_label": {
+    "message": "有効期限日"
+  },
+  "sharing_html_permissions_label": {
+    "message": "あなたの権限"
+  },
+  "sharing_html_download_label": {
+    "message": "ダウンロードリンク"
+  },
+  "sharing_html_footer": {
+    "message": "$1 は安全なメールとファイル交換のソリューションです。"
+  },
+  "sharing_dialog_title": {
+    "message": "Nextcloud 共有"
+  },
+  "sharing_heading_permissions": {
+    "message": "共有設定"
+  },
+  "sharing_step_expire": {
+    "message": "有効期限日"
+  },
+  "sharing_expire_hint": {
+    "message": "この日付以降、リンクは利用できません。"
+  },
+  "sharing_step_files_title": {
+    "message": "ファイルまたはフォルダーを選択"
+  },
+  "sharing_base_path_info": {
+    "message": "ベースディレクトリ: $1"
+  },
+  "sharing_files_table_path": {
+    "message": "パス"
+  },
+  "sharing_files_table_type": {
+    "message": "種類"
+  },
+  "sharing_files_table_status": {
+    "message": "状態"
+  },
+  "sharing_button_add_files": {
+    "message": "ファイルを追加..."
+  },
+  "sharing_button_add_folder": {
+    "message": "フォルダーを追加..."
+  },
+  "sharing_button_remove": {
+    "message": "削除"
+  },
+  "sharing_button_upload": {
+    "message": "アップロード"
+  },
+  "sharing_files_empty": {
+    "message": "ファイルが選択されていません。"
+  },
+  "sharing_file_type_file": {
+    "message": "ファイル"
+  },
+  "sharing_status_waiting": {
+    "message": "待機中"
+  },
+  "sharing_status_done_row": {
+    "message": "完了"
+  },
+  "sharing_status_error_row": {
+    "message": "エラー"
+  },
+  "sharing_status_ready": {
+    "message": "アップロードが完了しました。"
+  },
+  "sharing_status_uploading_bulk": {
+    "message": "ファイルをアップロード中..."
+  },
+  "sharing_message_invalid_share_name": {
+    "message": "共有名を入力してください。"
+  },
+  "sharing_message_no_files": {
+    "message": "少なくとも 1 つのファイルを追加してください。"
+  },
+  "sharing_confirm_no_files_title": {
+    "message": "アップロードなしで共有"
+  },
+  "sharing_confirm_no_files_message": {
+    "message": "この共有にはファイルまたはフォルダーが追加されていません。受信者は自分のファイルのみアップロードできます。続行しますか？"
+  },
+  "sharing_error_upload_required": {
+    "message": "続行する前にファイルをアップロードしてください。"
+  },
+  "sharing_step_note_heading": {
+    "message": "受信者へのメモ"
+  },
+  "sharing_status_inserting": {
+    "message": "HTML ブロックを挿入中..."
+  },
+  "sharing_status_checking_folder": {
+    "message": "フォルダーの利用可否を確認中..."
+  },
+  "sharing_error_folder_exists": {
+    "message": "この名前の共有フォルダーは既に存在します。別の名前を選択してください。"
+  },
+  "sharing_prompt_rename_duplicate": {
+    "message": "ファイル \"$1\" は既にキューに存在します。新しい名前を入力してください。"
+  },
+  "sharing_message_rename_cancelled": {
+    "message": "置換名が指定されなかったため、アップロードはキャンセルされました。"
+  },
+  "sharing_password_policy_error": {
+    "message": "パスワードは大文字と小文字、特殊文字を含む 10 文字以上である必要があります。"
+  },
+  "sharing_html_intro_line": {
+    "message": "ファイルを安全に共有し、あなたのプライバシーを保護したいと思います。以下のリンクをクリックしてファイルをダウンロードしてください。"
+  },
+  "sharing_attachment_prompt_title": {
+    "message": "添付ファイルの上限を超えました"
+  },
+  "sharing_attachment_prompt_reason": {
+    "message": "添付ファイルの合計サイズは $1 で、設定された上限 $2 を超えています。最後に追加: \"$3\" ($4)。"
+  },
+  "sharing_attachment_prompt_share": {
+    "message": "NC Connector で共有"
+  },
+  "sharing_attachment_prompt_remove_last": {
+    "message": "最後に選択した添付ファイルを削除"
+  },
+  "sharing_attachment_prompt_last_unknown": {
+    "message": "不明な添付ファイル"
+  },
+  "sharing_attachment_mode_reason_threshold": {
+    "message": "添付ファイル上限を超えました: $1 > $2。最後に追加: \"$3\" ($4)。これらの添付ファイルは NC Connector で共有されます。"
+  },
+  "sharing_attachment_mode_reason_always": {
+    "message": "添付ファイルモードが有効です。選択した添付ファイルは NC Connector で共有されます。"
+  },
+  "options_sharing_attachments_lock_title": {
+    "message": "添付ファイル自動化は無効です"
+  },
+  "options_sharing_attachments_lock_text": {
+    "message": "Thunderbird の「次より大きいファイルをアップロード」が有効です（$1 MB）。これは NC Connector の添付ファイル自動化と競合します。以下の添付ファイル設定はロックされています。"
+  },
+  "options_sharing_attachments_lock_step1": {
+    "message": "Thunderbird の設定 > 作成 > 添付ファイル を開いてください。"
+  },
+  "options_sharing_attachments_lock_step2": {
+    "message": "「次より大きいファイルをアップロード」を無効にしてください。"
+  },
+  "options_sharing_attachments_lock_step3": {
+    "message": "このアドオン設定を再度開いてください。"
+  },
+  "sharing_attachment_automation_locked_error": {
+    "message": "Thunderbird の「次より大きいファイルをアップロード」が有効です（$1 MB）。これは NC Connector の添付ファイル自動化と競合します。以下の添付ファイル設定はロックされています。"
+  },
+  "options_sharing_default_password_separate_label": {
+    "message": "パスワードを別メールで送信"
+  },
+  "sharing_password_separate_toggle": {
+    "message": "パスワードを別メールで送信する"
+  },
+  "sharing_html_password_separate_hint": {
+    "message": "パスワードは別メールで送信されます。"
+  },
+  "sharing_html_password_mail_intro": {
+    "message": "送信済み共有リンクのパスワードはこちらです。"
+  },
+  "sharing_password_mail_subject": {
+    "message": "共有リンクのパスワード"
+  },
+  "sharing_password_mail_subject_with_label": {
+    "message": "共有リンクのパスワード: $1"
+  },
+  "options_sharing_permissions_tooltip_title": {
+    "message": "🛡️ Default permissions"
+  },
+  "options_sharing_permissions_tooltip_line1": {
+    "message": "These values are used as defaults for new shares."
+  },
+  "options_sharing_permissions_tooltip_line2": {
+    "message": "They can still be adjusted in the sharing wizard."
+  },
+  "options_sharing_permissions_tooltip_line3": {
+    "message": "In attachment mode, recipient permission is always read-only."
+  },
+  "sharing_password_separate_tooltip_title": {
+    "message": "Coming soon (Pro feature)"
+  },
+  "sharing_password_separate_tooltip_line1": {
+    "message": "This option is disabled in this release."
+  },
+  "sharing_password_separate_tooltip_line2": {
+    "message": "Password delivery in a separate email will be available in a future Pro release."
+  },
+  "sharing_password_separate_tooltip_line3": {
+    "message": "For now, the password is included in the main share block."
+  },
+  "options_sharing_attachments_always_tooltip_title": {
+    "message": "📎 Always via NC Connector"
+  },
+  "options_sharing_attachments_always_tooltip_line1": {
+    "message": "New attachments are removed from the compose mail and processed via NC Connector."
+  },
+  "options_sharing_attachments_always_tooltip_line2": {
+    "message": "The sharing wizard opens directly in the file step."
+  },
+  "options_sharing_attachments_always_tooltip_line3": {
+    "message": "The final mail contains share links instead of physical attachments."
+  },
+  "options_sharing_attachments_offer_tooltip_title": {
+    "message": "📏 Attachment threshold"
+  },
+  "options_sharing_attachments_offer_tooltip_line1": {
+    "message": "The total size of all attachments is evaluated."
+  },
+  "options_sharing_attachments_offer_tooltip_line2": {
+    "message": "If exceeded, you can share via NC Connector or remove the last selected attachment batch."
+  },
+  "options_sharing_attachments_offer_tooltip_line3": {
+    "message": "The remove action returns the mail to a below-threshold state."
+  },
+  "talk_option_moderator_title": {
+    "message": "👑 Moderator delegation"
+  },
+  "talk_option_moderator_line1": {
+    "message": "The selected user is promoted after room creation."
+  },
+  "talk_option_moderator_line2": {
+    "message": "On successful delegation, the creator leaves the room."
+  },
+  "talk_option_moderator_line3": {
+    "message": "If delegation fails, room ownership remains with the creator."
+  },
+  "sharing_password_mail_notify_title": {
+    "message": "NC Connector"
+  },
+  "sharing_password_mail_notify_success": {
+    "message": "Password email sent to $1 recipient(s)."
+  },
+  "sharing_password_mail_notify_failure": {
+    "message": "Automatic password email failed for $1 recipient(s). Manual send mail was opened."
+  },
+  "sharing_password_mail_notify_manual_required": {
+    "message": "パスワードメールの自動送信に失敗しました。開かれた下書きを使って手動で送信してください。"
+  }
 }
+

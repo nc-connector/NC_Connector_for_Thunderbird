@@ -4,8 +4,8 @@ This document is the **single source of truth** for developers maintaining or ex
 
 It complements:
 - `docs/ADDON_DESCRIPTION.md` (architecture overview)
-- `docs/REVIEWER_NOTES.md` (review constraints you must not violate)
-- `reviewer-notes-2.2.7.md` (release-specific reviewer notes)
+- `docs/ATN_REVIEW_CHECKLIST_INTERNAL.md` (internal review constraints you must not violate)
+- `docs/ATN_REVIEW_NOTES_2.2.8.md` (reviewer-facing release-specific notes)
 
 ---
 
@@ -29,7 +29,8 @@ It complements:
 - [7. Calendar integration (Talk button in event editor)](#7-calendar-integration-talk-button-in-event-editor)
   - [7.1 Why a custom toolbar experiment exists](#71-why-a-custom-toolbar-experiment-exists)
   - [7.2 Editor variants: dialog vs tab](#72-editor-variants-dialog-vs-tab)
-  - [7.3 `ncCalToolbar` experiment API](#73-nccaltoolbar-experiment-api)
+  - [7.2.1 Why manual tab/window correlation exists today](#721-why-manual-tabwindow-correlation-exists-today)
+  - [7.3 `ncCalToolbar` API surface (editor-targeted)](#73-nccaltoolbar-api-surface-editor-targeted)
   - [7.4 Click snapshot & editor references](#74-click-snapshot--editor-references)
   - [7.5 Room cleanup signals](#75-room-cleanup-signals)
 - [8. Talk wizard (end-to-end flow)](#8-talk-wizard-end-to-end-flow)
@@ -98,17 +99,31 @@ Top-level:
 - `modules/` — shared logic (background + reusable modules)
 - `ui/` — HTML/JS/CSS for options and wizards
 - `experiments/`
-  - `experiments/calendar/` — **official calendar experiment API** (kept **as-is**)
-  - `experiments/ncCalToolbar/` — **minimal** custom experiment for the calendar editor toolbar button
+  - `experiments/calendar/` — official calendar experiment API (kept **as-is**) for persisted item monitoring
+  - `experiments/ncCalToolbar/` — minimal custom experiment for deterministic editor toolbar integration (dialog + tab)
+  - `experiments/ncComposePrefs/` — read-only experiment exposing Thunderbird compose big-attachment prefs for conflict locking
 - `_locales/` — translations (`messages.json` per locale)
 - `docs/` — developer & reviewer documentation
 
 Key files you’ll touch most:
-- `modules/background.js` — main background orchestrator (Talk + calendar monitoring + compose insertion)
+- `modules/bgState.js` — shared runtime state, startup initialization, and `[NCBG]` log helper
+- `modules/bgComposeAttachments.js` — compose attachment automation, threshold prompts, and sharing-launch context handling
+- `modules/bgComposeShareCleanup.js` — compose-tab and wizard-window remote cleanup lifecycle
+- `modules/bgComposePasswordDispatch.js` — separate-password-mail dispatch and password policy fetch/generate
+- `modules/bgCompose.js` — compose/window/tab listener wiring
+- `modules/bgCalendar.js` — `ncCalToolbar` integration, calendar wizard contexts, room metadata mapping, and persisted calendar monitoring sync
+- `modules/bgRouter.js` — `runtime.onMessage` dispatcher for Talk/Sharing/Options/UI bridge contracts
+- `modules/background.js` — thin bootstrap entrypoint
+- `modules/hostPermissions.js` — single host-permission gate used by core/talk/sharing runtime modules
+- `modules/nccore.js` — Nextcloud auth/login-flow helpers
 - `modules/talkcore.js` — Nextcloud Talk API helpers (OCS)
 - `modules/ncSharing.js` — Nextcloud sharing/DAV helpers used by the sharing wizard
+- `modules/icalContract.js` — shared iCal/vCard parser contract (powered by vendored `vendor/ical.js`)
+- `experiments/ncComposePrefs/parent.js` — read-only compose preference bridge (`mail.compose.big_attachments.*`)
 - `ui/talkDialog.html` + `ui/talkDialog.js` — Talk wizard UI
 - `ui/nextcloudSharingWizard.html` + `ui/nextcloudSharingWizard.js` — Sharing wizard UI
+- `ui/debugForwarder.js` — shared runtime debug forwarding helper for Talk + Sharing wizard UIs
+- `ui/passwordPolicyClient.js` — shared password-policy fetch/generate helper for both wizards
 - `options.html` + `options.js` — settings UI
 
 ---
@@ -129,14 +144,15 @@ Important for packaging:
 ### 4.2 Developer tools & consoles
 
 To debug, you’ll typically use:
-- The Thunderbird **Developer Console / Error Console** (for `[NCBG]`, `[NCUI][Talk]`, `[NCUI][Sharing]`, `[NCCalToolbar]` logs).
+- The Thunderbird **Developer Console / Error Console** (for `[NCBG]`, `[NCUI][Talk]`, `[NCUI][Sharing]`, `[ncCalToolbar]`, and `[calendar.items]` logs).
 - The add-on debug view (background + extension pages).
 
 What to look for:
 - `[NCBG]` — background logic (calendar monitoring, Talk operations, cleanup)
 - `[NCUI][Talk]` — Talk wizard UI flow
 - `[NCUI][Sharing]` — Sharing wizard UI flow
-- `[NCCalToolbar]` — experiment logs (button insertion, editor snapshot issues)
+- `[ncCalToolbar]` — custom editor integration logs (button/context/read-write lifecycle)
+- `[calendar.items]` — calendar monitoring logs (persisted item updates/removals)
 
 ### 4.3 Debug logging
 
@@ -144,10 +160,13 @@ Debug output is gated by the option:
 - `debugEnabled` in `browser.storage.local`
 
 Implementation:
-- Background uses `L(...)` in `modules/background.js` and logs as `[NCBG] …` when enabled.
+- Background uses `L(...)` in `modules/bgState.js` and logs as `[NCBG] …` when enabled.
 - UI pages can:
   - log locally to their own console, and/or
   - forward structured logs via `browser.runtime.sendMessage({ type: "debug:log", ... })` (see message contracts below).
+- Attachment automation adds debug traces for:
+  - threshold evaluation and prompt decisions in `[NCBG]`
+  - attachment-mode wizard/prompt flow in `[NCUI][Sharing]`
 
 Keep in mind:
 - Debug logs can contain URLs, tokens, and metadata. Treat logs as sensitive.
@@ -229,13 +248,17 @@ Talk defaults:
 - `talkAddParticipantsDefaultEnabled` (legacy; kept for backward compatibility as `addUsers || addGuests`)
 
 Sharing defaults (managed by `modules/sharingStorage.js`):
-- `sharingBase` (base path)
+- `sharingBasePath` (base path)
 - `sharingDefaultShareName`
 - `sharingDefaultPermCreate`
 - `sharingDefaultPermWrite`
 - `sharingDefaultPermDelete`
 - `sharingDefaultPassword`
+- `sharingDefaultPasswordSeparate`
 - `sharingDefaultExpireDays`
+- `sharingAttachmentsAlwaysConnector`
+- `sharingAttachmentsOfferAboveEnabled`
+- `sharingAttachmentsOfferAboveMb`
 
 Advanced language overrides:
 - `shareBlockLang` (`"default"` or a supported locale folder name like `de`, `pt_BR`, `zh_TW`, …)
@@ -263,20 +286,17 @@ Reviewer goal:
 - Prefer the official calendar experiment API (`experiments/calendar/**`) and avoid custom injection.
 
 Reality in Thunderbird ESR 140:
-- We need a **reliable default toolbar button placement** in:
-  - the **event dialog editor**
-  - the **event tab editor**
-- Pure WebExtension APIs were not sufficient to reliably place/persist the button in the dialog editor toolbar across restarts.
+- We need a deterministic editor-targeted contract for **dialog + tab** editors, including **new/unsaved** items.
+- We must not modify `experiments/calendar/**` (reviewer rule), so editor UI integration cannot be solved there.
 
-Therefore:
-- We use a **minimal** custom experiment (`experiments/ncCalToolbar/**`) that is limited to:
-  - inserting the button
-  - providing a click snapshot (iCal of the currently edited item)
-  - applying write-back into the open editor
-  - signaling save/discard so we can clean up unsaved rooms
-
-All business logic remains in:
-- `modules/background.js`
+Current implementation:
+- `experiments/ncCalToolbar/**` provides only editor integration:
+  - reliable Talk button in both editor variants
+  - deterministic editor identity (`editorId`)
+  - editor-targeted snapshot/write-back (`getCurrent` / `updateCurrent`)
+  - tracked close lifecycle (`onTrackedEditorClosed`)
+- `experiments/calendar/**` remains untouched and is used only for persisted item monitoring.
+- Business logic remains in background runtime modules (`modules/bgState.js`, `modules/bgComposeAttachments.js`, `modules/bgComposeShareCleanup.js`, `modules/bgComposePasswordDispatch.js`, `modules/bgCompose.js`, `modules/bgCalendar.js`, `modules/bgRouter.js`).
 
 ### 7.2 Editor variants: dialog vs tab
 
@@ -286,27 +306,56 @@ Event editors can open as:
 
 We must support both, without duplicating logic or increasing experiment scope.
 
-### 7.3 `ncCalToolbar` experiment API
+### 7.2.1 Why manual tab/window correlation exists today
 
-Schema:
-- `experiments/ncCalToolbar/schema.json`
+Current constraint:
+- Thunderbird ESR 140 does not yet provide a stable upstream API contract to resolve the active event-editor iframe context purely via API IDs in all dialog/tab permutations we need.
 
-Events:
-- `browser.ncCalToolbar.onClicked(snapshot)`
-- `browser.ncCalToolbar.onRoomCleanup(event)`
+Current implementation in `ncCalToolbar`:
+- We correlate the editor iframe to its `tabInfo` in a scoped way to produce a deterministic opaque `editorId`.
+- This is intentionally limited to calendar editor surfaces only (`ExtensionSupport.registerWindowListener` with editor chrome URLs), not generic window scanning.
+- Reviewer/ATN implementation detail:
+  - `ExtensionSupport` is consumed as a global experiment symbol (no `ChromeUtils.importESModule(...)` re-import in `parent.js`).
+  - This matches `docs/ATN_REVIEW_CHECKLIST_INTERNAL.md` ("globals must be used directly in Experiment scripts").
+  - Startup listener registration includes a deferred retry when `ExtensionSupport` is temporarily unavailable in the first startup tick, preventing intermittent bootstrap failures.
+- Historical context:
+  - Add-on 2.2.7 already contained manual editor mapping (`windowId`/`dialogOuterId`).
+  - In 2.2.7 tab mode, `windowId` identified the 3-pane host window only; follow-up
+    editor operations could resolve via selected `currentTabInfo`, which can drift
+    after tab switches or with multiple open editor tabs.
+  - In 2.2.8 this was upgraded to an opaque `editorId` bridge so targeting is deterministic and API-contract oriented.
 
-Functions:
-- `browser.ncCalToolbar.applyEventFields({ editor, fields })`
-- `browser.ncCalToolbar.setItemProperties({ editor, properties })`
-- `browser.ncCalToolbar.registerRoomCleanup({ editor, token })`
+Upstream direction:
+- We track this as a temporary bridge until upstream APIs expose the same deterministic contract.
+- Reference: PR #65 (deterministic editor context contract proposal): https://github.com/thunderbird/webext-experiments/pull/65
+
+### 7.3 `ncCalToolbar` API surface (editor-targeted)
+
+Entry / UI:
+- `browser.ncCalToolbar.onClicked(snapshot)` with `snapshot.editorId`
+
+Snapshot:
+- `browser.ncCalToolbar.getCurrent({ editorId, returnFormat: "ical" })`
+
+Write-back:
+- `browser.ncCalToolbar.updateCurrent({ editorId, fields, properties, returnFormat: "ical" })`
+
+Lifecycle:
+- `browser.ncCalToolbar.onTrackedEditorClosed` with action payload (`persisted`, `discarded`, `superseded`)
 
 ### 7.4 Click snapshot & editor references
 
-On click, the experiment sends:
+On click, background receives:
+- `browser.ncCalToolbar.onClicked(snapshot)` as entrypoint
+- snapshot payload includes:
 - an iCal snapshot of the **currently edited** item (`format: "ical"`, `item: "BEGIN:VCALENDAR..."`)
 - `calendarId` and `id` (note: `id` can be empty for new/unsaved items)
-- an `EditorRef`:
-  - `windowId` and/or `dialogOuterId`
+- an `editorId` (opaque identifier for one specific open editor)
+  - contract: add-ons must treat `editorId` as opaque and must not parse it
+  - lifetime: valid only while that editor remains open in the current Thunderbird session
+
+For fresh reads before write-back, background can call:
+- `browser.ncCalToolbar.getCurrent({ editorId, returnFormat: "ical" })`
 
 Why we rely on the iCal snapshot:
 - New/unsaved items may not have a stable `itemId` yet.
@@ -318,9 +367,11 @@ Problem:
 - A user can create a Talk room, then close the editor without saving → we must prevent orphan rooms.
 
 Solution:
-- Background registers cleanup hooks via `ncCalToolbar.registerRoomCleanup`.
-- The experiment emits `onRoomCleanup` with:
+- Background stores cleanup tracking via `talk:registerCleanup` using `editorId`.
+- `browser.ncCalToolbar.onTrackedEditorClosed` (tracked editors only, after `getCurrent`/`updateCurrent`) emits:
   - `action: "persisted"` (saved) / `"discarded"` (closed/canceled) / `"superseded"`
+  - `reason`: `dialogaccept`, `dialogextra1`, `dialogcancel`, `dialogextra2`, `unload`, `re-bound`
+  - ordering relative to other calendar item events is intentionally not guaranteed
 
 Background behavior:
 - If discarded: delete the room (if it was created during this session and not persisted).
@@ -333,12 +384,12 @@ Background behavior:
 ### 8.1 Wizard open → snapshot
 
 Entry point:
-- `browser.ncCalToolbar.onClicked` listener in `modules/background.js`
+- `browser.ncCalToolbar.onClicked` listener in `modules/bgCalendar.js`
 
 What happens:
 1. Create a `contextId` (calendar wizard context)
 2. Store:
-   - `editorRef`
+   - `editorId`
    - `item` (iCal)
    - derived `event` + `metadata` snapshot
 3. Open `ui/talkDialog.html?contextId=...` as a **real popup window** via `browser.windows.create({ type: "popup" })`
@@ -439,7 +490,7 @@ We use `returnFormat: "ical"` so our parsing logic stays consistent.
 
 ### 9.2 What we do on create/update/remove
 
-On create/update (`handleCalendarItemUpsert` in `modules/background.js`):
+On create/update (`handleCalendarItemUpsert` in `modules/bgCalendar.js`):
 - Keep room meta in sync:
   - lobby timer updates when event time changes
   - store token ↔ event mapping
@@ -453,7 +504,7 @@ On remove:
 ### 9.3 Orphan-room prevention
 
 Orphan prevention is handled by:
-- `ncCalToolbar.onRoomCleanup` (editor saved vs discarded)
+- `browser.ncCalToolbar.onTrackedEditorClosed` (editor saved vs discarded)
 - background cleanup maps keyed by room token + editor reference
 
 ---
@@ -464,24 +515,66 @@ Orphan prevention is handled by:
 
 Entry point:
 - `compose_action` button opens the sharing wizard (popup window).
+- `compose.onAttachmentAdded` can auto-open the sharing wizard in attachment mode
+  based on sharing options (`always` or threshold-based).
 
 Responsibilities:
 - The sharing wizard UI performs most DAV/OCS actions using shared modules.
 - The background is used for **compose insertion**, because the compose APIs are executed from the background.
+- In attachment mode, background removes selected attachments from compose and
+  passes them as a one-time launch context to the wizard.
 
 Key files:
 - `ui/nextcloudSharingWizard.html`
 - `ui/nextcloudSharingWizard.js`
+- `ui/composeAttachmentPrompt.html`
+- `ui/composeAttachmentPrompt.js`
 - `modules/ncSharing.js`
 - `modules/ocs.js`
 - `modules/nccore.js`
+- `modules/sharingStorage.js`
+
+Attachment mode specifics:
+- Wizard starts in step 3 (files queue), without note step.
+- Share name base is fixed to `email_attachment` with deterministic `_1`, `_2`, ... suffix handling.
+- Compose HTML block for this mode uses ZIP download URL (`/s/<token>/download`) and hides permission row.
+- Recipient permissions are enforced as read-only in this mode (`read=true`, `create/write/delete=false`), independent of sharing defaults.
+- Queue UI behavior:
+  - path column shows the best available source path (including file name)
+  - path text is horizontally scrollable per row (mouse wheel), while type/status columns remain fixed
+  - currently uploading row is highlighted in accent blue; upload progress and done state use green success styling
+- Upload uniqueness behavior:
+  - local duplicate target paths are resolved before upload (rename prompt)
+  - no per-file remote preflight checks are executed for each queue entry in newly created share folders
+- Share cleanup contract:
+  - cleanup is armed in background once a share was created and prepared for compose insertion
+  - cleanup is cleared only after successful `compose.onAfterSend` (`sendNow`/`sendLater` with message id)
+  - if compose tab is closed without successful send, background deletes the share folder on the server
+  - when send is still pending at tab-close time, cleanup delete is delayed by a short grace timer to avoid send/close races
+  - wizard-side cleanup is armed by window id in background; if the sharing wizard closes before finalize, background deletes the remote folder on `windows.onRemoved`
+  - finalize explicitly clears the wizard cleanup entry before closing the popup
+- Password separation:
+  - Option + wizard toggle can send password in a dedicated follow-up mail.
+  - This toggle is only active when password protection is enabled.
+  - Main compose block omits the inline password and shows a dedicated hint when enabled.
+  - Background captures final recipients on `compose.onBeforeSend` and dispatches password-only mail on `compose.onAfterSend`.
+  - Dispatch path: first try `compose.sendMessage(..., { mode: "sendNow" })` with a timeout guard for stuck send attempts.
+  - If immediate send fails (or times out), background opens a prefilled compose draft as explicit manual fallback.
+  - If a manual fallback draft was opened, a dedicated desktop notification tells the user to send the password mail manually.
+  - If manual fallback draft closes without successful send, compose-share cleanup removes the remote share folder.
+  - If manual fallback draft cannot be opened at all, background performs immediate best-effort remote share cleanup.
+- If Thunderbird's own big-attachment upload setting is enabled, add-on attachment automation settings are locked and a guidance block is shown in options.
+- The same lock is enforced live in background before evaluate/start/prompt-action and again at attachment-mode wizard finish.
+- On cancel, attachments are not restored to compose (explicit product decision).
 
 ### 10.2 Inserting the HTML block into the compose window
 
 The sharing wizard sends:
+- `browser.runtime.sendMessage({ type: "sharing:armComposeShareCleanup", payload: { tabId, folderInfo, ... } })`
 - `browser.runtime.sendMessage({ type: "sharing:insertHtml", payload: { tabId, html } })`
 
 Background:
+- arms compose-share cleanup before insertion (for unsent-tab cleanup handling)
 - reads current compose body and inserts the block near the `<body>` tag.
 
 ### 10.3 Share block language override
@@ -551,6 +644,7 @@ Talk wizard:
 - `talk:initDialog`
 - `talk:getEventSnapshot`
 - `talk:createRoom`
+- `talk:searchUsers`
 - `talk:applyMetadata`
 - `talk:applyEventFields`
 - `talk:trackRoom`
@@ -558,9 +652,16 @@ Talk wizard:
 
 Sharing wizard:
 - `sharing:insertHtml`
+- `sharing:armComposeShareCleanup`
+- `sharing:armWizardRemoteCleanup`
+- `sharing:clearWizardRemoteCleanup`
+- `sharing:getLaunchContext`
+- `sharing:resolveAttachmentPrompt`
+- `sharing:checkAttachmentAutomationAllowed`
+- `sharing:registerSeparatePasswordDispatch`
 
 Note:
-- There are additional “talkMenu:*” message types used by other UI surfaces.
+- Talk-related runtime messaging uses the `talk:*` namespace only.
 
 ### 12.2 Common response shape
 
@@ -596,10 +697,13 @@ All endpoint interaction lives in the shared modules (`modules/ocs.js`, `modules
 
 Before you ship:
 1. Bump `manifest.json` version.
-2. Update `reviewer-notes-<version>.md` and README “What’s new”.
+2. Update `docs/ATN_REVIEW_NOTES_<version>.md` and README “What’s new”.
 3. Run the manual tests (Talk dialog + tab editor, sharing wizard, event move/delete, delegation, invitee sync).
-4. Package the XPI with correct root structure.
-5. Sanity check:
+4. Run parser contract checks:
+   - `node tools/ical-contract-check.js`
+   - `node tools/i18n-locale-parity-check.js`
+5. Package the XPI with correct root structure.
+6. Sanity check:
    - add-on installs on ESR 140.\*
    - button is present in dialog + tab editor by default
    - no console spam in non-debug mode
@@ -612,11 +716,11 @@ Common symptoms:
 
 - **Button missing in dialog editor**
   - Verify `experiments/ncCalToolbar` is registered in `manifest.json`.
-  - Check `[NCCalToolbar]` logs for insertion errors.
+  - Check `[ncCalToolbar]` logs for toolbar insertion/context errors.
 
 - **Wizard opens but writes nothing**
   - Verify `contextId` is present in the wizard URL.
-  - Verify `ncCalToolbar.applyEventFields` and `ncCalToolbar.setItemProperties` exist (API registration).
+  - Verify `browser.ncCalToolbar.updateCurrent` is available and receives a valid `editorId`.
 
 - **Invitees not added**
   - Invitee sync happens after the event is saved (calendar upsert), not immediately.
@@ -630,11 +734,13 @@ Common symptoms:
 ## 16. Reviewer constraints (must-read)
 
 Before changing experiments or calendar integration, read:
-- `docs/REVIEWER_NOTES.md`
+- `docs/ATN_REVIEW_CHECKLIST_INTERNAL.md`
 
 Key rules:
 - Do not modify `experiments/calendar/**`.
 - Keep experiments minimal, deterministic, and auditable.
 - No trial-and-error code paths.
 - No broad window/tab monitoring; target only required windows via window listeners.
+
+
 

@@ -1,331 +1,828 @@
 {
-  "extName": { "message": "NC Connector for Thunderbird" },
-  "extDescription": { "message": "將 Nextcloud Talk 和 Files 無縫整合到 Thunderbird 中" },
-  "ui_button_ok": { "message": "OK" },
-  "ui_button_cancel": { "message": "取消" },
-  "ui_button_apply": { "message": "套用" },
-  "ui_button_apply_progress": { "message": "正在套用..." },
-  "ui_button_create_progress": { "message": "建立中..." },
-  "ui_button_clear": { "message": "清除" },
-  "ui_insert_button_label": { "message": "插入 Talk 連結" },
-  "ui_create_heading": { "message": "建立公開對話" },
-  "ui_create_title_label": { "message": "標題" },
-  "ui_create_add_participants_label": { "message": "將參與者加入房間" },
-  "ui_create_add_users_label": { "message": "新增使用者" },
-  "ui_create_add_guests_label": { "message": "新增訪客" },
-  "ui_create_password_label": { "message": "密碼（選用）" },
-  "talk_password_policy_error": { "message": "密碼長度至少需要 $1 個字元。" },
-  "ui_create_password_placeholder": { "message": "選用" },
-  "ui_password_generate_label": { "message": "產生" },
-  "ui_password_error_title": { "message": "檢查密碼" },
-  "ui_password_error_text": { "message": "請輸入至少 5 個字元。" },
-  "ui_create_lobby_label": { "message": "開始時間前啟用等候室" },
-  "ui_create_listable_label": { "message": "在搜尋中顯示" },
-  "talk_option_add_users_title": { "message": "👤 新增使用者" },
-  "talk_option_add_users_line1": { "message": "Nextcloud 內部使用者會直接加入房間" },
-  "talk_option_add_users_line2": { "message": "房間會立即在 Nextcloud Talk 中可見" },
-  "talk_option_add_guests_title": { "message": "🌍 新增訪客" },
-  "talk_option_add_guests_line1": { "message": "訪客也會直接加入房間" },
-  "talk_option_add_guests_line2": { "message": "⚠️ 他們會收到一封單獨（額外）的電子郵件，內含個人存取連結" },
-  "talk_option_listable_title": { "message": "🔍 在搜尋中顯示" },
-  "talk_option_listable_line1": { "message": "可透過 Talk 搜尋找到房間" },
-  "talk_option_listable_line2": { "message": "⚠️ 方便再次找到，但所有使用者都能搜尋到。" },
-  "talk_option_lobby_title": { "message": "🚪 開始時間前啟用等候室" },
-  "talk_option_lobby_line1": { "message": "開始前，參與者會進入等候室（等待區），暫時無法加入通話" },
-  "talk_option_lobby_line2": { "message": "⚠️ 只有在設定的開始時間之後（或主持人關閉等候室後）才能加入" },
-  "talk_option_lobby_line3": { "message": "適合避免有人過早進入會議／網路研討會。" },
-  "ui_create_roomtype_label": { "message": "房間類型" },
-  "ui_create_mode_event": { "message": "事件對話" },
-  "ui_create_mode_standard": { "message": "群組對話" },
-  "ui_create_mode_event_short": { "message": "事件" },
-  "ui_create_mode_standard_short": { "message": "標準" },
-  "ui_create_mode_unsupported": { "message": "伺服器不支援事件對話。" },
-  "talk_roomtype_group_title": { "message": "🗨️ 群組對話" },
-  "talk_roomtype_group_line1": { "message": "長期: 直到手動刪除前都會保留" },
-  "talk_roomtype_group_line2": { "message": "日常使用: 適合團隊、部門、進行中的專案與重複的行程" },
-  "talk_roomtype_group_line3": { "message": "含歷史紀錄: 可隨時查看完整聊天記錄" },
-  "talk_roomtype_event_title": { "message": "📅 事件對話" },
-  "talk_roomtype_event_line1": { "message": "限時: 用於特定行程或場合" },
-  "talk_roomtype_event_line2": { "message": "輕量快速: 適合會議、訓練或網路研討會" },
-  "talk_roomtype_event_line3": { "message": "自動清理: 一段時間後會自動移除" },
-  "ui_create_moderator_label": { "message": "主持人（選用）" },
-  "ui_create_moderator_placeholder": { "message": "輸入使用者名稱" },
-  "ui_create_moderator_hint": { "message": "若設定，建立後會將主持權轉移給該使用者，且您會離開房間。" },
-  "ui_delegate_selected_title": { "message": "已選取" },
-  "ui_delegate_selected_description": { "message": "若設定，建立後會將主持權轉移給該使用者，且您會離開房間。" },
-  "ui_delegate_status_searching": { "message": "搜尋中..." },
-  "ui_delegate_status_loading": { "message": "載入使用者中..." },
-  "ui_delegate_status_none_with_email": { "message": "沒有符合項目。" },
-  "ui_delegate_status_none_found": { "message": "找不到使用者。" },
-  "ui_delegate_status_single": { "message": "符合 1 項。" },
-  "ui_delegate_status_many": { "message": "符合 $1 項。" },
-  "ui_delegate_status_error": { "message": "使用者搜尋失敗。" },
-  "ui_create_password_short": { "message": "密碼長度至少需要 5 個字元。" },
-  "ui_create_send_failed": { "message": "傳送至背景腳本失敗：\n$1" },
-  "ui_create_no_handler": { "message": "未註冊 Nextcloud Talk 處理程式。請重新載入附加元件。" },
-  "ui_create_unknown_error": { "message": "建立對話時發生未知錯誤。" },
-  "ui_create_failed": { "message": "無法建立 Nextcloud Talk：\n$1\n請檢查設定。" },
-  "ui_moderator_transfer_failed": { "message": "無法轉移主持人權限。" },
-  "ui_moderator_transfer_failed_with_reason": { "message": "無法轉移主持人權限：\n$1" },
-  "ui_alert_title": { "message": "Nextcloud Talk" },
-  "ui_alert_room_created": { "message": "已建立 Talk 房間 \"$1\"。" },
-  "ui_alert_link_inserted": { "message": "已插入 Talk 連結：\n$1" },
-  "ui_alert_location_missing": { "message": "(注意：未自動填入「地點」欄位。)" },
-  "ui_alert_event_fallback": { "message": "注意：伺服器不支援事件對話。已建立群組對話。" },
-  "ui_alert_generic_fallback": { "message": "(注意：已建立不支援 API 的備援連結。)" },
-  "ui_alert_reason": { "message": "原因：$1" },
-  "ui_alert_pending_delegation": { "message": "在儲存/寄送時會將主持權轉移給：$1。" },
-  "ui_alert_delegation_done": { "message": "已將主持權轉移給：$1。" },
-  "ui_delegate_modal_title": { "message": "主持權轉移" },
-  "ui_alert_delegation_removed": { "message": "您已從對話中移除。" },
-  "ui_alert_password_protected": { "message": "注意：此對話受密碼保護。" },
-  "ui_prompt_base_url": { "message": "Nextcloud 基礎 URL（例如 https://cloud.example.com）：" },
-  "ui_prompt_title": { "message": "新公開對話的標題：" },
-  "ui_default_title": { "message": "會議" },
-  "ui_description_heading": { "message": "Nextcloud Talk" },
-  "ui_description_join_label": { "message": "立即加入會議：" },
-  "ui_description_password_line": { "message": "密碼：$1" },
-  "ui_description_help_label": { "message": "需要協助？" },
-  "ui_description_help_url": { "message": "https://docs.nextcloud.com/server/latest/user_manual/en/talk/join_a_call_or_chat_as_guest.html" },
-  "talk_dialog_title": { "message": "Nextcloud Talk" },
-  "talk_dialog_heading": { "message": "Nextcloud Talk" },
-  "talk_dialog_placeholder": { "message": "此獨立介面仍在開發中。在遷移完成前，請繼續使用內嵌的 Talk 對話框。" },
-  "talk_dialog_close": { "message": "關閉" },
-  "talk_dialog_missing_window": { "message": "無法偵測日曆視窗的內容脈絡。" },
-  "talk_dialog_ready": { "message": "對話框已初始化。" },
-  "talk_error_window_id_missing": { "message": "缺少視窗參照。" },
-  "talk_error_context_id_missing": { "message": "缺少事件內容脈絡。" },
-  "talk_error_init_failed": { "message": "對話框初始化失敗。" },
-  "talk_error_snapshot_failed": { "message": "無法讀取事件資料。" },
-  "talk_status_loading_event": { "message": "正在從編輯器載入事件…" },
-  "talk_error_editor_context_missing": { "message": "無法識別目前正在編輯的事件。請確認事件編輯器已開啟，然後再試一次。" },
-  "talk_error_create_failed": { "message": "房間建立失敗。" },
-  "talk_error_title_missing": { "message": "請輸入標題。" },
-  "talk_error_create_missing_data": { "message": "缺少房間資料。" },
-  "talk_error_window_reference": { "message": "缺少視窗參照。" },
-  "talk_error_context_reference": { "message": "缺少事件內容脈絡。" },
-  "talk_error_apply_failed": { "message": "無法將變更套用到事件。" },
-  "talk_section_event": { "message": "事件" },
-  "talk_field_start": { "message": "開始" },
-  "talk_field_end": { "message": "結束" },
-  "talk_field_location": { "message": "地點" },
-  "talk_field_description": { "message": "描述" },
-  "talk_section_settings": { "message": "Talk 設定" },
-  "talk_section_room": { "message": "Talk 房間" },
-  "talk_field_token": { "message": "權杖" },
-  "talk_field_url": { "message": "連結" },
-  "talk_field_lobby": { "message": "等候室" },
-  "talk_field_start_epoch": { "message": "開始時間戳記" },
-  "talk_password_toggle_label": { "message": "設定密碼" },
-  "talk_dialog_legacy": { "message": "開啟舊版對話框" },
-  "talk_button_apply_fields": { "message": "套用欄位" },
-  "talk_button_create_room": { "message": "建立 Talk 房間" },
-  "talk_dialog_fields_saved": { "message": "欄位已更新。" },
-  "talk_dialog_fields_error": { "message": "無法更新欄位。" },
-  "open_url_title": { "message": "開啟連結" },
-  "open_url_heading": { "message": "在瀏覽器中開啟連結" },
-  "open_url_instructions": { "message": "複製下方的 URL 並貼到預設瀏覽器中。" },
-  "open_url_copy": { "message": "複製 URL" },
-  "open_url_close": { "message": "關閉" },
-  "open_url_copied": { "message": "URL 已複製到剪貼簿。" },
-  "open_url_copy_failed": { "message": "複製失敗。請手動複製 URL。" },
-  "talk_value_enabled": { "message": "啟用" },
-  "talk_value_disabled": { "message": "停用" },
-  "ui_toolbar_tooltip": { "message": "Nextcloud Talk" },
-  "error_canvas_support_missing": { "message": "缺少 Canvas 支援。" },
-  "error_invalid_base64_length": { "message": "Base64 長度無效。" },
-  "error_invalid_base64_data": { "message": "Base64 資料無效。" },
-  "error_avatar_load_failed": { "message": "無法載入頭像。" },
-
-  "error_avatar_data_missing": { "message": "缺少頭像資料。" },
-  "error_canvas_context_missing": { "message": "Canvas 內容脈絡不可用。" },
-  "error_image_decode_failed": { "message": "無法解碼影像。" },
-  "error_image_size_unknown": { "message": "無法判定影像大小。" },
-  "error_image_load_failed": { "message": "無法載入影像。" },
-  "error_pixel_data_missing": { "message": "像素資料不可用。" },
-  "error_credentials_missing": { "message": "缺少 Nextcloud 憑證（附加元件設定）。" },
-  "error_host_permission_missing": { "message": "未授予存取已設定 Nextcloud 實例的權限。" },
-  "error_system_addressbook_failed": { "message": "無法載入系統通訊錄：$1" },
-  "error_lobby_set_failed": { "message": "無法設定等候室：$1" },
-  "error_lobby_set_failed_short": { "message": "無法設定等候室。" },
-  "error_room_create_failed": { "message": "無法建立房間。" },
-  "error_token_missing_in_response": { "message": "OCS 回應中沒有權杖。" },
-  "error_room_token_missing": { "message": "缺少房間權杖。" },
-  "error_room_delete_failed": { "message": "無法刪除房間：$1" },
-  "error_lobby_no_permission": { "message": "沒有變更等候室的權限（HTTP 403）。" },
-  "error_lobby_update_failed": { "message": "等候室更新失敗（HTTP $1）。" },
-  "error_ocs": { "message": "OCS 錯誤：$1" },
-  "error_token_or_actor_missing": { "message": "缺少房間權杖或參與者 ID。" },
-  "error_participant_add_failed": { "message": "無法加入參與者：$1" },
-  "error_moderator_id_missing": { "message": "缺少主持人 ID。" },
-  "error_moderator_set_failed": { "message": "無法設定主持人：$1" },
-  "error_leave_failed": { "message": "離開房間失敗：$1" },
-  "error_delegation_data_missing": { "message": "缺少轉移資料。" },
-  "error_moderator_target_missing": { "message": "主持人 ID 為空。" },
-  "error_participant_not_found": { "message": "找不到參與者，請檢查拼字。" },
-  "error_users_load_failed": { "message": "無法載入使用者。" },
-  "error_unknown_utility_request": { "message": "未知的工具請求。" },
-  "options_title": { "message": "NC Connector for Thunderbird – 設定" },
-  "options_heading": { "message": "NC Connector for Thunderbird – 設定" },
-  "options_base_url_label": { "message": "Nextcloud URL" },
-  "options_base_url_placeholder": { "message": "https://cloud.example.com" },
-  "options_user_label": { "message": "使用者名稱" },
-  "options_app_pass_label": { "message": "應用程式密碼" },
-  "options_debug_label": { "message": "除錯記錄" },
-  "options_debug_hint": { "message": "使用主控台輸出診斷訊息" },
-  "options_support_link": { "message": "PayPal：捐贈" },
-  "options_save_button": { "message": "儲存" },
-  "options_status_saved": { "message": "已儲存。" },
-  "options_status_save_failed": { "message": "儲存失敗。" },
-  "options_status_load_failed": { "message": "無法載入設定。" },
-  "options_test_button": { "message": "測試連線" },
-  "options_test_running": { "message": "正在測試連線..." },
-  "options_test_success": { "message": "連線成功。" },
-  "options_test_failed": { "message": "連線失敗。" },
-  "options_test_failed_auth": { "message": "使用者名稱或應用程式密碼無效。" },
-  "options_test_missing": { "message": "請先輸入 URL、使用者名稱與應用程式密碼。" },
-  "options_permission_required": { "message": "要繼續，請允許存取此 Nextcloud 實例。" },
-  "options_tab_general": { "message": "一般" },
-  "options_tab_sharing": { "message": "分享" },
-  "options_tab_talklink": { "message": "Talk 連結" },
-  "options_tab_advanced": { "message": "進階" },
-  "options_tab_debug": { "message": "除錯" },
-  "options_tab_about": { "message": "關於" },
-  "options_placeholder_sharing": { "message": "設定即將推出。" },
-  "options_placeholder_advanced": { "message": "設定即將推出。" },
-  "options_advanced_language_heading": { "message": "語言覆寫" },
-  "options_share_block_lang_label": { "message": "分享 HTML 區塊語言" },
-  "options_share_block_lang_hint": { "message": "控制插入的分享 HTML 區塊語言。" },
-  "options_event_description_lang_label": { "message": "Talk 描述文字語言" },
-  "options_event_description_lang_hint": { "message": "控制事件中 Talk 文字區塊的語言。" },
-  "options_lang_default": { "message": "預設（UI）" },
-  "options_lang_en": { "message": "英文" },
-  "options_lang_de": { "message": "德文" },
-  "options_lang_fr": { "message": "法文" },
-  "options_about_version_label": { "message": "版本：" },
-  "options_about_copyright_label": { "message": "版權：" },
-  "options_about_license_label": { "message": "授權：" },
-  "options_about_license_value": { "message": "AGPL v3" },
-  "options_about_support_note": { "message": "為了讓 NC Connector for Thunderbird 能夠繼續免費維護與改進。" },
-  "options_about_support_heading": { "message": "支援" },
-  "options_auth_heading": { "message": "驗證" },
-  "options_auth_manual": { "message": "手動（輸入使用者名稱 + 應用程式密碼）" },
-  "options_auth_login": { "message": "使用 Nextcloud 登入（自動取得應用程式密碼）" },
-  "options_loginflow_button": { "message": "使用 Nextcloud 登入..." },
-  "options_loginflow_starting": { "message": "正在啟動登入流程..." },
-  "options_loginflow_browser": { "message": "瀏覽器已開啟。請在 Nextcloud 中確認登入..." },
-  "options_loginflow_success": { "message": "登入成功。應用程式密碼已複製。" },
-  "options_loginflow_failed": { "message": "使用 Nextcloud 登入失敗。" },
-  "options_loginflow_missing": { "message": "請先輸入伺服器 URL。" },
-  "compose_sharing_title": { "message": "新增 Nextcloud 分享" },
-  "options_sharing_base_label": { "message": "基礎目錄" },
-  "options_sharing_base_hint": { "message": "檔案會儲存在此目錄下（例如 \"90 Freigaben - extern\"）。" },
-  "options_sharing_defaults_heading": { "message": "預設設定" },
-  "options_sharing_default_share_name_label": { "message": "分享名稱" },
-  "options_sharing_default_permissions_label": { "message": "預設權限" },
-  "options_sharing_default_perm_create": { "message": "上傳/建立" },
-  "options_sharing_default_perm_write": { "message": "編輯" },
-  "options_sharing_default_perm_delete": { "message": "刪除" },
-  "options_sharing_default_password_label": { "message": "設定密碼" },
-  "options_sharing_default_expire_days_label": { "message": "有效期限（天）" },
-  "options_talk_defaults_heading": { "message": "預設設定" },
-  "options_talk_default_title_label": { "message": "標題" },
-  "options_talk_default_lobby_label": { "message": "開始時間前啟用等候室" },
-  "options_talk_default_listable_label": { "message": "在搜尋中顯示" },
-  "options_talk_default_add_participants_label": { "message": "將參與者加入房間" },
-  "options_talk_default_add_users_label": { "message": "使用者" },
-  "options_talk_default_add_guests_label": { "message": "訪客" },
-  "options_talk_default_password_label": { "message": "設定密碼" },
-  "options_talk_default_roomtype_label": { "message": "房間類型" },
-  "options_talk_default_roomtype_event": { "message": "事件對話" },
-  "options_talk_default_roomtype_standard": { "message": "群組對話" },
-  "sharing_wizard_title": { "message": "Nextcloud 分享" },
-  "sharing_header_hint": { "message": "NC Connector for Thunderbird" },
-  "sharing_step_general": { "message": "分享" },
-  "sharing_share_name_label": { "message": "分享名稱" },
-  "sharing_share_placeholder": { "message": "例如：專案 X" },
-  "sharing_share_default": { "message": "分享名稱" },
-  "sharing_base_path_label": { "message": "基礎目錄" },
-  "sharing_base_path_hint": { "message": "檔案會儲存在此目錄下。" },
-  "sharing_allow_upload_label": { "message": "收件者可上傳自己的檔案" },
-  "sharing_step_security": { "message": "權限" },
-  "sharing_permission_read": { "message": "讀取" },
-  "sharing_permission_create": { "message": "上傳" },
-  "sharing_permission_write": { "message": "修改" },
-  "sharing_permission_delete": { "message": "刪除" },
-  "sharing_password_toggle": { "message": "設定密碼" },
-  "sharing_password_label": { "message": "密碼" },
-  "sharing_password_generate": { "message": "產生" },
-  "sharing_expire_toggle": { "message": "設定到期日期" },
-  "sharing_expire_label": { "message": "到期日期" },
-  "sharing_step_files": { "message": "檔案" },
-  "sharing_files_hint": { "message": "新增要上傳的檔案或資料夾。" },
-  "sharing_add_files": { "message": "選擇檔案..." },
-  "sharing_clear_files": { "message": "清空清單" },
-  "sharing_allow_empty_label": { "message": "無檔案繼續（僅分享上傳資料夾）" },
-  "sharing_step_note": { "message": "備註並完成" },
-  "sharing_note_toggle": { "message": "為收件者新增備註" },
-  "sharing_note_label": { "message": "備註" },
-  "sharing_note_placeholder": { "message": "給收件者的選用訊息" },
-  "sharing_summary_share": { "message": "分享名稱" },
-  "sharing_summary_folder": { "message": "資料夾" },
-  "sharing_summary_permissions": { "message": "權限" },
-  "sharing_progress_label": { "message": "正在建立分享..." },
-  "sharing_button_back": { "message": "返回" },
-  "sharing_button_cancel": { "message": "取消" },
-  "sharing_button_next": { "message": "下一步" },
-  "sharing_button_finish": { "message": "建立分享" },
-  "sharing_status_preparing": { "message": "正在準備上傳..." },
-  "sharing_status_uploading": { "message": "正在上傳 $3（$1 / $2）..." },
-  "sharing_status_creating": { "message": "正在建立公開連結..." },
-  "sharing_status_done": { "message": "分享已成功插入。" },
-  "sharing_status_error": { "message": "發生錯誤。" },
-  "sharing_error_share_name": { "message": "請輸入分享名稱。" },
-  "sharing_error_password_missing": { "message": "請輸入密碼。" },
-  "sharing_error_expire_missing": { "message": "請選擇到期日期。" },
-  "sharing_error_no_files": { "message": "請至少新增一個檔案，或啟用無檔案繼續的選項。" },
-  "sharing_error_missing_config": { "message": "無法偵測寫信視窗。" },
-  "sharing_error_insert_failed": { "message": "無法將分享插入郵件。" },
-  "sharing_html_intro": { "message": "我想安全地分享檔案並保護您的隱私。請點擊下方連結下載您的檔案。" },
-  "sharing_html_password_label": { "message": "密碼" },
-  "sharing_html_expire_label": { "message": "到期日期" },
-  "sharing_html_permissions_label": { "message": "您的權限" },
-  "sharing_html_download_label": { "message": "下載連結" },
-  "sharing_html_footer": { "message": "$1 是安全郵件與檔案交換的解決方案。" },
-  "sharing_dialog_title": { "message": "Nextcloud 分享" },
-  "sharing_heading_permissions": { "message": "分享設定" },
-  "sharing_step_expire": { "message": "到期日期" },
-  "sharing_expire_hint": { "message": "此日期之後，連結將不可用。" },
-  "sharing_step_files_title": { "message": "選擇檔案或資料夾" },
-  "sharing_base_path_info": { "message": "基礎目錄：$1" },
-  "sharing_files_table_path": { "message": "路徑" },
-  "sharing_files_table_type": { "message": "類型" },
-  "sharing_files_table_status": { "message": "狀態" },
-  "sharing_button_add_files": { "message": "新增檔案..." },
-  "sharing_button_add_folder": { "message": "新增資料夾..." },
-  "sharing_button_remove": { "message": "移除" },
-  "sharing_button_upload": { "message": "上傳" },
-  "sharing_files_empty": { "message": "未選擇檔案。" },
-  "sharing_file_type_file": { "message": "檔案" },
-  "sharing_file_type_folder": { "message": "資料夾" },
-  "sharing_status_waiting": { "message": "等待中" },
-  "sharing_status_done_row": { "message": "完成" },
-  "sharing_status_error_row": { "message": "錯誤" },
-  "sharing_status_ready": { "message": "上傳完成。" },
-  "sharing_status_uploading_bulk": { "message": "正在上傳檔案..." },
-  "sharing_message_invalid_share_name": { "message": "請輸入分享名稱。" },
-  "sharing_message_no_files": { "message": "請至少新增一個檔案。" },
-  "sharing_confirm_no_files_title": { "message": "不上傳也分享" },
-  "sharing_confirm_no_files_message": { "message": "此分享未新增任何檔案或資料夾。收件者只能上傳自己的檔案。是否繼續？" },
-  "sharing_error_upload_required": { "message": "繼續之前請先上傳檔案。" },
-  "sharing_step_note_heading": { "message": "給收件者的備註" },
-  "sharing_status_inserting": { "message": "正在插入 HTML 區塊..." },
-  "sharing_status_checking_folder": { "message": "正在檢查資料夾可用性..." },
-  "sharing_error_folder_exists": { "message": "已存在同名分享資料夾。請選擇其他名稱。" },
-  "sharing_prompt_rename_duplicate": { "message": "檔案 \"$1\" 已存在於佇列中。請輸入新名稱。" },
-  "sharing_prompt_rename_existing": { "message": "檔案 \"$1\" 已存在於伺服器上。請輸入新名稱。" },
-  "sharing_message_rename_cancelled": { "message": "由於未提供替代名稱，上傳已取消。" },
-  "sharing_password_policy_error": { "message": "密碼至少需要 10 個字元，並包含大寫、小寫字母與特殊字元。" },
-  "sharing_html_intro_line": { "message": "我想安全地分享檔案並保護您的隱私。請點擊下方連結下載您的檔案。" },
-  "sharing_html_footer_line": { "message": "Nextcloud 是安全電子郵件與資料交換的解決方案。" }
+  "extName": {
+    "message": "NC Connector for Thunderbird"
+  },
+  "extDescription": {
+    "message": "將 Nextcloud Talk 和 Files 無縫整合到 Thunderbird 中"
+  },
+  "ui_button_ok": {
+    "message": "OK"
+  },
+  "ui_button_cancel": {
+    "message": "取消"
+  },
+  "ui_button_create_progress": {
+    "message": "建立中..."
+  },
+  "ui_button_clear": {
+    "message": "清除"
+  },
+  "ui_insert_button_label": {
+    "message": "插入 Talk 連結"
+  },
+  "ui_create_title_label": {
+    "message": "標題"
+  },
+  "ui_create_add_users_label": {
+    "message": "新增使用者"
+  },
+  "ui_create_add_guests_label": {
+    "message": "新增訪客"
+  },
+  "talk_password_policy_error": {
+    "message": "密碼長度至少需要 $1 個字元。"
+  },
+  "ui_create_password_placeholder": {
+    "message": "選用"
+  },
+  "ui_password_generate_label": {
+    "message": "產生"
+  },
+  "ui_password_error_title": {
+    "message": "檢查密碼"
+  },
+  "ui_create_lobby_label": {
+    "message": "開始時間前啟用等候室"
+  },
+  "ui_create_listable_label": {
+    "message": "在搜尋中顯示"
+  },
+  "talk_option_add_users_title": {
+    "message": "👤 新增使用者"
+  },
+  "talk_option_add_users_line1": {
+    "message": "Nextcloud 內部使用者會直接加入房間"
+  },
+  "talk_option_add_users_line2": {
+    "message": "房間會立即在 Nextcloud Talk 中可見"
+  },
+  "talk_option_add_guests_title": {
+    "message": "🌍 新增訪客"
+  },
+  "talk_option_add_guests_line1": {
+    "message": "訪客也會直接加入房間"
+  },
+  "talk_option_add_guests_line2": {
+    "message": "⚠️ 他們會收到一封單獨（額外）的電子郵件，內含個人存取連結"
+  },
+  "talk_option_listable_title": {
+    "message": "🔍 在搜尋中顯示"
+  },
+  "talk_option_listable_line1": {
+    "message": "可透過 Talk 搜尋找到房間"
+  },
+  "talk_option_listable_line2": {
+    "message": "⚠️ 方便再次找到，但所有使用者都能搜尋到。"
+  },
+  "talk_option_lobby_title": {
+    "message": "🚪 開始時間前啟用等候室"
+  },
+  "talk_option_lobby_line1": {
+    "message": "開始前，參與者會進入等候室（等待區），暫時無法加入通話"
+  },
+  "talk_option_lobby_line2": {
+    "message": "⚠️ 只有在設定的開始時間之後（或主持人關閉等候室後）才能加入"
+  },
+  "talk_option_lobby_line3": {
+    "message": "適合避免有人過早進入會議／網路研討會。"
+  },
+  "ui_create_roomtype_label": {
+    "message": "房間類型"
+  },
+  "ui_create_mode_event": {
+    "message": "事件對話"
+  },
+  "ui_create_mode_standard": {
+    "message": "群組對話"
+  },
+  "talk_roomtype_group_title": {
+    "message": "🗨️ 群組對話"
+  },
+  "talk_roomtype_group_line1": {
+    "message": "長期: 直到手動刪除前都會保留"
+  },
+  "talk_roomtype_group_line2": {
+    "message": "日常使用: 適合團隊、部門、進行中的專案與重複的行程"
+  },
+  "talk_roomtype_group_line3": {
+    "message": "含歷史紀錄: 可隨時查看完整聊天記錄"
+  },
+  "talk_roomtype_event_title": {
+    "message": "📅 事件對話"
+  },
+  "talk_roomtype_event_line1": {
+    "message": "限時: 用於特定行程或場合"
+  },
+  "talk_roomtype_event_line2": {
+    "message": "輕量快速: 適合會議、訓練或網路研討會"
+  },
+  "talk_roomtype_event_line3": {
+    "message": "自動清理: 一段時間後會自動移除"
+  },
+  "ui_create_moderator_label": {
+    "message": "主持人（選用）"
+  },
+  "ui_create_moderator_hint": {
+    "message": "若設定，建立後會將主持權轉移給該使用者，且您會離開房間。"
+  },
+  "ui_delegate_selected_title": {
+    "message": "已選取"
+  },
+  "ui_delegate_selected_description": {
+    "message": "若設定，建立後會將主持權轉移給該使用者，且您會離開房間。"
+  },
+  "ui_delegate_status_searching": {
+    "message": "搜尋中..."
+  },
+  "ui_delegate_status_loading": {
+    "message": "載入使用者中..."
+  },
+  "ui_delegate_status_none_with_email": {
+    "message": "沒有符合項目。"
+  },
+  "ui_delegate_status_none_found": {
+    "message": "找不到使用者。"
+  },
+  "ui_delegate_status_single": {
+    "message": "符合 1 項。"
+  },
+  "ui_delegate_status_many": {
+    "message": "符合 $1 項。"
+  },
+  "ui_delegate_status_error": {
+    "message": "使用者搜尋失敗。"
+  },
+  "ui_create_failed": {
+    "message": "無法建立 Nextcloud Talk：\n$1\n請檢查設定。"
+  },
+  "ui_alert_pending_delegation": {
+    "message": "在儲存/寄送時會將主持權轉移給：$1。"
+  },
+  "ui_delegate_modal_title": {
+    "message": "主持權轉移"
+  },
+  "ui_default_title": {
+    "message": "會議"
+  },
+  "ui_description_heading": {
+    "message": "Nextcloud Talk"
+  },
+  "ui_description_join_label": {
+    "message": "立即加入會議："
+  },
+  "ui_description_password_line": {
+    "message": "密碼：$1"
+  },
+  "ui_description_help_label": {
+    "message": "需要協助？"
+  },
+  "ui_description_help_url": {
+    "message": "https://docs.nextcloud.com/server/latest/user_manual/en/talk/join_a_call_or_chat_as_guest.html"
+  },
+  "talk_dialog_title": {
+    "message": "Nextcloud Talk"
+  },
+  "talk_dialog_close": {
+    "message": "關閉"
+  },
+  "talk_error_context_id_missing": {
+    "message": "缺少事件內容脈絡。"
+  },
+  "talk_error_init_failed": {
+    "message": "對話框初始化失敗。"
+  },
+  "talk_error_snapshot_failed": {
+    "message": "無法讀取事件資料。"
+  },
+  "talk_error_editor_context_missing": {
+    "message": "無法識別目前正在編輯的事件。請確認事件編輯器已開啟，然後再試一次。"
+  },
+  "talk_error_create_failed": {
+    "message": "房間建立失敗。"
+  },
+  "talk_error_title_missing": {
+    "message": "請輸入標題。"
+  },
+  "talk_error_create_missing_data": {
+    "message": "缺少房間資料。"
+  },
+  "talk_error_context_reference": {
+    "message": "缺少事件內容脈絡。"
+  },
+  "talk_error_apply_failed": {
+    "message": "無法將變更套用到事件。"
+  },
+  "talk_section_settings": {
+    "message": "Talk 設定"
+  },
+  "talk_password_toggle_label": {
+    "message": "設定密碼"
+  },
+  "talk_button_create_room": {
+    "message": "建立 Talk 房間"
+  },
+  "open_url_title": {
+    "message": "開啟連結"
+  },
+  "open_url_heading": {
+    "message": "在瀏覽器中開啟連結"
+  },
+  "open_url_instructions": {
+    "message": "複製下方的 URL 並貼到預設瀏覽器中。"
+  },
+  "open_url_copy": {
+    "message": "複製 URL"
+  },
+  "open_url_close": {
+    "message": "關閉"
+  },
+  "open_url_copied": {
+    "message": "URL 已複製到剪貼簿。"
+  },
+  "open_url_copy_failed": {
+    "message": "複製失敗。請手動複製 URL。"
+  },
+  "error_credentials_missing": {
+    "message": "缺少 Nextcloud 憑證（附加元件設定）。"
+  },
+  "error_baseurl_https_required": {
+    "message": "請使用 HTTPS 的 Nextcloud URL。"
+  },
+  "error_host_permission_missing": {
+    "message": "未授予存取已設定 Nextcloud 實例的權限。"
+  },
+  "error_system_addressbook_failed": {
+    "message": "無法載入系統通訊錄：$1"
+  },
+  "error_lobby_set_failed": {
+    "message": "無法設定等候室：$1"
+  },
+  "error_lobby_set_failed_short": {
+    "message": "無法設定等候室。"
+  },
+  "error_room_create_failed": {
+    "message": "無法建立房間。"
+  },
+  "error_token_missing_in_response": {
+    "message": "OCS 回應中沒有權杖。"
+  },
+  "error_room_token_missing": {
+    "message": "缺少房間權杖。"
+  },
+  "error_room_delete_failed": {
+    "message": "無法刪除房間：$1"
+  },
+  "error_lobby_no_permission": {
+    "message": "沒有變更等候室的權限（HTTP 403）。"
+  },
+  "error_lobby_update_failed": {
+    "message": "等候室更新失敗（HTTP $1）。"
+  },
+  "error_ocs": {
+    "message": "OCS 錯誤：$1"
+  },
+  "error_token_or_actor_missing": {
+    "message": "缺少房間權杖或參與者 ID。"
+  },
+  "error_participant_add_failed": {
+    "message": "無法加入參與者：$1"
+  },
+  "error_moderator_id_missing": {
+    "message": "缺少主持人 ID。"
+  },
+  "error_moderator_set_failed": {
+    "message": "無法設定主持人：$1"
+  },
+  "error_leave_failed": {
+    "message": "離開房間失敗：$1"
+  },
+  "error_delegation_data_missing": {
+    "message": "缺少轉移資料。"
+  },
+  "error_moderator_target_missing": {
+    "message": "主持人 ID 為空。"
+  },
+  "error_participant_not_found": {
+    "message": "找不到參與者，請檢查拼字。"
+  },
+  "error_unknown_utility_request": {
+    "message": "未知的工具請求。"
+  },
+  "options_title": {
+    "message": "NC Connector for Thunderbird – 設定"
+  },
+  "options_base_url_label": {
+    "message": "Nextcloud URL"
+  },
+  "options_base_url_placeholder": {
+    "message": "https://cloud.example.com"
+  },
+  "options_user_label": {
+    "message": "使用者名稱"
+  },
+  "options_app_pass_label": {
+    "message": "應用程式密碼"
+  },
+  "options_debug_label": {
+    "message": "除錯記錄"
+  },
+  "options_debug_hint": {
+    "message": "使用主控台輸出診斷訊息"
+  },
+  "options_support_link": {
+    "message": "PayPal：捐贈"
+  },
+  "options_save_button": {
+    "message": "儲存"
+  },
+  "options_status_saved": {
+    "message": "已儲存。"
+  },
+  "options_status_save_failed": {
+    "message": "儲存失敗。"
+  },
+  "options_status_load_failed": {
+    "message": "無法載入設定。"
+  },
+  "options_test_button": {
+    "message": "測試連線"
+  },
+  "options_test_running": {
+    "message": "正在測試連線..."
+  },
+  "options_test_success": {
+    "message": "連線成功。"
+  },
+  "options_test_failed": {
+    "message": "連線失敗。"
+  },
+  "options_test_failed_auth": {
+    "message": "使用者名稱或應用程式密碼無效。"
+  },
+  "options_test_missing": {
+    "message": "請先輸入 URL、使用者名稱與應用程式密碼。"
+  },
+  "options_permission_required": {
+    "message": "要繼續，請允許存取此 Nextcloud 實例。"
+  },
+  "options_tab_general": {
+    "message": "一般"
+  },
+  "options_tab_sharing": {
+    "message": "分享"
+  },
+  "options_tab_talklink": {
+    "message": "Talk 連結"
+  },
+  "options_tab_advanced": {
+    "message": "進階"
+  },
+  "options_tab_debug": {
+    "message": "除錯"
+  },
+  "options_tab_about": {
+    "message": "關於"
+  },
+  "options_advanced_language_heading": {
+    "message": "語言覆寫"
+  },
+  "options_share_block_lang_label": {
+    "message": "分享 HTML 區塊語言"
+  },
+  "options_share_block_lang_hint": {
+    "message": "控制插入的分享 HTML 區塊語言。"
+  },
+  "options_event_description_lang_label": {
+    "message": "Talk 描述文字語言"
+  },
+  "options_event_description_lang_hint": {
+    "message": "控制事件中 Talk 文字區塊的語言。"
+  },
+  "options_lang_default": {
+    "message": "預設（UI）"
+  },
+  "options_about_version_label": {
+    "message": "版本："
+  },
+  "options_about_copyright_label": {
+    "message": "版權："
+  },
+  "options_about_license_label": {
+    "message": "授權："
+  },
+  "options_about_license_value": {
+    "message": "AGPL v3"
+  },
+  "options_about_support_note": {
+    "message": "為了讓 NC Connector for Thunderbird 能夠繼續免費維護與改進。"
+  },
+  "options_about_support_heading": {
+    "message": "支援"
+  },
+  "options_auth_heading": {
+    "message": "驗證"
+  },
+  "options_auth_manual": {
+    "message": "手動（輸入使用者名稱 + 應用程式密碼）"
+  },
+  "options_auth_login": {
+    "message": "使用 Nextcloud 登入（自動取得應用程式密碼）"
+  },
+  "options_loginflow_button": {
+    "message": "使用 Nextcloud 登入..."
+  },
+  "options_loginflow_starting": {
+    "message": "正在啟動登入流程..."
+  },
+  "options_loginflow_browser": {
+    "message": "瀏覽器已開啟。請在 Nextcloud 中確認登入..."
+  },
+  "options_loginflow_success": {
+    "message": "登入成功。應用程式密碼已複製。"
+  },
+  "options_loginflow_failed": {
+    "message": "使用 Nextcloud 登入失敗。"
+  },
+  "options_loginflow_missing": {
+    "message": "請先輸入伺服器 URL。"
+  },
+  "compose_sharing_title": {
+    "message": "新增 Nextcloud 分享"
+  },
+  "options_sharing_base_label": {
+    "message": "基礎目錄"
+  },
+  "options_sharing_base_hint": {
+    "message": "檔案會儲存在此目錄下（例如 \"90 Freigaben - extern\"）。"
+  },
+  "options_sharing_defaults_heading": {
+    "message": "預設設定"
+  },
+  "options_sharing_default_share_name_label": {
+    "message": "分享名稱"
+  },
+  "options_sharing_default_permissions_label": {
+    "message": "預設權限"
+  },
+  "options_sharing_default_perm_create": {
+    "message": "上傳/建立"
+  },
+  "options_sharing_default_perm_write": {
+    "message": "編輯"
+  },
+  "options_sharing_default_perm_delete": {
+    "message": "刪除"
+  },
+  "options_sharing_default_password_label": {
+    "message": "設定密碼"
+  },
+  "options_sharing_default_expire_days_label": {
+    "message": "有效期限（天）"
+  },
+  "options_sharing_attachments_heading": {
+    "message": "附件"
+  },
+  "options_sharing_attachments_always_label": {
+    "message": "一律透過 NC Connector 處理附件"
+  },
+  "options_sharing_attachments_offer_label": {
+    "message": "為大於下列大小的檔案提供上傳"
+  },
+  "options_sharing_attachments_offer_suffix": {
+    "message": "MB"
+  },
+  "options_talk_defaults_heading": {
+    "message": "預設設定"
+  },
+  "options_talk_default_title_label": {
+    "message": "標題"
+  },
+  "options_talk_default_lobby_label": {
+    "message": "開始時間前啟用等候室"
+  },
+  "options_talk_default_listable_label": {
+    "message": "在搜尋中顯示"
+  },
+  "options_talk_default_add_participants_label": {
+    "message": "將參與者加入房間"
+  },
+  "options_talk_default_add_users_label": {
+    "message": "使用者"
+  },
+  "options_talk_default_add_guests_label": {
+    "message": "訪客"
+  },
+  "options_talk_default_password_label": {
+    "message": "設定密碼"
+  },
+  "options_talk_default_roomtype_label": {
+    "message": "房間類型"
+  },
+  "options_talk_default_roomtype_event": {
+    "message": "事件對話"
+  },
+  "options_talk_default_roomtype_standard": {
+    "message": "群組對話"
+  },
+  "sharing_share_name_label": {
+    "message": "分享名稱"
+  },
+  "sharing_share_placeholder": {
+    "message": "例如：專案 X"
+  },
+  "sharing_share_default": {
+    "message": "分享名稱"
+  },
+  "sharing_permission_read": {
+    "message": "讀取"
+  },
+  "sharing_permission_create": {
+    "message": "上傳"
+  },
+  "sharing_permission_write": {
+    "message": "修改"
+  },
+  "sharing_permission_delete": {
+    "message": "刪除"
+  },
+  "sharing_password_toggle": {
+    "message": "設定密碼"
+  },
+  "sharing_password_generate": {
+    "message": "產生"
+  },
+  "sharing_expire_toggle": {
+    "message": "設定到期日期"
+  },
+  "sharing_note_toggle": {
+    "message": "為收件者新增備註"
+  },
+  "sharing_note_placeholder": {
+    "message": "給收件者的選用訊息"
+  },
+  "sharing_button_back": {
+    "message": "返回"
+  },
+  "sharing_button_cancel": {
+    "message": "取消"
+  },
+  "sharing_button_next": {
+    "message": "下一步"
+  },
+  "sharing_button_finish": {
+    "message": "建立分享"
+  },
+  "sharing_status_creating": {
+    "message": "正在建立公開連結..."
+  },
+  "sharing_status_error": {
+    "message": "發生錯誤。"
+  },
+  "sharing_error_insert_failed": {
+    "message": "無法將分享插入郵件。"
+  },
+  "sharing_html_password_label": {
+    "message": "密碼"
+  },
+  "sharing_html_expire_label": {
+    "message": "到期日期"
+  },
+  "sharing_html_permissions_label": {
+    "message": "您的權限"
+  },
+  "sharing_html_download_label": {
+    "message": "下載連結"
+  },
+  "sharing_html_footer": {
+    "message": "$1 是安全郵件與檔案交換的解決方案。"
+  },
+  "sharing_dialog_title": {
+    "message": "Nextcloud 分享"
+  },
+  "sharing_heading_permissions": {
+    "message": "分享設定"
+  },
+  "sharing_step_expire": {
+    "message": "到期日期"
+  },
+  "sharing_expire_hint": {
+    "message": "此日期之後，連結將不可用。"
+  },
+  "sharing_step_files_title": {
+    "message": "選擇檔案或資料夾"
+  },
+  "sharing_base_path_info": {
+    "message": "基礎目錄：$1"
+  },
+  "sharing_files_table_path": {
+    "message": "路徑"
+  },
+  "sharing_files_table_type": {
+    "message": "類型"
+  },
+  "sharing_files_table_status": {
+    "message": "狀態"
+  },
+  "sharing_button_add_files": {
+    "message": "新增檔案..."
+  },
+  "sharing_button_add_folder": {
+    "message": "新增資料夾..."
+  },
+  "sharing_button_remove": {
+    "message": "移除"
+  },
+  "sharing_button_upload": {
+    "message": "上傳"
+  },
+  "sharing_files_empty": {
+    "message": "未選擇檔案。"
+  },
+  "sharing_file_type_file": {
+    "message": "檔案"
+  },
+  "sharing_status_waiting": {
+    "message": "等待中"
+  },
+  "sharing_status_done_row": {
+    "message": "完成"
+  },
+  "sharing_status_error_row": {
+    "message": "錯誤"
+  },
+  "sharing_status_ready": {
+    "message": "上傳完成。"
+  },
+  "sharing_status_uploading_bulk": {
+    "message": "正在上傳檔案..."
+  },
+  "sharing_message_invalid_share_name": {
+    "message": "請輸入分享名稱。"
+  },
+  "sharing_message_no_files": {
+    "message": "請至少新增一個檔案。"
+  },
+  "sharing_confirm_no_files_title": {
+    "message": "不上傳也分享"
+  },
+  "sharing_confirm_no_files_message": {
+    "message": "此分享未新增任何檔案或資料夾。收件者只能上傳自己的檔案。是否繼續？"
+  },
+  "sharing_error_upload_required": {
+    "message": "繼續之前請先上傳檔案。"
+  },
+  "sharing_step_note_heading": {
+    "message": "給收件者的備註"
+  },
+  "sharing_status_inserting": {
+    "message": "正在插入 HTML 區塊..."
+  },
+  "sharing_status_checking_folder": {
+    "message": "正在檢查資料夾可用性..."
+  },
+  "sharing_error_folder_exists": {
+    "message": "已存在同名分享資料夾。請選擇其他名稱。"
+  },
+  "sharing_prompt_rename_duplicate": {
+    "message": "檔案 \"$1\" 已存在於佇列中。請輸入新名稱。"
+  },
+  "sharing_message_rename_cancelled": {
+    "message": "由於未提供替代名稱，上傳已取消。"
+  },
+  "sharing_password_policy_error": {
+    "message": "密碼至少需要 10 個字元，並包含大寫、小寫字母與特殊字元。"
+  },
+  "sharing_html_intro_line": {
+    "message": "我想安全地分享檔案並保護您的隱私。請點擊下方連結下載您的檔案。"
+  },
+  "sharing_attachment_prompt_title": {
+    "message": "附件大小超出限制"
+  },
+  "sharing_attachment_prompt_reason": {
+    "message": "附件總大小為 $1，已超過設定的限制 $2。最近新增：\"$3\"（$4）。"
+  },
+  "sharing_attachment_prompt_share": {
+    "message": "使用 NC Connector 分享"
+  },
+  "sharing_attachment_prompt_remove_last": {
+    "message": "移除最後選取的附件"
+  },
+  "sharing_attachment_prompt_last_unknown": {
+    "message": "未知附件"
+  },
+  "sharing_attachment_mode_reason_threshold": {
+    "message": "已超過附件門檻：$1 > $2。最近新增：\"$3\"（$4）。這些附件將透過 NC Connector 分享。"
+  },
+  "sharing_attachment_mode_reason_always": {
+    "message": "附件模式已啟用。所選附件將透過 NC Connector 分享。"
+  },
+  "options_sharing_attachments_lock_title": {
+    "message": "附件自動化已停用"
+  },
+  "options_sharing_attachments_lock_text": {
+    "message": "Thunderbird 的「上傳大於以下大小的檔案」選項已啟用（$1 MB）。這會與 NC Connector 的附件自動化衝突。下方附件選項已被鎖定。"
+  },
+  "options_sharing_attachments_lock_step1": {
+    "message": "開啟 Thunderbird 設定 > 撰寫 > 附件。"
+  },
+  "options_sharing_attachments_lock_step2": {
+    "message": "停用「上傳大於以下大小的檔案」。"
+  },
+  "options_sharing_attachments_lock_step3": {
+    "message": "重新開啟這些附加元件設定。"
+  },
+  "sharing_attachment_automation_locked_error": {
+    "message": "Thunderbird 的「上傳大於以下大小的檔案」選項已啟用（$1 MB）。這會與 NC Connector 的附件自動化衝突。下方附件選項已被鎖定。"
+  },
+  "options_sharing_default_password_separate_label": {
+    "message": "分開傳送密碼"
+  },
+  "sharing_password_separate_toggle": {
+    "message": "以獨立郵件傳送密碼"
+  },
+  "sharing_html_password_separate_hint": {
+    "message": "密碼將以獨立郵件傳送。"
+  },
+  "sharing_html_password_mail_intro": {
+    "message": "這是您已傳送共享連結的密碼。"
+  },
+  "sharing_password_mail_subject": {
+    "message": "共享連結密碼"
+  },
+  "sharing_password_mail_subject_with_label": {
+    "message": "共享連結密碼：$1"
+  },
+  "options_sharing_permissions_tooltip_title": {
+    "message": "🛡️ Default permissions"
+  },
+  "options_sharing_permissions_tooltip_line1": {
+    "message": "These values are used as defaults for new shares."
+  },
+  "options_sharing_permissions_tooltip_line2": {
+    "message": "They can still be adjusted in the sharing wizard."
+  },
+  "options_sharing_permissions_tooltip_line3": {
+    "message": "In attachment mode, recipient permission is always read-only."
+  },
+  "sharing_password_separate_tooltip_title": {
+    "message": "Coming soon (Pro feature)"
+  },
+  "sharing_password_separate_tooltip_line1": {
+    "message": "This option is disabled in this release."
+  },
+  "sharing_password_separate_tooltip_line2": {
+    "message": "Password delivery in a separate email will be available in a future Pro release."
+  },
+  "sharing_password_separate_tooltip_line3": {
+    "message": "For now, the password is included in the main share block."
+  },
+  "options_sharing_attachments_always_tooltip_title": {
+    "message": "📎 Always via NC Connector"
+  },
+  "options_sharing_attachments_always_tooltip_line1": {
+    "message": "New attachments are removed from the compose mail and processed via NC Connector."
+  },
+  "options_sharing_attachments_always_tooltip_line2": {
+    "message": "The sharing wizard opens directly in the file step."
+  },
+  "options_sharing_attachments_always_tooltip_line3": {
+    "message": "The final mail contains share links instead of physical attachments."
+  },
+  "options_sharing_attachments_offer_tooltip_title": {
+    "message": "📏 Attachment threshold"
+  },
+  "options_sharing_attachments_offer_tooltip_line1": {
+    "message": "The total size of all attachments is evaluated."
+  },
+  "options_sharing_attachments_offer_tooltip_line2": {
+    "message": "If exceeded, you can share via NC Connector or remove the last selected attachment batch."
+  },
+  "options_sharing_attachments_offer_tooltip_line3": {
+    "message": "The remove action returns the mail to a below-threshold state."
+  },
+  "talk_option_moderator_title": {
+    "message": "👑 Moderator delegation"
+  },
+  "talk_option_moderator_line1": {
+    "message": "The selected user is promoted after room creation."
+  },
+  "talk_option_moderator_line2": {
+    "message": "On successful delegation, the creator leaves the room."
+  },
+  "talk_option_moderator_line3": {
+    "message": "If delegation fails, room ownership remains with the creator."
+  },
+  "sharing_password_mail_notify_title": {
+    "message": "NC Connector"
+  },
+  "sharing_password_mail_notify_success": {
+    "message": "Password email sent to $1 recipient(s)."
+  },
+  "sharing_password_mail_notify_failure": {
+    "message": "Automatic password email failed for $1 recipient(s). Manual send mail was opened."
+  },
+  "sharing_password_mail_notify_manual_required": {
+    "message": "密碼郵件自動傳送失敗。請使用已開啟的草稿手動傳送密碼郵件。"
+  }
 }
+

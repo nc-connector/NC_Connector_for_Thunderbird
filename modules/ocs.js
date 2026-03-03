@@ -8,6 +8,20 @@
  */
 (function(global){
   "use strict";
+  const LOG_PREFIX = "[NCOcs]";
+
+  /**
+   * Log internal OCS helper errors.
+   * @param {string} scope
+   * @param {any} error
+   */
+  function logOcsError(scope, error){
+    try{
+      console.error(LOG_PREFIX, scope, error);
+    }catch(logError){
+      console.error(LOG_PREFIX, scope, error?.message || String(error), logError?.message || String(logError));
+    }
+  }
 
   /**
    * Build a Basic Authorization header value.
@@ -30,12 +44,16 @@
     const res = await fetch(url, { method, headers, body });
     const status = res.status;
     const statusText = res.statusText || "";
-    const raw = await res.text().catch(() => "");
+    const raw = await res.text().catch((error) => {
+      logOcsError("response read failed", error);
+      return "";
+    });
     let data = null;
     if (acceptJson){
       try{
         data = raw ? JSON.parse(raw) : null;
-      }catch(_){
+      }catch(error){
+        logOcsError("json parse failed", error);
         data = null;
       }
     }

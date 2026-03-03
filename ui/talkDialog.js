@@ -10,6 +10,7 @@
   const MIN_CONTENT_HEIGHT = 0;
   const CONTENT_MARGIN = 0;
   let layoutObserver = null;
+  let isPageUnloading = false;
   const dialogRoot = document.querySelector(".dialog");
   const popupSizer = window.NCTalkPopupSizing?.createPopupSizer({
     fixedWidth: POPUP_CONTENT_WIDTH,
@@ -50,6 +51,20 @@
   const messageBar = document.getElementById("messageBar");
   const okBtn = document.getElementById("okBtn");
   const cancelBtn = document.getElementById("cancelBtn");
+  let i18nLookupErrorLogged = false;
+
+  /**
+   * Log internal UI errors in a deterministic way.
+   * @param {string} scope
+   * @param {any} error
+   */
+  function logUiError(scope, error){
+    try{
+      console.error(LOG_PREFIX, scope, error);
+    }catch(logError){
+      console.error(LOG_PREFIX, scope, error?.message || String(error), logError?.message || String(logError));
+    }
+  }
 
   /**
    * Translate a key with optional fallback/substitutions.
@@ -72,7 +87,12 @@
       if (value){
         return value;
       }
-    }catch(_){ }
+    }catch(error){
+      if (!i18nLookupErrorLogged){
+        i18nLookupErrorLogged = true;
+        logUiError("i18n lookup failed", error);
+      }
+    }
     return fallback || "";
   };
 
@@ -97,7 +117,6 @@
       alertLabel: ""
     }
   };
-
   (async () => {
     try{
       const stored = await browser.storage.local.get(["debugEnabled"]);
@@ -105,16 +124,13 @@
       logDebug("popup init", {
         contextId: state.contextId || ""
       });
-    }catch(_){ }
+    }catch(error){
+      logUiError("debug flag init failed", error);
+    }
   })();
-  try{
-    browser.storage.onChanged.addListener((changes, area) => {
-      if (area !== "local") return;
-      if (Object.prototype.hasOwnProperty.call(changes, "debugEnabled")){
-        state.debugEnabled = !!changes.debugEnabled.newValue;
-      }
-    });
-  }catch(_){ }
+  window.addEventListener("pagehide", cleanupPageResources, true);
+  window.addEventListener("beforeunload", cleanupPageResources, true);
+  window.addEventListener("unload", cleanupPageResources, true);
 
   if (passwordInput){
     passwordInput.setAttribute("placeholder", t("ui_create_password_placeholder"));
@@ -152,6 +168,9 @@
     initDelegateField();
   }
 
+  /**
+   * Initialize the custom room-type dropdown and its keyboard/mouse handlers.
+   */
   function initRoomTypePicker(){
     if (!roomTypePicker || !roomTypeButton || !roomTypeDropdown || !roomTypeValue){
       return;
@@ -175,7 +194,9 @@
         closeRoomTypeDropdown();
         try{
           roomTypeButton.focus();
-        }catch(_){ }
+        }catch(error){
+          logUiError("room type button focus failed", error);
+        }
       });
     });
 
@@ -194,10 +215,17 @@
     setRoomTypeValue(roomTypeValue.value || "event", { closeDropdown:false });
   }
 
+  /**
+   * Return whether the room-type dropdown is currently visible.
+   * @returns {boolean}
+   */
   function isRoomTypeDropdownOpen(){
     return !!(roomTypeDropdown && roomTypeDropdown.hidden === false);
   }
 
+  /**
+   * Open the room-type dropdown.
+   */
   function openRoomTypeDropdown(){
     if (!roomTypeDropdown){
       return;
@@ -206,6 +234,9 @@
     roomTypeButton?.setAttribute("aria-expanded", "true");
   }
 
+  /**
+   * Close the room-type dropdown.
+   */
   function closeRoomTypeDropdown(){
     if (!roomTypeDropdown){
       return;
@@ -214,6 +245,9 @@
     roomTypeButton?.setAttribute("aria-expanded", "false");
   }
 
+  /**
+   * Toggle the room-type dropdown.
+   */
   function toggleRoomTypeDropdown(){
     if (isRoomTypeDropdownOpen()){
       closeRoomTypeDropdown();
@@ -222,6 +256,11 @@
     }
   }
 
+  /**
+   * Apply and render the selected room type.
+   * @param {string} value
+   * @param {{closeDropdown?:boolean}} options
+   */
   function setRoomTypeValue(value, options = {}){
     const closeDropdown = options.closeDropdown !== false;
     const normalized = value === "event" ? "event" : "normal";
@@ -259,6 +298,7 @@
       await loadPasswordPolicy();
       await loadSnapshot();
     }catch(error){
+      logUiError("init failed", error);
       setMessage(error?.message || String(error), true);
     }
   }
@@ -332,17 +372,11 @@
    * @returns {Promise<object>}
    */
   async function loadPasswordPolicy(){
-    try{
-      const response = await browser.runtime.sendMessage({ type: "passwordPolicy:fetch" });
-      if (response?.policy){
-        state.passwordPolicy = response.policy;
-      }else{
-        state.passwordPolicy = { hasPolicy:false, minLength:null, apiGenerateUrl:null, apiValidateUrl:null };
-      }
-    }catch(error){
-      console.error(LOG_PREFIX, "password policy fetch failed", error);
-      state.passwordPolicy = { hasPolicy:false, minLength:null, apiGenerateUrl:null, apiValidateUrl:null };
-    }
+    state.passwordPolicy = await NCPasswordPolicyClient.loadPolicy({
+      sendMessage: (message) => browser.runtime.sendMessage(message),
+      logger: (message, error) => logUiError(message, error),
+      logPrefix: LOG_PREFIX
+    });
     return state.passwordPolicy;
   }
 
@@ -351,8 +385,7 @@
    * @returns {number|null}
    */
   function getPolicyMinLength(){
-    const minLength = Number(state.passwordPolicy?.minLength);
-    return Number.isFinite(minLength) ? minLength : null;
+    return NCPasswordPolicyClient.getPolicyMinLength(state.passwordPolicy);
   }
 
   /**
@@ -390,43 +423,16 @@
    * @returns {Promise<string>}
    */
   async function generatePasswordFromPolicy(){
-    try{
-      const policy = state.passwordPolicy || { hasPolicy:false, minLength:null, apiGenerateUrl:null, apiValidateUrl:null };
-      if (policy?.apiGenerateUrl){
-        const response = await browser.runtime.sendMessage({
-          type: "passwordPolicy:generate",
-          payload: { policy }
-        });
-        if (response?.ok && response.password){
-          return response.password;
-        }
-      }
-    }catch(error){
-      console.error(LOG_PREFIX, "password generate failed", error);
-    }
-    const targetLength = Math.max(getPolicyMinLength() || 12, 12);
-    return NCTalkPassword.generatePassword({
-      length: targetLength,
-      requireUpper: true,
-      requireLower: true,
-      requireDigit: true,
-      requireSymbol: true
+    return NCPasswordPolicyClient.generatePassword({
+      policy: state.passwordPolicy,
+      sendMessage: (message) => browser.runtime.sendMessage(message),
+      passwordGenerator: (options) => NCTalkPassword.generatePassword(options),
+      fallbackLength: 12,
+      logger: (message, error) => logUiError(message, error),
+      logPrefix: LOG_PREFIX
     });
   }
 
-  /**
-   * Validate strong password rules for local fallback.
-   * @param {string} value
-   * @returns {boolean}
-   */
-  function isStrongPassword(value){
-    const pwd = String(value || "");
-    return pwd.length >= 12
-      && /[A-Z]/.test(pwd)
-      && /[a-z]/.test(pwd)
-      && /[0-9]/.test(pwd)
-      && /[!@#$%^&*()\-_=+\[\]{};:,.?]/.test(pwd);
-  }
   /**
    * Load the current event snapshot and populate the UI.
    * @returns {Promise<void>}
@@ -446,10 +452,17 @@
       applyDefaultsToUi(defaults, state.event, state.metadata);
       popupSizer?.scheduleSizeUpdate();
     }catch(error){
+      logUiError("load snapshot failed", error);
       setMessage(error?.message || String(error), true);
     }
   }
 
+  /**
+   * Apply default values and optional event metadata to dialog controls.
+   * @param {object} defaults
+   * @param {object|null} event
+   * @param {object|null} metadata
+   */
   function applyDefaultsToUi(defaults, event = null, metadata = null){
     const effectiveDefaults = defaults || {
       title: t("ui_default_title"),
@@ -502,7 +515,9 @@
             if (pwd && passwordInput && !passwordInput.value){
               passwordInput.value = pwd;
             }
-          }).catch(() => {});
+          }).catch((error) => {
+            logUiError("password bootstrap failed", error);
+          });
         }
       }
       hydrateDelegateFromMetadata(meta);
@@ -546,6 +561,7 @@
       await applyCreateResult(payload, response.result || {});
       window.close();
     }catch(error){
+      logUiError("handleOk failed", error);
       setMessage(error?.message || String(error), true);
       state.busy = false;
       okBtn.disabled = false;
@@ -603,7 +619,9 @@
     passwordInput.value = generated;
     try{
       passwordInput.setSelectionRange(0, generated.length);
-    }catch(_){ }
+    }catch(error){
+      logUiError("password selection range failed", error);
+    }
     passwordInput.focus();
   }
 
@@ -741,7 +759,9 @@
       });
       try{
         passwordInput.focus();
-      }catch(_){ }
+      }catch(error){
+        logUiError("password focus failed (empty)", error);
+      }
       return false;
     }
     if (minLength){
@@ -757,10 +777,12 @@
         try{
           passwordInput.focus();
           passwordInput.setSelectionRange(0, raw.length);
-        }catch(_){ }
+        }catch(error){
+          logUiError("password focus/select failed (min length)", error);
+        }
         return false;
       }
-    } else if (!isStrongPassword(trimmed)){
+    } else if (!NCPasswordPolicyClient.isStrongPassword(trimmed)){
       await showInlineModal({
         title: t("ui_password_error_title"),
         message: t("talk_password_policy_error", ["12"]),
@@ -772,7 +794,9 @@
       try{
         passwordInput.focus();
         passwordInput.setSelectionRange(0, raw.length);
-      }catch(_){ }
+      }catch(error){
+        logUiError("password focus/select failed (strength)", error);
+      }
       return false;
     }
     passwordInput.value = trimmed;
@@ -848,7 +872,9 @@
     if (buildStandard){
       try{
         parts.push(await buildStandard(url, password));
-      }catch(_){}
+      }catch(error){
+        logUiError("composeDescription buildStandard failed", error);
+      }
     }
     return parts.join("\n\n").trim();
   }
@@ -1034,6 +1060,7 @@
       renderDelegateDropdown();
     }catch(error){
       if (seq !== state.delegate.searchSeq){
+        console.error("[NCUI][Talk] delegate search failed (stale request)", error);
         return;
       }
       console.error("[NCUI][Talk] delegate search failed", error);
@@ -1188,7 +1215,9 @@
     try{
       const len = delegateInput.value.length;
       delegateInput.setSelectionRange?.(len, len);
-    }catch(_){ }
+    }catch(error){
+      logUiError("delegate selection range failed", error);
+    }
   }
 
   /**
@@ -1408,7 +1437,9 @@
           if (previousActive && typeof previousActive.focus === "function"){
             try{
               previousActive.focus();
-            }catch(_){ }
+            }catch(error){
+              logUiError("modal restore focus failed", error);
+            }
           }
           resolve(result);
         };
@@ -1465,12 +1496,17 @@
           try{
             const focusTarget = actions.querySelector("button.primary") || actions.querySelector("button");
             focusTarget?.focus();
-          }catch(_){ }
+          }catch(error){
+            logUiError("modal initial focus failed", error);
+          }
         }, 0);
-      }catch(_){
+      }catch(error){
+        logUiError("inline modal failed", error);
         try{
           window.alert?.(message);
-        }catch(__){ }
+        }catch(alertError){
+          logUiError("window.alert fallback failed", alertError);
+        }
         resolve("fallback");
       }
     });
@@ -1489,7 +1525,9 @@
         const paddingBottom = parseFloat(styles?.paddingBottom || "0") || 0;
         return Math.max(MIN_CONTENT_HEIGHT, Math.ceil(rect.height + paddingTop + paddingBottom));
       }
-    }catch(_){ }
+    }catch(error){
+      logUiError("content height measure failed", error);
+    }
     const fallback = document.documentElement?.scrollHeight || document.body?.scrollHeight || MIN_CONTENT_HEIGHT;
     return Math.max(MIN_CONTENT_HEIGHT, fallback);
   }
@@ -1508,38 +1546,50 @@
   }
 
   /**
+   * Cleanup listeners/resources when the popup page is closed.
+   */
+  function cleanupPageResources(){
+    if (isPageUnloading){
+      return;
+    }
+    isPageUnloading = true;
+    state.debugEnabled = false;
+    if (popupSizer){
+      window.removeEventListener("resize", popupSizer.scheduleSizeUpdate);
+    }
+    if (layoutObserver){
+      layoutObserver.disconnect();
+      layoutObserver = null;
+    }
+    window.removeEventListener("pagehide", cleanupPageResources, true);
+    window.removeEventListener("beforeunload", cleanupPageResources, true);
+    window.removeEventListener("unload", cleanupPageResources, true);
+  }
+
+  /**
    * Send a debug log to the console and background.
    * @param {string} label
    * @param {any} data
    */
   function logDebug(label, data){
-    if (!state.debugEnabled){
+    if (!state.debugEnabled || isPageUnloading){
       return;
     }
     const details = data || "";
     try{
       console.log(LOG_PREFIX, label, details);
-    }catch(_){}
-    try{
-      browser.runtime.sendMessage({
-        type: "debug:log",
-        payload: {
-          channel: "NCUI",
-          label: "Talk",
-          text: label,
-          details
-        }
-      }).catch(() => {});
-    }catch(_){}
+    }catch(error){
+      logUiError("debug console log failed", error);
+    }
+    NCDebugForwarder.forwardDebugLog({
+      enabled: state.debugEnabled,
+      isPageUnloading,
+      source: "talkDialog",
+      channel: "NCUI",
+      label: "Talk",
+      text: label,
+      details,
+      onError: logUiError
+    });
   }
 })();
-
-
-
-
-
-
-
-
-
-

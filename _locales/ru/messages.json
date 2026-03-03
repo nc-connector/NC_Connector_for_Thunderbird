@@ -1,331 +1,828 @@
 {
-  "extName": { "message": "NC Connector for Thunderbird" },
-  "extDescription": { "message": "Nextcloud Talk и Files бесшовно интегрированы в Thunderbird" },
-  "ui_button_ok": { "message": "OK" },
-  "ui_button_cancel": { "message": "Отмена" },
-  "ui_button_apply": { "message": "Применить" },
-  "ui_button_apply_progress": { "message": "Применение..." },
-  "ui_button_create_progress": { "message": "Создание..." },
-  "ui_button_clear": { "message": "Очистить" },
-  "ui_insert_button_label": { "message": "Вставить ссылку Talk" },
-  "ui_create_heading": { "message": "Создать публичную беседу" },
-  "ui_create_title_label": { "message": "Название" },
-  "ui_create_add_participants_label": { "message": "Добавить участников в комнату" },
-  "ui_create_add_users_label": { "message": "Добавить пользователей" },
-  "ui_create_add_guests_label": { "message": "Добавить гостей" },
-  "ui_create_password_label": { "message": "Пароль (необязательно)" },
-  "talk_password_policy_error": { "message": "Пароль должен содержать как минимум $1 символов." },
-  "ui_create_password_placeholder": { "message": "Необязательно" },
-  "ui_password_generate_label": { "message": "Сгенерировать" },
-  "ui_password_error_title": { "message": "Проверить пароль" },
-  "ui_password_error_text": { "message": "Пожалуйста, введите не менее 5 символов." },
-  "ui_create_lobby_label": { "message": "Лобби до времени начала" },
-  "ui_create_listable_label": { "message": "Показывать в поиске" },
-  "talk_option_add_users_title": { "message": "👤 Добавить пользователей" },
-  "talk_option_add_users_line1": { "message": "Внутренние пользователи Nextcloud будут добавлены в комнату напрямую" },
-  "talk_option_add_users_line2": { "message": "Комната сразу появится в Nextcloud Talk" },
-  "talk_option_add_guests_title": { "message": "🌍 Добавить гостей" },
-  "talk_option_add_guests_line1": { "message": "Гости также будут добавлены в комнату напрямую" },
-  "talk_option_add_guests_line2": { "message": "⚠️ Они получат отдельное (дополнительное) письмо с персональной ссылкой доступа" },
-  "talk_option_listable_title": { "message": "🔍 Показывать в поиске" },
-  "talk_option_listable_line1": { "message": "Комната доступна через поиск Talk" },
-  "talk_option_listable_line2": { "message": "⚠️ Упрощает повторный поиск, но комнату смогут найти все пользователи." },
-  "talk_option_lobby_title": { "message": "🚪 Лобби до времени начала" },
-  "talk_option_lobby_line1": { "message": "До начала участники попадают в лобби (зал ожидания) и пока не могут присоединиться к звонку" },
-  "talk_option_lobby_line2": { "message": "⚠️ Присоединиться можно только с указанного времени начала (или когда модератор завершит лобби)" },
-  "talk_option_lobby_line3": { "message": "Идеально, чтобы никто не зашел в встречу/вебинар слишком рано." },
-  "ui_create_roomtype_label": { "message": "Тип комнаты" },
-  "ui_create_mode_event": { "message": "Беседа события" },
-  "ui_create_mode_standard": { "message": "Групповая беседа" },
-  "ui_create_mode_event_short": { "message": "Событие" },
-  "ui_create_mode_standard_short": { "message": "Обычная" },
-  "ui_create_mode_unsupported": { "message": "Беседы событий не поддерживаются сервером." },
-  "talk_roomtype_group_title": { "message": "🗨️ Групповая беседа" },
-  "talk_roomtype_group_line1": { "message": "Постоянная: сохраняется, пока вы не удалите её вручную" },
-  "talk_roomtype_group_line2": { "message": "Для повседневной работы: идеально для команд, отделов, текущих проектов и регулярных встреч" },
-  "talk_roomtype_group_line3": { "message": "С историей: весь чат можно просмотреть в любое время" },
-  "talk_roomtype_event_title": { "message": "📅 Беседа события" },
-  "talk_roomtype_event_line1": { "message": "Ограничена по времени: для конкретной встречи или повода" },
-  "talk_roomtype_event_line2": { "message": "Спонтанная и лёгкая: подходит для совещаний, обучения или вебинаров" },
-  "talk_roomtype_event_line3": { "message": "Самоочищающаяся: автоматически удаляется через некоторое время" },
-  "ui_create_moderator_label": { "message": "Модератор (необязательно)" },
-  "ui_create_moderator_placeholder": { "message": "Введите имя пользователя" },
-  "ui_create_moderator_hint": { "message": "Если указан, модерация будет передана этому пользователю после создания, и Вы покинете комнату." },
-  "ui_delegate_selected_title": { "message": "Выбрано" },
-  "ui_delegate_selected_description": { "message": "Если указано, модерация будет передана этому пользователю после создания, и Вы покинете комнату." },
-  "ui_delegate_status_searching": { "message": "Поиск..." },
-  "ui_delegate_status_loading": { "message": "Загрузка пользователей..." },
-  "ui_delegate_status_none_with_email": { "message": "Совпадений нет." },
-  "ui_delegate_status_none_found": { "message": "Пользователи не найдены." },
-  "ui_delegate_status_single": { "message": "1 совпадение." },
-  "ui_delegate_status_many": { "message": "$1 совпадений." },
-  "ui_delegate_status_error": { "message": "Поиск пользователей не удался." },
-  "ui_create_password_short": { "message": "Пароль должен содержать как минимум 5 символов." },
-  "ui_create_send_failed": { "message": "Не удалось отправить в фоновый скрипт:\n$1" },
-  "ui_create_no_handler": { "message": "Не зарегистрирован обработчик Nextcloud Talk. Пожалуйста, перезагрузите дополнение." },
-  "ui_create_unknown_error": { "message": "Неизвестная ошибка при создании беседы." },
-  "ui_create_failed": { "message": "Не удалось создать Nextcloud Talk:\n$1\nПожалуйста, проверьте настройки." },
-  "ui_moderator_transfer_failed": { "message": "Не удалось передать права модератора." },
-  "ui_moderator_transfer_failed_with_reason": { "message": "Не удалось передать права модератора:\n$1" },
-  "ui_alert_title": { "message": "Nextcloud Talk" },
-  "ui_alert_room_created": { "message": "Комната Talk \"$1\" создана." },
-  "ui_alert_link_inserted": { "message": "Ссылка Talk вставлена:\n$1" },
-  "ui_alert_location_missing": { "message": "(Примечание: поле «Место» не было заполнено автоматически.)" },
-  "ui_alert_event_fallback": { "message": "Примечание: сервер не поддерживает беседы событий. Создана групповая беседа." },
-  "ui_alert_generic_fallback": { "message": "(Примечание: создана резервная ссылка без поддержки API.)" },
-  "ui_alert_reason": { "message": "Причина: $1" },
-  "ui_alert_pending_delegation": { "message": "Права модератора будут переданы при сохранении/отправке пользователю: $1." },
-  "ui_alert_delegation_done": { "message": "Права модератора переданы: $1." },
-  "ui_delegate_modal_title": { "message": "Передача прав модератора" },
-  "ui_alert_delegation_removed": { "message": "Вы были удалены из беседы." },
-  "ui_alert_password_protected": { "message": "Примечание: эта беседа защищена паролем." },
-  "ui_prompt_base_url": { "message": "Базовый URL Nextcloud (например, https://cloud.example.com):" },
-  "ui_prompt_title": { "message": "Название новой публичной беседы:" },
-  "ui_default_title": { "message": "Встреча" },
-  "ui_description_heading": { "message": "Nextcloud Talk" },
-  "ui_description_join_label": { "message": "Присоединяйтесь к встрече прямо сейчас:" },
-  "ui_description_password_line": { "message": "Пароль: $1" },
-  "ui_description_help_label": { "message": "Нужна помощь?" },
-  "ui_description_help_url": { "message": "https://docs.nextcloud.com/server/latest/user_manual/en/talk/join_a_call_or_chat_as_guest.html" },
-  "talk_dialog_title": { "message": "Nextcloud Talk" },
-  "talk_dialog_heading": { "message": "Nextcloud Talk" },
-  "talk_dialog_placeholder": { "message": "Этот автономный интерфейс находится в разработке. Пожалуйста, продолжайте использовать встроенный диалог Talk, пока миграция не будет завершена." },
-  "talk_dialog_close": { "message": "Закрыть" },
-  "talk_dialog_missing_window": { "message": "Не удалось определить контекст окна календаря." },
-  "talk_dialog_ready": { "message": "Диалог инициализирован." },
-  "talk_error_window_id_missing": { "message": "Отсутствует ссылка на окно." },
-  "talk_error_context_id_missing": { "message": "Отсутствует контекст события." },
-  "talk_error_init_failed": { "message": "Не удалось инициализировать диалог." },
-  "talk_error_snapshot_failed": { "message": "Не удалось прочитать данные события." },
-  "talk_status_loading_event": { "message": "Загрузка события из редактора…" },
-  "talk_error_editor_context_missing": { "message": "Не удалось определить текущее редактируемое событие. Пожалуйста, убедитесь, что редактор события открыт, и попробуйте снова." },
-  "talk_error_create_failed": { "message": "Не удалось создать комнату." },
-  "talk_error_title_missing": { "message": "Пожалуйста, введите название." },
-  "talk_error_create_missing_data": { "message": "Отсутствуют данные комнаты." },
-  "talk_error_window_reference": { "message": "Отсутствует ссылка на окно." },
-  "talk_error_context_reference": { "message": "Отсутствует контекст события." },
-  "talk_error_apply_failed": { "message": "Не удалось применить изменения к событию." },
-  "talk_section_event": { "message": "Событие" },
-  "talk_field_start": { "message": "Начало" },
-  "talk_field_end": { "message": "Конец" },
-  "talk_field_location": { "message": "Место" },
-  "talk_field_description": { "message": "Описание" },
-  "talk_section_settings": { "message": "Настройки Talk" },
-  "talk_section_room": { "message": "Комната Talk" },
-  "talk_field_token": { "message": "Токен" },
-  "talk_field_url": { "message": "Ссылка" },
-  "talk_field_lobby": { "message": "Лобби" },
-  "talk_field_start_epoch": { "message": "Метка времени начала" },
-  "talk_password_toggle_label": { "message": "Установить пароль" },
-  "talk_dialog_legacy": { "message": "Открыть старый диалог" },
-  "talk_button_apply_fields": { "message": "Применить поля" },
-  "talk_button_create_room": { "message": "Создать комнату Talk" },
-  "talk_dialog_fields_saved": { "message": "Поля обновлены." },
-  "talk_dialog_fields_error": { "message": "Не удалось обновить поля." },
-  "open_url_title": { "message": "Открыть ссылку" },
-  "open_url_heading": { "message": "Открыть ссылку в браузере" },
-  "open_url_instructions": { "message": "Скопируйте URL ниже и вставьте его в браузер по умолчанию." },
-  "open_url_copy": { "message": "Скопировать URL" },
-  "open_url_close": { "message": "Закрыть" },
-  "open_url_copied": { "message": "URL скопирован в буфер обмена." },
-  "open_url_copy_failed": { "message": "Не удалось скопировать. Пожалуйста, скопируйте URL вручную." },
-  "talk_value_enabled": { "message": "Включено" },
-  "talk_value_disabled": { "message": "Отключено" },
-  "ui_toolbar_tooltip": { "message": "Nextcloud Talk" },
-  "error_canvas_support_missing": { "message": "Отсутствует поддержка canvas." },
-  "error_invalid_base64_length": { "message": "Неверная длина Base64." },
-  "error_invalid_base64_data": { "message": "Неверные данные Base64." },
-  "error_avatar_load_failed": { "message": "Не удалось загрузить аватар." },
-
-  "error_avatar_data_missing": { "message": "Данные аватара отсутствуют." },
-  "error_canvas_context_missing": { "message": "Контекст canvas недоступен." },
-  "error_image_decode_failed": { "message": "Не удалось декодировать изображение." },
-  "error_image_size_unknown": { "message": "Не удалось определить размер изображения." },
-  "error_image_load_failed": { "message": "Не удалось загрузить изображение." },
-  "error_pixel_data_missing": { "message": "Данные пикселей недоступны." },
-  "error_credentials_missing": { "message": "Отсутствуют учетные данные Nextcloud (настройки дополнения)." },
-  "error_host_permission_missing": { "message": "Доступ к настроенному экземпляру Nextcloud не предоставлен." },
-  "error_system_addressbook_failed": { "message": "Не удалось загрузить системную адресную книгу: $1" },
-  "error_lobby_set_failed": { "message": "Не удалось установить лобби: $1" },
-  "error_lobby_set_failed_short": { "message": "Не удалось установить лобби." },
-  "error_room_create_failed": { "message": "Не удалось создать комнату." },
-  "error_token_missing_in_response": { "message": "В ответе OCS нет токена." },
-  "error_room_token_missing": { "message": "Токен комнаты отсутствует." },
-  "error_room_delete_failed": { "message": "Не удалось удалить комнату: $1" },
-  "error_lobby_no_permission": { "message": "Нет прав для изменения лобби (HTTP 403)." },
-  "error_lobby_update_failed": { "message": "Обновление лобби не удалось (HTTP $1)." },
-  "error_ocs": { "message": "Ошибка OCS: $1" },
-  "error_token_or_actor_missing": { "message": "Отсутствует токен комнаты или идентификатор участника." },
-  "error_participant_add_failed": { "message": "Не удалось добавить участника: $1" },
-  "error_moderator_id_missing": { "message": "Отсутствует идентификатор модератора." },
-  "error_moderator_set_failed": { "message": "Не удалось назначить модератора: $1" },
-  "error_leave_failed": { "message": "Не удалось покинуть комнату: $1" },
-  "error_delegation_data_missing": { "message": "Данные делегирования отсутствуют." },
-  "error_moderator_target_missing": { "message": "Идентификатор модератора пуст." },
-  "error_participant_not_found": { "message": "Участник не найден, проверьте написание." },
-  "error_users_load_failed": { "message": "Не удалось загрузить пользователей." },
-  "error_unknown_utility_request": { "message": "Неизвестный служебный запрос." },
-  "options_title": { "message": "NC Connector for Thunderbird – Настройки" },
-  "options_heading": { "message": "NC Connector for Thunderbird – Настройки" },
-  "options_base_url_label": { "message": "URL Nextcloud" },
-  "options_base_url_placeholder": { "message": "https://cloud.example.com" },
-  "options_user_label": { "message": "Имя пользователя" },
-  "options_app_pass_label": { "message": "Пароль приложения" },
-  "options_debug_label": { "message": "Отладочное журналирование" },
-  "options_debug_hint": { "message": "Используйте консоль для диагностических сообщений" },
-  "options_support_link": { "message": "PayPal: Пожертвовать" },
-  "options_save_button": { "message": "Сохранить" },
-  "options_status_saved": { "message": "Сохранено." },
-  "options_status_save_failed": { "message": "Не удалось сохранить." },
-  "options_status_load_failed": { "message": "Не удалось загрузить настройки." },
-  "options_test_button": { "message": "Проверить соединение" },
-  "options_test_running": { "message": "Проверка соединения..." },
-  "options_test_success": { "message": "Соединение успешно." },
-  "options_test_failed": { "message": "Соединение не удалось." },
-  "options_test_failed_auth": { "message": "Имя пользователя или пароль приложения неверны." },
-  "options_test_missing": { "message": "Сначала введите URL, имя пользователя и пароль приложения." },
-  "options_permission_required": { "message": "Чтобы продолжить, разрешите доступ к этому экземпляру Nextcloud." },
-  "options_tab_general": { "message": "Общие" },
-  "options_tab_sharing": { "message": "Общий доступ" },
-  "options_tab_talklink": { "message": "Ссылка Talk" },
-  "options_tab_advanced": { "message": "Дополнительно" },
-  "options_tab_debug": { "message": "Отладка" },
-  "options_tab_about": { "message": "О программе" },
-  "options_placeholder_sharing": { "message": "Конфигурация скоро будет доступна." },
-  "options_placeholder_advanced": { "message": "Настройки скоро будут доступны." },
-  "options_advanced_language_heading": { "message": "Переопределение языка" },
-  "options_share_block_lang_label": { "message": "Язык HTML-блока для общего доступа" },
-  "options_share_block_lang_hint": { "message": "Определяет язык вставляемого HTML-блока для общего доступа." },
-  "options_event_description_lang_label": { "message": "Язык текста описания Talk" },
-  "options_event_description_lang_hint": { "message": "Определяет язык текстового блока Talk в событиях." },
-  "options_lang_default": { "message": "По умолчанию (UI)" },
-  "options_lang_en": { "message": "Английский" },
-  "options_lang_de": { "message": "Немецкий" },
-  "options_lang_fr": { "message": "Французский" },
-  "options_about_version_label": { "message": "Версия:" },
-  "options_about_copyright_label": { "message": "Авторские права:" },
-  "options_about_license_label": { "message": "Лицензия:" },
-  "options_about_license_value": { "message": "AGPL v3" },
-  "options_about_support_note": { "message": "Чтобы NC Connector for Thunderbird и дальше мог бесплатно поддерживаться и улучшаться." },
-  "options_about_support_heading": { "message": "Поддержка" },
-  "options_auth_heading": { "message": "Аутентификация" },
-  "options_auth_manual": { "message": "Вручную (имя пользователя + пароль приложения)" },
-  "options_auth_login": { "message": "Войти через Nextcloud (автоматически получить пароль приложения)" },
-  "options_loginflow_button": { "message": "Войти через Nextcloud..." },
-  "options_loginflow_starting": { "message": "Запуск процесса входа..." },
-  "options_loginflow_browser": { "message": "Браузер открыт. Пожалуйста, подтвердите вход в Nextcloud..." },
-  "options_loginflow_success": { "message": "Вход выполнен. Пароль приложения скопирован." },
-  "options_loginflow_failed": { "message": "Не удалось войти через Nextcloud." },
-  "options_loginflow_missing": { "message": "Сначала введите URL сервера." },
-  "compose_sharing_title": { "message": "Добавить общий доступ Nextcloud" },
-  "options_sharing_base_label": { "message": "Базовый каталог" },
-  "options_sharing_base_hint": { "message": "Файлы будут храниться в этом каталоге (например, \"90 Freigaben - extern\")." },
-  "options_sharing_defaults_heading": { "message": "Настройки по умолчанию" },
-  "options_sharing_default_share_name_label": { "message": "Название общего доступа" },
-  "options_sharing_default_permissions_label": { "message": "Права по умолчанию" },
-  "options_sharing_default_perm_create": { "message": "Загрузка/Создание" },
-  "options_sharing_default_perm_write": { "message": "Редактирование" },
-  "options_sharing_default_perm_delete": { "message": "Удаление" },
-  "options_sharing_default_password_label": { "message": "Установить пароль" },
-  "options_sharing_default_expire_days_label": { "message": "Срок действия (дни)" },
-  "options_talk_defaults_heading": { "message": "Настройки по умолчанию" },
-  "options_talk_default_title_label": { "message": "Название" },
-  "options_talk_default_lobby_label": { "message": "Лобби до времени начала" },
-  "options_talk_default_listable_label": { "message": "Показывать в поиске" },
-  "options_talk_default_add_participants_label": { "message": "Добавить участников в комнату" },
-  "options_talk_default_add_users_label": { "message": "Пользователи" },
-  "options_talk_default_add_guests_label": { "message": "Гости" },
-  "options_talk_default_password_label": { "message": "Установить пароль" },
-  "options_talk_default_roomtype_label": { "message": "Тип комнаты" },
-  "options_talk_default_roomtype_event": { "message": "Беседа события" },
-  "options_talk_default_roomtype_standard": { "message": "Групповая беседа" },
-  "sharing_wizard_title": { "message": "Общий доступ Nextcloud" },
-  "sharing_header_hint": { "message": "NC Connector for Thunderbird" },
-  "sharing_step_general": { "message": "Общий доступ" },
-  "sharing_share_name_label": { "message": "Название общего доступа" },
-  "sharing_share_placeholder": { "message": "например, Проект X" },
-  "sharing_share_default": { "message": "Название общего доступа" },
-  "sharing_base_path_label": { "message": "Базовый каталог" },
-  "sharing_base_path_hint": { "message": "Файлы будут храниться в этом каталоге." },
-  "sharing_allow_upload_label": { "message": "Получатели могут загружать свои файлы" },
-  "sharing_step_security": { "message": "Права доступа" },
-  "sharing_permission_read": { "message": "Чтение" },
-  "sharing_permission_create": { "message": "Загрузка" },
-  "sharing_permission_write": { "message": "Изменение" },
-  "sharing_permission_delete": { "message": "Удаление" },
-  "sharing_password_toggle": { "message": "Установить пароль" },
-  "sharing_password_label": { "message": "Пароль" },
-  "sharing_password_generate": { "message": "Сгенерировать" },
-  "sharing_expire_toggle": { "message": "Установить дату окончания" },
-  "sharing_expire_label": { "message": "Дата окончания" },
-  "sharing_step_files": { "message": "Файлы" },
-  "sharing_files_hint": { "message": "Добавьте файлы или папки, которые нужно загрузить." },
-  "sharing_add_files": { "message": "Выбрать файлы..." },
-  "sharing_clear_files": { "message": "Очистить список" },
-  "sharing_allow_empty_label": { "message": "Продолжить без файлов (поделиться только папкой загрузки)" },
-  "sharing_step_note": { "message": "Примечание и завершение" },
-  "sharing_note_toggle": { "message": "Добавить примечание для получателей" },
-  "sharing_note_label": { "message": "Примечание" },
-  "sharing_note_placeholder": { "message": "Необязательное сообщение для получателей" },
-  "sharing_summary_share": { "message": "Название общего доступа" },
-  "sharing_summary_folder": { "message": "Папка" },
-  "sharing_summary_permissions": { "message": "Права доступа" },
-  "sharing_progress_label": { "message": "Создание общего доступа..." },
-  "sharing_button_back": { "message": "Назад" },
-  "sharing_button_cancel": { "message": "Отмена" },
-  "sharing_button_next": { "message": "Далее" },
-  "sharing_button_finish": { "message": "Создать общий доступ" },
-  "sharing_status_preparing": { "message": "Подготовка загрузки..." },
-  "sharing_status_uploading": { "message": "Загрузка $3 ($1 / $2)..." },
-  "sharing_status_creating": { "message": "Создание публичной ссылки..." },
-  "sharing_status_done": { "message": "Общий доступ успешно вставлен." },
-  "sharing_status_error": { "message": "Произошла ошибка." },
-  "sharing_error_share_name": { "message": "Пожалуйста, введите название общего доступа." },
-  "sharing_error_password_missing": { "message": "Пожалуйста, введите пароль." },
-  "sharing_error_expire_missing": { "message": "Пожалуйста, выберите дату окончания." },
-  "sharing_error_no_files": { "message": "Пожалуйста, добавьте хотя бы один файл или включите опцию продолжить без файлов." },
-  "sharing_error_missing_config": { "message": "Не удалось определить окно создания письма." },
-  "sharing_error_insert_failed": { "message": "Не удалось вставить общий доступ в сообщение." },
-  "sharing_html_intro": { "message": "Я хочу безопасно поделиться файлами и защитить Вашу конфиденциальность. Нажмите на ссылку ниже, чтобы скачать файлы." },
-  "sharing_html_password_label": { "message": "Пароль" },
-  "sharing_html_expire_label": { "message": "Дата окончания" },
-  "sharing_html_permissions_label": { "message": "Ваши права" },
-  "sharing_html_download_label": { "message": "Ссылка для скачивания" },
-  "sharing_html_footer": { "message": "$1 — решение для безопасной почты и обмена файлами." },
-  "sharing_dialog_title": { "message": "Общий доступ Nextcloud" },
-  "sharing_heading_permissions": { "message": "Настройки общего доступа" },
-  "sharing_step_expire": { "message": "Дата окончания" },
-  "sharing_expire_hint": { "message": "После этой даты ссылка будет недоступна." },
-  "sharing_step_files_title": { "message": "Выберите файлы или папки" },
-  "sharing_base_path_info": { "message": "Базовый каталог: $1" },
-  "sharing_files_table_path": { "message": "Путь" },
-  "sharing_files_table_type": { "message": "Тип" },
-  "sharing_files_table_status": { "message": "Статус" },
-  "sharing_button_add_files": { "message": "Добавить файлы..." },
-  "sharing_button_add_folder": { "message": "Добавить папку..." },
-  "sharing_button_remove": { "message": "Удалить" },
-  "sharing_button_upload": { "message": "Загрузить" },
-  "sharing_files_empty": { "message": "Файлы не выбраны." },
-  "sharing_file_type_file": { "message": "Файл" },
-  "sharing_file_type_folder": { "message": "Папка" },
-  "sharing_status_waiting": { "message": "Ожидание" },
-  "sharing_status_done_row": { "message": "Готово" },
-  "sharing_status_error_row": { "message": "Ошибка" },
-  "sharing_status_ready": { "message": "Загрузка завершена." },
-  "sharing_status_uploading_bulk": { "message": "Загрузка файлов..." },
-  "sharing_message_invalid_share_name": { "message": "Пожалуйста, введите название общего доступа." },
-  "sharing_message_no_files": { "message": "Пожалуйста, добавьте хотя бы один файл." },
-  "sharing_confirm_no_files_title": { "message": "Общий доступ без загрузки" },
-  "sharing_confirm_no_files_message": { "message": "В этот общий доступ не были добавлены файлы или папки. Получатели смогут загружать только свои файлы. Хотите продолжить?" },
-  "sharing_error_upload_required": { "message": "Пожалуйста, загрузите файлы перед продолжением." },
-  "sharing_step_note_heading": { "message": "Примечание получателю" },
-  "sharing_status_inserting": { "message": "Вставка HTML-блока..." },
-  "sharing_status_checking_folder": { "message": "Проверка доступности папки..." },
-  "sharing_error_folder_exists": { "message": "Папка для общего доступа с таким именем уже существует. Пожалуйста, выберите другое имя." },
-  "sharing_prompt_rename_duplicate": { "message": "Файл \"$1\" уже существует в очереди. Пожалуйста, введите новое имя." },
-  "sharing_prompt_rename_existing": { "message": "Файл \"$1\" уже существует на сервере. Пожалуйста, введите новое имя." },
-  "sharing_message_rename_cancelled": { "message": "Загрузка отменена, потому что не было указано новое имя." },
-  "sharing_password_policy_error": { "message": "Пароль должен содержать как минимум 10 символов, включая заглавные и строчные буквы, а также специальный символ." },
-  "sharing_html_intro_line": { "message": "Я хочу безопасно поделиться файлами и защитить Вашу конфиденциальность. Нажмите на ссылку ниже, чтобы скачать файлы." },
-  "sharing_html_footer_line": { "message": "Nextcloud — решение для безопасной электронной почты и обмена данными." }
+  "extName": {
+    "message": "NC Connector for Thunderbird"
+  },
+  "extDescription": {
+    "message": "Nextcloud Talk и Files бесшовно интегрированы в Thunderbird"
+  },
+  "ui_button_ok": {
+    "message": "OK"
+  },
+  "ui_button_cancel": {
+    "message": "Отмена"
+  },
+  "ui_button_create_progress": {
+    "message": "Создание..."
+  },
+  "ui_button_clear": {
+    "message": "Очистить"
+  },
+  "ui_insert_button_label": {
+    "message": "Вставить ссылку Talk"
+  },
+  "ui_create_title_label": {
+    "message": "Название"
+  },
+  "ui_create_add_users_label": {
+    "message": "Добавить пользователей"
+  },
+  "ui_create_add_guests_label": {
+    "message": "Добавить гостей"
+  },
+  "talk_password_policy_error": {
+    "message": "Пароль должен содержать как минимум $1 символов."
+  },
+  "ui_create_password_placeholder": {
+    "message": "Необязательно"
+  },
+  "ui_password_generate_label": {
+    "message": "Сгенерировать"
+  },
+  "ui_password_error_title": {
+    "message": "Проверить пароль"
+  },
+  "ui_create_lobby_label": {
+    "message": "Лобби до времени начала"
+  },
+  "ui_create_listable_label": {
+    "message": "Показывать в поиске"
+  },
+  "talk_option_add_users_title": {
+    "message": "👤 Добавить пользователей"
+  },
+  "talk_option_add_users_line1": {
+    "message": "Внутренние пользователи Nextcloud будут добавлены в комнату напрямую"
+  },
+  "talk_option_add_users_line2": {
+    "message": "Комната сразу появится в Nextcloud Talk"
+  },
+  "talk_option_add_guests_title": {
+    "message": "🌍 Добавить гостей"
+  },
+  "talk_option_add_guests_line1": {
+    "message": "Гости также будут добавлены в комнату напрямую"
+  },
+  "talk_option_add_guests_line2": {
+    "message": "⚠️ Они получат отдельное (дополнительное) письмо с персональной ссылкой доступа"
+  },
+  "talk_option_listable_title": {
+    "message": "🔍 Показывать в поиске"
+  },
+  "talk_option_listable_line1": {
+    "message": "Комната доступна через поиск Talk"
+  },
+  "talk_option_listable_line2": {
+    "message": "⚠️ Упрощает повторный поиск, но комнату смогут найти все пользователи."
+  },
+  "talk_option_lobby_title": {
+    "message": "🚪 Лобби до времени начала"
+  },
+  "talk_option_lobby_line1": {
+    "message": "До начала участники попадают в лобби (зал ожидания) и пока не могут присоединиться к звонку"
+  },
+  "talk_option_lobby_line2": {
+    "message": "⚠️ Присоединиться можно только с указанного времени начала (или когда модератор завершит лобби)"
+  },
+  "talk_option_lobby_line3": {
+    "message": "Идеально, чтобы никто не зашел в встречу/вебинар слишком рано."
+  },
+  "ui_create_roomtype_label": {
+    "message": "Тип комнаты"
+  },
+  "ui_create_mode_event": {
+    "message": "Беседа события"
+  },
+  "ui_create_mode_standard": {
+    "message": "Групповая беседа"
+  },
+  "talk_roomtype_group_title": {
+    "message": "🗨️ Групповая беседа"
+  },
+  "talk_roomtype_group_line1": {
+    "message": "Постоянная: сохраняется, пока вы не удалите её вручную"
+  },
+  "talk_roomtype_group_line2": {
+    "message": "Для повседневной работы: идеально для команд, отделов, текущих проектов и регулярных встреч"
+  },
+  "talk_roomtype_group_line3": {
+    "message": "С историей: весь чат можно просмотреть в любое время"
+  },
+  "talk_roomtype_event_title": {
+    "message": "📅 Беседа события"
+  },
+  "talk_roomtype_event_line1": {
+    "message": "Ограничена по времени: для конкретной встречи или повода"
+  },
+  "talk_roomtype_event_line2": {
+    "message": "Спонтанная и лёгкая: подходит для совещаний, обучения или вебинаров"
+  },
+  "talk_roomtype_event_line3": {
+    "message": "Самоочищающаяся: автоматически удаляется через некоторое время"
+  },
+  "ui_create_moderator_label": {
+    "message": "Модератор (необязательно)"
+  },
+  "ui_create_moderator_hint": {
+    "message": "Если указан, модерация будет передана этому пользователю после создания, и Вы покинете комнату."
+  },
+  "ui_delegate_selected_title": {
+    "message": "Выбрано"
+  },
+  "ui_delegate_selected_description": {
+    "message": "Если указано, модерация будет передана этому пользователю после создания, и Вы покинете комнату."
+  },
+  "ui_delegate_status_searching": {
+    "message": "Поиск..."
+  },
+  "ui_delegate_status_loading": {
+    "message": "Загрузка пользователей..."
+  },
+  "ui_delegate_status_none_with_email": {
+    "message": "Совпадений нет."
+  },
+  "ui_delegate_status_none_found": {
+    "message": "Пользователи не найдены."
+  },
+  "ui_delegate_status_single": {
+    "message": "1 совпадение."
+  },
+  "ui_delegate_status_many": {
+    "message": "$1 совпадений."
+  },
+  "ui_delegate_status_error": {
+    "message": "Поиск пользователей не удался."
+  },
+  "ui_create_failed": {
+    "message": "Не удалось создать Nextcloud Talk:\n$1\nПожалуйста, проверьте настройки."
+  },
+  "ui_alert_pending_delegation": {
+    "message": "Права модератора будут переданы при сохранении/отправке пользователю: $1."
+  },
+  "ui_delegate_modal_title": {
+    "message": "Передача прав модератора"
+  },
+  "ui_default_title": {
+    "message": "Встреча"
+  },
+  "ui_description_heading": {
+    "message": "Nextcloud Talk"
+  },
+  "ui_description_join_label": {
+    "message": "Присоединяйтесь к встрече прямо сейчас:"
+  },
+  "ui_description_password_line": {
+    "message": "Пароль: $1"
+  },
+  "ui_description_help_label": {
+    "message": "Нужна помощь?"
+  },
+  "ui_description_help_url": {
+    "message": "https://docs.nextcloud.com/server/latest/user_manual/en/talk/join_a_call_or_chat_as_guest.html"
+  },
+  "talk_dialog_title": {
+    "message": "Nextcloud Talk"
+  },
+  "talk_dialog_close": {
+    "message": "Закрыть"
+  },
+  "talk_error_context_id_missing": {
+    "message": "Отсутствует контекст события."
+  },
+  "talk_error_init_failed": {
+    "message": "Не удалось инициализировать диалог."
+  },
+  "talk_error_snapshot_failed": {
+    "message": "Не удалось прочитать данные события."
+  },
+  "talk_error_editor_context_missing": {
+    "message": "Не удалось определить текущее редактируемое событие. Пожалуйста, убедитесь, что редактор события открыт, и попробуйте снова."
+  },
+  "talk_error_create_failed": {
+    "message": "Не удалось создать комнату."
+  },
+  "talk_error_title_missing": {
+    "message": "Пожалуйста, введите название."
+  },
+  "talk_error_create_missing_data": {
+    "message": "Отсутствуют данные комнаты."
+  },
+  "talk_error_context_reference": {
+    "message": "Отсутствует контекст события."
+  },
+  "talk_error_apply_failed": {
+    "message": "Не удалось применить изменения к событию."
+  },
+  "talk_section_settings": {
+    "message": "Настройки Talk"
+  },
+  "talk_password_toggle_label": {
+    "message": "Установить пароль"
+  },
+  "talk_button_create_room": {
+    "message": "Создать комнату Talk"
+  },
+  "open_url_title": {
+    "message": "Открыть ссылку"
+  },
+  "open_url_heading": {
+    "message": "Открыть ссылку в браузере"
+  },
+  "open_url_instructions": {
+    "message": "Скопируйте URL ниже и вставьте его в браузер по умолчанию."
+  },
+  "open_url_copy": {
+    "message": "Скопировать URL"
+  },
+  "open_url_close": {
+    "message": "Закрыть"
+  },
+  "open_url_copied": {
+    "message": "URL скопирован в буфер обмена."
+  },
+  "open_url_copy_failed": {
+    "message": "Не удалось скопировать. Пожалуйста, скопируйте URL вручную."
+  },
+  "error_credentials_missing": {
+    "message": "Отсутствуют учетные данные Nextcloud (настройки дополнения)."
+  },
+  "error_baseurl_https_required": {
+    "message": "Используйте URL Nextcloud с HTTPS."
+  },
+  "error_host_permission_missing": {
+    "message": "Доступ к настроенному экземпляру Nextcloud не предоставлен."
+  },
+  "error_system_addressbook_failed": {
+    "message": "Не удалось загрузить системную адресную книгу: $1"
+  },
+  "error_lobby_set_failed": {
+    "message": "Не удалось установить лобби: $1"
+  },
+  "error_lobby_set_failed_short": {
+    "message": "Не удалось установить лобби."
+  },
+  "error_room_create_failed": {
+    "message": "Не удалось создать комнату."
+  },
+  "error_token_missing_in_response": {
+    "message": "В ответе OCS нет токена."
+  },
+  "error_room_token_missing": {
+    "message": "Токен комнаты отсутствует."
+  },
+  "error_room_delete_failed": {
+    "message": "Не удалось удалить комнату: $1"
+  },
+  "error_lobby_no_permission": {
+    "message": "Нет прав для изменения лобби (HTTP 403)."
+  },
+  "error_lobby_update_failed": {
+    "message": "Обновление лобби не удалось (HTTP $1)."
+  },
+  "error_ocs": {
+    "message": "Ошибка OCS: $1"
+  },
+  "error_token_or_actor_missing": {
+    "message": "Отсутствует токен комнаты или идентификатор участника."
+  },
+  "error_participant_add_failed": {
+    "message": "Не удалось добавить участника: $1"
+  },
+  "error_moderator_id_missing": {
+    "message": "Отсутствует идентификатор модератора."
+  },
+  "error_moderator_set_failed": {
+    "message": "Не удалось назначить модератора: $1"
+  },
+  "error_leave_failed": {
+    "message": "Не удалось покинуть комнату: $1"
+  },
+  "error_delegation_data_missing": {
+    "message": "Данные делегирования отсутствуют."
+  },
+  "error_moderator_target_missing": {
+    "message": "Идентификатор модератора пуст."
+  },
+  "error_participant_not_found": {
+    "message": "Участник не найден, проверьте написание."
+  },
+  "error_unknown_utility_request": {
+    "message": "Неизвестный служебный запрос."
+  },
+  "options_title": {
+    "message": "NC Connector for Thunderbird – Настройки"
+  },
+  "options_base_url_label": {
+    "message": "URL Nextcloud"
+  },
+  "options_base_url_placeholder": {
+    "message": "https://cloud.example.com"
+  },
+  "options_user_label": {
+    "message": "Имя пользователя"
+  },
+  "options_app_pass_label": {
+    "message": "Пароль приложения"
+  },
+  "options_debug_label": {
+    "message": "Отладочное журналирование"
+  },
+  "options_debug_hint": {
+    "message": "Используйте консоль для диагностических сообщений"
+  },
+  "options_support_link": {
+    "message": "PayPal: Пожертвовать"
+  },
+  "options_save_button": {
+    "message": "Сохранить"
+  },
+  "options_status_saved": {
+    "message": "Сохранено."
+  },
+  "options_status_save_failed": {
+    "message": "Не удалось сохранить."
+  },
+  "options_status_load_failed": {
+    "message": "Не удалось загрузить настройки."
+  },
+  "options_test_button": {
+    "message": "Проверить соединение"
+  },
+  "options_test_running": {
+    "message": "Проверка соединения..."
+  },
+  "options_test_success": {
+    "message": "Соединение успешно."
+  },
+  "options_test_failed": {
+    "message": "Соединение не удалось."
+  },
+  "options_test_failed_auth": {
+    "message": "Имя пользователя или пароль приложения неверны."
+  },
+  "options_test_missing": {
+    "message": "Сначала введите URL, имя пользователя и пароль приложения."
+  },
+  "options_permission_required": {
+    "message": "Чтобы продолжить, разрешите доступ к этому экземпляру Nextcloud."
+  },
+  "options_tab_general": {
+    "message": "Общие"
+  },
+  "options_tab_sharing": {
+    "message": "Общий доступ"
+  },
+  "options_tab_talklink": {
+    "message": "Ссылка Talk"
+  },
+  "options_tab_advanced": {
+    "message": "Дополнительно"
+  },
+  "options_tab_debug": {
+    "message": "Отладка"
+  },
+  "options_tab_about": {
+    "message": "О программе"
+  },
+  "options_advanced_language_heading": {
+    "message": "Переопределение языка"
+  },
+  "options_share_block_lang_label": {
+    "message": "Язык HTML-блока для общего доступа"
+  },
+  "options_share_block_lang_hint": {
+    "message": "Определяет язык вставляемого HTML-блока для общего доступа."
+  },
+  "options_event_description_lang_label": {
+    "message": "Язык текста описания Talk"
+  },
+  "options_event_description_lang_hint": {
+    "message": "Определяет язык текстового блока Talk в событиях."
+  },
+  "options_lang_default": {
+    "message": "По умолчанию (UI)"
+  },
+  "options_about_version_label": {
+    "message": "Версия:"
+  },
+  "options_about_copyright_label": {
+    "message": "Авторские права:"
+  },
+  "options_about_license_label": {
+    "message": "Лицензия:"
+  },
+  "options_about_license_value": {
+    "message": "AGPL v3"
+  },
+  "options_about_support_note": {
+    "message": "Чтобы NC Connector for Thunderbird и дальше мог бесплатно поддерживаться и улучшаться."
+  },
+  "options_about_support_heading": {
+    "message": "Поддержка"
+  },
+  "options_auth_heading": {
+    "message": "Аутентификация"
+  },
+  "options_auth_manual": {
+    "message": "Вручную (имя пользователя + пароль приложения)"
+  },
+  "options_auth_login": {
+    "message": "Войти через Nextcloud (автоматически получить пароль приложения)"
+  },
+  "options_loginflow_button": {
+    "message": "Войти через Nextcloud..."
+  },
+  "options_loginflow_starting": {
+    "message": "Запуск процесса входа..."
+  },
+  "options_loginflow_browser": {
+    "message": "Браузер открыт. Пожалуйста, подтвердите вход в Nextcloud..."
+  },
+  "options_loginflow_success": {
+    "message": "Вход выполнен. Пароль приложения скопирован."
+  },
+  "options_loginflow_failed": {
+    "message": "Не удалось войти через Nextcloud."
+  },
+  "options_loginflow_missing": {
+    "message": "Сначала введите URL сервера."
+  },
+  "compose_sharing_title": {
+    "message": "Добавить общий доступ Nextcloud"
+  },
+  "options_sharing_base_label": {
+    "message": "Базовый каталог"
+  },
+  "options_sharing_base_hint": {
+    "message": "Файлы будут храниться в этом каталоге (например, \"90 Freigaben - extern\")."
+  },
+  "options_sharing_defaults_heading": {
+    "message": "Настройки по умолчанию"
+  },
+  "options_sharing_default_share_name_label": {
+    "message": "Название общего доступа"
+  },
+  "options_sharing_default_permissions_label": {
+    "message": "Права по умолчанию"
+  },
+  "options_sharing_default_perm_create": {
+    "message": "Загрузка/Создание"
+  },
+  "options_sharing_default_perm_write": {
+    "message": "Редактирование"
+  },
+  "options_sharing_default_perm_delete": {
+    "message": "Удаление"
+  },
+  "options_sharing_default_password_label": {
+    "message": "Установить пароль"
+  },
+  "options_sharing_default_expire_days_label": {
+    "message": "Срок действия (дни)"
+  },
+  "options_sharing_attachments_heading": {
+    "message": "Вложения"
+  },
+  "options_sharing_attachments_always_label": {
+    "message": "Всегда обрабатывать вложения через NC Connector"
+  },
+  "options_sharing_attachments_offer_label": {
+    "message": "Предлагать загрузку для файлов больше"
+  },
+  "options_sharing_attachments_offer_suffix": {
+    "message": "МБ"
+  },
+  "options_talk_defaults_heading": {
+    "message": "Настройки по умолчанию"
+  },
+  "options_talk_default_title_label": {
+    "message": "Название"
+  },
+  "options_talk_default_lobby_label": {
+    "message": "Лобби до времени начала"
+  },
+  "options_talk_default_listable_label": {
+    "message": "Показывать в поиске"
+  },
+  "options_talk_default_add_participants_label": {
+    "message": "Добавить участников в комнату"
+  },
+  "options_talk_default_add_users_label": {
+    "message": "Пользователи"
+  },
+  "options_talk_default_add_guests_label": {
+    "message": "Гости"
+  },
+  "options_talk_default_password_label": {
+    "message": "Установить пароль"
+  },
+  "options_talk_default_roomtype_label": {
+    "message": "Тип комнаты"
+  },
+  "options_talk_default_roomtype_event": {
+    "message": "Беседа события"
+  },
+  "options_talk_default_roomtype_standard": {
+    "message": "Групповая беседа"
+  },
+  "sharing_share_name_label": {
+    "message": "Название общего доступа"
+  },
+  "sharing_share_placeholder": {
+    "message": "например, Проект X"
+  },
+  "sharing_share_default": {
+    "message": "Название общего доступа"
+  },
+  "sharing_permission_read": {
+    "message": "Чтение"
+  },
+  "sharing_permission_create": {
+    "message": "Загрузка"
+  },
+  "sharing_permission_write": {
+    "message": "Изменение"
+  },
+  "sharing_permission_delete": {
+    "message": "Удаление"
+  },
+  "sharing_password_toggle": {
+    "message": "Установить пароль"
+  },
+  "sharing_password_generate": {
+    "message": "Сгенерировать"
+  },
+  "sharing_expire_toggle": {
+    "message": "Установить дату окончания"
+  },
+  "sharing_note_toggle": {
+    "message": "Добавить примечание для получателей"
+  },
+  "sharing_note_placeholder": {
+    "message": "Необязательное сообщение для получателей"
+  },
+  "sharing_button_back": {
+    "message": "Назад"
+  },
+  "sharing_button_cancel": {
+    "message": "Отмена"
+  },
+  "sharing_button_next": {
+    "message": "Далее"
+  },
+  "sharing_button_finish": {
+    "message": "Создать общий доступ"
+  },
+  "sharing_status_creating": {
+    "message": "Создание публичной ссылки..."
+  },
+  "sharing_status_error": {
+    "message": "Произошла ошибка."
+  },
+  "sharing_error_insert_failed": {
+    "message": "Не удалось вставить общий доступ в сообщение."
+  },
+  "sharing_html_password_label": {
+    "message": "Пароль"
+  },
+  "sharing_html_expire_label": {
+    "message": "Дата окончания"
+  },
+  "sharing_html_permissions_label": {
+    "message": "Ваши права"
+  },
+  "sharing_html_download_label": {
+    "message": "Ссылка для скачивания"
+  },
+  "sharing_html_footer": {
+    "message": "$1 — решение для безопасной почты и обмена файлами."
+  },
+  "sharing_dialog_title": {
+    "message": "Общий доступ Nextcloud"
+  },
+  "sharing_heading_permissions": {
+    "message": "Настройки общего доступа"
+  },
+  "sharing_step_expire": {
+    "message": "Дата окончания"
+  },
+  "sharing_expire_hint": {
+    "message": "После этой даты ссылка будет недоступна."
+  },
+  "sharing_step_files_title": {
+    "message": "Выберите файлы или папки"
+  },
+  "sharing_base_path_info": {
+    "message": "Базовый каталог: $1"
+  },
+  "sharing_files_table_path": {
+    "message": "Путь"
+  },
+  "sharing_files_table_type": {
+    "message": "Тип"
+  },
+  "sharing_files_table_status": {
+    "message": "Статус"
+  },
+  "sharing_button_add_files": {
+    "message": "Добавить файлы..."
+  },
+  "sharing_button_add_folder": {
+    "message": "Добавить папку..."
+  },
+  "sharing_button_remove": {
+    "message": "Удалить"
+  },
+  "sharing_button_upload": {
+    "message": "Загрузить"
+  },
+  "sharing_files_empty": {
+    "message": "Файлы не выбраны."
+  },
+  "sharing_file_type_file": {
+    "message": "Файл"
+  },
+  "sharing_status_waiting": {
+    "message": "Ожидание"
+  },
+  "sharing_status_done_row": {
+    "message": "Готово"
+  },
+  "sharing_status_error_row": {
+    "message": "Ошибка"
+  },
+  "sharing_status_ready": {
+    "message": "Загрузка завершена."
+  },
+  "sharing_status_uploading_bulk": {
+    "message": "Загрузка файлов..."
+  },
+  "sharing_message_invalid_share_name": {
+    "message": "Пожалуйста, введите название общего доступа."
+  },
+  "sharing_message_no_files": {
+    "message": "Пожалуйста, добавьте хотя бы один файл."
+  },
+  "sharing_confirm_no_files_title": {
+    "message": "Общий доступ без загрузки"
+  },
+  "sharing_confirm_no_files_message": {
+    "message": "В этот общий доступ не были добавлены файлы или папки. Получатели смогут загружать только свои файлы. Хотите продолжить?"
+  },
+  "sharing_error_upload_required": {
+    "message": "Пожалуйста, загрузите файлы перед продолжением."
+  },
+  "sharing_step_note_heading": {
+    "message": "Примечание получателю"
+  },
+  "sharing_status_inserting": {
+    "message": "Вставка HTML-блока..."
+  },
+  "sharing_status_checking_folder": {
+    "message": "Проверка доступности папки..."
+  },
+  "sharing_error_folder_exists": {
+    "message": "Папка для общего доступа с таким именем уже существует. Пожалуйста, выберите другое имя."
+  },
+  "sharing_prompt_rename_duplicate": {
+    "message": "Файл \"$1\" уже существует в очереди. Пожалуйста, введите новое имя."
+  },
+  "sharing_message_rename_cancelled": {
+    "message": "Загрузка отменена, потому что не было указано новое имя."
+  },
+  "sharing_password_policy_error": {
+    "message": "Пароль должен содержать как минимум 10 символов, включая заглавные и строчные буквы, а также специальный символ."
+  },
+  "sharing_html_intro_line": {
+    "message": "Я хочу безопасно поделиться файлами и защитить Вашу конфиденциальность. Нажмите на ссылку ниже, чтобы скачать файлы."
+  },
+  "sharing_attachment_prompt_title": {
+    "message": "Превышен лимит вложений"
+  },
+  "sharing_attachment_prompt_reason": {
+    "message": "Общий размер вложений составляет $1 и превышает установленный лимит $2. Последнее добавленное: \"$3\" ($4)."
+  },
+  "sharing_attachment_prompt_share": {
+    "message": "Поделиться через NC Connector"
+  },
+  "sharing_attachment_prompt_remove_last": {
+    "message": "Удалить последние выбранные вложения"
+  },
+  "sharing_attachment_prompt_last_unknown": {
+    "message": "Неизвестное вложение"
+  },
+  "sharing_attachment_mode_reason_threshold": {
+    "message": "Лимит вложений превышен: $1 > $2. Последнее добавленное: \"$3\" ($4). Эти вложения будут отправлены через NC Connector."
+  },
+  "sharing_attachment_mode_reason_always": {
+    "message": "Режим вложений активен. Выбранные вложения будут отправлены через NC Connector."
+  },
+  "options_sharing_attachments_lock_title": {
+    "message": "Автоматизация вложений отключена"
+  },
+  "options_sharing_attachments_lock_text": {
+    "message": "В Thunderbird включена опция «Загружать файлы больше чем» ($1 MB). Это конфликтует с автоматизацией вложений NC Connector. Параметры вложений ниже заблокированы."
+  },
+  "options_sharing_attachments_lock_step1": {
+    "message": "Откройте Настройки Thunderbird > Создание писем > Вложения."
+  },
+  "options_sharing_attachments_lock_step2": {
+    "message": "Отключите «Загружать файлы больше чем»."
+  },
+  "options_sharing_attachments_lock_step3": {
+    "message": "Снова откройте эти настройки дополнения."
+  },
+  "sharing_attachment_automation_locked_error": {
+    "message": "В Thunderbird включена опция «Загружать файлы больше чем» ($1 MB). Это конфликтует с автоматизацией вложений NC Connector. Параметры вложений ниже заблокированы."
+  },
+  "options_sharing_default_password_separate_label": {
+    "message": "Отправлять пароль отдельно"
+  },
+  "sharing_password_separate_toggle": {
+    "message": "Отправить пароль отдельным письмом"
+  },
+  "sharing_html_password_separate_hint": {
+    "message": "Пароль будет отправлен отдельным письмом."
+  },
+  "sharing_html_password_mail_intro": {
+    "message": "Вот пароль к отправленной ссылке общего доступа."
+  },
+  "sharing_password_mail_subject": {
+    "message": "Пароль к ссылке общего доступа"
+  },
+  "sharing_password_mail_subject_with_label": {
+    "message": "Пароль к ссылке общего доступа: $1"
+  },
+  "options_sharing_permissions_tooltip_title": {
+    "message": "🛡️ Default permissions"
+  },
+  "options_sharing_permissions_tooltip_line1": {
+    "message": "These values are used as defaults for new shares."
+  },
+  "options_sharing_permissions_tooltip_line2": {
+    "message": "They can still be adjusted in the sharing wizard."
+  },
+  "options_sharing_permissions_tooltip_line3": {
+    "message": "In attachment mode, recipient permission is always read-only."
+  },
+  "sharing_password_separate_tooltip_title": {
+    "message": "Coming soon (Pro feature)"
+  },
+  "sharing_password_separate_tooltip_line1": {
+    "message": "This option is disabled in this release."
+  },
+  "sharing_password_separate_tooltip_line2": {
+    "message": "Password delivery in a separate email will be available in a future Pro release."
+  },
+  "sharing_password_separate_tooltip_line3": {
+    "message": "For now, the password is included in the main share block."
+  },
+  "options_sharing_attachments_always_tooltip_title": {
+    "message": "📎 Always via NC Connector"
+  },
+  "options_sharing_attachments_always_tooltip_line1": {
+    "message": "New attachments are removed from the compose mail and processed via NC Connector."
+  },
+  "options_sharing_attachments_always_tooltip_line2": {
+    "message": "The sharing wizard opens directly in the file step."
+  },
+  "options_sharing_attachments_always_tooltip_line3": {
+    "message": "The final mail contains share links instead of physical attachments."
+  },
+  "options_sharing_attachments_offer_tooltip_title": {
+    "message": "📏 Attachment threshold"
+  },
+  "options_sharing_attachments_offer_tooltip_line1": {
+    "message": "The total size of all attachments is evaluated."
+  },
+  "options_sharing_attachments_offer_tooltip_line2": {
+    "message": "If exceeded, you can share via NC Connector or remove the last selected attachment batch."
+  },
+  "options_sharing_attachments_offer_tooltip_line3": {
+    "message": "The remove action returns the mail to a below-threshold state."
+  },
+  "talk_option_moderator_title": {
+    "message": "👑 Moderator delegation"
+  },
+  "talk_option_moderator_line1": {
+    "message": "The selected user is promoted after room creation."
+  },
+  "talk_option_moderator_line2": {
+    "message": "On successful delegation, the creator leaves the room."
+  },
+  "talk_option_moderator_line3": {
+    "message": "If delegation fails, room ownership remains with the creator."
+  },
+  "sharing_password_mail_notify_title": {
+    "message": "NC Connector"
+  },
+  "sharing_password_mail_notify_success": {
+    "message": "Password email sent to $1 recipient(s)."
+  },
+  "sharing_password_mail_notify_failure": {
+    "message": "Automatic password email failed for $1 recipient(s). Manual send mail was opened."
+  },
+  "sharing_password_mail_notify_manual_required": {
+    "message": "Ne udalos avtomaticheski otpravit pismo s parolem. Otpravte pismo s parolem vruchnuyu iz otkrytogo chernovika."
+  }
 }
+

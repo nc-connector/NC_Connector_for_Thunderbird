@@ -10,6 +10,7 @@
   const MIN_CONTENT_HEIGHT = POPUP_CONTENT_HEIGHT;
   const CONTENT_MARGIN = 0;
   let layoutObserver = null;
+  let isPageUnloading = false;
   const popupSizer = window.NCTalkPopupSizing?.createPopupSizer({
     fixedWidth: POPUP_CONTENT_WIDTH,
     minHeight: MIN_CONTENT_HEIGHT,
@@ -18,11 +19,27 @@
   });
   let pendingUploadScroll = null;
   const TOTAL_STEPS = 4;
+  const ATTACHMENT_DEFAULT_SHARE_NAME = "email_attachment";
   const LOG_SOURCE = 'nextcloudSharingWizard';
   const LOG_LABEL = 'Sharing';
   const LOG_CHANNEL = 'NCUI';
   const LOG_PREFIX = `[${LOG_CHANNEL}][${LOG_LABEL}]`;
   const SHARING_KEYS = NCSharingStorage.SHARING_KEYS;
+  const SEPARATE_PASSWORD_FEATURE_ENABLED = false;
+
+  /**
+   * Log internal UI errors in a deterministic way.
+   * @param {string} scope
+   * @param {any} error
+   */
+  function logUiError(scope, error){
+    try{
+      console.error(LOG_PREFIX, scope, error);
+    }catch(logError){
+      console.error(LOG_PREFIX, scope, error?.message || String(error), logError?.message || String(logError));
+    }
+  }
+
   const state = {
     currentStep: 1,
     files: [],
@@ -35,6 +52,7 @@
       permWrite: false,
       permDelete: false,
       passwordEnabled: true,
+      passwordSeparate: false,
       expireDays: 7
     },
     passwordPolicy: null,
@@ -42,13 +60,23 @@
     uploadCompleted: false,
     uploadResult: null,
     tabId: null,
+    launchContextId: null,
+    mode: 'default',
+    attachmentReason: null,
     debugEnabled: false,
-    remoteFolderCreated: false,
-    remoteFolderInfo: null
+    wizardWindowId: 0,
+    remoteFolderInfo: null,
+    pathColumnScrollLeft: 0
   };
   const dom = {};
   const i18n = NCI18n.translate;
   const DEFAULT_EXPIRE_DAYS = 7;
+
+  // Register unload guards early so debug forwarding stops even if the window
+  // closes while async init is still running.
+  window.addEventListener('pagehide', cleanupPageResources, true);
+  window.addEventListener('beforeunload', cleanupPageResources, true);
+  window.addEventListener('unload', cleanupPageResources, true);
 
   document.addEventListener('DOMContentLoaded', init);
 
@@ -58,32 +86,59 @@
    */
   async function init(){
     cacheElements();
+    setWizardReady(false);
     NCTalkDomI18n.translatePage(i18n, { titleKey: "sharing_dialog_title" });
-    state.tabId = parseTabId();
-    attachEvents();
-    if (NCSharingStorage?.migrateLegacySharingKeys){
-      await NCSharingStorage.migrateLegacySharingKeys();
-    }
     try{
-      await loadDefaultSettings();
-    }catch(err){
-      console.error('[NCSHARE-UI] defaults', err);
+      state.tabId = parseTabId();
+      state.launchContextId = parseLaunchContextId();
+      state.wizardWindowId = await resolveWizardWindowId();
+      attachEvents();
+      if (NCSharingStorage?.migrateLegacySharingKeys){
+        await NCSharingStorage.migrateLegacySharingKeys();
+      }
+      try{
+        await loadDefaultSettings();
+      }catch(err){
+        console.error('[NCSHARE-UI] defaults', err);
+      }
+      setDefaultShareName();
+      await loadPasswordPolicy();
+      await applyDefaultSecuritySettings();
+      try{
+        await Promise.all([loadBasePath(), loadDebugFlag()]);
+      }catch(err){
+        console.error('[NCSHARE-UI] init', err);
+      }
+      await loadLaunchContext();
+      if (state.mode === "attachments"){
+        await applyAttachmentModeDefaults();
+      }else{
+        setDefaultShareName();
+      }
+      renderFileTable();
+      updateStep(state.mode === "attachments" ? 3 : 1);
+      updateAttachmentModeInfo();
+      log('Wizard initialized', {
+        tabId: state.tabId,
+        mode: state.mode,
+        launchContextId: state.launchContextId || ""
+      });
+    }finally{
+      setWizardReady(true);
+      setupWindowSizing();
     }
-    setDefaultShareName();
-    await loadPasswordPolicy();
-    await applyDefaultSecuritySettings();
-    try{
-      await Promise.all([loadBasePath(), loadDebugFlag()]);
-    }catch(err){
-      console.error('[NCSHARE-UI] init', err);
+  }
+
+  /**
+   * Toggle content visibility during async wizard initialization.
+   * Prevents initial step flicker before attachment launch context is applied.
+   * @param {boolean} ready
+   */
+  function setWizardReady(ready){
+    if (!dom.content){
+      return;
     }
-    if (browser?.storage?.onChanged){
-      browser.storage.onChanged.addListener(handleStorageChange);
-    }
-    renderFileTable();
-    updateStep(1);
-    setupWindowSizing();
-    log('Wizard initialisiert', { tabId: state.tabId });
+    dom.content.setAttribute('data-wizard-ready', ready ? 'true' : 'false');
   }
 
   /**
@@ -97,6 +152,8 @@
     dom.permWrite = document.getElementById('permWrite');
     dom.permDelete = document.getElementById('permDelete');
     dom.passwordToggle = document.getElementById('passwordToggle');
+    dom.passwordSeparateRow = document.getElementById('passwordSeparateRow');
+    dom.passwordSeparateToggle = document.getElementById('passwordSeparateToggle');
     dom.passwordFields = document.getElementById('passwordFields');
     dom.passwordInput = document.getElementById('passwordInput');
     dom.passwordGenerate = document.getElementById('passwordGenerate');
@@ -113,6 +170,7 @@
     dom.fileTableWrapper = document.querySelector('.file-table-wrapper');
     dom.fileEmptyPlaceholder = document.getElementById('fileEmptyPlaceholder');
     dom.uploadStatus = document.getElementById('uploadStatus');
+    dom.attachmentModeInfo = document.getElementById('attachmentModeInfo');
     dom.noteToggle = document.getElementById('noteToggle');
     dom.noteFields = document.getElementById('noteFields');
     dom.noteInput = document.getElementById('noteInput');
@@ -137,13 +195,38 @@
   }
 
   /**
+   * Parse the launch context id from the query string.
+   * @returns {string}
+   */
+  function parseLaunchContextId(){
+    const params = new URLSearchParams(window.location.search);
+    const raw = String(params.get('launchContextId') || '').trim();
+    return raw || '';
+  }
+
+  /**
+   * Resolve the current popup window id for background-scoped cleanup tracking.
+   * @returns {Promise<number>}
+   */
+  async function resolveWizardWindowId(){
+    try{
+      const currentWindow = await browser.windows.getCurrent();
+      const windowId = Number(currentWindow?.id);
+      return Number.isInteger(windowId) && windowId > 0 ? windowId : 0;
+    }catch(error){
+      logUiError("resolve wizard window id failed", error);
+      return 0;
+    }
+  }
+
+  /**
    * Attach UI event handlers for the wizard.
    */
   function attachEvents(){
     dom.shareName.addEventListener('input', () => {
       resetShareContext();
       invalidateUpload();
-      log('shareName geÃ¤ndert', dom.shareName.value);
+      log('shareName changed', dom.shareName.value);
     });
     [dom.permCreate, dom.permWrite, dom.permDelete].forEach((checkbox) => {
       checkbox.addEventListener('change', invalidateUpload);
@@ -155,7 +238,11 @@
         dom.passwordInput.value = await generatePasswordFromPolicy();
       }
       invalidateUpload();
-      log('passwort toggle', dom.passwordToggle.checked);
+      log('password toggle', dom.passwordToggle.checked);
+    });
+    dom.passwordSeparateToggle?.addEventListener('change', () => {
+      invalidateUpload();
+      log('separate password toggle', dom.passwordSeparateToggle.checked);
     });
     dom.passwordInput.addEventListener('input', invalidateUpload);
     dom.passwordGenerate.addEventListener('click', async () => {
@@ -163,7 +250,7 @@
       applyPasswordToggleState(true);
       dom.passwordInput.value = await generatePasswordFromPolicy();
       invalidateUpload();
-      log('passwort generiert');
+      log('password generated');
     });
     dom.expireToggle.addEventListener('change', () => {
       dom.expireFields.classList.toggle('hidden', !dom.expireToggle.checked);
@@ -179,11 +266,11 @@
       log('note toggle', dom.noteToggle.checked);
     });
     dom.addFilesBtn.addEventListener('click', () => {
-      log('Datei-Dialog geÃ¶ffnet');
+      log('File dialog opened');
       dom.fileInput.click();
     });
     dom.addFolderBtn.addEventListener('click', () => {
-      log('Ordner-Dialog geÃ¶ffnet');
+      log('Folder dialog opened');
       dom.folderInput?.click();
     });
     dom.fileInput.addEventListener('change', (event) => handleFileSelection(event, 'file'));
@@ -192,19 +279,25 @@
     dom.backBtn.addEventListener('click', () => {
       if (state.currentStep > 1 && !state.uploadInProgress){
         updateStep(state.currentStep - 1);
-        log('Step zurÃ¼ck', state.currentStep);
+        log('Step back', state.currentStep);
       }
     });
     dom.nextBtn.addEventListener('click', handleNext);
     dom.uploadBtn.addEventListener('click', () => {
       if (state.currentStep === 3){
         startUpload();
-        log('Upload Button klick');
+        log('Upload button click');
       }
     });
-    dom.finishBtn.addEventListener('click', finalizeShare);
+    dom.finishBtn.addEventListener('click', () => {
+      if (state.mode === "attachments"){
+        handleAttachmentModeFinish();
+      }else{
+        finalizeShare();
+      }
+    });
     dom.cancelBtn.addEventListener('click', handleCancel);
-    log('Event-Handler registriert');
+    log('Event handlers registered');
   }
 
   /**
@@ -217,6 +310,7 @@
     state.defaults.permWrite = false;
     state.defaults.permDelete = false;
     state.defaults.passwordEnabled = true;
+    state.defaults.passwordSeparate = false;
     state.defaults.expireDays = DEFAULT_EXPIRE_DAYS;
     if (!browser?.storage?.local){
       return;
@@ -227,6 +321,7 @@
       SHARING_KEYS.defaultPermWrite,
       SHARING_KEYS.defaultPermDelete,
       SHARING_KEYS.defaultPassword,
+      SHARING_KEYS.defaultPasswordSeparate,
       SHARING_KEYS.defaultExpireDays
     ]);
     const storedShareName = stored[SHARING_KEYS.defaultShareName];
@@ -248,6 +343,7 @@
     if (stored[SHARING_KEYS.defaultPassword] !== undefined){
       state.defaults.passwordEnabled = !!stored[SHARING_KEYS.defaultPassword];
     }
+    state.defaults.passwordSeparate = false;
     state.defaults.expireDays = NCTalkTextUtils.normalizeExpireDays(
       stored[SHARING_KEYS.defaultExpireDays],
       DEFAULT_EXPIRE_DAYS
@@ -258,17 +354,11 @@
    * @returns {Promise<object>}
    */
   async function loadPasswordPolicy(){
-    try{
-      const response = await browser.runtime.sendMessage({ type: "passwordPolicy:fetch" });
-      if (response?.policy){
-        state.passwordPolicy = response.policy;
-      }else{
-        state.passwordPolicy = { hasPolicy:false, minLength:null, apiGenerateUrl:null, apiValidateUrl:null };
-      }
-    }catch(err){
-      console.error('[NCSHARE-UI] password policy', err);
-      state.passwordPolicy = { hasPolicy:false, minLength:null, apiGenerateUrl:null, apiValidateUrl:null };
-    }
+    state.passwordPolicy = await NCPasswordPolicyClient.loadPolicy({
+      sendMessage: (message) => browser.runtime.sendMessage(message),
+      logger: (message, error) => logUiError(message, error),
+      logPrefix: LOG_PREFIX
+    });
     return state.passwordPolicy;
   }
 
@@ -313,23 +403,179 @@
   }
 
   /**
-   * React to changes in local storage while the wizard is open.
-   * @param {object} changes
-   * @param {string} area
+   * Load launch context passed by the background.
+   * @returns {Promise<void>}
    */
-  function handleStorageChange(changes, area){
-    if (area !== 'local'){
+  async function loadLaunchContext(){
+    if (!state.launchContextId){
+      log('Launch context not set (normal start)');
       return;
     }
-    if (Object.prototype.hasOwnProperty.call(changes, 'debugEnabled')){
-      state.debugEnabled = !!changes.debugEnabled.newValue;
+    try{
+      log('Request launch context', { contextId: state.launchContextId });
+      const response = await browser.runtime.sendMessage({
+        type: "sharing:getLaunchContext",
+        payload: { contextId: state.launchContextId }
+      });
+      if (!response?.ok || !response.context){
+        log('Launch context not found', state.launchContextId);
+        return;
+      }
+      const context = response.context;
+      log('Launch context received', {
+        mode: context.mode || '',
+        attachmentCount: Array.isArray(context.attachments) ? context.attachments.length : 0
+      });
+      if (context.mode === "attachments"){
+        state.mode = "attachments";
+        state.attachmentReason = context.reason || null;
+        preloadAttachmentEntries(context.attachments);
+      }
+    }catch(err){
+      console.error('[NCSHARE-UI] launch context', err);
+      log('Launch context error', err?.message || String(err));
     }
-    if (Object.prototype.hasOwnProperty.call(changes, SHARING_KEYS.basePath)){
-      state.basePath = changes[SHARING_KEYS.basePath].newValue || '';
-      if (dom.basePathLabel){
-        dom.basePathLabel.textContent = state.basePath || '';
+  }
+
+  /**
+   * Fill the upload queue from attachment launch context.
+   * @param {Array<object>} attachments
+   */
+  function preloadAttachmentEntries(attachments){
+    const list = Array.isArray(attachments) ? attachments : [];
+    const validCount = list.filter((item) => item && item.file instanceof File).length;
+    log('Attachment launch context preload', {
+      received: list.length,
+      valid: validCount
+    });
+    state.files = list
+      .filter((item) => item && item.file instanceof File)
+      .map((item) => {
+        const file = item.file;
+        const fileName = NCSharing.sanitizeFileName(item.name || file.name || 'File');
+        const sourceDisplayPath = resolveEntryDisplayPath({
+          file,
+          source: 'launch',
+          fallbackName: fileName,
+          providedPath: item.displayPath || item.path || item.fullPath || item.name || file.name || ''
+        });
+        const displayDir = extractDisplayDir(sourceDisplayPath);
+        return {
+          id: `entry_${Date.now()}_${Math.random().toString(36).slice(2)}`,
+          file,
+          displayPath: buildDisplayPath(displayDir, fileName),
+          displayDir,
+          relativeDir: '',
+          renamedName: '',
+          status: 'pending',
+          progress: 0,
+          error: ''
+        };
+      });
+    state.selectedFileId = null;
+    log('Attachment queue prepared', { files: state.files.length });
+  }
+
+  /**
+   * Apply the fixed defaults for attachment-mode launch.
+   * @returns {Promise<void>}
+   */
+  async function applyAttachmentModeDefaults(){
+    log('Apply attachment mode defaults');
+    dom.noteToggle.checked = false;
+    dom.noteFields.classList.add('hidden');
+    dom.noteInput.value = '';
+    await resolveAttachmentShareName();
+    log('Attachment mode defaults set', {
+      shareName: dom.shareName.value || '',
+      files: state.files.length
+    });
+  }
+
+  /**
+   * Update the explanatory message for attachment-mode launches.
+   */
+  function updateAttachmentModeInfo(){
+    if (!dom.attachmentModeInfo){
+      return;
+    }
+    if (state.mode !== "attachments"){
+      dom.attachmentModeInfo.hidden = true;
+      dom.attachmentModeInfo.textContent = '';
+      return;
+    }
+    if (state.attachmentReason?.trigger === "threshold"){
+      const text = i18n('sharing_attachment_mode_reason_threshold', [
+        NCTalkTextUtils.formatSizeMb(state.attachmentReason.totalBytes || 0),
+        `${state.attachmentReason.thresholdMb || 0} MB`,
+        state.attachmentReason.lastName || i18n('sharing_attachment_prompt_last_unknown'),
+        NCTalkTextUtils.formatSizeMb(state.attachmentReason.lastSizeBytes || 0)
+      ]);
+      dom.attachmentModeInfo.textContent = text;
+    }else{
+      dom.attachmentModeInfo.textContent = i18n('sharing_attachment_mode_reason_always');
+    }
+    dom.attachmentModeInfo.hidden = false;
+    log('Attachment mode info updated', {
+      trigger: state.attachmentReason?.trigger || 'always'
+    });
+  }
+
+  /**
+   * Handle attachment-mode finish button: upload/create/insert in one action.
+   * @returns {Promise<void>}
+   */
+  async function handleAttachmentModeFinish(){
+    if (state.uploadInProgress){
+      log('Attachment finish ignored (upload running)');
+      return;
+    }
+    const tabId = Number(state.tabId);
+    if (!Number.isInteger(tabId) || tabId <= 0){
+      setMessage(i18n('sharing_error_insert_failed'), 'error');
+      log('Attachment finish canceled (missing tabId)');
+      return;
+    }
+    try{
+      const guard = await browser.runtime.sendMessage({
+        type: 'sharing:checkAttachmentAutomationAllowed',
+        payload: {
+          tabId,
+          stage: 'wizard_finish'
+        }
+      });
+      if (!guard?.ok){
+        const thresholdMb = Number.isFinite(Number(guard?.thresholdMb))
+          ? Math.max(1, Math.floor(Number(guard.thresholdMb)))
+          : 0;
+        setMessage(
+          i18n('sharing_attachment_automation_locked_error', [String(thresholdMb)]),
+          'error'
+        );
+        log('Attachment finish blocked (Thunderbird setting active)', {
+          thresholdMb,
+          error: guard?.error || ''
+        });
+        return;
+      }
+    }catch(err){
+      logUiError("attachment finish guard failed", err);
+      setMessage(i18n('sharing_status_error'), 'error');
+      log('Attachment finish check failed', err?.message || String(err));
+      return;
+    }
+    log('Attachment finish started', {
+      uploadCompleted: !!state.uploadCompleted,
+      files: state.files.length
+    });
+    if (!state.uploadCompleted){
+      await startUpload();
+      if (!state.uploadCompleted){
+        log('Attachment finish canceled (upload failed)');
+        return;
       }
     }
+    await finalizeShare();
   }
 
   /**
@@ -337,8 +583,7 @@
    * @returns {number|null}
    */
   function getPolicyMinLength(){
-    const minLength = Number(state.passwordPolicy?.minLength);
-    return Number.isFinite(minLength) ? minLength : null;
+    return NCPasswordPolicyClient.getPolicyMinLength(state.passwordPolicy);
   }
 
   /**
@@ -346,42 +591,14 @@
    * @returns {Promise<string>}
    */
   async function generatePasswordFromPolicy(){
-    try{
-      const policy = state.passwordPolicy || { hasPolicy:false, minLength:null, apiGenerateUrl:null, apiValidateUrl:null };
-      if (policy?.apiGenerateUrl){
-        const response = await browser.runtime.sendMessage({
-          type: "passwordPolicy:generate",
-          payload: { policy }
-        });
-        if (response?.ok && response.password){
-          return response.password;
-        }
-      }
-    }catch(err){
-      console.error('[NCSHARE-UI] password generate', err);
-    }
-    const targetLength = Math.max(getPolicyMinLength() || 12, 12);
-    return NCTalkPassword.generatePassword({
-      length: targetLength,
-      requireUpper: true,
-      requireLower: true,
-      requireDigit: true,
-      requireSymbol: true
+    return NCPasswordPolicyClient.generatePassword({
+      policy: state.passwordPolicy,
+      sendMessage: (message) => browser.runtime.sendMessage(message),
+      passwordGenerator: (options) => NCTalkPassword.generatePassword(options),
+      fallbackLength: 12,
+      logger: (message, error) => logUiError(message, error),
+      logPrefix: LOG_PREFIX
     });
-  }
-
-  /**
-   * Validate strong password rules for local fallback.
-   * @param {string} value
-   * @returns {boolean}
-   */
-  function isStrongPassword(value){
-    const pwd = String(value || '');
-    return pwd.length >= 12
-      && /[A-Z]/.test(pwd)
-      && /[a-z]/.test(pwd)
-      && /[0-9]/.test(pwd)
-      && /[!@#$%^&*()\-_=+\[\]{};:,.?]/.test(pwd);
   }
 
   /**
@@ -392,11 +609,20 @@
     dom.passwordFields.classList.toggle('hidden', !enabled);
     dom.passwordInput.disabled = !enabled;
     dom.passwordGenerate.disabled = !enabled;
+    const separatePasswordEnabled = SEPARATE_PASSWORD_FEATURE_ENABLED && enabled;
+    if (dom.passwordSeparateToggle){
+      dom.passwordSeparateToggle.disabled = !separatePasswordEnabled;
+      if (!separatePasswordEnabled){
+        dom.passwordSeparateToggle.checked = false;
+      }
+    }
+    dom.passwordSeparateRow?.classList.toggle('is-disabled', !separatePasswordEnabled);
     if (!enabled){
       dom.passwordInput.value = '';
     }
   }
-  /**\r\n   * Apply the default share name to the input if empty.
+  /**
+   * Apply the default share name to the input if empty.
    */
   function setDefaultShareName(){
     if (!dom.shareName.value){
@@ -414,6 +640,11 @@
     const enabled = !!state.defaults.passwordEnabled;
     dom.passwordToggle.checked = enabled;
     applyPasswordToggleState(enabled);
+    if (dom.passwordSeparateToggle){
+      dom.passwordSeparateToggle.checked = enabled
+        && SEPARATE_PASSWORD_FEATURE_ENABLED
+        && !!state.defaults.passwordSeparate;
+    }
     if (enabled && !dom.passwordInput.value){
       dom.passwordInput.value = await generatePasswordFromPolicy();
     }
@@ -449,6 +680,15 @@
    * Update navigation and action button states.
    */
   function updateButtons(){
+    if (state.mode === "attachments"){
+      dom.backBtn.style.visibility = 'hidden';
+      dom.nextBtn.style.visibility = 'hidden';
+      dom.uploadBtn.style.visibility = 'hidden';
+      dom.finishBtn.style.visibility = state.currentStep === 3 ? 'visible' : 'hidden';
+      dom.finishBtn.disabled = state.uploadInProgress || (!state.uploadCompleted && state.files.length === 0);
+      dom.removeFileBtn.disabled = !state.selectedFileId || state.uploadInProgress;
+      return;
+    }
     dom.backBtn.disabled = state.currentStep === 1 || state.uploadInProgress;
     dom.nextBtn.style.visibility = state.currentStep >= TOTAL_STEPS ? 'hidden' : 'visible';
     dom.nextBtn.disabled = state.uploadInProgress
@@ -466,6 +706,9 @@
    * @returns {Promise<void>}
    */
   async function handleNext(){
+    if (state.mode === "attachments"){
+      return;
+    }
     if (state.uploadInProgress){
       return;
     }
@@ -498,6 +741,17 @@
    * @returns {Promise<boolean>}
    */
   async function ensureShareNameAvailable(){
+    if (state.mode === "attachments"){
+      try{
+        await resolveAttachmentShareName();
+        return true;
+      }catch(err){
+        logUiError("resolve attachment share name failed", err);
+        setMessage(err?.message || i18n('sharing_error_folder_exists'), 'error');
+        log('Attachment shareName error', err?.message || String(err));
+        return false;
+      }
+    }
     const shareName = getSanitizedShareName();
     if (!shareName){
       setMessage(i18n('sharing_message_invalid_share_name'), 'error');
@@ -515,16 +769,17 @@
       });
       if (result.exists){
         setMessage(i18n('sharing_error_folder_exists'), 'error');
-        log('Folder existiert bereits', shareName);
+        log('Folder already exists', shareName);
         return false;
       }
       rememberShareFolder(result.folderInfo, shareName);
       setMessage('');
-      log('Foldername verfÃƒÂ¼gbar', shareName);
+      log('Folder name available', shareName);
       return true;
     }catch(err){
+      logUiError("ensure share name availability failed", err);
       setMessage(err?.message || i18n('sharing_status_error'), 'error');
-      log('Foldercheck Fehler', err?.message);
+      log('Folder check error', err?.message);
       return false;
     }
   }
@@ -535,22 +790,41 @@
    * @param {string} source
    */
   function handleFileSelection(event, source){
+    const rawInputValue = String(event?.target?.value || '');
+    const selectionRootDir = extractSelectionRootDir(rawInputValue);
     const files = Array.from(event.target.files || []);
     if (!files.length){
       return;
     }
-    log('Dateien ausgewÃƒÂ¤hlt', { source, count: files.length });
+    const first = files[0];
+    log('Files selected', {
+      source,
+      count: files.length,
+      inputValueHasPath: /[\\/]/.test(rawInputValue),
+      resolvedSelectionRootDir: selectionRootDir || '',
+      firstHasWebkitRelativePath: !!first?.webkitRelativePath,
+      firstHasMozFullPath: !!first?.mozFullPath,
+      firstHasPath: !!first?.path
+    });
     const entries = files.map((file) => {
       const relativePath = (file.webkitRelativePath || file.relativePath || '').replace(/\\/g, '/');
       let relativeDir = '';
       if (source === 'folder' && relativePath.includes('/')){
         relativeDir = relativePath.slice(0, relativePath.lastIndexOf('/'));
       }
-      const displayPath = relativeDir ? `${relativeDir}/${file.name}` : file.name;
+      const displayPath = resolveEntryDisplayPath({
+        file,
+        source,
+        relativeDir,
+        selectionRootDir,
+        fallbackName: file.name || 'File'
+      });
+      const displayDir = extractDisplayDir(displayPath);
       return {
         id: `entry_${Date.now()}_${Math.random().toString(36).slice(2)}`,
         file,
         displayPath,
+        displayDir,
         relativeDir,
         renamedName: '',
         status: 'pending',
@@ -576,7 +850,7 @@
     state.files = state.files.filter((entry) => entry.id !== state.selectedFileId);
     state.selectedFileId = null;
     invalidateUpload();
-    log('Eintrag entfernt', removed?.displayPath || '');
+    log('Entry removed', removed?.displayPath || '');
   }
 
   /**
@@ -596,11 +870,22 @@
       if (state.selectedFileId === entry.id){
         row.classList.add('selected');
       }
+      if (entry.status === 'uploading'){
+        row.classList.add('uploading');
+      }
       const pathCell = document.createElement('td');
-      pathCell.textContent = entry.displayPath || entry.file?.name || '';
+      pathCell.className = 'path-cell';
+      const pathScroll = document.createElement('div');
+      pathScroll.className = 'path-scroll';
+      pathScroll.textContent = entry.displayPath || entry.file?.name || '';
+      attachPathWheelScroll(pathScroll);
+      pathScroll.scrollLeft = state.pathColumnScrollLeft;
+      pathCell.appendChild(pathScroll);
       const typeCell = document.createElement('td');
+      typeCell.className = 'type-cell';
       typeCell.textContent = i18n('sharing_file_type_file');
       const statusCell = document.createElement('td');
+      statusCell.className = 'status-cell';
       statusCell.innerHTML = buildStatusMarkup(entry);
       row.append(pathCell, typeCell, statusCell);
       row.addEventListener('click', () => {
@@ -610,6 +895,7 @@
       });
       dom.fileTableBody.appendChild(row);
     });
+    applySharedPathColumnScroll(state.pathColumnScrollLeft);
     ensureUploadListVisible();
   }
 
@@ -666,10 +952,10 @@
       return `<div class="status-progress"><span class="percent">${percent}%</span><div class="bar"><span style="width:${percent}%;"></span></div></div>`;
     }
     if (entry.status === 'done'){
-      return `<span>${i18n('sharing_status_done_row')}</span>`;
+      return `<span class="status-done">${i18n('sharing_status_done_row')}</span>`;
     }
     if (entry.status === 'error'){
-      return `<span title="${NCTalkTextUtils.escapeHtml(entry.error || '')}">${i18n('sharing_status_error_row')}</span>`;
+      return `<span class="status-error" title="${NCTalkTextUtils.escapeHtml(entry.error || '')}">${i18n('sharing_status_error_row')}</span>`;
     }
     return `<span>${i18n('sharing_status_waiting')}</span>`;
   }
@@ -682,9 +968,7 @@
     state.uploadResult = null;
     pendingUploadScroll = '__top__';
     state.files.forEach((entry) => {
-      entry.status = 'pending';
-      entry.progress = 0;
-      entry.error = '';
+      resetFileEntry(entry);
     });
     renderFileTable();
     updateButtons();
@@ -703,21 +987,17 @@
       setMessage(i18n('sharing_message_no_files'), 'error');
       return;
     }
-    log('Upload gestartet', { files: state.files.length });
+    log('Upload started', { files: state.files.length });
     if (!(await ensureShareNameAvailable())){
-      log('Upload abgebrochen: shareName unavailable');
+      log('Upload canceled: shareName unavailable');
       return;
     }
     if (!validatePasswordIfNeeded()){
-      log('Upload abgebrochen: Passwort ungÃƒÂ¼ltig');
+      log('Upload cancelled: invalid password');
       return;
     }
     if (!(await ensureUniqueQueueEntries())){
-      log('Upload abgebrochen: lokale Duplikate');
-      return;
-    }
-    if (!(await ensureRemoteUniqueness())){
-      log('Upload abgebrochen: Server Duplikate');
+      log('Upload canceled: local duplicates');
       return;
     }
     const hasFiles = state.files.length > 0;
@@ -726,9 +1006,8 @@
       setMessage(i18n('sharing_status_uploading_bulk'), 'info');
       setUploadStatus(i18n('sharing_status_uploading_bulk'));
       state.files.forEach((entry) => {
+        resetFileEntry(entry);
         entry.status = 'queued';
-        entry.progress = 0;
-        entry.error = '';
       });
     }else{
       setMessage(i18n('sharing_status_creating'), 'info');
@@ -736,7 +1015,7 @@
     }
     renderFileTable();
     updateButtons();
-    const noteEnabled = !!dom.noteToggle.checked;
+    const noteEnabled = state.mode === "attachments" ? false : !!dom.noteToggle.checked;
     const noteValue = noteEnabled ? dom.noteInput.value.trim() : '';
     try{
       const shareContext = getShareContext();
@@ -745,14 +1024,28 @@
       }
       if (shareContext.folderInfo){
         state.remoteFolderInfo = { ...shareContext.folderInfo };
-        state.remoteFolderCreated = true;
+        await armWizardRemoteCleanup({
+          tabId: Number(state.tabId),
+          shareLabel: shareContext.sanitizedName || "",
+          shareUrl: "",
+          shareId: "",
+          folderInfo: state.remoteFolderInfo
+        });
       }
+      const permissions = getPermissions();
+      log('Upload permissions', {
+        mode: state.mode,
+        read: !!permissions.read,
+        create: !!permissions.create,
+        write: !!permissions.write,
+        delete: !!permissions.delete
+      });
       const result = await NCSharing.createFileLink({
         shareName: shareContext.sanitizedName,
         basePath: state.basePath,
         shareDate: shareContext.shareDate.toISOString(),
         folderInfo: shareContext.folderInfo,
-        permissions: getPermissions(),
+        permissions,
         passwordEnabled: !!dom.passwordToggle.checked,
         password: dom.passwordInput.value,
         expireEnabled: !!dom.expireToggle.checked,
@@ -769,15 +1062,23 @@
         onUploadStatus: handleUploadStatus
       });
       state.uploadResult = result;
+      await armWizardRemoteCleanup({
+        tabId: Number(state.tabId),
+        shareLabel: String(result?.shareInfo?.label || shareContext.sanitizedName || ""),
+        shareUrl: String(result?.shareInfo?.shareUrl || ""),
+        shareId: String(result?.shareInfo?.shareId || ""),
+        folderInfo: result?.shareInfo?.folderInfo || state.remoteFolderInfo || null
+      });
       state.uploadCompleted = true;
       setMessage(i18n('sharing_status_ready'), 'success');
       setUploadStatus(i18n('sharing_status_ready'));
-      log('Upload abgeschlossen');
+      log('Upload completed');
     }catch(err){
+      logUiError("upload failed", err);
       state.uploadCompleted = false;
       setMessage(err?.message || i18n('sharing_status_error'), 'error');
       setUploadStatus(err?.message || i18n('sharing_status_error'));
-      log('Upload fehlgeschlagen', err?.message);
+      log('Upload failed', err?.message);
     }finally{
       state.uploadInProgress = false;
       renderFileTable();
@@ -798,21 +1099,20 @@
       return;
     }
     if (event.phase === 'start'){
+      resetFileEntry(entry);
       entry.status = 'uploading';
-      entry.progress = 0;
-      entry.error = '';
-      log('Upload Datei gestartet', entry.displayPath || entry.file?.name || entry.id);
+      log('Upload file started', entry.displayPath || entry.file?.name || entry.id);
     }else if (event.phase === 'progress'){
       entry.status = 'uploading';
       entry.progress = event.percent || 0;
     }else if (event.phase === 'done'){
       entry.status = 'done';
       entry.progress = 100;
-      log('Upload Datei abgeschlossen', entry.displayPath || entry.file?.name || entry.id);
+      log('Upload file completed', entry.displayPath || entry.file?.name || entry.id);
     }else if (event.phase === 'error'){
       entry.status = 'error';
       entry.error = event.error || '';
-      log('Upload Datei Fehler', { name: entry.displayPath || entry.file?.name || entry.id, error: entry.error });
+      log('Upload file error', { name: entry.displayPath || entry.file?.name || entry.id, error: entry.error });
     }
     pendingUploadScroll = entry.id;
     renderFileTable();
@@ -825,12 +1125,22 @@
   async function finalizeShare(){
     if (!state.uploadCompleted || !state.uploadResult?.shareInfo){
       setMessage(i18n('sharing_error_upload_required'), 'error');
+      log('Finalize canceled: upload missing');
       return;
     }
-    const noteEnabled = !!dom.noteToggle.checked;
+    const attachmentMode = state.mode === "attachments";
+    const noteEnabled = attachmentMode ? false : !!dom.noteToggle.checked;
     const note = noteEnabled ? dom.noteInput.value.trim() : '';
+    const separatePasswordMail = isSeparatePasswordMailEnabled();
+    log('Finalize started', {
+      attachmentMode,
+      noteEnabled,
+      zipDownload: attachmentMode,
+      hidePermissions: attachmentMode,
+      separatePasswordMail
+    });
     try{
-      if (typeof NCSharing.updateShareDetails === 'function'){
+      if (!attachmentMode && typeof NCSharing.updateShareDetails === 'function'){
         await NCSharing.updateShareDetails({
           shareInfo: state.uploadResult.shareInfo,
           noteEnabled,
@@ -842,17 +1152,218 @@
       setMessage(i18n('sharing_status_inserting'), 'info');
       const html = await NCSharing.buildHtmlBlock(state.uploadResult.shareInfo, {
         noteEnabled,
-        note
+        note,
+        hidePermissions: attachmentMode,
+        zipDownload: attachmentMode,
+        hidePassword: separatePasswordMail,
+        showPasswordSeparateHint: separatePasswordMail
+      });
+      await armComposeShareCleanup({
+        tabId: Number(state.tabId),
+        shareId: state.uploadResult.shareInfo?.shareId || "",
+        shareLabel: state.uploadResult.shareInfo?.label || getSanitizedShareName(),
+        shareUrl: state.uploadResult.shareInfo?.shareUrl || "",
+        folderInfo: state.uploadResult.shareInfo?.folderInfo || null
       });
       await insertIntoCompose(html);
-      log('Freigabe eingefÃƒÂ¼gt');
-      state.remoteFolderCreated = false;
+      if (separatePasswordMail){
+        const passwordMailHtml = await NCSharing.buildHtmlBlock(state.uploadResult.shareInfo, {
+          passwordOnly: true
+        });
+        await registerSeparatePasswordDispatch({
+          tabId: Number(state.tabId),
+          shareLabel: state.uploadResult.shareInfo?.label || getSanitizedShareName(),
+          shareUrl: state.uploadResult.shareInfo?.shareUrl || "",
+          shareId: state.uploadResult.shareInfo?.shareId || "",
+          folderInfo: state.uploadResult.shareInfo?.folderInfo || null,
+          password: state.uploadResult.shareInfo?.password || "",
+          html: passwordMailHtml
+        });
+      }
+      await clearWizardRemoteCleanup();
+      log('Share inserted');
       state.remoteFolderInfo = null;
       window.close();
     }catch(err){
+      logUiError("finalize share failed", err);
       setMessage(err?.message || i18n('sharing_status_error'), 'error');
-      log('Freigabe EinfÃƒÂ¼gen fehlgeschlagen', err?.message);
+      log('Share insert failed', err?.message);
     }
+  }
+
+  /**
+   * Determine whether password dispatch in a separate mail is enabled.
+   * @returns {boolean}
+   */
+  function isSeparatePasswordMailEnabled(){
+    return !!SEPARATE_PASSWORD_FEATURE_ENABLED
+      && !!dom.passwordToggle?.checked
+      && !!dom.passwordSeparateToggle?.checked
+      && !!state.uploadResult?.shareInfo?.password;
+  }
+
+  /**
+   * Arm server-side remote cleanup for this wizard popup window in background.
+   * The cleanup is triggered when the popup window closes unless explicitly cleared.
+   * @param {{tabId:number,shareId:string,shareLabel:string,shareUrl:string,folderInfo:object}} payload
+   * @returns {Promise<void>}
+   */
+  async function armWizardRemoteCleanup(payload = {}){
+    const folderInfo = payload?.folderInfo && typeof payload.folderInfo === "object"
+      ? payload.folderInfo
+      : null;
+    if (!folderInfo || typeof folderInfo.relativeFolder !== "string" || !folderInfo.relativeFolder.trim()){
+      throw new Error(i18n('sharing_error_insert_failed'));
+    }
+    if (!Number.isInteger(state.wizardWindowId) || state.wizardWindowId <= 0){
+      state.wizardWindowId = await resolveWizardWindowId();
+    }
+    if (!Number.isInteger(state.wizardWindowId) || state.wizardWindowId <= 0){
+      throw new Error(i18n('sharing_error_insert_failed'));
+    }
+    const response = await browser.runtime.sendMessage({
+      type: "sharing:armWizardRemoteCleanup",
+      payload: {
+        windowId: state.wizardWindowId,
+        tabId: Number(payload.tabId) || 0,
+        shareId: String(payload.shareId || ""),
+        shareLabel: String(payload.shareLabel || ""),
+        shareUrl: String(payload.shareUrl || ""),
+        folderInfo: {
+          relativeFolder: String(folderInfo.relativeFolder || ""),
+          relativeBase: String(folderInfo.relativeBase || ""),
+          folderName: String(folderInfo.folderName || "")
+        }
+      }
+    });
+    if (!response?.ok){
+      log('Wizard remote cleanup arm failed', {
+        error: String(response?.error || ""),
+        windowId: state.wizardWindowId
+      });
+      throw new Error(i18n('sharing_error_insert_failed'));
+    }
+    log('Wizard remote cleanup armed', {
+      windowId: state.wizardWindowId,
+      relativeFolder: String(folderInfo.relativeFolder || ""),
+      shareLabel: String(payload.shareLabel || "")
+    });
+  }
+
+  /**
+   * Clear the armed wizard remote cleanup entry on successful finalize.
+   * @returns {Promise<void>}
+   */
+  async function clearWizardRemoteCleanup(){
+    if (!Number.isInteger(state.wizardWindowId) || state.wizardWindowId <= 0){
+      state.wizardWindowId = await resolveWizardWindowId();
+    }
+    if (!Number.isInteger(state.wizardWindowId) || state.wizardWindowId <= 0){
+      throw new Error(i18n('sharing_error_insert_failed'));
+    }
+    const response = await browser.runtime.sendMessage({
+      type: "sharing:clearWizardRemoteCleanup",
+      payload: {
+        windowId: state.wizardWindowId
+      }
+    });
+    if (!response?.ok){
+      log('Wizard remote cleanup clear failed', {
+        error: String(response?.error || ""),
+        windowId: state.wizardWindowId
+      });
+      throw new Error(i18n('sharing_error_insert_failed'));
+    }
+    log('Wizard remote cleanup cleared', {
+      windowId: state.wizardWindowId
+    });
+  }
+
+  /**
+   * Register compose-share cleanup in the background.
+   * The share folder is removed if the compose tab is closed without successful send.
+   * @param {{tabId:number,shareId:string,shareLabel:string,shareUrl:string,folderInfo:object}} payload
+   * @returns {Promise<void>}
+   */
+  async function armComposeShareCleanup(payload = {}){
+    const tabId = Number(payload.tabId);
+    if (!Number.isInteger(tabId) || tabId <= 0){
+      throw new Error(i18n('sharing_error_insert_failed'));
+    }
+    const folderInfo = payload?.folderInfo && typeof payload.folderInfo === "object"
+      ? payload.folderInfo
+      : null;
+    if (!folderInfo || typeof folderInfo.relativeFolder !== "string" || !folderInfo.relativeFolder.trim()){
+      throw new Error(i18n('sharing_error_insert_failed'));
+    }
+    const response = await browser.runtime.sendMessage({
+      type: "sharing:armComposeShareCleanup",
+      payload: {
+        tabId,
+        shareId: String(payload.shareId || ""),
+        shareLabel: String(payload.shareLabel || ""),
+        shareUrl: String(payload.shareUrl || ""),
+        folderInfo: {
+          relativeFolder: String(folderInfo.relativeFolder || ""),
+          relativeBase: String(folderInfo.relativeBase || ""),
+          folderName: String(folderInfo.folderName || "")
+        }
+      }
+    });
+    if (!response?.ok){
+      log('Compose share cleanup arm failed', {
+        error: String(response?.error || "")
+      });
+      throw new Error(i18n('sharing_error_insert_failed'));
+    }
+    log('Compose share cleanup armed', {
+      tabId,
+      shareLabel: String(payload.shareLabel || ""),
+      relativeFolder: String(folderInfo.relativeFolder || "")
+    });
+  }
+
+  /**
+   * Register a password-only follow-up mail dispatch in the background.
+   * The background captures final recipients when the main message is sent.
+   * @param {{tabId:number,shareLabel:string,shareUrl:string,shareId?:string,folderInfo?:object,password:string,html:string}} payload
+   * @returns {Promise<void>}
+   */
+  async function registerSeparatePasswordDispatch(payload = {}){
+    const tabId = Number(payload.tabId);
+    if (!Number.isInteger(tabId) || tabId <= 0){
+      throw new Error("invalid_tab_id");
+    }
+    const password = String(payload.password || "");
+    const html = String(payload.html || "");
+    if (!password || !html){
+      throw new Error("password_dispatch_payload_invalid");
+    }
+    const response = await browser.runtime.sendMessage({
+      type: "sharing:registerSeparatePasswordDispatch",
+      payload: {
+        tabId,
+        shareLabel: String(payload.shareLabel || ""),
+        shareUrl: String(payload.shareUrl || ""),
+        shareId: String(payload.shareId || ""),
+        folderInfo: payload?.folderInfo && typeof payload.folderInfo === "object"
+          ? {
+            relativeFolder: String(payload.folderInfo.relativeFolder || ""),
+            relativeBase: String(payload.folderInfo.relativeBase || ""),
+            folderName: String(payload.folderInfo.folderName || "")
+          }
+          : null,
+        password,
+        html
+      }
+    });
+    if (!response?.ok){
+      throw new Error(response?.error || "password_dispatch_register_failed");
+    }
+    log('Password dispatch registered', {
+      tabId,
+      shareLabel: String(payload.shareLabel || "")
+    });
   }
 
   /**
@@ -860,6 +1371,14 @@
    * @returns {{read:boolean,create:boolean,write:boolean,delete:boolean}}
    */
   function getPermissions(){
+    if (state.mode === "attachments"){
+      return {
+        read: true,
+        create: false,
+        write: false,
+        delete: false
+      };
+    }
     return {
       read: true,
       create: !!dom.permCreate.checked,
@@ -881,35 +1400,11 @@
           return false;
         }
         key = getTargetRelativePath(entry);
-        log('Lokaler Duplikat-Rename', entry.displayPath);
+        log('Local duplicate rename', entry.displayPath);
       }
       seen.add(key);
     }
     renderFileTable();
-    return true;
-  }
-
-  /**
-   * Ensure selected files do not collide with remote paths.
-   * @returns {Promise<boolean>}
-   */
-  async function ensureRemoteUniqueness(){
-    const shareContext = getShareContext();
-    if (!shareContext){
-      return false;
-    }
-    for (const entry of state.files){
-      const relativePath = joinRelative(shareContext.folderInfo.relativeFolder, getTargetRelativePath(entry));
-      const exists = await NCSharing.checkRemotePathExists({ relativePath });
-      if (exists){
-        if (!promptForRename(entry, 'sharing_prompt_rename_existing')){
-          return false;
-        }
-        renderFileTable();
-        log('Server Duplikat-Rename', entry.displayPath);
-        return ensureRemoteUniqueness();
-      }
-    }
     return true;
   }
 
@@ -919,7 +1414,7 @@
    * @returns {string}
    */
   function getTargetRelativePath(entry){
-    const sanitizedName = NCSharing.sanitizeFileName(entry.renamedName || entry.file?.name || 'Datei');
+    const sanitizedName = NCSharing.sanitizeFileName(entry.renamedName || entry.file?.name || 'File');
     const sanitizedDir = NCSharing.sanitizeRelativeDir(entry.relativeDir || '');
     return sanitizedDir ? `${sanitizedDir}/${sanitizedName}` : sanitizedName;
   }
@@ -944,7 +1439,7 @@
         setMessage(i18n('sharing_password_policy_error'), 'error');
         return false;
       }
-    }else if (!isStrongPassword(pwd)){
+    }else if (!NCPasswordPolicyClient.isStrongPassword(pwd)){
       setMessage(i18n('sharing_password_policy_error'), 'error');
       return false;
     }
@@ -965,8 +1460,8 @@
    * @returns {boolean}
    */
   function confirmNoFileUpload(){
-    const title = i18n('sharing_confirm_no_files_title') || 'Freigabe ohne Upload';
-    const body = i18n('sharing_confirm_no_files_message') || 'Es wurden keine Dateien hinzugefügt. Der Empfänger kann nur eigene Dateien hochladen. Fortfahren?';
+    const title = i18n('sharing_confirm_no_files_title') || 'Share without upload';
+    const body = i18n('sharing_confirm_no_files_message') || 'No files were added. Recipients can only upload their own files. Continue?';
     return window.confirm(`${title}\n\n${body}`);
   }
 
@@ -1010,37 +1505,15 @@
   }
 
   /**
-   * Handle cancel and clean up any temporary server state.
+   * Handle cancel by closing the wizard.
+   * Background owns remote cleanup via the armed wizard window entry.
    * @param {Event} event
    * @returns {Promise<void>}
    */
   async function handleCancel(event){
     event?.preventDefault?.();
-    await cleanupRemoteFolder('cancel');
+    log('Wizard cancel requested');
     window.close();
-  }
-
-  /**
-   * Remove the remote folder if it was created during this wizard run.
-   * @param {string} reason
-   * @returns {Promise<void>}
-   */
-  async function cleanupRemoteFolder(reason = ''){
-    if (!state.remoteFolderCreated || !state.remoteFolderInfo){
-      return;
-    }
-    if (typeof NCSharing?.deleteShareFolder !== 'function'){
-      return;
-    }
-    try{
-      await NCSharing.deleteShareFolder({ folderInfo: state.remoteFolderInfo });
-      log('Remote Ordner bereinigt', { reason, folder: state.remoteFolderInfo.relativeFolder });
-    }catch(err){
-      log('Remote Ordner Bereinigung fehlgeschlagen', err?.message || err);
-    }finally{
-      state.remoteFolderCreated = false;
-      state.remoteFolderInfo = null;
-    }
   }
 
   /**
@@ -1088,6 +1561,33 @@
   }
 
   /**
+   * Resolve the fixed attachment share name with collision suffixes.
+   * Uses `email_attachment`, then `email_attachment_1`, `email_attachment_2`, ...
+   * @returns {Promise<string>}
+   */
+  async function resolveAttachmentShareName(){
+    const baseName = ATTACHMENT_DEFAULT_SHARE_NAME;
+    const shareDate = state.shareContext.shareDate instanceof Date ? state.shareContext.shareDate : new Date();
+    for (let suffix = 0; suffix < 1000; suffix++){
+      const candidate = suffix === 0 ? baseName : `${baseName}_${suffix}`;
+      log('Check attachment share name', { candidate, suffix });
+      const result = await NCSharing.checkShareFolderAvailability({
+        shareName: candidate,
+        basePath: state.basePath,
+        shareDate: shareDate.toISOString()
+      });
+      if (!result.exists){
+        dom.shareName.value = candidate;
+        rememberShareFolder(result.folderInfo, candidate);
+        log('Attachment share name set', { candidate });
+        return candidate;
+      }
+    }
+    log('Attachment share name failed (no free variant found)');
+    throw new Error(i18n('sharing_error_folder_exists'));
+  }
+
+  /**
    * Compute the default expire date as YYYY-MM-DD.
    * @returns {string}
    */
@@ -1103,81 +1603,28 @@
    * @returns {string}
    */
   function getDefaultShareName(){
-    return i18n('sharing_share_default') || 'Freigabename';
-  }
-
-  /**
-   * Join path segments and trim slashes.
-   * @param {...string} segments
-   * @returns {string}
-   */
-  function joinRelative(...segments){
-    return segments
-      .map((segment) => String(segment || '').replace(/^[\\/]+|[\\/]+$/g, ''))
-      .filter(Boolean)
-      .join('/');
+    return i18n('sharing_share_default') || 'Share name';
   }
 
   /**
    * Send a debug log message when enabled.
    */
   function log(){
-    if (!state.debugEnabled){
+    if (!state.debugEnabled || isPageUnloading){
       return;
     }
     const args = Array.from(arguments);
-    forwardDebugLog(args);
-  }
-
-  /**
-   * Forward a debug log payload to the background.
-   * @param {any[]} args
-   */
-  function forwardDebugLog(args){
-    if (!browser?.runtime?.sendMessage){
-      return;
-    }
     const list = Array.isArray(args) ? args : [];
-    const payload = {
+    NCDebugForwarder.forwardDebugLog({
+      enabled: state.debugEnabled,
+      isPageUnloading,
       source: LOG_SOURCE,
       channel: LOG_CHANNEL,
       label: LOG_LABEL,
-      text: formatLogArg(list[0])
-    };
-    if (list.length > 1){
-      payload.details = list.slice(1).map(formatLogArg);
-    }
-    try{
-      browser.runtime.sendMessage({
-        type: 'debug:log',
-        payload
-      }).catch(() => {});
-    }catch(_){}
-  }
-
-  /**
-   * Format a log argument for transport.
-   * @param {any} value
-   * @returns {string}
-   */
-  function formatLogArg(value){
-    if (value == null){
-      return String(value);
-    }
-    if (typeof value === 'string' || typeof value === 'number' || typeof value === 'boolean'){
-      return String(value);
-    }
-    if (value instanceof Error){
-      return value?.message || value.toString();
-    }
-    try{
-      return JSON.stringify(value);
-    }catch(_){}
-    try{
-      return String(value);
-    }catch(__){
-      return Object.prototype.toString.call(value);
-    }
+      text: list[0],
+      details: list.slice(1),
+      onError: logUiError
+    });
   }
   /**
    * Create a fresh share context snapshot.
@@ -1236,7 +1683,176 @@
       return;
     }
     entry.renamedName = clean;
-    entry.displayPath = entry.relativeDir ? `${entry.relativeDir}/${clean}` : clean;
+    entry.displayPath = buildDisplayPath(entry.displayDir || entry.relativeDir || '', clean);
+  }
+
+  /**
+   * Normalize display paths to slash-separated strings.
+   * @param {string} value
+   * @returns {string}
+   */
+  function normalizeDisplayPath(value){
+    const raw = String(value || '').trim();
+    if (!raw){
+      return '';
+    }
+    return raw.replace(/\\/g, '/').replace(/\/+/g, '/');
+  }
+
+  /**
+   * Return the display-directory portion of a full display path.
+   * @param {string} fullPath
+   * @returns {string}
+   */
+  function extractDisplayDir(fullPath){
+    const normalized = normalizeDisplayPath(fullPath);
+    const idx = normalized.lastIndexOf('/');
+    if (idx <= 0){
+      return '';
+    }
+    return normalized.slice(0, idx);
+  }
+
+  /**
+   * Build one display path from directory + file name.
+   * @param {string} displayDir
+   * @param {string} fileName
+   * @returns {string}
+   */
+  function buildDisplayPath(displayDir, fileName){
+    const safeFileName = String(fileName || '').trim();
+    const normalizedDir = normalizeDisplayPath(displayDir).replace(/\/+$/, '');
+    if (!normalizedDir){
+      return safeFileName;
+    }
+    return `${normalizedDir}/${safeFileName}`;
+  }
+
+  /**
+   * Resolve the most useful display path for one file entry.
+   * @param {{file:File,source:string,relativeDir?:string,fallbackName:string,providedPath?:string}} options
+   * @returns {string}
+   */
+  function resolveEntryDisplayPath({
+    file,
+    source,
+    relativeDir = '',
+    selectionRootDir = '',
+    fallbackName = '',
+    providedPath = ''
+  } = {}){
+    const fileName = String(fallbackName || file?.name || 'File').trim() || 'File';
+    if (source === 'folder'){
+      return buildDisplayPath(relativeDir, fileName);
+    }
+    const candidates = [
+      providedPath,
+      file?.webkitRelativePath,
+      file?.relativePath,
+      file?.mozFullPath,
+      file?.path
+    ];
+    for (const candidate of candidates){
+      const normalized = normalizeDisplayPath(candidate);
+      if (!normalized){
+        continue;
+      }
+      const normalizedFileName = fileName.toLowerCase();
+      const normalizedCandidate = normalized.toLowerCase();
+      if (normalizedCandidate.endsWith(`/${normalizedFileName}`) || normalizedCandidate === normalizedFileName){
+        return normalized;
+      }
+      return buildDisplayPath(normalized, fileName);
+    }
+    if (source === 'file'){
+      const root = normalizeDisplayPath(selectionRootDir).replace(/\/+$/, '');
+      if (root){
+        return buildDisplayPath(root, fileName);
+      }
+    }
+    return buildDisplayPath(relativeDir, fileName);
+  }
+
+  /**
+   * Try to resolve the selected source directory from the file input value.
+   * Works only if Thunderbird exposes a non-sanitized native path.
+   * @param {string} inputValue
+   * @returns {string}
+   */
+  function extractSelectionRootDir(inputValue){
+    const normalized = normalizeDisplayPath(inputValue);
+    if (!normalized || !normalized.includes('/')){
+      return '';
+    }
+    if (normalized.toLowerCase().includes('/fakepath/')){
+      return '';
+    }
+    const idx = normalized.lastIndexOf('/');
+    if (idx <= 0){
+      return '';
+    }
+    return normalized.slice(0, idx);
+  }
+
+  /**
+   * Calculate the shared horizontal scroll limit for all visible path cells.
+   * @returns {number}
+   */
+  function getMaxPathColumnScrollLeft(){
+    const nodes = dom.fileTableBody?.querySelectorAll('.path-scroll');
+    if (!nodes?.length){
+      return 0;
+    }
+    let max = 0;
+    for (const node of nodes){
+      const localMax = Math.max(0, (node.scrollWidth || 0) - (node.clientWidth || 0));
+      if (localMax > max){
+        max = localMax;
+      }
+    }
+    return max;
+  }
+
+  /**
+   * Apply one shared horizontal scroll position to the whole path column.
+   * @param {number} nextScrollLeft
+   */
+  function applySharedPathColumnScroll(nextScrollLeft){
+    const maxScrollLeft = getMaxPathColumnScrollLeft();
+    const clamped = Math.min(maxScrollLeft, Math.max(0, Number(nextScrollLeft) || 0));
+    state.pathColumnScrollLeft = clamped;
+    const nodes = dom.fileTableBody?.querySelectorAll('.path-scroll');
+    if (!nodes?.length){
+      return;
+    }
+    for (const node of nodes){
+      if (node.scrollLeft !== clamped){
+        node.scrollLeft = clamped;
+      }
+    }
+  }
+
+  /**
+   * Translate mouse-wheel movement into shared horizontal scrolling for path cells.
+   * Wheel input inside the path column updates all path cells in sync.
+   * @param {HTMLElement} element
+   */
+  function attachPathWheelScroll(element){
+    if (!element){
+      return;
+    }
+    element.addEventListener('wheel', (event) => {
+      const scrollable = element.scrollWidth > element.clientWidth;
+      if (!scrollable){
+        return;
+      }
+      const delta = Math.abs(event.deltaX) > 0 ? event.deltaX : event.deltaY;
+      if (!delta){
+        return;
+      }
+      applySharedPathColumnScroll(state.pathColumnScrollLeft + delta);
+      event.preventDefault();
+    }, { passive: false });
   }
   /**
    * Prompt the user to rename an entry to avoid collisions.
@@ -1271,6 +1887,28 @@
   }
 
   /**
+   * Cleanup listeners/resources when the popup page is closed.
+   */
+  function cleanupPageResources(){
+    if (isPageUnloading){
+      return;
+    }
+    // Wizard remote cleanup is handled centrally in background by window removal.
+    isPageUnloading = true;
+    state.debugEnabled = false;
+    if (popupSizer){
+      window.removeEventListener('resize', popupSizer.scheduleSizeUpdate);
+    }
+    if (layoutObserver){
+      layoutObserver.disconnect();
+      layoutObserver = null;
+    }
+    window.removeEventListener('pagehide', cleanupPageResources, true);
+    window.removeEventListener('beforeunload', cleanupPageResources, true);
+    window.removeEventListener('unload', cleanupPageResources, true);
+  }
+
+  /**
    * Return the desired content height for popup sizing.
    * @returns {number}
    */
@@ -1278,19 +1916,3 @@
     return POPUP_CONTENT_HEIGHT;
   }
 })();
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-

@@ -5,7 +5,7 @@
  */
 'use strict';
 (function(__context){
-  const DEFAULT_BASE_PATH = "90 Freigaben - extern";
+  const DEFAULT_BASE_PATH = "90 Shares - external";
   const NEXTCLOUD_DEVICE_NAME = "NC Connector for Thunderbird";
   const PERMISSION_FLAGS = {
     read: 1,
@@ -27,7 +27,22 @@
     }
     try{
       console.log("[NCSHARE]", ...args);
-    }catch(_){}
+    }catch(error){
+      console.error("[NCSHARE] debug log failed", error);
+    }
+  }
+
+  /**
+   * Log internal sharing module errors.
+   * @param {string} scope
+   * @param {any} error
+   */
+  function logInternalError(scope, error){
+    try{
+      console.error("[NCSHARE]", scope, error);
+    }catch(logError){
+      console.error("[NCSHARE]", scope, error?.message || String(error), logError?.message || String(logError));
+    }
   }
 
   const sharedTranslator = (typeof NCI18n !== "undefined" && typeof NCI18n.translate === "function")
@@ -48,7 +63,9 @@
         if (translated){
           return translated;
         }
-      }catch(_){}
+      }catch(error){
+        logInternalError("shared i18n translation failed", error);
+      }
     }
     try{
       if (typeof browser !== "undefined" && browser?.i18n?.getMessage){
@@ -57,7 +74,9 @@
           return fallback;
         }
       }
-    }catch(_){}
+    }catch(error){
+      logInternalError("browser.i18n.getMessage failed", error);
+    }
     if (Array.isArray(substitutions) && substitutions.length){
       return String(substitutions[0] ?? "");
     }
@@ -78,14 +97,14 @@
    * @returns {Promise<boolean>}
    */
   async function ensureHostPermission(baseUrl){
-    if (typeof NCHostPermissions === "undefined" || !NCHostPermissions?.hasOriginPermission){
+    if (typeof NCHostPermissions === "undefined" || !NCHostPermissions?.requireOriginPermission){
       return true;
     }
-    const ok = await NCHostPermissions.hasOriginPermission(baseUrl);
-    if (!ok){
-      throw hostPermissionError();
-    }
-    return true;
+    return NCHostPermissions.requireOriginPermission(baseUrl, {
+      errorFactory: hostPermissionError,
+      scope: "[NCSHARE] host permission missing",
+      logMissing: false
+    });
   }
 
   /**
@@ -123,7 +142,7 @@
    * @returns {string}
    */
   function sanitizeShareName(value){
-    const fallback = i18n("sharing_share_default") || "Freigabe";
+    const fallback = i18n("sharing_share_default") || "Share";
     if (!value) return fallback;
     const normalized = String(value).normalize("NFKC").replace(INVALID_PATH_CHARS, "_").trim();
     return normalized || fallback;
@@ -135,7 +154,7 @@
    * @param {string} fallback
    * @returns {string}
    */
-  function sanitizeFileName(value, fallback = "Datei"){
+  function sanitizeFileName(value, fallback = "File"){
     if (!value && value !== 0) return fallback;
     const normalized = String(value).normalize("NFKC").replace(INVALID_PATH_CHARS, "_").trim();
     return normalized || fallback;
@@ -207,7 +226,7 @@
     return String(dir)
       .split(/[\\/]+/)
       .filter(Boolean)
-      .map((segment) => sanitizeFileName(segment, "Ordner"))
+      .map((segment) => sanitizeFileName(segment, "Folder"))
       .join("/");
   }
 
@@ -236,7 +255,10 @@
       return true;
     }
     if (!res.ok){
-      const text = await res.text().catch(() => "");
+      const text = await res.text().catch((error) => {
+        logInternalError("pathExists response read failed", error);
+        return "";
+      });
       throw new Error(text || `Path check failed (${res.status})`);
     }
     return true;
@@ -265,7 +287,10 @@
         continue;
       }
       if (!res.ok){
-        const text = await res.text().catch(() => "");
+        const text = await res.text().catch((error) => {
+          logInternalError("ensureFolderExists response read failed", error);
+          return "";
+        });
         throw new Error(text || `MKCOL failed (${res.status})`);
       }
     }
@@ -294,7 +319,10 @@
       return false;
     }
     if (!res.ok){
-      const text = await res.text().catch(() => "");
+      const text = await res.text().catch((error) => {
+        logInternalError("deleteRemotePath response read failed", error);
+        return "";
+      });
       throw new Error(text || `DELETE failed (${res.status})`);
     }
     return true;
@@ -488,7 +516,6 @@
 
   /**
    * Load a packaged asset and return a base64 payload.
-   * Falls back to XHR if fetch is blocked.
    * @param {string} assetPath
    * @returns {Promise<string>}
    */
@@ -504,26 +531,8 @@
       }
       return bufferToBase64(await response.arrayBuffer());
     }catch(err){
-      try{
-        const buffer = await new Promise((resolve, reject) => {
-          const xhr = new XMLHttpRequest();
-          xhr.open("GET", url, true);
-          xhr.responseType = "arraybuffer";
-          xhr.onload = () => {
-            if (xhr.status === 200 || xhr.status === 0){
-              resolve(xhr.response);
-            }else{
-              reject(new Error(`Asset XHR failed (${xhr.status})`));
-            }
-          };
-          xhr.onerror = () => reject(new Error("Asset XHR failed"));
-          xhr.send();
-        });
-        return bufferToBase64(buffer);
-      }catch(err2){
-        console.warn("[NCSHARE] asset base64 failed", assetPath, err2?.message || err2);
-        return "";
-      }
+      console.error("[NCSHARE] asset base64 failed", assetPath, err?.message || err);
+      return "";
     }
   }
 
@@ -574,26 +583,6 @@
   }
 
   /**
-   * Check if a remote file/folder exists under the current user's DAV root.
-   * @param {string|{relativePath:string}} input
-   * @returns {Promise<boolean>}
-   */
-  async function checkRemotePathExists(input){
-    const opts = await NCCore.getOpts();
-    if (!opts.baseUrl || !opts.user || !opts.appPass){
-      throw new Error(i18n("error_credentials_missing"));
-    }
-    await ensureHostPermission(opts.baseUrl);
-    const relativePath = typeof input === "string" ? input : input?.relativePath || "";
-    const authHeader = NCOcs.buildAuthHeader(opts.user, opts.appPass);
-    const davRoot = `${opts.baseUrl.replace(/\/+$/, "")}/remote.php/dav/files/${encodeURIComponent(opts.user)}`;
-    logDebug(opts, "remotePath:check", { relativePath });
-    const exists = await pathExists({ davRoot, relativePath, authHeader });
-    logDebug(opts, "remotePath:result", { relativePath, exists });
-    return exists;
-  }
-
-  /**
    * Build the HTML block inserted into the compose body.
    * @param {object} result
    * @param {object} request
@@ -602,15 +591,24 @@
   async function buildHtmlBlock(result, request){
     const shareLang = await getShareBlockLang();
     const headerImage = await getHeaderBase64();
+    const passwordOnly = !!request?.passwordOnly;
+    const hidePassword = !!request?.hidePassword;
+    const showPasswordSeparateHint = !!request?.showPasswordSeparateHint;
     const paragraphs = [];
-    if (request?.noteEnabled && request?.note){
+    if (!passwordOnly && request?.noteEnabled && request?.note){
       paragraphs.push(`<p style="margin:0 0 14px 0;line-height:1.4;">${escapeHtml(request.note)}</p>`);
     }
-    const introLine = await tShare(shareLang, "sharing_html_intro_line");
+    const introLine = passwordOnly
+      ? await tShare(shareLang, "sharing_html_password_mail_intro")
+      : await tShare(shareLang, "sharing_html_intro_line");
     if (introLine){
       paragraphs.push(`<p style="margin:0 0 14px 0;line-height:1.4;">${escapeHtml(introLine)}<br /></p>`);
     }
-    const downloadLink = `<a href="${escapeHtml(result.shareUrl)}" style="color:#0082C9;text-decoration:none;">${escapeHtml(result.shareUrl)}</a>`;
+    const shareUrl = String(result?.shareUrl || "");
+    const downloadUrl = request?.zipDownload
+      ? buildZipDownloadUrl(shareUrl)
+      : shareUrl;
+    const downloadLink = `<a href="${escapeHtml(downloadUrl)}" style="color:#0082C9;text-decoration:none;">${escapeHtml(downloadUrl)}</a>`;
     const permissionLabels = {
       read: await tShare(shareLang, "sharing_permission_read"),
       create: await tShare(shareLang, "sharing_permission_create"),
@@ -618,17 +616,34 @@
       delete: await tShare(shareLang, "sharing_permission_delete")
     };
     const rows = [];
-    rows.push(buildTableRow(await tShare(shareLang, "sharing_html_download_label"), downloadLink));
-    if (result.password){
-      const badge = `<span style="display:inline-block;font-family:'Consolas','Courier New',monospace;padding:2px 6px;border:1px solid #c7c7c7;border-radius:3px;-ms-user-select:all;user-select:all;" ondblclick="try{window.getSelection().selectAllChildren(this);}catch(e){}" onclick="try{window.getSelection().selectAllChildren(this);}catch(e){}">${escapeHtml(result.password)}</span>`;
+    if (passwordOnly){
+      const badge = `<span style="display:inline-block;font-family:'Consolas','Courier New',monospace;padding:2px 6px;border:1px solid #c7c7c7;border-radius:3px;-ms-user-select:all;user-select:all;" ondblclick="window.getSelection().selectAllChildren(this);" onclick="window.getSelection().selectAllChildren(this);">${escapeHtml(result.password || "")}</span>`;
       rows.push(buildTableRow(await tShare(shareLang, "sharing_html_password_label"), badge));
+    }else{
+      rows.push(buildTableRow(await tShare(shareLang, "sharing_html_download_label"), downloadLink));
+      if (result.password && !hidePassword){
+        const badge = `<span style="display:inline-block;font-family:'Consolas','Courier New',monospace;padding:2px 6px;border:1px solid #c7c7c7;border-radius:3px;-ms-user-select:all;user-select:all;" ondblclick="window.getSelection().selectAllChildren(this);" onclick="window.getSelection().selectAllChildren(this);">${escapeHtml(result.password)}</span>`;
+        rows.push(buildTableRow(await tShare(shareLang, "sharing_html_password_label"), badge));
+      }
+      if (showPasswordSeparateHint && result.password){
+        rows.push(buildTableRow(await tShare(shareLang, "sharing_html_password_label"), escapeHtml(await tShare(shareLang, "sharing_html_password_separate_hint"))));
+      }
+      if (result.expireDate){
+        rows.push(buildTableRow(await tShare(shareLang, "sharing_html_expire_label"), escapeHtml(result.expireDate)));
+      }
+      if (!request?.hidePermissions){
+        rows.push(buildTableRow(await tShare(shareLang, "sharing_html_permissions_label"), buildPermissionsBadges(result.permissions, permissionLabels)));
+      }
     }
-    if (result.expireDate){
-      rows.push(buildTableRow(await tShare(shareLang, "sharing_html_expire_label"), escapeHtml(result.expireDate)));
-    }
-    rows.push(buildTableRow(await tShare(shareLang, "sharing_html_permissions_label"), buildPermissionsBadges(result.permissions, permissionLabels)));
     const nextcloudAnchor = `<a href="https://nextcloud.com/" style="color:#0082C9;text-decoration:none;">Nextcloud</a>`;
-    const footer = (await tShare(shareLang, "sharing_html_footer", [nextcloudAnchor])) || "";
+    const footer = passwordOnly
+      ? ""
+      : ((await tShare(shareLang, "sharing_html_footer", [nextcloudAnchor])) || "");
+    const footerHtml = footer
+      ? `<div style="padding:10px 18px 16px 18px;font-size:9pt;font-style:italic;">
+          ${footer}
+        </div>`
+      : "";
     return `
 <div style="font-family:Calibri,'Segoe UI',Arial,sans-serif;font-size:11pt;margin:16px 0;">
   <table role="presentation" width="640" style="border-collapse:separate;border-spacing:0;width:640px;margin:0;background-color:transparent;border:1px solid #d7d7db;border-radius:8px;overflow:hidden;">
@@ -649,9 +664,7 @@
             ${rows.join("\n")}
           </table>
         </div>
-        <div style="padding:10px 18px 16px 18px;font-size:9pt;font-style:italic;">
-          ${footer}
-        </div>
+        ${footerHtml}
       </td>
     </tr>
   </table>
@@ -703,6 +716,30 @@
   }
 
   /**
+   * Build the public ZIP download URL from a Nextcloud public share URL.
+   * @param {string} shareUrl
+   * @returns {string}
+   */
+  function buildZipDownloadUrl(shareUrl){
+    const base = String(shareUrl || "").trim();
+    if (!base){
+      return "";
+    }
+    const parsed = new URL(base);
+    const pathSegments = parsed.pathname.split("/").filter(Boolean);
+    const shareSegmentIndex = pathSegments.lastIndexOf("s");
+    if (shareSegmentIndex < 0 || shareSegmentIndex + 1 >= pathSegments.length){
+      throw new Error("Invalid Nextcloud public share URL");
+    }
+    const normalized = pathSegments.slice(0, shareSegmentIndex + 2);
+    normalized.push("download");
+    parsed.pathname = "/" + normalized.join("/");
+    parsed.search = "";
+    parsed.hash = "";
+    return parsed.toString();
+  }
+
+  /**
    * Create a Nextcloud share, upload files, and return HTML output.
    * @param {object} request
    * @returns {Promise<{html:string, shareUrl:string, shareInfo:object}>}
@@ -744,7 +781,7 @@
       let uploaded = 0;
       for (const item of files){
         const displayPath = item.displayPath || item.file?.name || "";
-        const sanitizedFileName = sanitizeFileName(item.renamedName || item.file?.name || "Datei");
+        const sanitizedFileName = sanitizeFileName(item.renamedName || item.file?.name || "File");
         const relativeDir = sanitizeRelativeDir(item.relativeDir || "");
         const targetFolder = relativeDir ? joinRelativePath(relativeFolder, relativeDir) : relativeFolder;
         if (relativeDir){
@@ -818,7 +855,7 @@
     try{
       html = await buildHtmlBlock(resultPayload, request);
     }catch(err){
-      console.warn("[NCSHARE] buildHtmlBlock failed", err?.message || err);
+      logInternalError("buildHtmlBlock failed", err);
       const safeUrl = escapeHtml(share.url || "");
       html = safeUrl
         ? `<p style="margin:0 0 12px 0;"><a href="${safeUrl}" style="color:#0082C9;text-decoration:none;">${safeUrl}</a></p>`
@@ -906,7 +943,6 @@
     getFileLinkBasePath,
     buildShareFolderInfo,
     checkShareFolderAvailability,
-    checkRemotePathExists,
     sanitizeShareName,
     sanitizeFileName,
     sanitizeRelativeDir,
@@ -918,35 +954,3 @@
     __context.NCSharing = api;
   }
 })(typeof window !== "undefined" ? window : (typeof globalThis !== "undefined" ? globalThis : this));
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-

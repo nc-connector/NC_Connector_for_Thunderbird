@@ -11,15 +11,67 @@
  */
 const NCCore = (() => {
   const DEVICE_NAME = "NC Connector for Thunderbird";
+  const coreShortId = NCTalkTextUtils.shortId;
 
   /**
-   * Normalize a base URL (trim and remove trailing slashes).
+   * Log NCCore internal errors (with L(...) when available).
+   * @param {string} scope
+   * @param {any} error
+   * @param {object} details
+   */
+  function logNCCoreError(scope, error, details = undefined){
+    if (typeof L === "function"){
+      try{
+        L(scope, {
+          error: error?.message || String(error),
+          details: details || null
+        });
+        return;
+      }catch(logError){
+        console.error("[NCCore]", scope, error, details || "", logError);
+        return;
+      }
+    }
+    console.error("[NCCore]", scope, error, details || "");
+  }
+
+  /**
+   * Build a localized login-flow error and mark it as fatal.
+   * @returns {Error}
+   */
+  function createLoginFlowError(){
+    const fallback = typeof bgI18n === "function"
+      ? bgI18n("options_loginflow_failed")
+      : "Login flow failed.";
+    const error = new Error(fallback || "Login flow failed.");
+    error.ncLoginFlowFatal = true;
+    return error;
+  }
+
+  /**
+   * Normalize a base URL and enforce HTTPS.
    * @param {string} input - User input from settings.
    * @returns {string} - Normalized base URL or empty string.
    */
   function normalizeBaseUrl(input){
     if (!input) return "";
-    return String(input).trim().replace(/\/+$/, "");
+    const raw = String(input).trim();
+    if (!raw){
+      return "";
+    }
+    try{
+      const parsed = new URL(raw);
+      if (parsed.protocol !== "https:"){
+        return "";
+      }
+      const normalizedPath = String(parsed.pathname || "").replace(/\/+$/, "");
+      return parsed.origin + normalizedPath;
+    }catch(error){
+      logNCCoreError("normalize base URL failed", error, {
+        inputSample: raw.slice(0, 160)
+      });
+      return "";
+    }
   }
 
   /**
@@ -28,14 +80,13 @@ const NCCore = (() => {
    * @returns {Promise<boolean>}
    */
   async function ensureHostPermission(baseUrl){
-    if (typeof NCHostPermissions === "undefined" || !NCHostPermissions?.hasOriginPermission){
+    if (typeof NCHostPermissions === "undefined" || !NCHostPermissions?.requireOriginPermission){
       return true;
     }
-    const ok = await NCHostPermissions.hasOriginPermission(baseUrl);
-    if (!ok){
-      throw new Error(bgI18n("error_host_permission_missing"));
-    }
-    return true;
+    return NCHostPermissions.requireOriginPermission(baseUrl, {
+      message: bgI18n("error_host_permission_missing"),
+      scope: "[NCCore] host permission missing"
+    });
   }
 
   /**
@@ -45,16 +96,20 @@ const NCCore = (() => {
    * @returns {Promise<{ok:boolean, code:string, message?:string, version?:string}>}
    */
   async function testCredentials({ baseUrl, user, appPass } = {}){
-    const normalizedBase = normalizeBaseUrl(baseUrl);
+    const rawBase = typeof baseUrl === "string" ? baseUrl.trim() : "";
+    const normalizedBase = normalizeBaseUrl(rawBase);
     const trimmedUser = typeof user === "string" ? user.trim() : "";
     const password = typeof appPass === "string" ? appPass : "";
-    if (!normalizedBase || !trimmedUser || !password){
+    if (!rawBase || !trimmedUser || !password){
       return { ok:false, code:"missing", message: bgI18n("error_credentials_missing") };
     }
+    if (!normalizedBase){
+      return { ok:false, code:"https_required", message: bgI18n("error_baseurl_https_required") };
+    }
     await ensureHostPermission(normalizedBase);
-    const basicHeader = "Basic " + btoa(trimmedUser + ":" + password);
+    const basicHeader = NCOcs.buildAuthHeader(trimmedUser, password);
     try{
-      L("options test connection", { base: normalizedBase, user: shortId(trimmedUser) });
+      L("options test connection", { base: normalizedBase, user: coreShortId(trimmedUser) });
       const headers = {
         "OCS-APIRequest": "true",
         "Authorization": basicHeader,
@@ -62,9 +117,16 @@ const NCCore = (() => {
       };
       const url = normalizedBase + "/ocs/v2.php/cloud/capabilities";
       const res = await fetch(url, { method:"GET", headers });
-      const raw = await res.text().catch(() => "");
+      const raw = await res.text().catch((error) => {
+        logNCCoreError("capabilities response read failed", error);
+        return "";
+      });
       let data = null;
-      try{ data = raw ? JSON.parse(raw) : null; }catch(_){}
+      try{
+        data = raw ? JSON.parse(raw) : null;
+      }catch(error){
+        logNCCoreError("capabilities json parse failed", error, { responseSample: String(raw || "").slice(0, 160) });
+      }
       if (res.status === 401 || res.status === 403){
         const detail = data?.ocs?.meta?.message || "HTTP " + res.status;
         return { ok:false, code:"auth", message: detail };
@@ -105,21 +167,29 @@ const NCCore = (() => {
           return { ok:false, code:"auth", message: bgI18n("options_test_failed_auth") };
         }
         if (!userRes.ok){
-          const userRaw = await userRes.text().catch(() => "");
+          const userRaw = await userRes.text().catch((error) => {
+            logNCCoreError("user endpoint response read failed", error);
+            return "";
+          });
           let userData = null;
           try{
             userData = userRaw ? JSON.parse(userRaw) : null;
-          }catch(_){
+          }catch(error){
+            logNCCoreError("user endpoint json parse failed", error, { responseSample: String(userRaw || "").slice(0, 160) });
             userData = null;
           }
           const detail = userData?.ocs?.meta?.message || userRaw || (userRes.status + " " + userRes.statusText);
           return { ok:false, code:"http", message: detail };
         }
       }catch(userErr){
+        console.error("[NCCore] user endpoint request failed", userErr);
+        logNCCoreError("user endpoint request failed", userErr, { base: normalizedBase });
         return { ok:false, code:"network", message: userErr?.message || String(userErr) };
       }
       return { ok:true, version: versionStr, message };
     }catch(e){
+      console.error("[NCCore] capabilities request failed", e);
+      logNCCoreError("capabilities request failed", e, { base: normalizedBase });
       return { ok:false, code:"network", message: e?.message || String(e) };
     }
   }
@@ -130,9 +200,13 @@ const NCCore = (() => {
    * @returns {Promise<{loginUrl:string,pollEndpoint:string,pollToken:string}>}
    */
   async function startLoginFlow(baseUrl){
-    const normalized = normalizeBaseUrl(baseUrl);
-    if (!normalized){
+    const rawBase = typeof baseUrl === "string" ? baseUrl.trim() : "";
+    if (!rawBase){
       throw new Error(bgI18n("error_credentials_missing"));
+    }
+    const normalized = normalizeBaseUrl(rawBase);
+    if (!normalized){
+      throw new Error(bgI18n("error_baseurl_https_required"));
     }
     await ensureHostPermission(normalized);
     const url = normalized + "/index.php/login/v2";
@@ -143,9 +217,16 @@ const NCCore = (() => {
     };
     const body = JSON.stringify({ name: DEVICE_NAME });
     const res = await fetch(url, { method:"POST", headers, body });
-    const raw = await res.text().catch(() => "");
+    const raw = await res.text().catch((error) => {
+      logNCCoreError("login flow start response read failed", error);
+      return "";
+    });
     let data = null;
-    try{ data = raw ? JSON.parse(raw) : null; }catch(_){}
+    try{
+      data = raw ? JSON.parse(raw) : null;
+    }catch(error){
+      logNCCoreError("login flow start json parse failed", error, { responseSample: String(raw || "").slice(0, 160) });
+    }
     if (!res.ok){
       const detail = data?.ocs?.meta?.message || raw || (res.status + " " + res.statusText);
       throw new Error(detail || bgI18n("options_loginflow_failed"));
@@ -155,10 +236,13 @@ const NCCore = (() => {
     let pollEndpoint = poll.endpoint || "";
     const pollToken = poll.token || "";
     if (!loginUrl || !pollEndpoint || !pollToken){
-      throw new Error("Login-Flow Antwort unvollständig.");
+      throw createLoginFlowError();
     }
     if (!/^https?:/i.test(pollEndpoint)){
       pollEndpoint = normalized + pollEndpoint;
+    }
+    if (!/^https:/i.test(pollEndpoint)){
+      throw createLoginFlowError(bgI18n("error_baseurl_https_required"));
     }
     return {
       loginUrl,
@@ -174,7 +258,7 @@ const NCCore = (() => {
    */
   async function completeLoginFlow({ pollEndpoint, pollToken, timeoutMs = 120000, intervalMs = 2000 } = {}){
     if (!pollEndpoint || !pollToken){
-      throw new Error("Login-Flow Daten fehlen.");
+      throw createLoginFlowError();
     }
     await ensureHostPermission(pollEndpoint);
     const headers = {
@@ -191,9 +275,16 @@ const NCCore = (() => {
           await delay(intervalMs);
           continue;
         }
-        const raw = await res.text().catch(() => "");
+        const raw = await res.text().catch((error) => {
+          logNCCoreError("login flow poll response read failed", error);
+          return "";
+        });
         let data = null;
-        try{ data = raw ? JSON.parse(raw) : null; }catch(_){}
+        try{
+          data = raw ? JSON.parse(raw) : null;
+        }catch(error){
+          logNCCoreError("login flow poll json parse failed", error, { responseSample: String(raw || "").slice(0, 160) });
+        }
         if (!res.ok){
           const detail = data?.ocs?.meta?.message || raw || (res.status + " " + res.statusText);
           throw new Error(detail || bgI18n("options_loginflow_failed"));
@@ -201,24 +292,28 @@ const NCCore = (() => {
         const appPassword = data?.appPassword || data?.token || data?.ocs?.data?.appPassword || data?.ocs?.data?.token;
         const loginName = data?.loginName || data?.ocs?.data?.loginName;
         if (!appPassword || !loginName){
-          throw new Error("Login-Flow liefert kein App-Passwort.");
+          throw createLoginFlowError();
         }
         return {
           loginName,
           appPassword
         };
       }catch(err){
-        if (err?.message && /login flow/i.test(err.message)){
+        if (err?.ncLoginFlowFatal){
+          console.error("[NCCore] login flow poll fatal error", err);
+          logNCCoreError("login flow poll fatal error", err);
           throw err;
         }
         if (err && err.statusCode === 404){
           await delay(intervalMs);
           continue;
         }
+        console.error("[NCCore] login flow poll failed", err);
+        logNCCoreError("login flow poll failed", err);
         throw err;
       }
     }
-    throw new Error("Login-Flow Timeout.");
+    throw createLoginFlowError();
   }
 
   /**

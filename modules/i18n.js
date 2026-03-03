@@ -20,7 +20,7 @@
         }
       }
     }catch(err){
-      try{ console.error('[NC-I18N]', err); }catch(_){ }
+      console.error('[NC-I18N]', err);
     }
     if (Array.isArray(substitutions) && substitutions.length){
       return String(substitutions[0] ?? '');

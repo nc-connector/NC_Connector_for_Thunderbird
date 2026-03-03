@@ -1,0 +1,26 @@
+[
+  {
+    "namespace": "ncComposePrefs",
+    "description": "Read-only access to Thunderbird compose preference values needed for attachment automation conflict checks.",
+    "types": [
+      {
+        "id": "BigAttachmentSettings",
+        "type": "object",
+        "properties": {
+          "thresholdMb": { "type": "integer" },
+          "lockActive": { "type": "boolean" }
+        }
+      }
+    ],
+    "functions": [
+      {
+        "name": "getBigAttachmentSettings",
+        "type": "function",
+        "async": true,
+        "description": "Read Thunderbird compose big-attachment settings and indicate whether NC Connector attachment options should be locked.",
+        "parameters": [],
+        "returns": { "$ref": "BigAttachmentSettings" }
+      }
+    ]
+  }
+]

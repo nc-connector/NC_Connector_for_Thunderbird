@@ -10,6 +10,7 @@
 async function getOpts(){
   return NCCore.getOpts();
 }
+const talkShortId = NCTalkTextUtils.shortId;
 
 /**
  * Build a standard host-permission error.
@@ -26,24 +27,41 @@ function hostPermissionError(){
 }
 
 /**
+ * Log Talk core internal errors (uses L(...) when available).
+ * @param {string} scope
+ * @param {any} error
+ * @param {object} details
+ */
+function logTalkCoreError(scope, error, details = undefined){
+  if (typeof L === "function"){
+    try{
+      L(scope, {
+        error: error?.message || String(error),
+        details: details || null
+      });
+      return;
+    }catch(logError){
+      console.error("[NCTalk]", scope, error, details || "", logError);
+      return;
+    }
+  }
+  console.error("[NCTalk]", scope, error, details || "");
+}
+
+/**
  * Ensure optional host permission exists for the given base URL.
  * @param {string} baseUrl
  * @returns {Promise<boolean>}
  */
 async function ensureHostPermission(baseUrl){
-  if (typeof NCHostPermissions === "undefined" || !NCHostPermissions?.hasOriginPermission){
+  if (typeof NCHostPermissions === "undefined" || !NCHostPermissions?.requireOriginPermission){
     return true;
   }
-  const ok = await NCHostPermissions.hasOriginPermission(baseUrl);
-  if (!ok){
-    try{
-      L("host permission missing", { baseUrl });
-    }catch(_){
-      console.warn("[NCTalk] host permission missing", baseUrl || "");
-    }
-    throw hostPermissionError();
-  }
-  return true;
+  return NCHostPermissions.requireOriginPermission(baseUrl, {
+    errorFactory: hostPermissionError,
+    scope: "[NCTalk] host permission missing",
+    logMissing: false
+  });
 }
 
 const EVENT_SUPPORT_CACHE = {
@@ -162,9 +180,15 @@ async function requestTalkCapabilities(url, headers){
     L("talk capabilities status", { status: res.status, ok: res.ok });
     const raw = await res.text();
     let data = null;
-    try{ data = raw ? JSON.parse(raw) : null; }catch(_){}
+    try{
+      data = raw ? JSON.parse(raw) : null;
+    }catch(error){
+      logTalkCoreError("talk capabilities json parse failed", error, {
+        responseSample: String(raw || "").slice(0, 160)
+      });
+    }
     if (res.status === 404){
-      return { supported:null, reason:"Talk Capabilities-Endpunkt liefert HTTP 404." };
+      return { supported:null, reason:"Talk capabilities endpoint returned HTTP 404." };
     }
     if (!res.ok){
       const meta = data?.ocs?.meta || {};
@@ -174,7 +198,7 @@ async function requestTalkCapabilities(url, headers){
       if (meta.statuscode) detailParts.push("HTTP " + meta.statuscode);
       if (res.status) detailParts.push("HTTP " + res.status + " " + res.statusText);
       const detail = detailParts.filter(Boolean).join(" / ") || raw || ("HTTP " + res.status + " " + res.statusText);
-      return { supported:null, reason:"Talk Capabilities fehlgeschlagen: " + detail };
+      return { supported:null, reason:"Talk capabilities request failed: " + detail };
     }
     const spreedCaps = data?.ocs?.data?.spreed ?? data?.ocs?.data ?? data?.spreed ?? null;
     const parsed = parseEventSupportFlag(spreedCaps);
@@ -182,11 +206,12 @@ async function requestTalkCapabilities(url, headers){
       return { supported:true, reason:"Talk Capabilities: " + parsed.hint };
     }
     if (parsed.status === false){
-      return { supported:false, reason:"Talk Capabilities: " + parsed.hint + " => Event nicht verfuegbar." };
+      return { supported:false, reason:"Talk capabilities: " + parsed.hint + " => event not available." };
     }
-    return { supported:null, reason: parsed.hint ? "Talk Capabilities: " + parsed.hint : "Talk Capabilities ohne Event-Flag." };
+    return { supported:null, reason: parsed.hint ? "Talk capabilities: " + parsed.hint : "Talk capabilities without event flag." };
   }catch(e){
-    return { supported:null, reason: e?.message || "Talk Capabilities nicht erreichbar." };
+    logTalkCoreError("requestTalkCapabilities failed", e, { url });
+    return { supported:null, reason: e?.message || "Talk capabilities endpoint unreachable." };
   }
 }
 
@@ -204,7 +229,13 @@ async function requestCoreCapabilities(baseUrl, headers){
     L("core capabilities status", { status: res.status, ok: res.ok });
     const raw = await res.text();
     let data = null;
-    try{ data = raw ? JSON.parse(raw) : null; }catch(_){}
+    try{
+      data = raw ? JSON.parse(raw) : null;
+    }catch(error){
+      logTalkCoreError("core capabilities json parse failed", error, {
+        responseSample: String(raw || "").slice(0, 160)
+      });
+    }
     if (!res.ok){
       const meta = data?.ocs?.meta || {};
       const detailParts = [];
@@ -213,7 +244,7 @@ async function requestCoreCapabilities(baseUrl, headers){
       if (meta.statuscode) detailParts.push("HTTP " + meta.statuscode);
       if (res.status) detailParts.push("HTTP " + res.status + " " + res.statusText);
       const detail = detailParts.filter(Boolean).join(" / ") || raw || ("HTTP " + res.status + " " + res.statusText);
-      return { supported:null, reason:"Cloud Capabilities fehlgeschlagen: " + detail };
+      return { supported:null, reason:"Cloud capabilities request failed: " + detail };
     }
     const capabilities = data?.ocs?.data?.capabilities || {};
     const spreedCaps = capabilities.spreed ?? data?.ocs?.data?.spreed ?? null;
@@ -222,7 +253,7 @@ async function requestCoreCapabilities(baseUrl, headers){
       return { supported:true, reason:"Cloud Capabilities: " + parsed.hint };
     }
     if (parsed.status === false){
-      return { supported:false, reason:"Cloud Capabilities: " + parsed.hint + " => Event nicht verfuegbar." };
+      return { supported:false, reason:"Cloud capabilities: " + parsed.hint + " => event not available." };
     }
     const versionMajor =
       parseMajorVersion(spreedCaps?.version) ??
@@ -231,14 +262,15 @@ async function requestCoreCapabilities(baseUrl, headers){
       parseMajorVersion(data?.ocs?.data?.installed?.version) ??
       parseMajorVersion(data?.ocs?.data?.system?.version);
     if (versionMajor !== null && versionMajor < 32){
-      return { supported:false, reason:"Cloud Capabilities: Nextcloud-Version " + versionMajor + " (<32) => Event deaktiviert." };
+      return { supported:false, reason:"Cloud capabilities: Nextcloud version " + versionMajor + " (<32) => event disabled." };
     }
     if (versionMajor !== null && versionMajor >= 32){
-      return { supported:null, reason:"Cloud Capabilities: Nextcloud-Version " + versionMajor + " meldet kein Event-Flag." };
+      return { supported:null, reason:"Cloud capabilities: Nextcloud version " + versionMajor + " does not expose an event flag." };
     }
-    return { supported:null, reason:"Cloud Capabilities ohne Event-Angaben." };
+    return { supported:null, reason:"Cloud capabilities without event indicators." };
   }catch(e){
-    return { supported:null, reason: e?.message || "Cloud Capabilities nicht erreichbar." };
+    logTalkCoreError("requestCoreCapabilities failed", e, { url: coreUrl });
+    return { supported:null, reason: e?.message || "Cloud capabilities endpoint unreachable." };
   }
 }
 
@@ -259,13 +291,13 @@ async function getEventConversationSupport(){
   const { baseUrl, user, appPass } = await getOpts();
   if (!baseUrl || !user || !appPass){
     L("event support aborted", "credentials missing");
-    noteEventSupport(false, "Zugangsdaten fehlen");
-    return { supported:false, reason:"Zugangsdaten fehlen" };
+    noteEventSupport(false, "Credentials missing");
+    return { supported:false, reason:"Credentials missing" };
   }
   await ensureHostPermission(baseUrl);
   const headers = {
     "OCS-APIRequest": "true",
-    "Authorization": "Basic " + btoa(user + ":" + appPass),
+    "Authorization": NCOcs.buildAuthHeader(user, appPass),
     "Accept": "application/json"
   };
   const talkUrl = baseUrl + "/ocs/v2.php/apps/spreed/api/v4/capabilities";
@@ -274,7 +306,7 @@ async function getEventConversationSupport(){
     if (talkResult.reason){
       L("event capability (talk)", talkResult.reason);
     } else {
-      L("event capability (talk)", "Event-Unterstuetzung bestaetigt (Talk Capabilities).");
+      L("event capability (talk)", "Event support confirmed (Talk capabilities).");
     }
     noteEventSupport(true, talkResult.reason || "");
     return { supported:true, reason: talkResult.reason || "" };
@@ -295,7 +327,7 @@ async function getEventConversationSupport(){
     if (reason){
       L("event capability (core)", reason);
     } else {
-      L("event capability (core)", "Event-Unterstuetzung bestaetigt (Cloud Capabilities).");
+      L("event capability (core)", "Event support confirmed (Cloud capabilities).");
     }
     noteEventSupport(true, reason);
     return { supported:true, reason };
@@ -309,7 +341,7 @@ async function getEventConversationSupport(){
     noteEventSupport(false, reason);
     return { supported:false, reason };
   }
-  const aggregatedReason = reasons.filter(Boolean).join(" | ") || "Capabilities nicht auswertbar.";
+  const aggregatedReason = reasons.filter(Boolean).join(" | ") || "Capabilities could not be evaluated.";
   noteEventSupport(null, aggregatedReason);
   L("event support indeterminate", { reason: aggregatedReason });
   return { supported:null, reason: aggregatedReason };
@@ -333,153 +365,157 @@ const SYSTEM_ADDRESSBOOK_CACHE = {
 const SYSTEM_ADDRESSBOOK_TTL = 5 * 60 * 1000;
 
 /**
- * Decode escaped values inside a vCard field payload.
- * @param {string} value - Raw vCard content after the colon
- * @returns {string}
+ * Resolve shared iCal/vCard parser contract API for Talk module.
+ * @returns {object|null}
  */
-function decodeVCardValue(value){
-  return String(value ?? "")
-    .replace(/\\\\/g, "\\")
-    .replace(/\\n/gi, "\n")
-    .replace(/\\,/g, ",")
-    .replace(/\\;/g, ";")
-    .replace(/\\:/g, ":");
+function getTalkIcalContractApi(){
+  if (
+    typeof NCIcalContract === "undefined" ||
+    !NCIcalContract ||
+    typeof NCIcalContract.parseVcardComponents !== "function" ||
+    typeof NCIcalContract.stringifyValue !== "function"
+  ){
+    console.error("[NCTalk] NCIcalContract API missing");
+    return null;
+  }
+  return NCIcalContract;
 }
 
 /**
- * Unfold RFC 6350 wrapped vCard lines.
- * @param {string} data - Full vCard export
- * @returns {string[]}
+ * Build a normalized parameter map from one parsed vCard property.
+ * @param {object} prop
+ * @param {object} contract
+ * @returns {Record<string,string>}
  */
-function unfoldVCardLines(data){
-  const normalized = String(data ?? "").replace(/\r\n/g, "\n").replace(/\r/g, "\n");
-  const lines = normalized.split("\n");
-  const unfolded = [];
-  for (const line of lines){
-    if (!line.length && !unfolded.length){
+function getVcardPropertyParams(prop, contract){
+  const params = {};
+  const raw = prop?.jCal?.[1] && typeof prop.jCal[1] === "object" ? prop.jCal[1] : {};
+  for (const [key, value] of Object.entries(raw)){
+    const normalized = String(key || "").toUpperCase();
+    if (!normalized){
       continue;
     }
-    if ((line.startsWith(" ") || line.startsWith("\t")) && unfolded.length){
-      unfolded[unfolded.length - 1] += line.slice(1);
+    if (Array.isArray(value)){
+      params[normalized] = value.map((entry) => contract.stringifyValue(entry)).join(",");
     } else {
-      unfolded.push(line);
+      params[normalized] = contract.stringifyValue(value);
     }
   }
-  return unfolded;
+  return params;
 }
+
+/**
+ * Read first text-like property value from a vCard component.
+ * @param {object} card
+ * @param {string} propertyName
+ * @param {object} contract
+ * @returns {string}
+ */
+function readVcardTextProperty(card, propertyName, contract){
+  const prop = card?.getFirstProperty(propertyName);
+  if (!prop){
+    return "";
+  }
+  return String(contract.stringifyValue(prop.getFirstValue()) || "").trim();
+}
+
+/**
+ * Build label from N property payload when FN is missing.
+ * @param {any} value
+ * @returns {string}
+ */
+function buildLabelFromVcardName(value){
+  if (Array.isArray(value)){
+    const family = String(value[0] || "").trim();
+    const given = String(value[1] || "").trim();
+    const additional = String(value[2] || "").trim();
+    return [given, additional, family].filter(Boolean).join(" ").trim();
+  }
+  if (value == null){
+    return "";
+  }
+  const parts = String(value).split(";");
+  const family = String(parts[0] || "").trim();
+  const given = String(parts[1] || "").trim();
+  const additional = String(parts[2] || "").trim();
+  return [given, additional, family].filter(Boolean).join(" ").trim();
+}
+
 /**
  * Parse the system addressbook vCard export into a contact list.
  * @param {string} data - Raw CardDAV export
  * @returns {Array<{id:string,label:string,email:string,idLower:string,labelLower:string,emailLower:string,avatarDataUrl:string|null}>}
  */
 function parseSystemAddressbook(data){
-  const unfolded = unfoldVCardLines(data);
+  const contract = getTalkIcalContractApi();
+  if (!contract){
+    return [];
+  }
+  const cards = contract.parseVcardComponents(data);
   const contacts = [];
-  let card = null;
-  for (const rawLine of unfolded){
-    const line = rawLine.trimEnd();
-    if (!line) continue;
-    if (line.toUpperCase() === "BEGIN:VCARD"){
-      card = { emails: [], photo: null };
+  for (const card of cards){
+    const uid = readVcardTextProperty(card, "uid", contract);
+    if (!uid){
       continue;
     }
-    if (!card) continue;
-    if (line.toUpperCase() === "END:VCARD"){
-      if (card.uid && card.emails.length){
-        const preferred = card.emails.find((item) => {
-          const scope = (item.params["X-NC-SCOPE"] || "").toLowerCase();
-          return scope === "v2-federated";
-        }) || card.emails[0];
-        if (preferred && preferred.value){
-          const email = preferred.value.trim();
-          if (email){
-            const label = (card.fn || card.nickname || card.displayName || email || card.uid).trim() || email;
-            const avatar = card.photo ? createPhotoDataUrl(card.photo) : null;
-            contacts.push({
-              id: card.uid,
-              label,
-              email,
-              idLower: card.uid.toLowerCase(),
-              labelLower: label.toLowerCase(),
-              emailLower: email.toLowerCase(),
-              avatarDataUrl: avatar ? avatar.dataUrl : null
-            });
-          }
-        }
-      }
-      card = null;
-      continue;
+    let fn = readVcardTextProperty(card, "fn", contract);
+    if (!fn){
+      fn = buildLabelFromVcardName(card.getFirstPropertyValue("n"));
     }
-    const colonIdx = line.indexOf(":");
-    if (colonIdx === -1) continue;
-    const lhs = line.slice(0, colonIdx);
-    const rhs = line.slice(colonIdx + 1);
-    const segments = lhs.split(";");
-    const tag = (segments.shift() || "").toUpperCase();
-    const params = {};
-    for (const segment of segments){
-      if (!segment) continue;
-      const eqIdx = segment.indexOf("=");
-      if (eqIdx === -1){
-        params[segment.toUpperCase()] = true;
-      } else {
-        const key = segment.slice(0, eqIdx).toUpperCase();
-        const value = decodeVCardValue(segment.slice(eqIdx + 1));
-        params[key] = value;
-      }
-    }
-    const decoded = decodeVCardValue(rhs);
-    switch (tag){
-      case "UID":
-        if (decoded.trim()) card.uid = decoded.trim();
-        break;
-      case "FN":
-        if (decoded.trim()) card.fn = decoded.trim();
-        break;
-      case "N":
-        if (!card.fn){
-          const parts = decoded.split(";");
-          const given = (parts[1] || "").trim();
-          const additional = (parts[2] || "").trim();
-          const family = (parts[0] || "").trim();
-          const labelParts = [given, additional, family].filter(Boolean);
-          if (labelParts.length){
-            card.fn = labelParts.join(" ");
-          }
+    const nickname = readVcardTextProperty(card, "nickname", contract);
+    const displayName =
+      readVcardTextProperty(card, "x-nc-share-with-name", contract) ||
+      readVcardTextProperty(card, "x-nc-share-with-displayname", contract) ||
+      readVcardTextProperty(card, "org", contract);
+
+    const emails = card.getAllProperties("email")
+      .map((prop) => {
+        const value = String(contract.stringifyValue(prop.getFirstValue()) || "").trim();
+        if (!value){
+          return null;
         }
-        break;
-      case "NICKNAME":
-        if (decoded.trim()) card.nickname = decoded.trim();
-        break;
-      case "EMAIL": {
-        const email = decoded.trim();
-        if (email){
-          card.emails.push({ value: email, params });
-        }
-        break;
-      }
-      case "PHOTO":
-        card.photo = {
-          raw: decoded,
-          encoding: params.ENCODING || params["ENCODING"],
-          valueType: params.VALUE || params["VALUE"],
-          mime: params.TYPE || params["TYPE"] || params.MEDIATYPE || params["MEDIATYPE"] || ""
+        return {
+          value,
+          params: getVcardPropertyParams(prop, contract)
         };
-        break;
-      case "X-NC-SHARE-WITH-NAME":
-      case "X-NC-SHARE-WITH-DISPLAYNAME":
-        if (!card.displayName && decoded.trim()){
-          card.displayName = decoded.trim();
-        }
-        break;
-      case "ORG":
-        if (!card.displayName && decoded.trim()){
-          card.displayName = decoded.trim();
-        }
-        break;
-      default:
-        break;
+      })
+      .filter(Boolean);
+
+    if (!emails.length){
+      continue;
     }
+
+    const preferred = emails.find((entry) => {
+      const scope = String(entry.params["X-NC-SCOPE"] || "").toLowerCase();
+      return scope === "v2-federated";
+    }) || emails[0];
+    const email = String(preferred?.value || "").trim();
+    if (!email){
+      continue;
+    }
+
+    const photoProp = card.getFirstProperty("photo");
+    let photo = null;
+    if (photoProp){
+      const photoParams = getVcardPropertyParams(photoProp, contract);
+      photo = {
+        raw: String(contract.stringifyValue(photoProp.getFirstValue()) || ""),
+        encoding: photoParams.ENCODING || "",
+        valueType: photoParams.VALUE || "",
+        mime: photoParams.TYPE || photoParams.MEDIATYPE || ""
+      };
+    }
+    const label = (fn || nickname || displayName || email || uid).trim() || email;
+    const avatar = photo ? createPhotoDataUrl(photo) : null;
+    contacts.push({
+      id: uid,
+      label,
+      email,
+      idLower: uid.toLowerCase(),
+      labelLower: label.toLowerCase(),
+      emailLower: email.toLowerCase(),
+      avatarDataUrl: avatar ? avatar.dataUrl : null
+    });
   }
   contacts.sort((a, b) => {
     const byLabel = a.labelLower.localeCompare(b.labelLower);
@@ -532,50 +568,6 @@ function createPhotoDataUrl(photo){
 }
 
 /**
- * Return a window object that provides DOM APIs (Canvas, etc.).
- * @returns {Window|Global|null}
- */
-function getHiddenWindow(){
-  try{
-    if (typeof Services !== "undefined" && Services && Services.appShell?.hiddenDOMWindow){
-      return Services.appShell.hiddenDOMWindow;
-    }
-  }catch(_){}
-  if (typeof window !== "undefined" && window){
-    return window;
-  }
-  if (typeof globalThis !== "undefined"){
-    if (globalThis.window){
-      return globalThis.window;
-    }
-    return globalThis;
-  }
-  return null;
-}
-/**
- * Create a scratch canvas for image work, preferring OffscreenCanvas.
- * @param {number} width
- * @param {number} height
- * @returns {HTMLCanvasElement|OffscreenCanvas}
- */
-function createScratchCanvas(width, height){
-  const w = Math.max(1, Number(width) || 1);
-  const h = Math.max(1, Number(height) || 1);
-  if (typeof OffscreenCanvas === "function"){
-    return new OffscreenCanvas(w, h);
-  }
-  const hidden = getHiddenWindow();
-  if (hidden && hidden.document && typeof hidden.document.createElement === "function"){
-    const canvas = hidden.document.createElement("canvas");
-    canvas.width = w;
-    canvas.height = h;
-    return canvas;
-  }
-  throw localizedError("error_canvas_support_missing");
-}
-
-
-/**
  * Load and cache the Nextcloud system addressbook as a contact list.
  * @param {boolean} force - Force a refresh when true
  * @returns {Promise<Array<{id:string,label:string,email:string,idLower:string,labelLower:string,emailLower:string,avatarDataUrl:string|null}>>}
@@ -596,7 +588,7 @@ async function getSystemAddressbookContacts(force = false){
     });
     return SYSTEM_ADDRESSBOOK_CACHE.contacts;
   }
-  const auth = "Basic " + btoa(user + ":" + appPass);
+  const auth = NCOcs.buildAuthHeader(user, appPass);
   const base = baseUrl.replace(/\/$/,"");
   L("system addressbook fetch", { base, user });
 // Access to the server-side system addressbook (CardDAV) requires remote.php permission.
@@ -610,7 +602,10 @@ async function getSystemAddressbookContacts(force = false){
     }
   });
   if (!res.ok){
-    const text = await res.text().catch(() => "");
+    const text = await res.text().catch((error) => {
+      logTalkCoreError("system addressbook response read failed", error);
+      return "";
+    });
     throw localizedError("error_system_addressbook_failed", [text || (res.status + " " + res.statusText)]);
   }
   const raw = await res.text();
@@ -692,7 +687,8 @@ async function getEventDescriptionLang(){
   try{
     const stored = await browser.storage.local.get(["eventDescriptionLang"]);
     return stored.eventDescriptionLang || "default";
-  }catch(_){
+  }catch(error){
+    logTalkCoreError("event description language read failed", error);
     return "default";
   }
 }
@@ -714,13 +710,17 @@ async function descriptionI18n(lang, key, substitutions = []){
       const msg = bgI18n(key, substitutions);
       if (msg) return msg;
     }
-  }catch(_){}
+  }catch(error){
+    logTalkCoreError("description bgI18n failed", error, { key });
+  }
   try{
     if (typeof NCI18n !== "undefined" && typeof NCI18n.translate === "function"){
       const msg = NCI18n.translate(key, substitutions);
       if (msg) return msg;
     }
-  }catch(_){}
+  }catch(error){
+    logTalkCoreError("description fallback i18n failed", error, { key });
+  }
   if (substitutions.length){
     return String(substitutions[0]);
   }
@@ -776,7 +776,7 @@ async function createTalkPublicRoom({
   if (!baseUrl || !user || !appPass) throw localizedError("error_credentials_missing");
   await ensureHostPermission(baseUrl);
 
-  const auth = "Basic " + btoa(user + ":" + appPass);
+  const auth = NCOcs.buildAuthHeader(user, appPass);
   const headers = { "OCS-APIRequest": "true", "Authorization": auth, "Accept":"application/json", "Content-Type":"application/json" };
 
   const base = baseUrl.replace(/\/$/,"");
@@ -795,7 +795,7 @@ async function createTalkPublicRoom({
     descriptionLength: (cleanedDescription || "").length,
     attemptEvent,
     objectType: attemptEvent ? objectType : null,
-    objectId: attemptEvent ? shortId(objectId) : null,
+    objectId: attemptEvent ? talkShortId(objectId) : null,
     startTimestamp: typeof startTimestamp === "number" ? startTimestamp : null
   });
   let supportInfo = { supported:null, reason:"" };
@@ -817,7 +817,7 @@ async function createTalkPublicRoom({
     const body = {
       roomType: ROOM_TYPE_PUBLIC,
       type: ROOM_TYPE_PUBLIC,
-      roomName: title || "Besprechung",
+      roomName: title || "Meeting",
       listable: listableScope,
       participants: {}
     };
@@ -831,7 +831,14 @@ async function createTalkPublicRoom({
     L("create attempt status", { includeEvent: attempt.includeEvent, status: res.status, ok: res.ok });
     const raw = await res.text();
     let data = null;
-    try { data = raw ? JSON.parse(raw) : null; } catch(_){ }
+    try{
+      data = raw ? JSON.parse(raw) : null;
+    }catch(error){
+      logTalkCoreError("room create json parse failed", error, {
+        includeEvent: attempt.includeEvent,
+        responseSample: String(raw || "").slice(0, 160)
+      });
+    }
     if (!res.ok){
       const meta = data?.ocs?.meta || {};
       const payload = data?.ocs?.data || {};
@@ -850,7 +857,7 @@ async function createTalkPublicRoom({
       if (meta.message && meta.message !== meta.status) parts.push(meta.message);
       if (payload.error) parts.push(payload.error);
       if (Array.isArray(payload.errors)) parts.push(...payload.errors);
-      if (meta.statuscode) parts.push("Statuscode " + meta.statuscode);
+      if (meta.statuscode) parts.push("Status code " + meta.statuscode);
       if (res.status) parts.push("HTTP " + res.status + " " + res.statusText);
       const detail = parts.filter(Boolean).join(" / ") || raw || (res.status + " " + res.statusText);
       const err = localizedError("error_ocs", [detail]);
@@ -887,7 +894,10 @@ async function createTalkPublicRoom({
         L("set lobby payload", lobbyPayload);
         const lobbyRes = await fetch(lobbyUrl, { method:"PUT", headers, body: JSON.stringify(lobbyPayload) });
         if (!lobbyRes.ok){
-          const lobbyText = await lobbyRes.text().catch(() => "");
+          const lobbyText = await lobbyRes.text().catch((error) => {
+            logTalkCoreError("lobby response read failed", error);
+            return "";
+          });
           L("lobby set failed", lobbyRes.status, lobbyRes.statusText, lobbyText);
           throw localizedError("error_lobby_set_failed", [lobbyText || (lobbyRes.status + " " + lobbyRes.statusText)]);
         }
@@ -896,6 +906,10 @@ async function createTalkPublicRoom({
           timer: lobbyPayload.timer ?? null
         });
       }catch(e){
+        console.error("[NCTalk] lobby update error", {
+          token: shortToken(token),
+          error: e?.message || String(e)
+        });
         L("lobby update error", e?.message || String(e));
         return { url, token, fallback:true, reason: e?.message || bgI18n("error_lobby_set_failed_short") };
       }
@@ -913,6 +927,10 @@ async function createTalkPublicRoom({
           });
         }
       }catch(e){
+        console.error("[NCTalk] listable update error", {
+          token: shortToken(token),
+          error: e?.message || String(e)
+        });
         L("listable update error", e?.message || String(e));
       }
     }
@@ -928,11 +946,15 @@ async function createTalkPublicRoom({
           L("description update success", { token: shortToken(token) });
         }
       }catch(e){
+        console.error("[NCTalk] description update error", {
+          token: shortToken(token),
+          error: e?.message || String(e)
+        });
         L("description update error", e?.message || String(e));
       }
     }
     const fallbackFlag = attemptEvent && !attempt.includeEvent;
-    const fallbackReason = fallbackFlag ? supportInfo.reason || "Event-Konversation nicht verfuegbar." : null;
+    const fallbackReason = fallbackFlag ? supportInfo.reason || "Event conversation not available." : null;
     L("create attempt complete", {
       includeEvent: attempt.includeEvent,
       token: shortToken(token),
@@ -976,7 +998,7 @@ async function updateTalkLobby({ token, enableLobby, startTimestamp } = {}){
   const { baseUrl, user, appPass } = await getOpts();
   if (!baseUrl || !user || !appPass) throw localizedError("error_credentials_missing");
   await ensureHostPermission(baseUrl);
-  const auth = "Basic " + btoa(user + ":" + appPass);
+  const auth = NCOcs.buildAuthHeader(user, appPass);
   const headers = { "OCS-APIRequest": "true", "Authorization": auth, "Accept":"application/json", "Content-Type":"application/json" };
   const base = baseUrl.replace(/\/$/,"");
   const lobbyUrl = base + "/ocs/v2.php/apps/spreed/api/v4/room/" + token + "/webinar/lobby";
@@ -1010,15 +1032,24 @@ async function deleteTalkRoom({ token } = {}){
   const { baseUrl, user, appPass } = await getOpts();
   if (!baseUrl || !user || !appPass) throw localizedError("error_credentials_missing");
   await ensureHostPermission(baseUrl);
-  const auth = "Basic " + btoa(user + ":" + appPass);
+  const auth = NCOcs.buildAuthHeader(user, appPass);
   const headers = { "OCS-APIRequest": "true", "Authorization": auth, "Accept":"application/json" };
   const base = baseUrl.replace(/\/$/,"");
   const url = base + "/ocs/v2.php/apps/spreed/api/v4/room/" + encodeURIComponent(token);
   L("delete talk room request", { token: shortToken(token) });
   const res = await fetch(url, { method:"DELETE", headers });
-  const raw = await res.text().catch(() => "");
+  const raw = await res.text().catch((error) => {
+    logTalkCoreError("delete room response read failed", error);
+    return "";
+  });
   let data = null;
-  try{ data = raw ? JSON.parse(raw) : null; }catch(_){}
+  try{
+    data = raw ? JSON.parse(raw) : null;
+  }catch(error){
+    logTalkCoreError("delete room json parse failed", error, {
+      responseSample: String(raw || "").slice(0, 160)
+    });
+  }
   L("delete talk room status", { token: shortToken(token), status: res.status, ok: res.ok });
   if (res.status === 404){
     L("delete talk room already removed", { token: shortToken(token) });
@@ -1030,7 +1061,7 @@ async function deleteTalkRoom({ token } = {}){
     const parts = [];
     if (meta.message && meta.message !== meta.status) parts.push(meta.message);
     if (payload.error) parts.push(payload.error);
-    if (meta.statuscode) parts.push("Statuscode " + meta.statuscode);
+    if (meta.statuscode) parts.push("Status code " + meta.statuscode);
     if (res.status) parts.push("HTTP " + res.status + " " + res.statusText);
     const detail = parts.filter(Boolean).join(" / ") || raw || (res.status + " " + res.statusText);
     throw localizedError("error_room_delete_failed", [detail]);
@@ -1050,14 +1081,20 @@ async function getTalkRoomParticipants({ token } = {}){
   if (!baseUrl || !user || !appPass) throw localizedError("error_credentials_missing");
   await ensureHostPermission(baseUrl);
   L("get room participants request", { token: shortToken(token) });
-  const auth = "Basic " + btoa(user + ":" + appPass);
+  const auth = NCOcs.buildAuthHeader(user, appPass);
   const headers = { "OCS-APIRequest": "true", "Authorization": auth, "Accept":"application/json" };
   const base = baseUrl.replace(/\/$/,"");
   const infoUrl = base + "/ocs/v2.php/apps/spreed/api/v4/room/" + encodeURIComponent(token) + "/participants?includeStatus=true";
   const res = await fetch(infoUrl, { method:"GET", headers });
   const raw = await res.text();
   let data = null;
-  try { data = raw ? JSON.parse(raw) : null; } catch(_){}
+  try{
+    data = raw ? JSON.parse(raw) : null;
+  }catch(error){
+    logTalkCoreError("participants json parse failed", error, {
+      responseSample: String(raw || "").slice(0, 160)
+    });
+  }
   if (res.status === 404){
     return [];
   }
@@ -1084,7 +1121,7 @@ async function addTalkParticipant({ token, actorId, source = "users" } = {}){
     actor: String(actorId).trim(),
     source: source || "users"
   });
-  const auth = "Basic " + btoa(user + ":" + appPass);
+  const auth = NCOcs.buildAuthHeader(user, appPass);
   const headers = {
     "OCS-APIRequest": "true",
     "Authorization": auth,
@@ -1095,9 +1132,18 @@ async function addTalkParticipant({ token, actorId, source = "users" } = {}){
   const url = base + "/ocs/v2.php/apps/spreed/api/v4/room/" + encodeURIComponent(token) + "/participants";
   const body = { newParticipant: actorId, source: source || "users" };
   const res = await fetch(url, { method:"POST", headers, body: JSON.stringify(body) });
-  const raw = await res.text().catch(() => "");
+  const raw = await res.text().catch((error) => {
+    logTalkCoreError("add participant response read failed", error);
+    return "";
+  });
   let json = null;
-  try { json = raw ? JSON.parse(raw) : null; } catch(_){}
+  try{
+    json = raw ? JSON.parse(raw) : null;
+  }catch(error){
+    logTalkCoreError("add participant json parse failed", error, {
+      responseSample: String(raw || "").slice(0, 160)
+    });
+  }
   if (!res.ok && res.status !== 409){
     const meta = json?.ocs?.meta || {};
     const detail = meta.message || raw || (res.status + " " + res.statusText);
@@ -1123,7 +1169,7 @@ async function promoteTalkModerator({ token, attendeeId } = {}){
     token: shortToken(token),
     attendeeId
   });
-  const auth = "Basic " + btoa(user + ":" + appPass);
+  const auth = NCOcs.buildAuthHeader(user, appPass);
   const headers = {
     "OCS-APIRequest": "true",
     "Authorization": auth,
@@ -1135,9 +1181,18 @@ async function promoteTalkModerator({ token, attendeeId } = {}){
   const body = { attendeeId };
   const res = await fetch(url, { method:"POST", headers, body: JSON.stringify(body) });
   if (!res.ok && res.status !== 409){
-    const raw = await res.text().catch(() => "");
+    const raw = await res.text().catch((error) => {
+      logTalkCoreError("promote moderator response read failed", error);
+      return "";
+    });
     let json = null;
-    try { json = raw ? JSON.parse(raw) : null; } catch(_){}
+    try{
+      json = raw ? JSON.parse(raw) : null;
+    }catch(error){
+      logTalkCoreError("promote moderator json parse failed", error, {
+        responseSample: String(raw || "").slice(0, 160)
+      });
+    }
     const meta = json?.ocs?.meta || {};
     const detail = meta.message || raw || (res.status + " " + res.statusText);
     throw localizedError("error_moderator_set_failed", [detail]);
@@ -1158,7 +1213,7 @@ async function leaveTalkRoom({ token } = {}){
   if (!baseUrl || !user || !appPass) throw localizedError("error_credentials_missing");
   await ensureHostPermission(baseUrl);
   L("leave room request", { token: shortToken(token) });
-  const auth = "Basic " + btoa(user + ":" + appPass);
+  const auth = NCOcs.buildAuthHeader(user, appPass);
   const headers = {
     "OCS-APIRequest": "true",
     "Authorization": auth,
@@ -1168,9 +1223,18 @@ async function leaveTalkRoom({ token } = {}){
   const url = base + "/ocs/v2.php/apps/spreed/api/v4/room/" + encodeURIComponent(token) + "/participants/self";
   const res = await fetch(url, { method:"DELETE", headers });
   if (!res.ok && res.status !== 404){
-    const raw = await res.text().catch(() => "");
+    const raw = await res.text().catch((error) => {
+      logTalkCoreError("leave room response read failed", error);
+      return "";
+    });
     let json = null;
-    try { json = raw ? JSON.parse(raw) : null; } catch(_){}
+    try{
+      json = raw ? JSON.parse(raw) : null;
+    }catch(error){
+      logTalkCoreError("leave room json parse failed", error, {
+        responseSample: String(raw || "").slice(0, 160)
+      });
+    }
     const meta = json?.ocs?.meta || {};
     const detail = meta.message || raw || (res.status + " " + res.statusText);
     throw localizedError("error_leave_failed", [detail]);
@@ -1213,9 +1277,20 @@ async function delegateRoomModerator({ token, newModerator } = {}){
   return { leftSelf: false, delegate: targetId };
 }
 
-const NCTalkCore = {
-  buildStandardTalkDescription
-};
+const NCTalkCore = Object.freeze({
+  buildStandardTalkDescription,
+  getEventConversationSupport,
+  getSystemAddressbookContacts,
+  searchSystemAddressbook,
+  createTalkPublicRoom,
+  updateTalkLobby,
+  deleteTalkRoom,
+  getTalkRoomParticipants,
+  addTalkParticipant,
+  promoteTalkModerator,
+  leaveTalkRoom,
+  delegateRoomModerator
+});
 
 if (typeof globalThis !== "undefined"){
   globalThis.NCTalkCore = NCTalkCore;

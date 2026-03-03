@@ -12,9 +12,23 @@
   const globalScope = typeof window !== "undefined"
     ? window
     : (typeof globalThis !== "undefined" ? globalThis : this);
+  const LOG_PREFIX = "[NCUI][PopupSizing]";
 
   if (globalScope.NCTalkPopupSizing){
     return;
+  }
+
+  /**
+   * Log internal popup sizing errors.
+   * @param {string} scope
+   * @param {any} error
+   */
+  function logPopupSizingError(scope, error){
+    try{
+      console.error(LOG_PREFIX, scope, error);
+    }catch(logError){
+      console.error(LOG_PREFIX, scope, error?.message || String(error), logError?.message || String(logError));
+    }
   }
 
   /**
@@ -76,7 +90,9 @@
             : (window.innerHeight + getFrameHeight());
           window.resizeTo(targetOuter, outerHeight);
         }
-      }catch(_){ }
+      }catch(error){
+        logPopupSizingError("enforceFixedWidth failed", error);
+      }
     }
 
     /**
@@ -98,7 +114,9 @@
             : (fixedWidth + getFrameWidth());
           window.resizeTo(width, targetOuter);
         }
-      }catch(_){ }
+      }catch(error){
+        logPopupSizingError("enforceMinHeight failed", error);
+      }
     }
 
     /**
@@ -152,7 +170,9 @@
             }
             await browser.windows.update(win.id, updates);
           }
-        }catch(_){ }
+        }catch(error){
+          logPopupSizingError("enforceWindowBoundsAsync failed", error);
+        }
         boundsPromise = null;
       })();
     }

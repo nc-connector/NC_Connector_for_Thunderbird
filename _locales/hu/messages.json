@@ -1,331 +1,828 @@
 {
-  "extName": { "message": "NC Connector for Thunderbird" },
-  "extDescription": { "message": "Nextcloud Talk és Fájlok zökkenőmentesen integrálva a Thunderbirdbe" },
-  "ui_button_ok": { "message": "OK" },
-  "ui_button_cancel": { "message": "Mégse" },
-  "ui_button_apply": { "message": "Alkalmaz" },
-  "ui_button_apply_progress": { "message": "Alkalmazás..." },
-  "ui_button_create_progress": { "message": "Létrehozás..." },
-  "ui_button_clear": { "message": "Kiürítés" },
-  "ui_insert_button_label": { "message": "Talk-link beszúrása" },
-  "ui_create_heading": { "message": "Nyilvános beszélgetés létrehozása" },
-  "ui_create_title_label": { "message": "Cím" },
-  "ui_create_add_participants_label": { "message": "Résztvevők hozzáadása a szobához" },
-  "ui_create_add_users_label": { "message": "Felhasználók hozzáadása" },
-  "ui_create_add_guests_label": { "message": "Vendégek hozzáadása" },
-  "ui_create_password_label": { "message": "Jelszó (opcionális)" },
-  "talk_password_policy_error": { "message": "A jelszónak legalább $1 karakter hosszúnak kell lennie." },
-  "ui_create_password_placeholder": { "message": "Opcionális" },
-  "ui_password_generate_label": { "message": "Generálás" },
-  "ui_password_error_title": { "message": "Jelszó ellenőrzése" },
-  "ui_password_error_text": { "message": "Kérjük, adjon meg legalább 5 karaktert." },
-  "ui_create_lobby_label": { "message": "Előszoba a kezdési időpontig" },
-  "ui_create_listable_label": { "message": "Megjelenítés a keresésben" },
-  "talk_option_add_users_title": { "message": "👤 Felhasználók hozzáadása" },
-  "talk_option_add_users_line1": { "message": "A belső Nextcloud-felhasználók közvetlenül hozzá lesznek adva a szobához" },
-  "talk_option_add_users_line2": { "message": "A szoba azonnal látható a Nextcloud Talkban" },
-  "talk_option_add_guests_title": { "message": "🌍 Vendégek hozzáadása" },
-  "talk_option_add_guests_line1": { "message": "A vendégek szintén közvetlenül hozzá lesznek adva a szobához" },
-  "talk_option_add_guests_line2": { "message": "⚠️ Külön (további) e-mailt kapnak személyes hozzáférési hivatkozással" },
-  "talk_option_listable_title": { "message": "🔍 Megjelenítés a keresésben" },
-  "talk_option_listable_line1": { "message": "A szoba megtalálható a Talk keresőjével" },
-  "talk_option_listable_line2": { "message": "⚠️ Megkönnyíti a későbbi megtalálást, de minden felhasználó számára megtalálható." },
-  "talk_option_lobby_title": { "message": "🚪 Előszoba a kezdési időpontig" },
-  "talk_option_lobby_line1": { "message": "A résztvevők a kezdés előtt az előszobába (váróterembe) kerülnek, és még nem tudnak belépni a hívásba" },
-  "talk_option_lobby_line2": { "message": "⚠️ Csak a beállított kezdési időponttól (vagy ha egy moderátor megszünteti az előszobát) lehet csatlakozni" },
-  "talk_option_lobby_line3": { "message": "Ideális, hogy senki ne lépjen be túl korán a meeting/webinárba." },
-  "ui_create_roomtype_label": { "message": "Szobatípus" },
-  "ui_create_mode_event": { "message": "Eseménybeszélgetés" },
-  "ui_create_mode_standard": { "message": "Csoportbeszélgetés" },
-  "ui_create_mode_event_short": { "message": "Esemény" },
-  "ui_create_mode_standard_short": { "message": "Normál" },
-  "ui_create_mode_unsupported": { "message": "Az eseménybeszélgetéseket a szerver nem támogatja." },
-  "talk_roomtype_group_title": { "message": "🗨️ Csoportbeszélgetés" },
-  "talk_roomtype_group_line1": { "message": "Tartós: addig marad meg, amíg kézzel nem törlöd" },
-  "talk_roomtype_group_line2": { "message": "Mindennapi használatra: ideális csapatoknak, részlegeknek, folyamatban lévő projektekhez és ismétlődő időpontokhoz" },
-  "talk_roomtype_group_line3": { "message": "Előzménnyel: a teljes chat bármikor visszanézhető" },
-  "talk_roomtype_event_title": { "message": "📅 Eseménybeszélgetés" },
-  "talk_roomtype_event_line1": { "message": "Időben korlátozott: egy konkrét időponthoz vagy alkalomhoz" },
-  "talk_roomtype_event_line2": { "message": "Spontán és könnyű: alkalmas megbeszélésekhez, képzésekhez vagy webináriumokhoz" },
-  "talk_roomtype_event_line3": { "message": "Öntisztuló: egy idő után automatikusan eltávolításra kerül" },
-  "ui_create_moderator_label": { "message": "Moderátor (opcionális)" },
-  "ui_create_moderator_placeholder": { "message": "Felhasználónév megadása" },
-  "ui_create_moderator_hint": { "message": "Ha megadja, a moderátori jog a létrehozás után erre a felhasználóra kerül, és Ön kilép a szobából." },
-  "ui_delegate_selected_title": { "message": "Kiválasztva" },
-  "ui_delegate_selected_description": { "message": "Ha megadja, a moderátori jog a létrehozás után erre a felhasználóra kerül, és Ön kilép a szobából." },
-  "ui_delegate_status_searching": { "message": "Keresés..." },
-  "ui_delegate_status_loading": { "message": "Felhasználók betöltése..." },
-  "ui_delegate_status_none_with_email": { "message": "Nincs találat." },
-  "ui_delegate_status_none_found": { "message": "Nem található felhasználó." },
-  "ui_delegate_status_single": { "message": "1 találat." },
-  "ui_delegate_status_many": { "message": "$1 találat." },
-  "ui_delegate_status_error": { "message": "A felhasználókeresés sikertelen." },
-  "ui_create_password_short": { "message": "A jelszónak legalább 5 karakter hosszúnak kell lennie." },
-  "ui_create_send_failed": { "message": "A háttérszkriptnek való küldés sikertelen:\n$1" },
-  "ui_create_no_handler": { "message": "Nincs regisztrálva Nextcloud Talk kezelő. Kérjük, töltse újra a kiegészítőt." },
-  "ui_create_unknown_error": { "message": "Ismeretlen hiba a beszélgetés létrehozása közben." },
-  "ui_create_failed": { "message": "A Nextcloud Talk létrehozása sikertelen:\n$1\nKérjük, ellenőrizze a beállításokat." },
-  "ui_moderator_transfer_failed": { "message": "Nem sikerült átadni a moderátori jogot." },
-  "ui_moderator_transfer_failed_with_reason": { "message": "Nem sikerült átadni a moderátori jogot:\n$1" },
-  "ui_alert_title": { "message": "Nextcloud Talk" },
-  "ui_alert_room_created": { "message": "A Talk-szoba \"$1\" létrejött." },
-  "ui_alert_link_inserted": { "message": "Talk-link beszúrva:\n$1" },
-  "ui_alert_location_missing": { "message": "(Megjegyzés: a Hely mező nem lett automatikusan kitöltve.)" },
-  "ui_alert_event_fallback": { "message": "Megjegyzés: a szerver nem támogatja az eseménybeszélgetéseket. Csoportbeszélgetés jött létre." },
-  "ui_alert_generic_fallback": { "message": "(Megjegyzés: API-támogatás nélküli tartalék hivatkozás készült.)" },
-  "ui_alert_reason": { "message": "Ok: $1" },
-  "ui_alert_pending_delegation": { "message": "A moderátori jog mentés/küldéskor átadásra kerül: $1." },
-  "ui_alert_delegation_done": { "message": "Moderátori jog átadva: $1." },
-  "ui_delegate_modal_title": { "message": "Moderátori jog átadása" },
-  "ui_alert_delegation_removed": { "message": "Önt eltávolították a beszélgetésből." },
-  "ui_alert_password_protected": { "message": "Megjegyzés: ez a beszélgetés jelszóval védett." },
-  "ui_prompt_base_url": { "message": "Nextcloud alap URL (pl. https://cloud.example.com):" },
-  "ui_prompt_title": { "message": "Az új nyilvános beszélgetés címe:" },
-  "ui_default_title": { "message": "Megbeszélés" },
-  "ui_description_heading": { "message": "Nextcloud Talk" },
-  "ui_description_join_label": { "message": "Csatlakozzon a megbeszéléshez most:" },
-  "ui_description_password_line": { "message": "Jelszó: $1" },
-  "ui_description_help_label": { "message": "Segítségre van szüksége?" },
-  "ui_description_help_url": { "message": "https://docs.nextcloud.com/server/latest/user_manual/en/talk/join_a_call_or_chat_as_guest.html" },
-  "talk_dialog_title": { "message": "Nextcloud Talk" },
-  "talk_dialog_heading": { "message": "Nextcloud Talk" },
-  "talk_dialog_placeholder": { "message": "Ez az önálló felület fejlesztés alatt áll. Kérjük, a migráció befejezéséig használja tovább a beágyazott Talk párbeszédablakot." },
-  "talk_dialog_close": { "message": "Bezárás" },
-  "talk_dialog_missing_window": { "message": "Nem sikerült felismerni a naptárablak kontextusát." },
-  "talk_dialog_ready": { "message": "A párbeszédablak inicializálva." },
-  "talk_error_window_id_missing": { "message": "Hiányzik az ablak hivatkozása." },
-  "talk_error_context_id_missing": { "message": "Hiányzik az esemény kontextusa." },
-  "talk_error_init_failed": { "message": "A párbeszédablak inicializálása sikertelen." },
-  "talk_error_snapshot_failed": { "message": "Nem sikerült beolvasni az esemény adatait." },
-  "talk_status_loading_event": { "message": "Esemény betöltése a szerkesztőből…" },
-  "talk_error_editor_context_missing": { "message": "Nem sikerült felismerni az aktuálisan szerkesztett eseményt. Kérjük, ellenőrizze, hogy az eseményszerkesztő meg van nyitva, és próbálja újra." },
-  "talk_error_create_failed": { "message": "A szoba létrehozása sikertelen." },
-  "talk_error_title_missing": { "message": "Kérjük, adjon meg címet." },
-  "talk_error_create_missing_data": { "message": "Hiányzó szobaadatok." },
-  "talk_error_window_reference": { "message": "Hiányzik az ablak hivatkozása." },
-  "talk_error_context_reference": { "message": "Hiányzik az esemény kontextusa." },
-  "talk_error_apply_failed": { "message": "Nem sikerült alkalmazni a módosításokat az eseményre." },
-  "talk_section_event": { "message": "Esemény" },
-  "talk_field_start": { "message": "Kezdés" },
-  "talk_field_end": { "message": "Befejezés" },
-  "talk_field_location": { "message": "Hely" },
-  "talk_field_description": { "message": "Leírás" },
-  "talk_section_settings": { "message": "Talk beállítások" },
-  "talk_section_room": { "message": "Talk szoba" },
-  "talk_field_token": { "message": "Token" },
-  "talk_field_url": { "message": "Hivatkozás" },
-  "talk_field_lobby": { "message": "Előszoba" },
-  "talk_field_start_epoch": { "message": "Kezdési időbélyeg" },
-  "talk_password_toggle_label": { "message": "Jelszó beállítása" },
-  "talk_dialog_legacy": { "message": "Régi párbeszédablak megnyitása" },
-  "talk_button_apply_fields": { "message": "Mezők alkalmazása" },
-  "talk_button_create_room": { "message": "Talk szoba létrehozása" },
-  "talk_dialog_fields_saved": { "message": "A mezők frissítve." },
-  "talk_dialog_fields_error": { "message": "Nem sikerült frissíteni a mezőket." },
-  "open_url_title": { "message": "Hivatkozás megnyitása" },
-  "open_url_heading": { "message": "Hivatkozás megnyitása böngészőben" },
-  "open_url_instructions": { "message": "Másolja ki az alábbi URL-t, és illessze be az alapértelmezett böngészőjébe." },
-  "open_url_copy": { "message": "URL másolása" },
-  "open_url_close": { "message": "Bezárás" },
-  "open_url_copied": { "message": "Az URL a vágólapra másolva." },
-  "open_url_copy_failed": { "message": "A másolás sikertelen. Kérjük, másolja ki az URL-t kézzel." },
-  "talk_value_enabled": { "message": "Engedélyezve" },
-  "talk_value_disabled": { "message": "Letiltva" },
-  "ui_toolbar_tooltip": { "message": "Nextcloud Talk" },
-  "error_canvas_support_missing": { "message": "Hiányzik a canvas támogatás." },
-  "error_invalid_base64_length": { "message": "Érvénytelen Base64 hossz." },
-  "error_invalid_base64_data": { "message": "Érvénytelen Base64 adat." },
-  "error_avatar_load_failed": { "message": "Az avatar nem tölthető be." },
-
-  "error_avatar_data_missing": { "message": "Az avatar adatai hiányoznak." },
-  "error_canvas_context_missing": { "message": "A canvas kontextus nem elérhető." },
-  "error_image_decode_failed": { "message": "A kép nem dekódolható." },
-  "error_image_size_unknown": { "message": "A kép mérete nem határozható meg." },
-  "error_image_load_failed": { "message": "A kép nem tölthető be." },
-  "error_pixel_data_missing": { "message": "A pixeladatok nem érhetők el." },
-  "error_credentials_missing": { "message": "Hiányoznak a Nextcloud hitelesítési adatok (kiegészítő beállításai)." },
-  "error_host_permission_missing": { "message": "A beállított Nextcloud példányhoz nem kapott hozzáférést." },
-  "error_system_addressbook_failed": { "message": "A rendszer címjegyzéke nem tölthető be: $1" },
-  "error_lobby_set_failed": { "message": "Az előszoba nem állítható be: $1" },
-  "error_lobby_set_failed_short": { "message": "Az előszoba nem állítható be." },
-  "error_room_create_failed": { "message": "A szoba nem hozható létre." },
-  "error_token_missing_in_response": { "message": "Nincs token az OCS válaszban." },
-  "error_room_token_missing": { "message": "Hiányzik a szoba tokenje." },
-  "error_room_delete_failed": { "message": "A szoba nem törölhető: $1" },
-  "error_lobby_no_permission": { "message": "Nincs jogosultság az előszoba módosításához (HTTP 403)." },
-  "error_lobby_update_failed": { "message": "Az előszoba frissítése sikertelen (HTTP $1)." },
-  "error_ocs": { "message": "OCS hiba: $1" },
-  "error_token_or_actor_missing": { "message": "Hiányzik a szoba tokenje vagy a résztvevő azonosítója." },
-  "error_participant_add_failed": { "message": "Nem sikerült hozzáadni a résztvevőt: $1" },
-  "error_moderator_id_missing": { "message": "Hiányzik a moderátor azonosítója." },
-  "error_moderator_set_failed": { "message": "Nem sikerült beállítani a moderátort: $1" },
-  "error_leave_failed": { "message": "A szoba elhagyása sikertelen: $1" },
-  "error_delegation_data_missing": { "message": "Hiányzik a delegálási adat." },
-  "error_moderator_target_missing": { "message": "A moderátor azonosítója üres." },
-  "error_participant_not_found": { "message": "A résztvevő nem található, ellenőrizze a helyesírást." },
-  "error_users_load_failed": { "message": "A felhasználók betöltése sikertelen." },
-  "error_unknown_utility_request": { "message": "Ismeretlen segédkérés." },
-  "options_title": { "message": "NC Connector for Thunderbird – Beállítások" },
-  "options_heading": { "message": "NC Connector for Thunderbird – Beállítások" },
-  "options_base_url_label": { "message": "Nextcloud URL" },
-  "options_base_url_placeholder": { "message": "https://cloud.example.com" },
-  "options_user_label": { "message": "Felhasználónév" },
-  "options_app_pass_label": { "message": "Alkalmazásjelszó" },
-  "options_debug_label": { "message": "Hibakeresési naplózás" },
-  "options_debug_hint": { "message": "Diagnosztikai üzenetek a konzolban" },
-  "options_support_link": { "message": "PayPal: Adományozás" },
-  "options_save_button": { "message": "Mentés" },
-  "options_status_saved": { "message": "Mentve." },
-  "options_status_save_failed": { "message": "Mentés sikertelen." },
-  "options_status_load_failed": { "message": "A beállítások betöltése sikertelen." },
-  "options_test_button": { "message": "Kapcsolat tesztelése" },
-  "options_test_running": { "message": "Kapcsolat tesztelése..." },
-  "options_test_success": { "message": "Sikeres kapcsolat." },
-  "options_test_failed": { "message": "Kapcsolódás sikertelen." },
-  "options_test_failed_auth": { "message": "A felhasználónév vagy az alkalmazásjelszó érvénytelen." },
-  "options_test_missing": { "message": "Először adja meg az URL-t, a felhasználónevet és az alkalmazásjelszót." },
-  "options_permission_required": { "message": "A folytatáshoz engedélyezze a hozzáférést ehhez a Nextcloud példányhoz." },
-  "options_tab_general": { "message": "Általános" },
-  "options_tab_sharing": { "message": "Megosztás" },
-  "options_tab_talklink": { "message": "Talk-link" },
-  "options_tab_advanced": { "message": "Speciális" },
-  "options_tab_debug": { "message": "Hibakeresés" },
-  "options_tab_about": { "message": "Névjegy" },
-  "options_placeholder_sharing": { "message": "A konfiguráció hamarosan elérhető." },
-  "options_placeholder_advanced": { "message": "A beállítások hamarosan elérhetők." },
-  "options_advanced_language_heading": { "message": "Nyelvi felülbírálások" },
-  "options_share_block_lang_label": { "message": "A megosztási HTML-blokk nyelve" },
-  "options_share_block_lang_hint": { "message": "A beszúrt megosztási HTML-blokk nyelvét állítja be." },
-  "options_event_description_lang_label": { "message": "A Talk leíró szövegének nyelve" },
-  "options_event_description_lang_hint": { "message": "Az eseményekben megjelenő Talk szövegblokk nyelvét állítja be." },
-  "options_lang_default": { "message": "Alapértelmezett (UI)" },
-  "options_lang_en": { "message": "Angol" },
-  "options_lang_de": { "message": "Német" },
-  "options_lang_fr": { "message": "Francia" },
-  "options_about_version_label": { "message": "Verzió:" },
-  "options_about_copyright_label": { "message": "Szerzői jog:" },
-  "options_about_license_label": { "message": "Licenc:" },
-  "options_about_license_value": { "message": "AGPL v3" },
-  "options_about_support_note": { "message": "Hogy a NC Connector for Thunderbird továbbra is ingyenesen karbantartható és fejleszthető legyen." },
-  "options_about_support_heading": { "message": "Támogatás" },
-  "options_auth_heading": { "message": "Hitelesítés" },
-  "options_auth_manual": { "message": "Kézi (felhasználónév + alkalmazásjelszó)" },
-  "options_auth_login": { "message": "Bejelentkezés Nextclouddal (alkalmazásjelszó automatikus lekérése)" },
-  "options_loginflow_button": { "message": "Bejelentkezés Nextclouddal..." },
-  "options_loginflow_starting": { "message": "Bejelentkezési folyamat indítása..." },
-  "options_loginflow_browser": { "message": "A böngésző megnyílt. Kérjük, erősítse meg a bejelentkezést a Nextcloudban..." },
-  "options_loginflow_success": { "message": "Sikeres bejelentkezés. Az alkalmazásjelszó másolva." },
-  "options_loginflow_failed": { "message": "A Nextcloud-bejelentkezés sikertelen." },
-  "options_loginflow_missing": { "message": "Először adja meg a szerver URL-jét." },
-  "compose_sharing_title": { "message": "Nextcloud megosztás hozzáadása" },
-  "options_sharing_base_label": { "message": "Alapkönyvtár" },
-  "options_sharing_base_hint": { "message": "A fájlok e könyvtár alatt tárolódnak (pl. „90 Freigaben - extern”)." },
-  "options_sharing_defaults_heading": { "message": "Alapértelmezett beállítások" },
-  "options_sharing_default_share_name_label": { "message": "Megosztás neve" },
-  "options_sharing_default_permissions_label": { "message": "Alapértelmezett jogosultságok" },
-  "options_sharing_default_perm_create": { "message": "Feltöltés/Létrehozás" },
-  "options_sharing_default_perm_write": { "message": "Szerkesztés" },
-  "options_sharing_default_perm_delete": { "message": "Törlés" },
-  "options_sharing_default_password_label": { "message": "Jelszó beállítása" },
-  "options_sharing_default_expire_days_label": { "message": "Lejárat (nap)" },
-  "options_talk_defaults_heading": { "message": "Alapértelmezett beállítások" },
-  "options_talk_default_title_label": { "message": "Cím" },
-  "options_talk_default_lobby_label": { "message": "Előszoba a kezdési időpontig" },
-  "options_talk_default_listable_label": { "message": "Megjelenítés a keresésben" },
-  "options_talk_default_add_participants_label": { "message": "Résztvevők hozzáadása a szobához" },
-  "options_talk_default_add_users_label": { "message": "Felhasználók" },
-  "options_talk_default_add_guests_label": { "message": "Vendégek" },
-  "options_talk_default_password_label": { "message": "Jelszó beállítása" },
-  "options_talk_default_roomtype_label": { "message": "Szobatípus" },
-  "options_talk_default_roomtype_event": { "message": "Eseménybeszélgetés" },
-  "options_talk_default_roomtype_standard": { "message": "Csoportbeszélgetés" },
-  "sharing_wizard_title": { "message": "Nextcloud megosztás" },
-  "sharing_header_hint": { "message": "NC Connector for Thunderbird" },
-  "sharing_step_general": { "message": "Megosztás" },
-  "sharing_share_name_label": { "message": "Megosztás neve" },
-  "sharing_share_placeholder": { "message": "pl. X projekt" },
-  "sharing_share_default": { "message": "Megosztás neve" },
-  "sharing_base_path_label": { "message": "Alapkönyvtár" },
-  "sharing_base_path_hint": { "message": "A fájlok e könyvtár alatt lesznek tárolva." },
-  "sharing_allow_upload_label": { "message": "A címzettek feltölthetik saját fájljaikat" },
-  "sharing_step_security": { "message": "Jogosultságok" },
-  "sharing_permission_read": { "message": "Olvasás" },
-  "sharing_permission_create": { "message": "Feltöltés" },
-  "sharing_permission_write": { "message": "Módosítás" },
-  "sharing_permission_delete": { "message": "Törlés" },
-  "sharing_password_toggle": { "message": "Jelszó beállítása" },
-  "sharing_password_label": { "message": "Jelszó" },
-  "sharing_password_generate": { "message": "Generálás" },
-  "sharing_expire_toggle": { "message": "Lejárati dátum beállítása" },
-  "sharing_expire_label": { "message": "Lejárati dátum" },
-  "sharing_step_files": { "message": "Fájlok" },
-  "sharing_files_hint": { "message": "Adja hozzá a feltöltendő fájlokat vagy mappákat." },
-  "sharing_add_files": { "message": "Fájlok kiválasztása..." },
-  "sharing_clear_files": { "message": "Lista ürítése" },
-  "sharing_allow_empty_label": { "message": "Folytatás fájlok nélkül (csak a feltöltési mappa megosztása)" },
-  "sharing_step_note": { "message": "Megjegyzés és befejezés" },
-  "sharing_note_toggle": { "message": "Megjegyzés hozzáadása a címzetteknek" },
-  "sharing_note_label": { "message": "Megjegyzés" },
-  "sharing_note_placeholder": { "message": "Opcionális üzenet a címzetteknek" },
-  "sharing_summary_share": { "message": "Megosztás neve" },
-  "sharing_summary_folder": { "message": "Mappa" },
-  "sharing_summary_permissions": { "message": "Jogosultságok" },
-  "sharing_progress_label": { "message": "Megosztás létrehozása..." },
-  "sharing_button_back": { "message": "Vissza" },
-  "sharing_button_cancel": { "message": "Mégse" },
-  "sharing_button_next": { "message": "Tovább" },
-  "sharing_button_finish": { "message": "Megosztás létrehozása" },
-  "sharing_status_preparing": { "message": "Feltöltés előkészítése..." },
-  "sharing_status_uploading": { "message": "Feltöltés: $3 ($1 / $2)..." },
-  "sharing_status_creating": { "message": "Nyilvános hivatkozás létrehozása..." },
-  "sharing_status_done": { "message": "A megosztás sikeresen beszúrva." },
-  "sharing_status_error": { "message": "Hiba történt." },
-  "sharing_error_share_name": { "message": "Kérjük, adjon meg megosztásnevet." },
-  "sharing_error_password_missing": { "message": "Kérjük, adjon meg jelszót." },
-  "sharing_error_expire_missing": { "message": "Kérjük, válasszon lejárati dátumot." },
-  "sharing_error_no_files": { "message": "Kérjük, adjon hozzá legalább egy fájlt, vagy engedélyezze a fájlok nélküli folytatást." },
-  "sharing_error_missing_config": { "message": "A levélíró ablak nem észlelhető." },
-  "sharing_error_insert_failed": { "message": "Nem sikerült beszúrni a megosztást az üzenetbe." },
-  "sharing_html_intro": { "message": "Szeretnék fájlokat biztonságosan megosztani, és megóvni az Ön magánszféráját. Kattintson az alábbi hivatkozásra a fájlok letöltéséhez." },
-  "sharing_html_password_label": { "message": "Jelszó" },
-  "sharing_html_expire_label": { "message": "Lejárati dátum" },
-  "sharing_html_permissions_label": { "message": "Az Ön jogosultságai" },
-  "sharing_html_download_label": { "message": "Letöltési hivatkozás" },
-  "sharing_html_footer": { "message": "$1 egy megoldás a biztonságos e-mail- és fájlmegosztásra." },
-  "sharing_dialog_title": { "message": "Nextcloud megosztás" },
-  "sharing_heading_permissions": { "message": "Megosztási beállítások" },
-  "sharing_step_expire": { "message": "Lejárati dátum" },
-  "sharing_expire_hint": { "message": "E dátum után a hivatkozás már nem érhető el." },
-  "sharing_step_files_title": { "message": "Fájlok vagy mappák kiválasztása" },
-  "sharing_base_path_info": { "message": "Alapkönyvtár: $1" },
-  "sharing_files_table_path": { "message": "Elérési út" },
-  "sharing_files_table_type": { "message": "Típus" },
-  "sharing_files_table_status": { "message": "Állapot" },
-  "sharing_button_add_files": { "message": "Fájlok hozzáadása..." },
-  "sharing_button_add_folder": { "message": "Mappa hozzáadása..." },
-  "sharing_button_remove": { "message": "Eltávolítás" },
-  "sharing_button_upload": { "message": "Feltöltés" },
-  "sharing_files_empty": { "message": "Nincs kiválasztott fájl." },
-  "sharing_file_type_file": { "message": "Fájl" },
-  "sharing_file_type_folder": { "message": "Mappa" },
-  "sharing_status_waiting": { "message": "Várakozás" },
-  "sharing_status_done_row": { "message": "Kész" },
-  "sharing_status_error_row": { "message": "Hiba" },
-  "sharing_status_ready": { "message": "Feltöltés kész." },
-  "sharing_status_uploading_bulk": { "message": "Fájlok feltöltése..." },
-  "sharing_message_invalid_share_name": { "message": "Kérjük, adjon meg megosztásnevet." },
-  "sharing_message_no_files": { "message": "Kérjük, adjon hozzá legalább egy fájlt." },
-  "sharing_confirm_no_files_title": { "message": "Megosztás feltöltés nélkül" },
-  "sharing_confirm_no_files_message": { "message": "Ehhez a megosztáshoz nem lett hozzáadva fájl vagy mappa. A címzettek csak a saját fájljaikat tölthetik fel. Folytatja?" },
-  "sharing_error_upload_required": { "message": "Folytatás előtt töltse fel a fájlokat." },
-  "sharing_step_note_heading": { "message": "Megjegyzés a címzettnek" },
-  "sharing_status_inserting": { "message": "HTML-blokk beszúrása..." },
-  "sharing_status_checking_folder": { "message": "Mappa elérhetőségének ellenőrzése..." },
-  "sharing_error_folder_exists": { "message": "Már létezik ilyen nevű megosztási mappa. Kérjük, válasszon másik nevet." },
-  "sharing_prompt_rename_duplicate": { "message": "A(z) \"$1\" fájl már szerepel a várólistán. Kérjük, adjon meg új nevet." },
-  "sharing_prompt_rename_existing": { "message": "A(z) \"$1\" fájl már létezik a szerveren. Kérjük, adjon meg új nevet." },
-  "sharing_message_rename_cancelled": { "message": "A feltöltés megszakadt, mert nem adott meg új nevet." },
-  "sharing_password_policy_error": { "message": "A jelszónak legalább 10 karakterből kell állnia, nagy- és kisbetűkkel, valamint egy speciális karakterrel." },
-  "sharing_html_intro_line": { "message": "Szeretnék fájlokat biztonságosan megosztani, és megóvni az Ön magánszféráját. Kattintson az alábbi hivatkozásra a fájlok letöltéséhez." },
-  "sharing_html_footer_line": { "message": "A Nextcloud megoldás a biztonságos e-mail és adatcsere számára." }
+  "extName": {
+    "message": "NC Connector for Thunderbird"
+  },
+  "extDescription": {
+    "message": "Nextcloud Talk és Fájlok zökkenőmentesen integrálva a Thunderbirdbe"
+  },
+  "ui_button_ok": {
+    "message": "OK"
+  },
+  "ui_button_cancel": {
+    "message": "Mégse"
+  },
+  "ui_button_create_progress": {
+    "message": "Létrehozás..."
+  },
+  "ui_button_clear": {
+    "message": "Kiürítés"
+  },
+  "ui_insert_button_label": {
+    "message": "Talk-link beszúrása"
+  },
+  "ui_create_title_label": {
+    "message": "Cím"
+  },
+  "ui_create_add_users_label": {
+    "message": "Felhasználók hozzáadása"
+  },
+  "ui_create_add_guests_label": {
+    "message": "Vendégek hozzáadása"
+  },
+  "talk_password_policy_error": {
+    "message": "A jelszónak legalább $1 karakter hosszúnak kell lennie."
+  },
+  "ui_create_password_placeholder": {
+    "message": "Opcionális"
+  },
+  "ui_password_generate_label": {
+    "message": "Generálás"
+  },
+  "ui_password_error_title": {
+    "message": "Jelszó ellenőrzése"
+  },
+  "ui_create_lobby_label": {
+    "message": "Előszoba a kezdési időpontig"
+  },
+  "ui_create_listable_label": {
+    "message": "Megjelenítés a keresésben"
+  },
+  "talk_option_add_users_title": {
+    "message": "👤 Felhasználók hozzáadása"
+  },
+  "talk_option_add_users_line1": {
+    "message": "A belső Nextcloud-felhasználók közvetlenül hozzá lesznek adva a szobához"
+  },
+  "talk_option_add_users_line2": {
+    "message": "A szoba azonnal látható a Nextcloud Talkban"
+  },
+  "talk_option_add_guests_title": {
+    "message": "🌍 Vendégek hozzáadása"
+  },
+  "talk_option_add_guests_line1": {
+    "message": "A vendégek szintén közvetlenül hozzá lesznek adva a szobához"
+  },
+  "talk_option_add_guests_line2": {
+    "message": "⚠️ Külön (további) e-mailt kapnak személyes hozzáférési hivatkozással"
+  },
+  "talk_option_listable_title": {
+    "message": "🔍 Megjelenítés a keresésben"
+  },
+  "talk_option_listable_line1": {
+    "message": "A szoba megtalálható a Talk keresőjével"
+  },
+  "talk_option_listable_line2": {
+    "message": "⚠️ Megkönnyíti a későbbi megtalálást, de minden felhasználó számára megtalálható."
+  },
+  "talk_option_lobby_title": {
+    "message": "🚪 Előszoba a kezdési időpontig"
+  },
+  "talk_option_lobby_line1": {
+    "message": "A résztvevők a kezdés előtt az előszobába (váróterembe) kerülnek, és még nem tudnak belépni a hívásba"
+  },
+  "talk_option_lobby_line2": {
+    "message": "⚠️ Csak a beállított kezdési időponttól (vagy ha egy moderátor megszünteti az előszobát) lehet csatlakozni"
+  },
+  "talk_option_lobby_line3": {
+    "message": "Ideális, hogy senki ne lépjen be túl korán a meeting/webinárba."
+  },
+  "ui_create_roomtype_label": {
+    "message": "Szobatípus"
+  },
+  "ui_create_mode_event": {
+    "message": "Eseménybeszélgetés"
+  },
+  "ui_create_mode_standard": {
+    "message": "Csoportbeszélgetés"
+  },
+  "talk_roomtype_group_title": {
+    "message": "🗨️ Csoportbeszélgetés"
+  },
+  "talk_roomtype_group_line1": {
+    "message": "Tartós: addig marad meg, amíg kézzel nem törlöd"
+  },
+  "talk_roomtype_group_line2": {
+    "message": "Mindennapi használatra: ideális csapatoknak, részlegeknek, folyamatban lévő projektekhez és ismétlődő időpontokhoz"
+  },
+  "talk_roomtype_group_line3": {
+    "message": "Előzménnyel: a teljes chat bármikor visszanézhető"
+  },
+  "talk_roomtype_event_title": {
+    "message": "📅 Eseménybeszélgetés"
+  },
+  "talk_roomtype_event_line1": {
+    "message": "Időben korlátozott: egy konkrét időponthoz vagy alkalomhoz"
+  },
+  "talk_roomtype_event_line2": {
+    "message": "Spontán és könnyű: alkalmas megbeszélésekhez, képzésekhez vagy webináriumokhoz"
+  },
+  "talk_roomtype_event_line3": {
+    "message": "Öntisztuló: egy idő után automatikusan eltávolításra kerül"
+  },
+  "ui_create_moderator_label": {
+    "message": "Moderátor (opcionális)"
+  },
+  "ui_create_moderator_hint": {
+    "message": "Ha megadja, a moderátori jog a létrehozás után erre a felhasználóra kerül, és Ön kilép a szobából."
+  },
+  "ui_delegate_selected_title": {
+    "message": "Kiválasztva"
+  },
+  "ui_delegate_selected_description": {
+    "message": "Ha megadja, a moderátori jog a létrehozás után erre a felhasználóra kerül, és Ön kilép a szobából."
+  },
+  "ui_delegate_status_searching": {
+    "message": "Keresés..."
+  },
+  "ui_delegate_status_loading": {
+    "message": "Felhasználók betöltése..."
+  },
+  "ui_delegate_status_none_with_email": {
+    "message": "Nincs találat."
+  },
+  "ui_delegate_status_none_found": {
+    "message": "Nem található felhasználó."
+  },
+  "ui_delegate_status_single": {
+    "message": "1 találat."
+  },
+  "ui_delegate_status_many": {
+    "message": "$1 találat."
+  },
+  "ui_delegate_status_error": {
+    "message": "A felhasználókeresés sikertelen."
+  },
+  "ui_create_failed": {
+    "message": "A Nextcloud Talk létrehozása sikertelen:\n$1\nKérjük, ellenőrizze a beállításokat."
+  },
+  "ui_alert_pending_delegation": {
+    "message": "A moderátori jog mentés/küldéskor átadásra kerül: $1."
+  },
+  "ui_delegate_modal_title": {
+    "message": "Moderátori jog átadása"
+  },
+  "ui_default_title": {
+    "message": "Megbeszélés"
+  },
+  "ui_description_heading": {
+    "message": "Nextcloud Talk"
+  },
+  "ui_description_join_label": {
+    "message": "Csatlakozzon a megbeszéléshez most:"
+  },
+  "ui_description_password_line": {
+    "message": "Jelszó: $1"
+  },
+  "ui_description_help_label": {
+    "message": "Segítségre van szüksége?"
+  },
+  "ui_description_help_url": {
+    "message": "https://docs.nextcloud.com/server/latest/user_manual/en/talk/join_a_call_or_chat_as_guest.html"
+  },
+  "talk_dialog_title": {
+    "message": "Nextcloud Talk"
+  },
+  "talk_dialog_close": {
+    "message": "Bezárás"
+  },
+  "talk_error_context_id_missing": {
+    "message": "Hiányzik az esemény kontextusa."
+  },
+  "talk_error_init_failed": {
+    "message": "A párbeszédablak inicializálása sikertelen."
+  },
+  "talk_error_snapshot_failed": {
+    "message": "Nem sikerült beolvasni az esemény adatait."
+  },
+  "talk_error_editor_context_missing": {
+    "message": "Nem sikerült felismerni az aktuálisan szerkesztett eseményt. Kérjük, ellenőrizze, hogy az eseményszerkesztő meg van nyitva, és próbálja újra."
+  },
+  "talk_error_create_failed": {
+    "message": "A szoba létrehozása sikertelen."
+  },
+  "talk_error_title_missing": {
+    "message": "Kérjük, adjon meg címet."
+  },
+  "talk_error_create_missing_data": {
+    "message": "Hiányzó szobaadatok."
+  },
+  "talk_error_context_reference": {
+    "message": "Hiányzik az esemény kontextusa."
+  },
+  "talk_error_apply_failed": {
+    "message": "Nem sikerült alkalmazni a módosításokat az eseményre."
+  },
+  "talk_section_settings": {
+    "message": "Talk beállítások"
+  },
+  "talk_password_toggle_label": {
+    "message": "Jelszó beállítása"
+  },
+  "talk_button_create_room": {
+    "message": "Talk szoba létrehozása"
+  },
+  "open_url_title": {
+    "message": "Hivatkozás megnyitása"
+  },
+  "open_url_heading": {
+    "message": "Hivatkozás megnyitása böngészőben"
+  },
+  "open_url_instructions": {
+    "message": "Másolja ki az alábbi URL-t, és illessze be az alapértelmezett böngészőjébe."
+  },
+  "open_url_copy": {
+    "message": "URL másolása"
+  },
+  "open_url_close": {
+    "message": "Bezárás"
+  },
+  "open_url_copied": {
+    "message": "Az URL a vágólapra másolva."
+  },
+  "open_url_copy_failed": {
+    "message": "A másolás sikertelen. Kérjük, másolja ki az URL-t kézzel."
+  },
+  "error_credentials_missing": {
+    "message": "Hiányoznak a Nextcloud hitelesítési adatok (kiegészítő beállításai)."
+  },
+  "error_baseurl_https_required": {
+    "message": "Kérjük, HTTPS-es Nextcloud URL-t használjon."
+  },
+  "error_host_permission_missing": {
+    "message": "A beállított Nextcloud példányhoz nem kapott hozzáférést."
+  },
+  "error_system_addressbook_failed": {
+    "message": "A rendszer címjegyzéke nem tölthető be: $1"
+  },
+  "error_lobby_set_failed": {
+    "message": "Az előszoba nem állítható be: $1"
+  },
+  "error_lobby_set_failed_short": {
+    "message": "Az előszoba nem állítható be."
+  },
+  "error_room_create_failed": {
+    "message": "A szoba nem hozható létre."
+  },
+  "error_token_missing_in_response": {
+    "message": "Nincs token az OCS válaszban."
+  },
+  "error_room_token_missing": {
+    "message": "Hiányzik a szoba tokenje."
+  },
+  "error_room_delete_failed": {
+    "message": "A szoba nem törölhető: $1"
+  },
+  "error_lobby_no_permission": {
+    "message": "Nincs jogosultság az előszoba módosításához (HTTP 403)."
+  },
+  "error_lobby_update_failed": {
+    "message": "Az előszoba frissítése sikertelen (HTTP $1)."
+  },
+  "error_ocs": {
+    "message": "OCS hiba: $1"
+  },
+  "error_token_or_actor_missing": {
+    "message": "Hiányzik a szoba tokenje vagy a résztvevő azonosítója."
+  },
+  "error_participant_add_failed": {
+    "message": "Nem sikerült hozzáadni a résztvevőt: $1"
+  },
+  "error_moderator_id_missing": {
+    "message": "Hiányzik a moderátor azonosítója."
+  },
+  "error_moderator_set_failed": {
+    "message": "Nem sikerült beállítani a moderátort: $1"
+  },
+  "error_leave_failed": {
+    "message": "A szoba elhagyása sikertelen: $1"
+  },
+  "error_delegation_data_missing": {
+    "message": "Hiányzik a delegálási adat."
+  },
+  "error_moderator_target_missing": {
+    "message": "A moderátor azonosítója üres."
+  },
+  "error_participant_not_found": {
+    "message": "A résztvevő nem található, ellenőrizze a helyesírást."
+  },
+  "error_unknown_utility_request": {
+    "message": "Ismeretlen segédkérés."
+  },
+  "options_title": {
+    "message": "NC Connector for Thunderbird – Beállítások"
+  },
+  "options_base_url_label": {
+    "message": "Nextcloud URL"
+  },
+  "options_base_url_placeholder": {
+    "message": "https://cloud.example.com"
+  },
+  "options_user_label": {
+    "message": "Felhasználónév"
+  },
+  "options_app_pass_label": {
+    "message": "Alkalmazásjelszó"
+  },
+  "options_debug_label": {
+    "message": "Hibakeresési naplózás"
+  },
+  "options_debug_hint": {
+    "message": "Diagnosztikai üzenetek a konzolban"
+  },
+  "options_support_link": {
+    "message": "PayPal: Adományozás"
+  },
+  "options_save_button": {
+    "message": "Mentés"
+  },
+  "options_status_saved": {
+    "message": "Mentve."
+  },
+  "options_status_save_failed": {
+    "message": "Mentés sikertelen."
+  },
+  "options_status_load_failed": {
+    "message": "A beállítások betöltése sikertelen."
+  },
+  "options_test_button": {
+    "message": "Kapcsolat tesztelése"
+  },
+  "options_test_running": {
+    "message": "Kapcsolat tesztelése..."
+  },
+  "options_test_success": {
+    "message": "Sikeres kapcsolat."
+  },
+  "options_test_failed": {
+    "message": "Kapcsolódás sikertelen."
+  },
+  "options_test_failed_auth": {
+    "message": "A felhasználónév vagy az alkalmazásjelszó érvénytelen."
+  },
+  "options_test_missing": {
+    "message": "Először adja meg az URL-t, a felhasználónevet és az alkalmazásjelszót."
+  },
+  "options_permission_required": {
+    "message": "A folytatáshoz engedélyezze a hozzáférést ehhez a Nextcloud példányhoz."
+  },
+  "options_tab_general": {
+    "message": "Általános"
+  },
+  "options_tab_sharing": {
+    "message": "Megosztás"
+  },
+  "options_tab_talklink": {
+    "message": "Talk-link"
+  },
+  "options_tab_advanced": {
+    "message": "Speciális"
+  },
+  "options_tab_debug": {
+    "message": "Hibakeresés"
+  },
+  "options_tab_about": {
+    "message": "Névjegy"
+  },
+  "options_advanced_language_heading": {
+    "message": "Nyelvi felülbírálások"
+  },
+  "options_share_block_lang_label": {
+    "message": "A megosztási HTML-blokk nyelve"
+  },
+  "options_share_block_lang_hint": {
+    "message": "A beszúrt megosztási HTML-blokk nyelvét állítja be."
+  },
+  "options_event_description_lang_label": {
+    "message": "A Talk leíró szövegének nyelve"
+  },
+  "options_event_description_lang_hint": {
+    "message": "Az eseményekben megjelenő Talk szövegblokk nyelvét állítja be."
+  },
+  "options_lang_default": {
+    "message": "Alapértelmezett (UI)"
+  },
+  "options_about_version_label": {
+    "message": "Verzió:"
+  },
+  "options_about_copyright_label": {
+    "message": "Szerzői jog:"
+  },
+  "options_about_license_label": {
+    "message": "Licenc:"
+  },
+  "options_about_license_value": {
+    "message": "AGPL v3"
+  },
+  "options_about_support_note": {
+    "message": "Hogy a NC Connector for Thunderbird továbbra is ingyenesen karbantartható és fejleszthető legyen."
+  },
+  "options_about_support_heading": {
+    "message": "Támogatás"
+  },
+  "options_auth_heading": {
+    "message": "Hitelesítés"
+  },
+  "options_auth_manual": {
+    "message": "Kézi (felhasználónév + alkalmazásjelszó)"
+  },
+  "options_auth_login": {
+    "message": "Bejelentkezés Nextclouddal (alkalmazásjelszó automatikus lekérése)"
+  },
+  "options_loginflow_button": {
+    "message": "Bejelentkezés Nextclouddal..."
+  },
+  "options_loginflow_starting": {
+    "message": "Bejelentkezési folyamat indítása..."
+  },
+  "options_loginflow_browser": {
+    "message": "A böngésző megnyílt. Kérjük, erősítse meg a bejelentkezést a Nextcloudban..."
+  },
+  "options_loginflow_success": {
+    "message": "Sikeres bejelentkezés. Az alkalmazásjelszó másolva."
+  },
+  "options_loginflow_failed": {
+    "message": "A Nextcloud-bejelentkezés sikertelen."
+  },
+  "options_loginflow_missing": {
+    "message": "Először adja meg a szerver URL-jét."
+  },
+  "compose_sharing_title": {
+    "message": "Nextcloud megosztás hozzáadása"
+  },
+  "options_sharing_base_label": {
+    "message": "Alapkönyvtár"
+  },
+  "options_sharing_base_hint": {
+    "message": "A fájlok e könyvtár alatt tárolódnak (pl. „90 Freigaben - extern”)."
+  },
+  "options_sharing_defaults_heading": {
+    "message": "Alapértelmezett beállítások"
+  },
+  "options_sharing_default_share_name_label": {
+    "message": "Megosztás neve"
+  },
+  "options_sharing_default_permissions_label": {
+    "message": "Alapértelmezett jogosultságok"
+  },
+  "options_sharing_default_perm_create": {
+    "message": "Feltöltés/Létrehozás"
+  },
+  "options_sharing_default_perm_write": {
+    "message": "Szerkesztés"
+  },
+  "options_sharing_default_perm_delete": {
+    "message": "Törlés"
+  },
+  "options_sharing_default_password_label": {
+    "message": "Jelszó beállítása"
+  },
+  "options_sharing_default_expire_days_label": {
+    "message": "Lejárat (nap)"
+  },
+  "options_sharing_attachments_heading": {
+    "message": "Mellékletek"
+  },
+  "options_sharing_attachments_always_label": {
+    "message": "A mellékletek kezelése mindig az NC Connectorral"
+  },
+  "options_sharing_attachments_offer_label": {
+    "message": "Feltöltés felajánlása ennél nagyobb fájloknál"
+  },
+  "options_sharing_attachments_offer_suffix": {
+    "message": "MB"
+  },
+  "options_talk_defaults_heading": {
+    "message": "Alapértelmezett beállítások"
+  },
+  "options_talk_default_title_label": {
+    "message": "Cím"
+  },
+  "options_talk_default_lobby_label": {
+    "message": "Előszoba a kezdési időpontig"
+  },
+  "options_talk_default_listable_label": {
+    "message": "Megjelenítés a keresésben"
+  },
+  "options_talk_default_add_participants_label": {
+    "message": "Résztvevők hozzáadása a szobához"
+  },
+  "options_talk_default_add_users_label": {
+    "message": "Felhasználók"
+  },
+  "options_talk_default_add_guests_label": {
+    "message": "Vendégek"
+  },
+  "options_talk_default_password_label": {
+    "message": "Jelszó beállítása"
+  },
+  "options_talk_default_roomtype_label": {
+    "message": "Szobatípus"
+  },
+  "options_talk_default_roomtype_event": {
+    "message": "Eseménybeszélgetés"
+  },
+  "options_talk_default_roomtype_standard": {
+    "message": "Csoportbeszélgetés"
+  },
+  "sharing_share_name_label": {
+    "message": "Megosztás neve"
+  },
+  "sharing_share_placeholder": {
+    "message": "pl. X projekt"
+  },
+  "sharing_share_default": {
+    "message": "Megosztás neve"
+  },
+  "sharing_permission_read": {
+    "message": "Olvasás"
+  },
+  "sharing_permission_create": {
+    "message": "Feltöltés"
+  },
+  "sharing_permission_write": {
+    "message": "Módosítás"
+  },
+  "sharing_permission_delete": {
+    "message": "Törlés"
+  },
+  "sharing_password_toggle": {
+    "message": "Jelszó beállítása"
+  },
+  "sharing_password_generate": {
+    "message": "Generálás"
+  },
+  "sharing_expire_toggle": {
+    "message": "Lejárati dátum beállítása"
+  },
+  "sharing_note_toggle": {
+    "message": "Megjegyzés hozzáadása a címzetteknek"
+  },
+  "sharing_note_placeholder": {
+    "message": "Opcionális üzenet a címzetteknek"
+  },
+  "sharing_button_back": {
+    "message": "Vissza"
+  },
+  "sharing_button_cancel": {
+    "message": "Mégse"
+  },
+  "sharing_button_next": {
+    "message": "Tovább"
+  },
+  "sharing_button_finish": {
+    "message": "Megosztás létrehozása"
+  },
+  "sharing_status_creating": {
+    "message": "Nyilvános hivatkozás létrehozása..."
+  },
+  "sharing_status_error": {
+    "message": "Hiba történt."
+  },
+  "sharing_error_insert_failed": {
+    "message": "Nem sikerült beszúrni a megosztást az üzenetbe."
+  },
+  "sharing_html_password_label": {
+    "message": "Jelszó"
+  },
+  "sharing_html_expire_label": {
+    "message": "Lejárati dátum"
+  },
+  "sharing_html_permissions_label": {
+    "message": "Az Ön jogosultságai"
+  },
+  "sharing_html_download_label": {
+    "message": "Letöltési hivatkozás"
+  },
+  "sharing_html_footer": {
+    "message": "$1 egy megoldás a biztonságos e-mail- és fájlmegosztásra."
+  },
+  "sharing_dialog_title": {
+    "message": "Nextcloud megosztás"
+  },
+  "sharing_heading_permissions": {
+    "message": "Megosztási beállítások"
+  },
+  "sharing_step_expire": {
+    "message": "Lejárati dátum"
+  },
+  "sharing_expire_hint": {
+    "message": "E dátum után a hivatkozás már nem érhető el."
+  },
+  "sharing_step_files_title": {
+    "message": "Fájlok vagy mappák kiválasztása"
+  },
+  "sharing_base_path_info": {
+    "message": "Alapkönyvtár: $1"
+  },
+  "sharing_files_table_path": {
+    "message": "Elérési út"
+  },
+  "sharing_files_table_type": {
+    "message": "Típus"
+  },
+  "sharing_files_table_status": {
+    "message": "Állapot"
+  },
+  "sharing_button_add_files": {
+    "message": "Fájlok hozzáadása..."
+  },
+  "sharing_button_add_folder": {
+    "message": "Mappa hozzáadása..."
+  },
+  "sharing_button_remove": {
+    "message": "Eltávolítás"
+  },
+  "sharing_button_upload": {
+    "message": "Feltöltés"
+  },
+  "sharing_files_empty": {
+    "message": "Nincs kiválasztott fájl."
+  },
+  "sharing_file_type_file": {
+    "message": "Fájl"
+  },
+  "sharing_status_waiting": {
+    "message": "Várakozás"
+  },
+  "sharing_status_done_row": {
+    "message": "Kész"
+  },
+  "sharing_status_error_row": {
+    "message": "Hiba"
+  },
+  "sharing_status_ready": {
+    "message": "Feltöltés kész."
+  },
+  "sharing_status_uploading_bulk": {
+    "message": "Fájlok feltöltése..."
+  },
+  "sharing_message_invalid_share_name": {
+    "message": "Kérjük, adjon meg megosztásnevet."
+  },
+  "sharing_message_no_files": {
+    "message": "Kérjük, adjon hozzá legalább egy fájlt."
+  },
+  "sharing_confirm_no_files_title": {
+    "message": "Megosztás feltöltés nélkül"
+  },
+  "sharing_confirm_no_files_message": {
+    "message": "Ehhez a megosztáshoz nem lett hozzáadva fájl vagy mappa. A címzettek csak a saját fájljaikat tölthetik fel. Folytatja?"
+  },
+  "sharing_error_upload_required": {
+    "message": "Folytatás előtt töltse fel a fájlokat."
+  },
+  "sharing_step_note_heading": {
+    "message": "Megjegyzés a címzettnek"
+  },
+  "sharing_status_inserting": {
+    "message": "HTML-blokk beszúrása..."
+  },
+  "sharing_status_checking_folder": {
+    "message": "Mappa elérhetőségének ellenőrzése..."
+  },
+  "sharing_error_folder_exists": {
+    "message": "Már létezik ilyen nevű megosztási mappa. Kérjük, válasszon másik nevet."
+  },
+  "sharing_prompt_rename_duplicate": {
+    "message": "A(z) \"$1\" fájl már szerepel a várólistán. Kérjük, adjon meg új nevet."
+  },
+  "sharing_message_rename_cancelled": {
+    "message": "A feltöltés megszakadt, mert nem adott meg új nevet."
+  },
+  "sharing_password_policy_error": {
+    "message": "A jelszónak legalább 10 karakterből kell állnia, nagy- és kisbetűkkel, valamint egy speciális karakterrel."
+  },
+  "sharing_html_intro_line": {
+    "message": "Szeretnék fájlokat biztonságosan megosztani, és megóvni az Ön magánszféráját. Kattintson az alábbi hivatkozásra a fájlok letöltéséhez."
+  },
+  "sharing_attachment_prompt_title": {
+    "message": "Mellékletkorlát túllépve"
+  },
+  "sharing_attachment_prompt_reason": {
+    "message": "A mellékletek összmérete $1, ami meghaladja a beállított $2 korlátot. Utoljára hozzáadva: \"$3\" ($4)."
+  },
+  "sharing_attachment_prompt_share": {
+    "message": "Megosztás NC Connectorral"
+  },
+  "sharing_attachment_prompt_remove_last": {
+    "message": "A legutóbb kijelölt mellékletek eltávolítása"
+  },
+  "sharing_attachment_prompt_last_unknown": {
+    "message": "Ismeretlen melléklet"
+  },
+  "sharing_attachment_mode_reason_threshold": {
+    "message": "A mellékletkorlát túllépve: $1 > $2. Utoljára hozzáadva: \"$3\" ($4). Ezeket a mellékleteket az NC Connector osztja meg."
+  },
+  "sharing_attachment_mode_reason_always": {
+    "message": "A mellékletmód aktív. A kijelölt mellékletek az NC Connectoron keresztül lesznek megosztva."
+  },
+  "options_sharing_attachments_lock_title": {
+    "message": "A melléklet-automatizálás le van tiltva"
+  },
+  "options_sharing_attachments_lock_text": {
+    "message": "A Thunderbird „Feltöltés ekkora fájlméret felett” beállítása be van kapcsolva ($1 MB). Ez ütközik az NC Connector melléklet-automatizálásával. Az alábbi mellékletopciók zárolva vannak."
+  },
+  "options_sharing_attachments_lock_step1": {
+    "message": "Nyisd meg: Thunderbird Beállítások > Levélírás > Mellékletek."
+  },
+  "options_sharing_attachments_lock_step2": {
+    "message": "Kapcsold ki a „Feltöltés ekkora fájlméret felett” opciót."
+  },
+  "options_sharing_attachments_lock_step3": {
+    "message": "Nyisd meg újra ezeket a kiegészítő-beállításokat."
+  },
+  "sharing_attachment_automation_locked_error": {
+    "message": "A Thunderbird „Feltöltés ekkora fájlméret felett” beállítása be van kapcsolva ($1 MB). Ez ütközik az NC Connector melléklet-automatizálásával. Az alábbi mellékletopciók zárolva vannak."
+  },
+  "options_sharing_default_password_separate_label": {
+    "message": "Jelszó külön küldése"
+  },
+  "sharing_password_separate_toggle": {
+    "message": "Jelszó küldése külön e-mailben"
+  },
+  "sharing_html_password_separate_hint": {
+    "message": "A jelszót külön e-mailben küldjük el."
+  },
+  "sharing_html_password_mail_intro": {
+    "message": "Itt találja a jelszót az elküldött megosztási hivatkozáshoz."
+  },
+  "sharing_password_mail_subject": {
+    "message": "Jelszó a megosztott hivatkozáshoz"
+  },
+  "sharing_password_mail_subject_with_label": {
+    "message": "Jelszó a megosztott hivatkozáshoz: $1"
+  },
+  "options_sharing_permissions_tooltip_title": {
+    "message": "🛡️ Default permissions"
+  },
+  "options_sharing_permissions_tooltip_line1": {
+    "message": "These values are used as defaults for new shares."
+  },
+  "options_sharing_permissions_tooltip_line2": {
+    "message": "They can still be adjusted in the sharing wizard."
+  },
+  "options_sharing_permissions_tooltip_line3": {
+    "message": "In attachment mode, recipient permission is always read-only."
+  },
+  "sharing_password_separate_tooltip_title": {
+    "message": "Coming soon (Pro feature)"
+  },
+  "sharing_password_separate_tooltip_line1": {
+    "message": "This option is disabled in this release."
+  },
+  "sharing_password_separate_tooltip_line2": {
+    "message": "Password delivery in a separate email will be available in a future Pro release."
+  },
+  "sharing_password_separate_tooltip_line3": {
+    "message": "For now, the password is included in the main share block."
+  },
+  "options_sharing_attachments_always_tooltip_title": {
+    "message": "📎 Always via NC Connector"
+  },
+  "options_sharing_attachments_always_tooltip_line1": {
+    "message": "New attachments are removed from the compose mail and processed via NC Connector."
+  },
+  "options_sharing_attachments_always_tooltip_line2": {
+    "message": "The sharing wizard opens directly in the file step."
+  },
+  "options_sharing_attachments_always_tooltip_line3": {
+    "message": "The final mail contains share links instead of physical attachments."
+  },
+  "options_sharing_attachments_offer_tooltip_title": {
+    "message": "📏 Attachment threshold"
+  },
+  "options_sharing_attachments_offer_tooltip_line1": {
+    "message": "The total size of all attachments is evaluated."
+  },
+  "options_sharing_attachments_offer_tooltip_line2": {
+    "message": "If exceeded, you can share via NC Connector or remove the last selected attachment batch."
+  },
+  "options_sharing_attachments_offer_tooltip_line3": {
+    "message": "The remove action returns the mail to a below-threshold state."
+  },
+  "talk_option_moderator_title": {
+    "message": "👑 Moderator delegation"
+  },
+  "talk_option_moderator_line1": {
+    "message": "The selected user is promoted after room creation."
+  },
+  "talk_option_moderator_line2": {
+    "message": "On successful delegation, the creator leaves the room."
+  },
+  "talk_option_moderator_line3": {
+    "message": "If delegation fails, room ownership remains with the creator."
+  },
+  "sharing_password_mail_notify_title": {
+    "message": "NC Connector"
+  },
+  "sharing_password_mail_notify_success": {
+    "message": "Password email sent to $1 recipient(s)."
+  },
+  "sharing_password_mail_notify_failure": {
+    "message": "Automatic password email failed for $1 recipient(s). Manual send mail was opened."
+  },
+  "sharing_password_mail_notify_manual_required": {
+    "message": "Az automatikus jelszo-e-mail kuldes sikertelen volt. Kerjuk, kuldje el kezzel a jelszo e-mailt a megnyitott piszkozatbol."
+  }
 }
+

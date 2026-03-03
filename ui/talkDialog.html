@@ -616,42 +616,42 @@ textarea{
     <div class="dialog-content">
 <div class="message" id="messageBar"></div>
       <div class="section">
-        <label for="titleInput" data-i18n="ui_create_title_label">Titel</label>
+        <label for="titleInput" data-i18n="ui_create_title_label">Title</label>
         <input id="titleInput" type="text">
       </div>
       <div class="section roomtype-section">
-        <label for="roomTypeButton" data-i18n="ui_create_roomtype_label">Raumtyp</label>
+        <label for="roomTypeButton" data-i18n="ui_create_roomtype_label">Room type</label>
         <div class="roomtype-picker" id="roomTypePicker">
           <button type="button" class="roomtype-button" id="roomTypeButton" aria-haspopup="listbox" aria-expanded="false">
-            <span class="roomtype-button-label" id="roomTypeButtonLabel" data-i18n="ui_create_mode_event">Event-Unterhaltung</span>
+            <span class="roomtype-button-label" id="roomTypeButtonLabel" data-i18n="ui_create_mode_event">Event conversation</span>
             <span class="roomtype-button-arrow" aria-hidden="true">▾</span>
           </button>
           <div class="roomtype-dropdown" id="roomTypeDropdown" role="listbox" hidden>
             <button type="button" class="roomtype-option" data-value="event" data-selected="true" role="option">
               <div class="roomtype-option-main">
-                <span class="roomtype-option-label" data-i18n="ui_create_mode_event">Event-Unterhaltung</span>
+                <span class="roomtype-option-label" data-i18n="ui_create_mode_event">Event conversation</span>
                 <span class="roomtype-option-check" aria-hidden="true">✓</span>
               </div>
               <div class="roomtype-tooltip" role="tooltip">
-                <div class="roomtype-tooltip-title" data-i18n="talk_roomtype_event_title">📅 Event-Unterhaltung</div>
+                <div class="roomtype-tooltip-title" data-i18n="talk_roomtype_event_title">📅 Event conversation</div>
                 <ul class="roomtype-tooltip-list">
-                  <li data-i18n="talk_roomtype_event_line1">Zeitlich begrenzt: für einen konkreten Termin oder Anlass</li>
-                  <li data-i18n="talk_roomtype_event_line2">Spontan & leichtgewichtig: geeignet für Meetings, Schulungen oder Webinare</li>
-                  <li data-i18n="talk_roomtype_event_line3">Selbstaufräumend: wird nach einiger Zeit automatisch entfernt</li>
+                  <li data-i18n="talk_roomtype_event_line1">Time-limited: for a specific appointment or occasion</li>
+                  <li data-i18n="talk_roomtype_event_line2">Spontaneous & lightweight: suitable for meetings, trainings or webinars</li>
+                  <li data-i18n="talk_roomtype_event_line3">Self-cleaning: removed automatically after some time</li>
                 </ul>
               </div>
             </button>
             <button type="button" class="roomtype-option" data-value="normal" data-selected="false" role="option">
               <div class="roomtype-option-main">
-                <span class="roomtype-option-label" data-i18n="ui_create_mode_standard">Gruppenunterhaltung</span>
+                <span class="roomtype-option-label" data-i18n="ui_create_mode_standard">Group conversation</span>
                 <span class="roomtype-option-check" aria-hidden="true">✓</span>
               </div>
               <div class="roomtype-tooltip" role="tooltip">
-                <div class="roomtype-tooltip-title" data-i18n="talk_roomtype_group_title">🗨️ Gruppenunterhaltung</div>
+                <div class="roomtype-tooltip-title" data-i18n="talk_roomtype_group_title">🗨️ Group conversation</div>
                 <ul class="roomtype-tooltip-list">
-                  <li data-i18n="talk_roomtype_group_line1">Dauerhaft: bleibt bestehen, bis sie aktiv gelöscht wird</li>
-                  <li data-i18n="talk_roomtype_group_line2">Für den Alltag gemacht: ideal für Teams, Abteilungen, laufende Projekte und wiederkehrende Termine</li>
-                  <li data-i18n="talk_roomtype_group_line3">Mit Verlauf: der gesamte Chat ist jederzeit nachvollziehbar</li>
+                  <li data-i18n="talk_roomtype_group_line1">Persistent: remains until it is actively deleted</li>
+                  <li data-i18n="talk_roomtype_group_line2">Everyday use: ideal for teams, departments, ongoing projects and recurring appointments</li>
+                  <li data-i18n="talk_roomtype_group_line3">With history: the entire chat can be reviewed at any time</li>
                 </ul>
               </div>
             </button>
@@ -662,68 +662,78 @@ textarea{
       <div class="section password-section">
         <label class="checkbox-row">
           <input type="checkbox" id="passwordToggle">
-          <span data-i18n="talk_password_toggle_label">Passwort setzen</span>
+          <span data-i18n="talk_password_toggle_label">Set password</span>
         </label>
         <div class="password-row" id="passwordFields">
           <input id="passwordInput" type="text" autocomplete="new-password">
-          <button type="button" id="passwordGenerateBtn" data-i18n="ui_password_generate_label">Generieren</button>
+          <button type="button" id="passwordGenerateBtn" data-i18n="ui_password_generate_label">Generate</button>
         </div>
       </div>
       <div class="section section-options">
-        <div class="section-heading" data-i18n="talk_section_settings">Optionen</div>
+        <div class="section-heading" data-i18n="talk_section_settings">Talk Settings</div>
         <label class="checkbox-row option-tooltip-wrap">
           <input type="checkbox" id="addUsersToggle">
-          <span data-i18n="ui_create_add_users_label">Benutzer hinzufügen</span>
+          <span data-i18n="ui_create_add_users_label">Add users</span>
           <div class="option-tooltip" role="tooltip">
-            <div class="option-tooltip-title" data-i18n="talk_option_add_users_title">👤 Benutzer hinzufügen</div>
+            <div class="option-tooltip-title" data-i18n="talk_option_add_users_title">👤 Add users</div>
             <ul class="option-tooltip-list">
-              <li data-i18n="talk_option_add_users_line1">Interne Nextcloud-Benutzer werden direkt dem Raum hinzugefügt</li>
-              <li data-i18n="talk_option_add_users_line2">Der Raum ist sofort in Nextcloud Talk sichtbar</li>
+              <li data-i18n="talk_option_add_users_line1">Internal Nextcloud users are added directly to the room</li>
+              <li data-i18n="talk_option_add_users_line2">The room is immediately visible in Nextcloud Talk</li>
             </ul>
           </div>
         </label>
         <label class="checkbox-row option-tooltip-wrap">
           <input type="checkbox" id="addGuestsToggle">
-          <span data-i18n="ui_create_add_guests_label">Gäste hinzufügen</span>
+          <span data-i18n="ui_create_add_guests_label">Add guests</span>
           <div class="option-tooltip" role="tooltip">
-            <div class="option-tooltip-title" data-i18n="talk_option_add_guests_title">🌍 Gäste hinzufügen</div>
+            <div class="option-tooltip-title" data-i18n="talk_option_add_guests_title">🌍 Add guests</div>
             <ul class="option-tooltip-list">
-              <li data-i18n="talk_option_add_guests_line1">Gäste werden ebenfalls direkt dem Raum hinzugefügt</li>
-              <li data-i18n="talk_option_add_guests_line2">⚠️ Sie erhalten eine separate (zusätzliche) E-Mail mit persönlichem Zugangslink</li>
+              <li data-i18n="talk_option_add_guests_line1">Guests are also added directly to the room</li>
+              <li data-i18n="talk_option_add_guests_line2">⚠️ They will receive a separate (additional) email with a personal access link</li>
             </ul>
           </div>
         </label>
         <label class="checkbox-row option-tooltip-wrap">
           <input type="checkbox" id="lobbyToggle">
-          <span data-i18n="ui_create_lobby_label">Lobby bis Startzeit</span>
+          <span data-i18n="ui_create_lobby_label">Lobby until start time</span>
           <div class="option-tooltip" role="tooltip">
-            <div class="option-tooltip-title" data-i18n="talk_option_lobby_title">🚪 Lobby bis Startzeit</div>
+            <div class="option-tooltip-title" data-i18n="talk_option_lobby_title">🚪 Lobby until start time</div>
             <ul class="option-tooltip-list">
-              <li data-i18n="talk_option_lobby_line1">Teilnehmer landen vor Beginn in der Lobby (Warteraum) und können noch nicht in den Call</li>
-              <li data-i18n="talk_option_lobby_line2">⚠️ Erst ab der eingestellten Startzeit (oder wenn ein Moderator die Lobby beendet) ist der Beitritt möglich</li>
-              <li data-i18n="talk_option_lobby_line3">Ideal, damit niemand zu früh in Meeting/Webinar reinplatzt.</li>
+              <li data-i18n="talk_option_lobby_line1">Participants are placed in the lobby (waiting room) before the start and cannot join the call yet</li>
+              <li data-i18n="talk_option_lobby_line2">⚠️ Joining is only possible from the configured start time (or when a moderator ends the lobby)</li>
+              <li data-i18n="talk_option_lobby_line3">Ideal so nobody joins the meeting/webinar too early.</li>
             </ul>
           </div>
         </label>
         <label class="checkbox-row option-tooltip-wrap">
           <input type="checkbox" id="listableToggle" checked>
-          <span data-i18n="ui_create_listable_label">In Suche anzeigen</span>
+          <span data-i18n="ui_create_listable_label">Show in search</span>
           <div class="option-tooltip" role="tooltip">
-            <div class="option-tooltip-title" data-i18n="talk_option_listable_title">🔍 In Suche anzeigen</div>
+            <div class="option-tooltip-title" data-i18n="talk_option_listable_title">🔍 Show in search</div>
             <ul class="option-tooltip-list">
-              <li data-i18n="talk_option_listable_line1">Der Raum ist über die Talk-Suche auffindbar</li>
-              <li data-i18n="talk_option_listable_line2">⚠️ Erleichtert das Wiederfinden, ist aber für jeden Benutzer auffindbar.</li>
+              <li data-i18n="talk_option_listable_line1">The room can be found via Talk search</li>
+              <li data-i18n="talk_option_listable_line2">⚠️ Makes it easier to find again, but is discoverable for all users.</li>
             </ul>
           </div>
         </label>
       </div>
       <div class="section delegate-section">
-        <label for="delegateInput" data-i18n="ui_create_moderator_label">Moderator (optional)</label>
+        <label for="delegateInput" class="option-tooltip-wrap">
+          <span data-i18n="ui_create_moderator_label">Moderator (optional)</span>
+          <div class="option-tooltip" role="tooltip">
+            <div class="option-tooltip-title" data-i18n="talk_option_moderator_title">👑 Moderator delegation</div>
+            <ul class="option-tooltip-list">
+              <li data-i18n="talk_option_moderator_line1">The selected user is promoted after room creation.</li>
+              <li data-i18n="talk_option_moderator_line2">On successful delegation, the creator leaves the room.</li>
+              <li data-i18n="talk_option_moderator_line3">If delegation fails, room ownership remains with the creator.</li>
+            </ul>
+          </div>
+        </label>
         <div class="delegate-field">
           <div class="delegate-input-wrap">
             <div class="delegate-input-row">
               <input id="delegateInput" type="text" autocomplete="off" spellcheck="false">
-              <button type="button" id="delegateClearBtn" data-i18n="ui_button_clear">Leeren</button>
+              <button type="button" id="delegateClearBtn" data-i18n="ui_button_clear">Clear</button>
             </div>
             <div class="delegate-dropdown" id="delegateDropdown"></div>
           </div>
@@ -734,27 +744,32 @@ textarea{
               <span id="delegateAvatarInitials"></span>
             </div>
             <div class="delegate-selected-text">
-              <div class="delegate-selected-title" data-i18n="ui_delegate_selected_title">Ausgewählt</div>
+              <div class="delegate-selected-title" data-i18n="ui_delegate_selected_title">Selected</div>
               <div class="delegate-selected-name" id="delegateSelectedName"></div>
               <div class="delegate-selected-meta" id="delegateSelectedMeta"></div>
             </div>
           </div>
-          <div class="delegate-hint" data-i18n="ui_create_moderator_hint">Moderator kann optional vorab gesetzt werden.</div>
+          <div class="delegate-hint" data-i18n="ui_create_moderator_hint">If provided, moderation is transferred to this user after creation and you leave the room.</div>
         </div>
       </div>
     </div>
     <div class="footer">
-      <button type="button" id="cancelBtn" data-i18n="talk_dialog_close">Abbrechen</button>
-      <button type="button" id="okBtn" class="primary" data-i18n="talk_button_create_room">OK</button>
+      <button type="button" id="cancelBtn" data-i18n="talk_dialog_close">Close</button>
+      <button type="button" id="okBtn" class="primary" data-i18n="talk_button_create_room">Create Talk Room</button>
     </div>
   </div>
   <script src="../modules/i18n.js"></script>
   <script src="../modules/i18nOverride.js"></script>
   <script src="../modules/ocs.js"></script>
+  <script src="../vendor/ical.js"></script>
+  <script src="../modules/icalContract.js"></script>
+  <script src="../modules/textUtils.js"></script>
   <script src="../modules/nccore.js"></script>
   <script src="../modules/talkcore.js"></script>
   <script src="popupSizing.js"></script>
   <script src="password.js"></script>
+  <script src="passwordPolicyClient.js"></script>
+  <script src="debugForwarder.js"></script>
   <script src="domI18n.js"></script>
   <script src="talkDialog.js"></script>
 </body>

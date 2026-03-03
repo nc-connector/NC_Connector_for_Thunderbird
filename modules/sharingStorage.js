@@ -9,6 +9,7 @@
  * Storage helpers for sharing defaults and legacy key migration.
  */
 const NCSharingStorage = (() => {
+  const DEFAULT_ATTACHMENT_THRESHOLD_MB = 5;
   const SHARING_KEYS = {
     basePath: "sharingBasePath",
     defaultShareName: "sharingDefaultShareName",
@@ -16,7 +17,11 @@ const NCSharingStorage = (() => {
     defaultPermWrite: "sharingDefaultPermWrite",
     defaultPermDelete: "sharingDefaultPermDelete",
     defaultPassword: "sharingDefaultPassword",
-    defaultExpireDays: "sharingDefaultExpireDays"
+    defaultPasswordSeparate: "sharingDefaultPasswordSeparate",
+    defaultExpireDays: "sharingDefaultExpireDays",
+    attachmentsAlwaysConnector: "sharingAttachmentsAlwaysConnector",
+    attachmentsOfferAboveEnabled: "sharingAttachmentsOfferAboveEnabled",
+    attachmentsOfferAboveMb: "sharingAttachmentsOfferAboveMb"
   };
   const LEGACY_KEYS = {
     basePath: "fileLinkBasePath",
@@ -25,9 +30,23 @@ const NCSharingStorage = (() => {
     defaultPermWrite: "filelinkDefaultPermWrite",
     defaultPermDelete: "filelinkDefaultPermDelete",
     defaultPassword: "filelinkDefaultPassword",
+    defaultPasswordSeparate: "filelinkDefaultPasswordSeparate",
     defaultExpireDays: "filelinkDefaultExpireDays"
   };
   const ALL_KEYS = Object.values(SHARING_KEYS).concat(Object.values(LEGACY_KEYS));
+
+  /**
+   * Normalize configured attachment threshold (MB) to a positive integer.
+   * @param {any} value
+   * @returns {number}
+   */
+  function normalizeAttachmentThresholdMb(value){
+    const parsed = Number.parseInt(String(value ?? ""), 10);
+    if (!Number.isFinite(parsed) || parsed < 1){
+      return DEFAULT_ATTACHMENT_THRESHOLD_MB;
+    }
+    return parsed;
+  }
 
   /**
    * Migrate legacy filelink storage keys to sharing keys and clean up old entries.
@@ -61,6 +80,10 @@ const NCSharingStorage = (() => {
         && stored[LEGACY_KEYS.defaultPassword] !== undefined){
       migration[SHARING_KEYS.defaultPassword] = stored[LEGACY_KEYS.defaultPassword];
     }
+    if (stored[SHARING_KEYS.defaultPasswordSeparate] === undefined
+        && stored[LEGACY_KEYS.defaultPasswordSeparate] !== undefined){
+      migration[SHARING_KEYS.defaultPasswordSeparate] = stored[LEGACY_KEYS.defaultPasswordSeparate];
+    }
     if (stored[SHARING_KEYS.defaultExpireDays] == null
         && stored[LEGACY_KEYS.defaultExpireDays] !== undefined){
       migration[SHARING_KEYS.defaultExpireDays] = stored[LEGACY_KEYS.defaultExpireDays];
@@ -75,7 +98,9 @@ const NCSharingStorage = (() => {
   }
 
   return {
+    DEFAULT_ATTACHMENT_THRESHOLD_MB,
     SHARING_KEYS,
+    normalizeAttachmentThresholdMb,
     migrateLegacySharingKeys
   };
 })();

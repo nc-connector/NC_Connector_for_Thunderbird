@@ -1,349 +1,828 @@
 {
-  "extName": { "message": "NC Connector for Thunderbird" },
-  "extDescription": { "message": "Nextcloud Talk & Files nahtlos in Thunderbird integriert" },
-  "ui_button_ok": { "message": "OK" },
-  "ui_button_cancel": { "message": "Abbrechen" },
-  "ui_button_apply": { "message": "Übernehmen" },
-  "ui_button_apply_progress": { "message": "Übernehme..." },
-  "ui_button_create_progress": { "message": "Erstelle..." },
-  "ui_button_clear": { "message": "Leeren" },
-  "ui_insert_button_label": { "message": "Talk-Link einfügen" },
-  "ui_create_heading": { "message": "Öffentliche Unterhaltung erstellen" },
-  "ui_create_title_label": { "message": "Titel" },
-  "ui_create_add_participants_label": { "message": "Teilnehmer in den Raum hinzufügen" },
-  "ui_create_add_users_label": { "message": "Benutzer hinzufügen" },
-  "ui_create_add_guests_label": { "message": "Gäste hinzufügen" },
-  "ui_create_password_label": { "message": "Passwort (optional)" },
-  "talk_password_policy_error": { "message": "Das Passwort muss mindestens $1 Zeichen lang sein." },
-  "ui_create_password_placeholder": { "message": "Optional" },
-  "ui_password_generate_label": { "message": "Generieren" },
-  "ui_password_error_title": { "message": "Passwort prüfen" },
-  "ui_password_error_text": { "message": "Das Passwort muss mindestens 5 Zeichen lang sein." },
-  "ui_create_lobby_label": { "message": "Lobby bis Startzeit" },
-  "ui_create_listable_label": { "message": "In Suche anzeigen" },
-  "talk_option_add_users_title": { "message": "👤 Benutzer hinzufügen" },
-  "talk_option_add_users_line1": { "message": "Interne Nextcloud-Benutzer werden direkt dem Raum hinzugefügt" },
-  "talk_option_add_users_line2": { "message": "Der Raum ist sofort in Nextcloud Talk sichtbar" },
-  "talk_option_add_guests_title": { "message": "🌍 Gäste hinzufügen" },
-  "talk_option_add_guests_line1": { "message": "Gäste werden ebenfalls direkt dem Raum hinzugefügt" },
-  "talk_option_add_guests_line2": { "message": "⚠️ Sie erhalten eine separate (zusätzliche) E-Mail mit persönlichem Zugangslink" },
-  "talk_option_listable_title": { "message": "🔍 In Suche anzeigen" },
-  "talk_option_listable_line1": { "message": "Der Raum ist über die Talk-Suche auffindbar" },
-  "talk_option_listable_line2": { "message": "⚠️ Erleichtert das Wiederfinden, ist aber für jeden Benutzer auffindbar." },
-  "talk_option_lobby_title": { "message": "🚪 Lobby bis Startzeit" },
-  "talk_option_lobby_line1": { "message": "Teilnehmer landen vor Beginn in der Lobby (Warteraum) und können noch nicht in den Call" },
-  "talk_option_lobby_line2": { "message": "⚠️ Erst ab der eingestellten Startzeit (oder wenn ein Moderator die Lobby beendet) ist der Beitritt möglich" },
-  "talk_option_lobby_line3": { "message": "Ideal, damit niemand zu früh in Meeting/Webinar reinplatzt." },
-  "ui_create_roomtype_label": { "message": "Raumtyp" },
-  "ui_create_mode_event": { "message": "Event-Unterhaltung" },
-  "ui_create_mode_standard": { "message": "Gruppenunterhaltung" },
-  "ui_create_mode_event_short": { "message": "Event" },
-  "ui_create_mode_standard_short": { "message": "Standard" },
-  "ui_create_mode_unsupported": { "message": "Event-Unterhaltungen werden vom Server nicht unterstützt." },
-  "talk_roomtype_group_title": { "message": "🗨️ Gruppenunterhaltung" },
-  "talk_roomtype_group_line1": { "message": "Dauerhaft: bleibt bestehen, bis sie aktiv gelöscht wird" },
-  "talk_roomtype_group_line2": { "message": "Für den Alltag gemacht: ideal für Teams, Abteilungen, laufende Projekte und wiederkehrende Termine" },
-  "talk_roomtype_group_line3": { "message": "Mit Verlauf: der gesamte Chat ist jederzeit nachvollziehbar" },
-  "talk_roomtype_event_title": { "message": "📅 Event-Unterhaltung" },
-  "talk_roomtype_event_line1": { "message": "Zeitlich begrenzt: für einen konkreten Termin oder Anlass" },
-  "talk_roomtype_event_line2": { "message": "Spontan & leichtgewichtig: geeignet für Meetings, Schulungen oder Webinare" },
-  "talk_roomtype_event_line3": { "message": "Selbstaufräumend: wird nach einiger Zeit automatisch entfernt" },
-  "ui_create_moderator_label": { "message": "Moderator (optional)" },
-  "ui_create_moderator_placeholder": { "message": "Benutzername eingeben" },
-  "ui_create_moderator_hint": { "message": "Bei Angabe wird die Moderation nach Erstellung an diesen Benutzer übertragen und Sie verlassen den Raum." },
-  "ui_delegate_selected_title": { "message": "Ausgewählt" },
-  "ui_delegate_selected_description": { "message": "Bei Angabe wird die Moderation nach Erstellung an diesen Benutzer übertragen und Sie verlassen den Raum." },
-  "ui_delegate_status_searching": { "message": "Suche..." },
-  "ui_delegate_status_loading": { "message": "Lade Benutzer..." },
-  "ui_delegate_status_none_with_email": { "message": "Keine Treffer." },
-  "ui_delegate_status_none_found": { "message": "Keine Benutzer gefunden." },
-  "ui_delegate_status_single": { "message": "1 Treffer." },
-  "ui_delegate_status_many": { "message": "$1 Treffer." },
-  "ui_delegate_status_error": { "message": "Benutzersuche fehlgeschlagen." },
-  "ui_create_password_short": { "message": "Das Passwort muss mindestens 5 Zeichen lang sein." },
-  "ui_create_send_failed": { "message": "Senden an Hintergrundskript fehlgeschlagen:\n$1" },
-  "ui_create_no_handler": { "message": "Kein Nextcloud Talk Handler registriert. Bitte Add-on neu laden." },
-  "ui_create_unknown_error": { "message": "Unbekannter Fehler beim Erstellen der Unterhaltung." },
-  "ui_create_failed": { "message": "Nextcloud Talk konnte nicht erstellt werden:\n$1\nBitte Optionen prüfen." },
-  "ui_moderator_transfer_failed": { "message": "Moderator konnte nicht übertragen werden." },
-  "ui_moderator_transfer_failed_with_reason": { "message": "Moderator konnte nicht übertragen werden:\n$1" },
-  "ui_alert_title": { "message": "Nextcloud Talk" },
-  "ui_alert_room_created": { "message": "Talk Raum \"$1\" wurde erstellt." },
-  "ui_alert_link_inserted": { "message": "Talk-Link eingefügt:\n$1" },
-  "ui_alert_location_missing": { "message": "(Hinweis: Feld 'Ort' wurde nicht automatisch gefunden.)" },
-  "ui_alert_event_fallback": { "message": "Hinweis: Server unterstützt Event-Unterhaltungen nicht. Es wurde eine Gruppenunterhaltung erstellt." },
-  "ui_alert_generic_fallback": { "message": "(Hinweis: Es wurde ein Fallback-Link ohne API erzeugt.)" },
-  "ui_alert_reason": { "message": "Grund: $1" },
-  "ui_alert_pending_delegation": { "message": "Moderator wird beim Speichern/Senden übertragen an: $1." },
-  "ui_alert_delegation_done": { "message": "Moderator übertragen an: $1." },
-  "ui_delegate_modal_title": { "message": "Moderatorenübergabe" },
-  "ui_alert_delegation_removed": { "message": "Sie wurden aus der Unterhaltung entfernt." },
-  "ui_alert_password_protected": { "message": "Hinweis: Diese Unterhaltung ist passwortgeschützt." },
-  "ui_prompt_base_url": { "message": "Nextcloud Basis-URL (z.B. https://cloud.example.com):" },
-  "ui_prompt_title": { "message": "Titel für neue öffentliche Unterhaltung:" },
-  "ui_default_title": { "message": "Besprechung" },
-  "ui_description_heading": { "message": "Nextcloud Talk" },
-  "ui_description_join_label": { "message": "Jetzt an der Besprechung teilnehmen :" },
-  "ui_description_password_line": { "message": "Passwort: $1" },
-  "ui_description_help_label": { "message": "Benötigen Sie Hilfe?" },
-  "ui_description_help_url": { "message": "https://docs.nextcloud.com/server/latest/user_manual/de/talk/join_a_call_or_chat_as_guest.html" },
-  "talk_dialog_title": { "message": "Nextcloud Talk" },
-  "talk_dialog_heading": { "message": "Nextcloud Talk" },
-  "talk_dialog_placeholder": { "message": "Diese eigenständige Oberfläche befindet sich im Aufbau. Bis zur Fertigstellung bitte weiterhin den eingebetteten Talk-Dialog verwenden." },
-  "talk_dialog_close": { "message": "Schließen" },
-  "talk_dialog_missing_window": { "message": "Kalenderfenster konnte nicht ermittelt werden." },
-  "talk_dialog_ready": { "message": "Dialog wurde vorbereitet." },
-  "talk_error_window_id_missing": { "message": "Fenster-ID fehlt." },
-  "talk_error_context_id_missing": { "message": "Termin-Kontext fehlt." },
-  "talk_error_init_failed": { "message": "Dialog konnte nicht initialisiert werden." },
-  "talk_error_snapshot_failed": { "message": "Termindaten konnten nicht gelesen werden." },
-  "talk_status_loading_event": { "message": "Lade Termin aus dem Editor…" },
-  "talk_error_editor_context_missing": { "message": "Der aktuell bearbeitete Termin konnte nicht erkannt werden. Bitte stelle sicher, dass der Termin-Editor geöffnet ist, und versuche es erneut." },
-  "talk_error_create_failed": { "message": "Raum konnte nicht erstellt werden." },
-  "talk_error_title_missing": { "message": "Bitte einen Titel eingeben." },
-  "talk_error_create_missing_data": { "message": "Rauminformationen fehlen." },
-  "talk_error_window_reference": { "message": "Fensterreferenz fehlt." },
-  "talk_error_context_reference": { "message": "Termin-Kontext fehlt." },
-  "talk_error_apply_failed": { "message": "Änderungen konnten nicht in den Termin übernommen werden." },
-  "talk_section_event": { "message": "Termin" },
-  "talk_field_start": { "message": "Beginn" },
-  "talk_field_end": { "message": "Ende" },
-  "talk_field_location": { "message": "Ort" },
-  "talk_field_description": { "message": "Beschreibung" },
-  "talk_section_settings": { "message": "Talk-Einstellungen" },
-  "talk_section_room": { "message": "Talk-Raum" },
-  "talk_field_token": { "message": "Token" },
-  "talk_field_url": { "message": "Link" },
-  "talk_field_lobby": { "message": "Lobby" },
-  "talk_field_start_epoch": { "message": "Startzeit" },
-  "talk_password_toggle_label": { "message": "Passwort setzen" },
-  "talk_dialog_legacy": { "message": "Dialog im Termin öffnen" },
-  "talk_button_apply_fields": { "message": "Felder übernehmen" },
-  "talk_button_create_room": { "message": "Talk-Raum erstellen" },
-  "talk_dialog_fields_saved": { "message": "Felder wurden übernommen." },
-  "talk_dialog_fields_error": { "message": "Felder konnten nicht übernommen werden." },
-  "open_url_title": { "message": "Link öffnen" },
-  "open_url_heading": { "message": "Link im Browser öffnen" },
-  "open_url_instructions": { "message": "Kopieren Sie die URL und öffnen Sie sie im Standardbrowser." },
-  "open_url_copy": { "message": "URL kopieren" },
-  "open_url_close": { "message": "Schließen" },
-  "open_url_copied": { "message": "URL in die Zwischenablage kopiert." },
-  "open_url_copy_failed": { "message": "Kopieren fehlgeschlagen. Bitte URL manuell kopieren." },
-  "talk_value_enabled": { "message": "Aktiv" },
-  "talk_value_disabled": { "message": "Inaktiv" },
-  "ui_toolbar_tooltip": { "message": "Nextcloud Talk" },
-  "error_canvas_support_missing": { "message": "Canvas-Unterstuetzung fehlt." },
-  "error_invalid_base64_length": { "message": "Ungueltige Base64-Laenge." },
-  "error_invalid_base64_data": { "message": "Ungueltige Base64-Daten." },
-  "error_avatar_load_failed": { "message": "Avatar konnte nicht geladen werden." },
-
-  "error_avatar_data_missing": { "message": "Avatar-Daten fehlen." },
-  "error_canvas_context_missing": { "message": "Canvas-Kontext nicht verfuegbar." },
-  "error_image_decode_failed": { "message": "Bild konnte nicht dekodiert werden." },
-  "error_image_size_unknown": { "message": "Bildgroesse konnte nicht ermittelt werden." },
-  "error_image_load_failed": { "message": "Bild konnte nicht geladen werden." },
-  "error_pixel_data_missing": { "message": "Pixel-Daten nicht verfuegbar." },
-  "error_credentials_missing": { "message": "Nextcloud Zugangsdaten fehlen (Add-on-Optionen)." },
-  "error_host_permission_missing": { "message": "Zugriff auf die konfigurierte Nextcloud-Instanz wurde nicht erlaubt." },
-  "error_system_addressbook_failed": { "message": "System-Adressbuch konnte nicht geladen werden: $1" },
-  "error_lobby_set_failed": { "message": "Lobby konnte nicht gesetzt werden: $1" },
-  "error_lobby_set_failed_short": { "message": "Lobby konnte nicht gesetzt werden." },
-  "error_room_create_failed": { "message": "Raum konnte nicht erstellt werden." },
-  "error_token_missing_in_response": { "message": "Kein Token im OCS-Response." },
-  "error_room_token_missing": { "message": "Raum-Token fehlt." },
-  "error_room_delete_failed": { "message": "Raum konnte nicht geloescht werden: $1" },
-  "error_lobby_no_permission": { "message": "Keine Berechtigung zum Aendern der Lobby (HTTP 403)." },
-  "error_lobby_update_failed": { "message": "Lobby-Update fehlgeschlagen (HTTP $1)." },
-  "error_ocs": { "message": "OCS-Fehler: $1" },
-  "error_token_or_actor_missing": { "message": "Raum-Token oder Teilnehmer-ID fehlt." },
-  "error_participant_add_failed": { "message": "Teilnehmer konnte nicht hinzugefuegt werden: $1" },
-  "error_moderator_id_missing": { "message": "Moderator-ID fehlt." },
-  "error_moderator_set_failed": { "message": "Moderator konnte nicht gesetzt werden: $1" },
-  "error_leave_failed": { "message": "Verlassen des Raums fehlgeschlagen: $1" },
-  "error_delegation_data_missing": { "message": "Delegationsdaten fehlen." },
-  "error_moderator_target_missing": { "message": "Moderator-ID ist leer." },
-  "error_participant_not_found": { "message": "Teilnehmer wurde nicht gefunden, bitte Schreibweise pruefen." },
-  "error_users_load_failed": { "message": "Benutzer konnten nicht geladen werden." },
-  "error_unknown_utility_request": { "message": "Unbekannte Utility-Anfrage." },
-  "options_title": { "message": "NC Connector for Thunderbird - Einstellungen" },
-  "options_heading": { "message": "NC Connector for Thunderbird - Einstellungen" },
-  "options_base_url_label": { "message": "Nextcloud URL" },
-  "options_base_url_placeholder": { "message": "https://cloud.example.com" },
-  "options_user_label": { "message": "Benutzername" },
-  "options_app_pass_label": { "message": "App-Passwort" },
-  "options_debug_label": { "message": "Debug-Logging" },
-  "options_debug_hint": { "message": "Konsole für Diagnosemeldungen verwenden" },
-  "options_support_link": { "message": "PayPal: Spenden" },
-  "options_save_button": { "message": "Speichern" },
-  "options_status_saved": { "message": "Gespeichert." },
-  "options_status_save_failed": { "message": "Speichern fehlgeschlagen." },
-  "options_status_load_failed": { "message": "Einstellungen konnten nicht geladen werden." },
-  "options_test_button": { "message": "Verbindung testen" },
-  "options_test_running": { "message": "Prüfe Verbindung..." },
-  "options_test_success": { "message": "Verbindung erfolgreich." },
-  "options_test_failed": { "message": "Verbindung fehlgeschlagen." },
-  "options_test_failed_auth": { "message": "Benutzername oder App-Passwort ungültig." },
-  "options_test_missing": { "message": "Bitte zuerst URL, Benutzername und App-Passwort eingeben." },
-  "options_permission_required": { "message": "Bitte Zugriff auf diese Nextcloud-Instanz erlauben." },
-  "options_tab_general": { "message": "Allgemein" },
-  "options_tab_sharing": { "message": "Freigabe" },
-  "options_tab_talklink": { "message": "Talk Link" },
-  "options_tab_advanced": { "message": "Erweitert" },
-  "options_tab_debug": { "message": "Debug" },
-  "options_tab_about": { "message": "Über" },
-  "options_placeholder_sharing": { "message": "Konfiguration folgt." },
-  "options_placeholder_advanced": { "message": "Einstellungen folgen." },
-  "options_advanced_language_heading": { "message": "Sprach-Overrides" },
-  "options_share_block_lang_label": { "message": "Sprache im Freigabe-HTML-Block" },
-  "options_share_block_lang_hint": { "message": "Steuert die Sprache des eingefügten Freigabe-HTML-Blocks." },
-  "options_event_description_lang_label": { "message": "Sprache im Talk-Beschreibungstext" },
-  "options_event_description_lang_hint": { "message": "Steuert die Sprache des Talk-Textblocks in Terminen." },
-  "options_lang_default": { "message": "Standard (UI)" },
-  "options_lang_en": { "message": "Englisch" },
-  "options_lang_de": { "message": "Deutsch" },
-  "options_lang_fr": { "message": "Französisch" },
-  "options_about_version_label": { "message": "Version:" },
-  "options_about_copyright_label": { "message": "Copyright:" },
-  "options_about_license_label": { "message": "Lizenz:" },
-  "options_about_license_value": { "message": "AGPL v3" },
-  "options_about_support_note": { "message": "Damit NC Connector for Thunderbird weiter kostenlos gepflegt und verbessert werden kann" },
-  "options_about_support_heading": { "message": "Unterstützen" },
-  "options_auth_heading": { "message": "Authentifizierung" },
-  "options_auth_manual": { "message": "Manuell (Benutzername + App-Passwort eingeben)" },
-  "options_auth_login": { "message": "Login mit Nextcloud (App-Passwort automatisch holen)" },
-  "options_loginflow_button": { "message": "Login mit Nextcloud..." },
-  "options_loginflow_starting": { "message": "Login-Flow wird gestartet..." },
-  "options_loginflow_browser": { "message": "Browser geöffnet. Bitte Login in Nextcloud bestätigen..." },
-  "options_loginflow_success": { "message": "Login erfolgreich. App-Passwort übernommen." },
-  "options_loginflow_failed": { "message": "Login mit Nextcloud fehlgeschlagen." },
-  "options_loginflow_missing": { "message": "Bitte zuerst die Server-URL eingeben." },
-  "compose_sharing_title": { "message": "Nextcloud-Freigabe hinzufügen" },
-  "options_sharing_base_label": { "message": "Basisverzeichnis" },
-  "options_sharing_base_hint": { "message": "Dateien werden unterhalb dieses Verzeichnisses abgelegt (z. B. \\\"90 Freigaben - extern\\\")." },
-  "options_sharing_defaults_heading": { "message": "Default-Einstellungen" },
-  "options_sharing_default_share_name_label": { "message": "Freigabename" },
-  "options_sharing_default_permissions_label": { "message": "Standard-Berechtigungen" },
-  "options_sharing_default_perm_create": { "message": "Hochladen/Erstellen" },
-  "options_sharing_default_perm_write": { "message": "Bearbeiten" },
-  "options_sharing_default_perm_delete": { "message": "Loeschen" },
-  "options_sharing_default_password_label": { "message": "Passwort setzen" },
-  "options_sharing_default_expire_days_label": { "message": "Ablaufdatum (Tage)" },
-  "options_talk_defaults_heading": { "message": "Default-Einstellungen" },
-  "options_talk_default_title_label": { "message": "Titel" },
-  "options_talk_default_lobby_label": { "message": "Lobby bis Startzeit aktiv" },
-  "options_talk_default_listable_label": { "message": "In Suche anzeigen" },
-  "options_talk_default_add_participants_label": { "message": "Teilnehmer in den Raum hinzufügen" },
-  "options_talk_default_add_users_label": { "message": "Benutzer" },
-  "options_talk_default_add_guests_label": { "message": "Gäste" },
-  "options_talk_default_password_label": { "message": "Passwort setzen" },
-  "options_talk_default_roomtype_label": { "message": "Raumtyp" },
-  "options_talk_default_roomtype_event": { "message": "Event-Unterhaltung" },
-  "options_talk_default_roomtype_standard": { "message": "Gruppenunterhaltung" },
-  "sharing_wizard_title": { "message": "Nextcloud-Freigabe" },
-  "sharing_header_hint": { "message": "NC Connector for Thunderbird" },
-  "sharing_step_general": { "message": "Freigabe" },
-  "sharing_share_name_label": { "message": "Freigabename" },
-  "sharing_share_placeholder": { "message": "z. B. Projekt X" },
-  "sharing_share_default": { "message": "Freigabename" },
-  "sharing_base_path_label": { "message": "Basisverzeichnis" },
-  "sharing_base_path_hint": { "message": "Dateien werden unterhalb dieses Verzeichnisses abgelegt." },
-  "sharing_allow_upload_label": { "message": "Empfänger dürfen eigene Dateien hochladen" },
-  "sharing_step_security": { "message": "Berechtigungen" },
-  "sharing_permission_read": { "message": "Lesen" },
-  "sharing_permission_create": { "message": "Hochladen" },
-  "sharing_permission_write": { "message": "Bearbeiten" },
-  "sharing_permission_delete": { "message": "Löschen" },
-  "sharing_password_toggle": { "message": "Passwort setzen" },
-  "sharing_password_label": { "message": "Passwort" },
-  "sharing_password_generate": { "message": "Generieren" },
-  "sharing_expire_toggle": { "message": "Ablaufdatum setzen" },
-  "sharing_expire_label": { "message": "Ablaufdatum" },
-  "sharing_step_files": { "message": "Dateien" },
-  "sharing_files_hint": { "message": "Fügen Sie Dateien oder Ordner hinzu, die hochgeladen werden sollen." },
-  "sharing_add_files": { "message": "Dateien auswählen..." },
-  "sharing_clear_files": { "message": "Liste leeren" },
-  "sharing_allow_empty_label": { "message": "Ohne Dateien fortfahren (nur Upload-Ordner freigeben)" },
-  "sharing_step_note": { "message": "Notiz & Abschluss" },
-  "sharing_note_toggle": { "message": "Notiz für Empfänger hinzufügen" },
-  "sharing_note_label": { "message": "Notiz" },
-  "sharing_note_placeholder": { "message": "Optionale Nachricht für Empfänger" },
-  "sharing_summary_share": { "message": "Freigabename" },
-  "sharing_summary_folder": { "message": "Ordner" },
-  "sharing_summary_permissions": { "message": "Berechtigungen" },
-  "sharing_progress_label": { "message": "Freigabe wird erstellt..." },
-  "sharing_button_back": { "message": "Zurück" },
-  "sharing_button_cancel": { "message": "Abbrechen" },
-  "sharing_button_next": { "message": "Weiter" },
-  "sharing_button_finish": { "message": "Freigabe erstellen" },
-  "sharing_status_preparing": { "message": "Upload wird vorbereitet..." },
-  "sharing_status_uploading": { "message": "Lade $3 hoch ($1 / $2)..." },
-  "sharing_status_creating": { "message": "Öffentlichen Link erstellen..." },
-  "sharing_status_done": { "message": "Freigabe erfolgreich eingefügt." },
-  "sharing_status_error": { "message": "Es ist ein Fehler aufgetreten." },
-  "sharing_error_share_name": { "message": "Bitte einen Freigabenamen eingeben." },
-  "sharing_error_password_missing": { "message": "Bitte ein Passwort hinterlegen." },
-  "sharing_error_expire_missing": { "message": "Bitte ein Ablaufdatum auswählen." },
-  "sharing_error_no_files": { "message": "Bitte mindestens eine Datei hinzufügen oder die Option ohne Dateien aktivieren." },
-  "sharing_error_missing_config": { "message": "Verfassen-Fenster wurde nicht erkannt." },
-  "sharing_error_insert_failed": { "message": "Freigabe konnte nicht in die Nachricht eingefügt werden." },
-  "sharing_html_intro": { "message": "Ich möchte Dateien sicher und unter Wahrung Ihrer Privatsphäre mit Ihnen teilen. Klicken Sie auf den untenstehenden Link, um Ihre Dateien herunterzuladen." },
-  "sharing_html_password_label": { "message": "Passwort" },
-  "sharing_html_expire_label": { "message": "Ablaufdatum" },
-  "sharing_html_permissions_label": { "message": "Ihre Berechtigungen" },
-  "sharing_html_download_label": { "message": "Downloadlink" },
-  "sharing_html_footer": { "message": "$1 ist eine Lösung für sicheren E-Mail- und Datenaustausch." },
-  "sharing_dialog_title": { "message": "Nextcloud Freigabe" },
-  "sharing_heading_permissions": { "message": "Freigabeeinstellungen" },
-  "sharing_step_expire": { "message": "Ablaufdatum" },
-  "sharing_expire_hint": { "message": "Nach Ablauf ist der Link nicht mehr abrufbar." },
-  "sharing_step_files_title": { "message": "Dateien oder Ordner auswählen" },
-  "sharing_base_path_info": { "message": "Basisverzeichnis: $1" },
-  "sharing_files_table_path": { "message": "Pfad" },
-  "sharing_files_table_type": { "message": "Typ" },
-  "sharing_files_table_status": { "message": "Status" },
-  "sharing_button_add_files": { "message": "Dateien hinzufügen..." },
-  "sharing_button_add_folder": { "message": "Ordner hinzufügen..." },
-  "sharing_button_remove": { "message": "Entfernen" },
-  "sharing_button_upload": { "message": "Upload" },
-  "sharing_files_empty": { "message": "Keine Dateien ausgewählt." },
-  "sharing_file_type_file": { "message": "Datei" },
-  "sharing_file_type_folder": { "message": "Ordner" },
-  "sharing_status_waiting": { "message": "Wartet" },
-  "sharing_status_done_row": { "message": "Fertig" },
-  "sharing_status_error_row": { "message": "Fehler" },
-  "sharing_status_ready": { "message": "Upload abgeschlossen." },
-  "sharing_status_uploading_bulk": { "message": "Dateien werden hochgeladen..." },
-  "sharing_message_invalid_share_name": { "message": "Bitte einen Freigabenamen eingeben." },
-  "sharing_message_no_files": { "message": "Bitte mindestens eine Datei auswählen." },
-  "sharing_confirm_no_files_title": { "message": "Freigabe ohne Upload" },
-  "sharing_confirm_no_files_message": { "message": "Es wurden keine Dateien oder Ordner zur Freigabe hinzugefügt. Der Empfänger kann lediglich eigene Dateien hochladen. Möchten Sie trotzdem fortfahren?" },
-  "sharing_error_upload_required": { "message": "Bitte zuerst den Upload ausführen." },
-  "sharing_step_note_heading": { "message": "Notiz an Empfänger" },
-  "sharing_status_inserting": { "message": "HTML-Block wird eingefügt..." },
-  "sharing_status_checking_folder": { "message": "Freigabe-Ordner wird geprüft..." },
-  "sharing_error_folder_exists": { "message": "Ein Ordner mit diesem Namen existiert bereits. Bitte Freigabenamen anpassen." },
-  "sharing_prompt_rename_duplicate": { "message": "Die Datei \"$1\" ist bereits in der Warteschlange. Bitte neuen Namen eingeben." },
-  "sharing_prompt_rename_existing": { "message": "Die Datei \"$1\" existiert bereits auf dem Server. Bitte neuen Namen eingeben." },
-  "sharing_message_rename_cancelled": { "message": "Upload abgebrochen, da kein Ersatzname angegeben wurde." },
-  "sharing_password_policy_error": { "message": "Passwort muss mindestens 10 Zeichen lang sein und Groß-, Kleinbuchstaben sowie ein Sonderzeichen enthalten." },
-  "sharing_html_intro_line": { "message": "Ich möchte Dateien sicher und unter Wahrung Ihrer Privatsphäre mit Ihnen teilen. Klicken Sie auf den untenstehenden Link, um Ihre Dateien herunterzuladen." },
-  "sharing_html_footer_line": { "message": "Nextcloud ist eine Lösung für sicheren E-Mail- und Datenaustausch." }
+  "extName": {
+    "message": "NC Connector for Thunderbird"
+  },
+  "extDescription": {
+    "message": "Nextcloud Talk & Files nahtlos in Thunderbird integriert"
+  },
+  "ui_button_ok": {
+    "message": "OK"
+  },
+  "ui_button_cancel": {
+    "message": "Abbrechen"
+  },
+  "ui_button_create_progress": {
+    "message": "Erstelle..."
+  },
+  "ui_button_clear": {
+    "message": "Leeren"
+  },
+  "ui_insert_button_label": {
+    "message": "Talk-Link einfügen"
+  },
+  "ui_create_title_label": {
+    "message": "Titel"
+  },
+  "ui_create_add_users_label": {
+    "message": "Benutzer hinzufügen"
+  },
+  "ui_create_add_guests_label": {
+    "message": "Gäste hinzufügen"
+  },
+  "talk_password_policy_error": {
+    "message": "Das Passwort muss mindestens $1 Zeichen lang sein."
+  },
+  "ui_create_password_placeholder": {
+    "message": "Optional"
+  },
+  "ui_password_generate_label": {
+    "message": "Generieren"
+  },
+  "ui_password_error_title": {
+    "message": "Passwort prüfen"
+  },
+  "ui_create_lobby_label": {
+    "message": "Lobby bis Startzeit"
+  },
+  "ui_create_listable_label": {
+    "message": "In Suche anzeigen"
+  },
+  "talk_option_add_users_title": {
+    "message": "👤 Benutzer hinzufügen"
+  },
+  "talk_option_add_users_line1": {
+    "message": "Interne Nextcloud-Benutzer werden direkt dem Raum hinzugefügt"
+  },
+  "talk_option_add_users_line2": {
+    "message": "Der Raum ist sofort in Nextcloud Talk sichtbar"
+  },
+  "talk_option_add_guests_title": {
+    "message": "🌍 Gäste hinzufügen"
+  },
+  "talk_option_add_guests_line1": {
+    "message": "Gäste werden ebenfalls direkt dem Raum hinzugefügt"
+  },
+  "talk_option_add_guests_line2": {
+    "message": "⚠️ Sie erhalten eine separate (zusätzliche) E-Mail mit persönlichem Zugangslink"
+  },
+  "talk_option_listable_title": {
+    "message": "🔍 In Suche anzeigen"
+  },
+  "talk_option_listable_line1": {
+    "message": "Der Raum ist über die Talk-Suche auffindbar"
+  },
+  "talk_option_listable_line2": {
+    "message": "⚠️ Erleichtert das Wiederfinden, ist aber für jeden Benutzer auffindbar."
+  },
+  "talk_option_lobby_title": {
+    "message": "🚪 Lobby bis Startzeit"
+  },
+  "talk_option_lobby_line1": {
+    "message": "Teilnehmer landen vor Beginn in der Lobby (Warteraum) und können noch nicht in den Call"
+  },
+  "talk_option_lobby_line2": {
+    "message": "⚠️ Erst ab der eingestellten Startzeit (oder wenn ein Moderator die Lobby beendet) ist der Beitritt möglich"
+  },
+  "talk_option_lobby_line3": {
+    "message": "Ideal, damit niemand zu früh in Meeting/Webinar reinplatzt."
+  },
+  "ui_create_roomtype_label": {
+    "message": "Raumtyp"
+  },
+  "ui_create_mode_event": {
+    "message": "Event-Unterhaltung"
+  },
+  "ui_create_mode_standard": {
+    "message": "Gruppenunterhaltung"
+  },
+  "talk_roomtype_group_title": {
+    "message": "🗨️ Gruppenunterhaltung"
+  },
+  "talk_roomtype_group_line1": {
+    "message": "Dauerhaft: bleibt bestehen, bis sie aktiv gelöscht wird"
+  },
+  "talk_roomtype_group_line2": {
+    "message": "Für den Alltag gemacht: ideal für Teams, Abteilungen, laufende Projekte und wiederkehrende Termine"
+  },
+  "talk_roomtype_group_line3": {
+    "message": "Mit Verlauf: der gesamte Chat ist jederzeit nachvollziehbar"
+  },
+  "talk_roomtype_event_title": {
+    "message": "📅 Event-Unterhaltung"
+  },
+  "talk_roomtype_event_line1": {
+    "message": "Zeitlich begrenzt: für einen konkreten Termin oder Anlass"
+  },
+  "talk_roomtype_event_line2": {
+    "message": "Spontan & leichtgewichtig: geeignet für Meetings, Schulungen oder Webinare"
+  },
+  "talk_roomtype_event_line3": {
+    "message": "Selbstaufräumend: wird nach einiger Zeit automatisch entfernt"
+  },
+  "ui_create_moderator_label": {
+    "message": "Moderator (optional)"
+  },
+  "ui_create_moderator_hint": {
+    "message": "Bei Angabe wird die Moderation nach Erstellung an diesen Benutzer übertragen und Sie verlassen den Raum."
+  },
+  "ui_delegate_selected_title": {
+    "message": "Ausgewählt"
+  },
+  "ui_delegate_selected_description": {
+    "message": "Bei Angabe wird die Moderation nach Erstellung an diesen Benutzer übertragen und Sie verlassen den Raum."
+  },
+  "ui_delegate_status_searching": {
+    "message": "Suche..."
+  },
+  "ui_delegate_status_loading": {
+    "message": "Lade Benutzer..."
+  },
+  "ui_delegate_status_none_with_email": {
+    "message": "Keine Treffer."
+  },
+  "ui_delegate_status_none_found": {
+    "message": "Keine Benutzer gefunden."
+  },
+  "ui_delegate_status_single": {
+    "message": "1 Treffer."
+  },
+  "ui_delegate_status_many": {
+    "message": "$1 Treffer."
+  },
+  "ui_delegate_status_error": {
+    "message": "Benutzersuche fehlgeschlagen."
+  },
+  "ui_create_failed": {
+    "message": "Nextcloud Talk konnte nicht erstellt werden:\n$1\nBitte Optionen prüfen."
+  },
+  "ui_alert_pending_delegation": {
+    "message": "Moderator wird beim Speichern/Senden übertragen an: $1."
+  },
+  "ui_delegate_modal_title": {
+    "message": "Moderatorenübergabe"
+  },
+  "ui_default_title": {
+    "message": "Besprechung"
+  },
+  "ui_description_heading": {
+    "message": "Nextcloud Talk"
+  },
+  "ui_description_join_label": {
+    "message": "Jetzt an der Besprechung teilnehmen :"
+  },
+  "ui_description_password_line": {
+    "message": "Passwort: $1"
+  },
+  "ui_description_help_label": {
+    "message": "Benötigen Sie Hilfe?"
+  },
+  "ui_description_help_url": {
+    "message": "https://docs.nextcloud.com/server/latest/user_manual/de/talk/join_a_call_or_chat_as_guest.html"
+  },
+  "talk_dialog_title": {
+    "message": "Nextcloud Talk"
+  },
+  "talk_dialog_close": {
+    "message": "Schließen"
+  },
+  "talk_error_context_id_missing": {
+    "message": "Termin-Kontext fehlt."
+  },
+  "talk_error_init_failed": {
+    "message": "Dialog konnte nicht initialisiert werden."
+  },
+  "talk_error_snapshot_failed": {
+    "message": "Termindaten konnten nicht gelesen werden."
+  },
+  "talk_error_editor_context_missing": {
+    "message": "Der aktuell bearbeitete Termin konnte nicht erkannt werden. Bitte stelle sicher, dass der Termin-Editor geöffnet ist, und versuche es erneut."
+  },
+  "talk_error_create_failed": {
+    "message": "Raum konnte nicht erstellt werden."
+  },
+  "talk_error_title_missing": {
+    "message": "Bitte einen Titel eingeben."
+  },
+  "talk_error_create_missing_data": {
+    "message": "Rauminformationen fehlen."
+  },
+  "talk_error_context_reference": {
+    "message": "Termin-Kontext fehlt."
+  },
+  "talk_error_apply_failed": {
+    "message": "Änderungen konnten nicht in den Termin übernommen werden."
+  },
+  "talk_section_settings": {
+    "message": "Talk-Einstellungen"
+  },
+  "talk_password_toggle_label": {
+    "message": "Passwort setzen"
+  },
+  "talk_button_create_room": {
+    "message": "Talk-Raum erstellen"
+  },
+  "open_url_title": {
+    "message": "Link öffnen"
+  },
+  "open_url_heading": {
+    "message": "Link im Browser öffnen"
+  },
+  "open_url_instructions": {
+    "message": "Kopieren Sie die URL und öffnen Sie sie im Standardbrowser."
+  },
+  "open_url_copy": {
+    "message": "URL kopieren"
+  },
+  "open_url_close": {
+    "message": "Schließen"
+  },
+  "open_url_copied": {
+    "message": "URL in die Zwischenablage kopiert."
+  },
+  "open_url_copy_failed": {
+    "message": "Kopieren fehlgeschlagen. Bitte URL manuell kopieren."
+  },
+  "error_credentials_missing": {
+    "message": "Nextcloud Zugangsdaten fehlen (Add-on-Optionen)."
+  },
+  "error_baseurl_https_required": {
+    "message": "Bitte verwende eine HTTPS-Nextcloud-URL."
+  },
+  "error_host_permission_missing": {
+    "message": "Zugriff auf die konfigurierte Nextcloud-Instanz wurde nicht erlaubt."
+  },
+  "error_system_addressbook_failed": {
+    "message": "System-Adressbuch konnte nicht geladen werden: $1"
+  },
+  "error_lobby_set_failed": {
+    "message": "Lobby konnte nicht gesetzt werden: $1"
+  },
+  "error_lobby_set_failed_short": {
+    "message": "Lobby konnte nicht gesetzt werden."
+  },
+  "error_room_create_failed": {
+    "message": "Raum konnte nicht erstellt werden."
+  },
+  "error_token_missing_in_response": {
+    "message": "Kein Token im OCS-Response."
+  },
+  "error_room_token_missing": {
+    "message": "Raum-Token fehlt."
+  },
+  "error_room_delete_failed": {
+    "message": "Raum konnte nicht geloescht werden: $1"
+  },
+  "error_lobby_no_permission": {
+    "message": "Keine Berechtigung zum Aendern der Lobby (HTTP 403)."
+  },
+  "error_lobby_update_failed": {
+    "message": "Lobby-Update fehlgeschlagen (HTTP $1)."
+  },
+  "error_ocs": {
+    "message": "OCS-Fehler: $1"
+  },
+  "error_token_or_actor_missing": {
+    "message": "Raum-Token oder Teilnehmer-ID fehlt."
+  },
+  "error_participant_add_failed": {
+    "message": "Teilnehmer konnte nicht hinzugefuegt werden: $1"
+  },
+  "error_moderator_id_missing": {
+    "message": "Moderator-ID fehlt."
+  },
+  "error_moderator_set_failed": {
+    "message": "Moderator konnte nicht gesetzt werden: $1"
+  },
+  "error_leave_failed": {
+    "message": "Verlassen des Raums fehlgeschlagen: $1"
+  },
+  "error_delegation_data_missing": {
+    "message": "Delegationsdaten fehlen."
+  },
+  "error_moderator_target_missing": {
+    "message": "Moderator-ID ist leer."
+  },
+  "error_participant_not_found": {
+    "message": "Teilnehmer wurde nicht gefunden, bitte Schreibweise pruefen."
+  },
+  "error_unknown_utility_request": {
+    "message": "Unbekannte Utility-Anfrage."
+  },
+  "options_title": {
+    "message": "NC Connector for Thunderbird - Einstellungen"
+  },
+  "options_base_url_label": {
+    "message": "Nextcloud URL"
+  },
+  "options_base_url_placeholder": {
+    "message": "https://cloud.example.com"
+  },
+  "options_user_label": {
+    "message": "Benutzername"
+  },
+  "options_app_pass_label": {
+    "message": "App-Passwort"
+  },
+  "options_debug_label": {
+    "message": "Debug-Logging"
+  },
+  "options_debug_hint": {
+    "message": "Konsole für Diagnosemeldungen verwenden"
+  },
+  "options_support_link": {
+    "message": "PayPal: Spenden"
+  },
+  "options_save_button": {
+    "message": "Speichern"
+  },
+  "options_status_saved": {
+    "message": "Gespeichert."
+  },
+  "options_status_save_failed": {
+    "message": "Speichern fehlgeschlagen."
+  },
+  "options_status_load_failed": {
+    "message": "Einstellungen konnten nicht geladen werden."
+  },
+  "options_test_button": {
+    "message": "Verbindung testen"
+  },
+  "options_test_running": {
+    "message": "Prüfe Verbindung..."
+  },
+  "options_test_success": {
+    "message": "Verbindung erfolgreich."
+  },
+  "options_test_failed": {
+    "message": "Verbindung fehlgeschlagen."
+  },
+  "options_test_failed_auth": {
+    "message": "Benutzername oder App-Passwort ungültig."
+  },
+  "options_test_missing": {
+    "message": "Bitte zuerst URL, Benutzername und App-Passwort eingeben."
+  },
+  "options_permission_required": {
+    "message": "Bitte Zugriff auf diese Nextcloud-Instanz erlauben."
+  },
+  "options_tab_general": {
+    "message": "Allgemein"
+  },
+  "options_tab_sharing": {
+    "message": "Freigabe"
+  },
+  "options_tab_talklink": {
+    "message": "Talk Link"
+  },
+  "options_tab_advanced": {
+    "message": "Erweitert"
+  },
+  "options_tab_debug": {
+    "message": "Debug"
+  },
+  "options_tab_about": {
+    "message": "Über"
+  },
+  "options_advanced_language_heading": {
+    "message": "Sprach-Overrides"
+  },
+  "options_share_block_lang_label": {
+    "message": "Sprache im Freigabe-HTML-Block"
+  },
+  "options_share_block_lang_hint": {
+    "message": "Steuert die Sprache des eingefügten Freigabe-HTML-Blocks."
+  },
+  "options_event_description_lang_label": {
+    "message": "Sprache im Talk-Beschreibungstext"
+  },
+  "options_event_description_lang_hint": {
+    "message": "Steuert die Sprache des Talk-Textblocks in Terminen."
+  },
+  "options_lang_default": {
+    "message": "Standard (UI)"
+  },
+  "options_about_version_label": {
+    "message": "Version:"
+  },
+  "options_about_copyright_label": {
+    "message": "Copyright:"
+  },
+  "options_about_license_label": {
+    "message": "Lizenz:"
+  },
+  "options_about_license_value": {
+    "message": "AGPL v3"
+  },
+  "options_about_support_note": {
+    "message": "Damit NC Connector for Thunderbird weiter kostenlos gepflegt und verbessert werden kann"
+  },
+  "options_about_support_heading": {
+    "message": "Unterstützen"
+  },
+  "options_auth_heading": {
+    "message": "Authentifizierung"
+  },
+  "options_auth_manual": {
+    "message": "Manuell (Benutzername + App-Passwort eingeben)"
+  },
+  "options_auth_login": {
+    "message": "Login mit Nextcloud (App-Passwort automatisch holen)"
+  },
+  "options_loginflow_button": {
+    "message": "Login mit Nextcloud..."
+  },
+  "options_loginflow_starting": {
+    "message": "Login-Flow wird gestartet..."
+  },
+  "options_loginflow_browser": {
+    "message": "Browser geöffnet. Bitte Login in Nextcloud bestätigen..."
+  },
+  "options_loginflow_success": {
+    "message": "Login erfolgreich. App-Passwort übernommen."
+  },
+  "options_loginflow_failed": {
+    "message": "Login mit Nextcloud fehlgeschlagen."
+  },
+  "options_loginflow_missing": {
+    "message": "Bitte zuerst die Server-URL eingeben."
+  },
+  "compose_sharing_title": {
+    "message": "Nextcloud-Freigabe hinzufügen"
+  },
+  "options_sharing_base_label": {
+    "message": "Basisverzeichnis"
+  },
+  "options_sharing_base_hint": {
+    "message": "Dateien werden unterhalb dieses Verzeichnisses abgelegt (z. B. \\\"90 Freigaben - extern\\\")."
+  },
+  "options_sharing_defaults_heading": {
+    "message": "Default-Einstellungen"
+  },
+  "options_sharing_default_share_name_label": {
+    "message": "Freigabename"
+  },
+  "options_sharing_default_permissions_label": {
+    "message": "Standard-Berechtigungen"
+  },
+  "options_sharing_default_perm_create": {
+    "message": "Hochladen/Erstellen"
+  },
+  "options_sharing_default_perm_write": {
+    "message": "Bearbeiten"
+  },
+  "options_sharing_default_perm_delete": {
+    "message": "Löschen"
+  },
+  "options_sharing_default_password_label": {
+    "message": "Passwort setzen"
+  },
+  "options_sharing_default_expire_days_label": {
+    "message": "Ablaufdatum (Tage)"
+  },
+  "options_sharing_attachments_heading": {
+    "message": "Anhänge"
+  },
+  "options_sharing_attachments_always_label": {
+    "message": "Anhänge immer über NC Connector"
+  },
+  "options_sharing_attachments_offer_label": {
+    "message": "Hochladen für Dateien größer als"
+  },
+  "options_sharing_attachments_offer_suffix": {
+    "message": "MB anbieten"
+  },
+  "options_talk_defaults_heading": {
+    "message": "Default-Einstellungen"
+  },
+  "options_talk_default_title_label": {
+    "message": "Titel"
+  },
+  "options_talk_default_lobby_label": {
+    "message": "Lobby bis Startzeit aktiv"
+  },
+  "options_talk_default_listable_label": {
+    "message": "In Suche anzeigen"
+  },
+  "options_talk_default_add_participants_label": {
+    "message": "Teilnehmer in den Raum hinzufügen"
+  },
+  "options_talk_default_add_users_label": {
+    "message": "Benutzer"
+  },
+  "options_talk_default_add_guests_label": {
+    "message": "Gäste"
+  },
+  "options_talk_default_password_label": {
+    "message": "Passwort setzen"
+  },
+  "options_talk_default_roomtype_label": {
+    "message": "Raumtyp"
+  },
+  "options_talk_default_roomtype_event": {
+    "message": "Event-Unterhaltung"
+  },
+  "options_talk_default_roomtype_standard": {
+    "message": "Gruppenunterhaltung"
+  },
+  "sharing_share_name_label": {
+    "message": "Freigabename"
+  },
+  "sharing_share_placeholder": {
+    "message": "z. B. Projekt X"
+  },
+  "sharing_share_default": {
+    "message": "Freigabename"
+  },
+  "sharing_permission_read": {
+    "message": "Lesen"
+  },
+  "sharing_permission_create": {
+    "message": "Hochladen"
+  },
+  "sharing_permission_write": {
+    "message": "Bearbeiten"
+  },
+  "sharing_permission_delete": {
+    "message": "Löschen"
+  },
+  "sharing_password_toggle": {
+    "message": "Passwort setzen"
+  },
+  "sharing_password_generate": {
+    "message": "Generieren"
+  },
+  "sharing_expire_toggle": {
+    "message": "Ablaufdatum setzen"
+  },
+  "sharing_note_toggle": {
+    "message": "Notiz für Empfänger hinzufügen"
+  },
+  "sharing_note_placeholder": {
+    "message": "Optionale Nachricht für Empfänger"
+  },
+  "sharing_button_back": {
+    "message": "Zurück"
+  },
+  "sharing_button_cancel": {
+    "message": "Abbrechen"
+  },
+  "sharing_button_next": {
+    "message": "Weiter"
+  },
+  "sharing_button_finish": {
+    "message": "Freigabe erstellen"
+  },
+  "sharing_status_creating": {
+    "message": "Öffentlichen Link erstellen..."
+  },
+  "sharing_status_error": {
+    "message": "Es ist ein Fehler aufgetreten."
+  },
+  "sharing_error_insert_failed": {
+    "message": "Freigabe konnte nicht in die Nachricht eingefügt werden."
+  },
+  "sharing_html_password_label": {
+    "message": "Passwort"
+  },
+  "sharing_html_expire_label": {
+    "message": "Ablaufdatum"
+  },
+  "sharing_html_permissions_label": {
+    "message": "Ihre Berechtigungen"
+  },
+  "sharing_html_download_label": {
+    "message": "Downloadlink"
+  },
+  "sharing_html_footer": {
+    "message": "$1 ist eine Lösung für sicheren E-Mail- und Datenaustausch."
+  },
+  "sharing_dialog_title": {
+    "message": "Nextcloud Freigabe"
+  },
+  "sharing_heading_permissions": {
+    "message": "Freigabeeinstellungen"
+  },
+  "sharing_step_expire": {
+    "message": "Ablaufdatum"
+  },
+  "sharing_expire_hint": {
+    "message": "Nach Ablauf ist der Link nicht mehr abrufbar."
+  },
+  "sharing_step_files_title": {
+    "message": "Dateien oder Ordner auswählen"
+  },
+  "sharing_base_path_info": {
+    "message": "Basisverzeichnis: $1"
+  },
+  "sharing_files_table_path": {
+    "message": "Pfad"
+  },
+  "sharing_files_table_type": {
+    "message": "Typ"
+  },
+  "sharing_files_table_status": {
+    "message": "Status"
+  },
+  "sharing_button_add_files": {
+    "message": "Dateien hinzufügen..."
+  },
+  "sharing_button_add_folder": {
+    "message": "Ordner hinzufügen..."
+  },
+  "sharing_button_remove": {
+    "message": "Entfernen"
+  },
+  "sharing_button_upload": {
+    "message": "Upload"
+  },
+  "sharing_files_empty": {
+    "message": "Keine Dateien ausgewählt."
+  },
+  "sharing_file_type_file": {
+    "message": "Datei"
+  },
+  "sharing_status_waiting": {
+    "message": "Wartet"
+  },
+  "sharing_status_done_row": {
+    "message": "Fertig"
+  },
+  "sharing_status_error_row": {
+    "message": "Fehler"
+  },
+  "sharing_status_ready": {
+    "message": "Upload abgeschlossen."
+  },
+  "sharing_status_uploading_bulk": {
+    "message": "Dateien werden hochgeladen..."
+  },
+  "sharing_message_invalid_share_name": {
+    "message": "Bitte einen Freigabenamen eingeben."
+  },
+  "sharing_message_no_files": {
+    "message": "Bitte mindestens eine Datei auswählen."
+  },
+  "sharing_confirm_no_files_title": {
+    "message": "Freigabe ohne Upload"
+  },
+  "sharing_confirm_no_files_message": {
+    "message": "Es wurden keine Dateien oder Ordner zur Freigabe hinzugefügt. Der Empfänger kann lediglich eigene Dateien hochladen. Möchten Sie trotzdem fortfahren?"
+  },
+  "sharing_error_upload_required": {
+    "message": "Bitte zuerst den Upload ausführen."
+  },
+  "sharing_step_note_heading": {
+    "message": "Notiz an Empfänger"
+  },
+  "sharing_status_inserting": {
+    "message": "HTML-Block wird eingefügt..."
+  },
+  "sharing_status_checking_folder": {
+    "message": "Freigabe-Ordner wird geprüft..."
+  },
+  "sharing_error_folder_exists": {
+    "message": "Ein Ordner mit diesem Namen existiert bereits. Bitte Freigabenamen anpassen."
+  },
+  "sharing_prompt_rename_duplicate": {
+    "message": "Die Datei \"$1\" ist bereits in der Warteschlange. Bitte neuen Namen eingeben."
+  },
+  "sharing_message_rename_cancelled": {
+    "message": "Upload abgebrochen, da kein Ersatzname angegeben wurde."
+  },
+  "sharing_password_policy_error": {
+    "message": "Passwort muss mindestens 10 Zeichen lang sein und Groß-, Kleinbuchstaben sowie ein Sonderzeichen enthalten."
+  },
+  "sharing_html_intro_line": {
+    "message": "Ich möchte Dateien sicher und unter Wahrung Ihrer Privatsphäre mit Ihnen teilen. Klicken Sie auf den untenstehenden Link, um Ihre Dateien herunterzuladen."
+  },
+  "sharing_attachment_prompt_title": {
+    "message": "Anhanglimit überschritten"
+  },
+  "sharing_attachment_prompt_reason": {
+    "message": "Die Gesamtgröße der Anhänge beträgt $1 und überschreitet den Grenzwert von $2. Zuletzt hinzugefügt: \"$3\" ($4)."
+  },
+  "sharing_attachment_prompt_share": {
+    "message": "Mit NC Connector teilen"
+  },
+  "sharing_attachment_prompt_remove_last": {
+    "message": "Zuletzt ausgewählte Anhänge entfernen"
+  },
+  "sharing_attachment_prompt_last_unknown": {
+    "message": "Unbekannter Anhang"
+  },
+  "sharing_attachment_mode_reason_threshold": {
+    "message": "Anhänge über Grenzwert: $1 > $2. Zuletzt hinzugefügt: \"$3\" ($4). Diese Anhänge werden über NC Connector geteilt."
+  },
+  "sharing_attachment_mode_reason_always": {
+    "message": "Anhänge werden in diesem Modus immer über NC Connector geteilt."
+  },
+  "options_sharing_attachments_lock_title": {
+    "message": "Anhangs-Automatisierung deaktiviert"
+  },
+  "options_sharing_attachments_lock_text": {
+    "message": "In Thunderbird ist die Option „Hochladen für Dateien größer als“ aktiviert ($1 MB). Das kollidiert mit der NC Connector Anhangs-Automatisierung. Die Anhangsoptionen unten sind deshalb gesperrt."
+  },
+  "options_sharing_attachments_lock_step1": {
+    "message": "Öffne Thunderbird-Einstellungen > Verfassen > Anhänge."
+  },
+  "options_sharing_attachments_lock_step2": {
+    "message": "Deaktiviere „Hochladen für Dateien größer als …“."
+  },
+  "options_sharing_attachments_lock_step3": {
+    "message": "Öffne diese Add-on-Einstellungen erneut."
+  },
+  "sharing_attachment_automation_locked_error": {
+    "message": "In Thunderbird ist die Option „Hochladen für Dateien größer als“ aktiviert ($1 MB). Das kollidiert mit der NC Connector Anhangs-Automatisierung. Die Anhangsoptionen unten sind deshalb gesperrt."
+  },
+  "options_sharing_default_password_separate_label": {
+    "message": "Passwort separat senden"
+  },
+  "sharing_password_separate_toggle": {
+    "message": "Passwort in separater E-Mail senden"
+  },
+  "sharing_html_password_separate_hint": {
+    "message": "Das Passwort wird in einer separaten E-Mail gesendet."
+  },
+  "sharing_html_password_mail_intro": {
+    "message": "Hier ist Ihr Passwort zur gesendeten Freigabe."
+  },
+  "sharing_password_mail_subject": {
+    "message": "Passwort zur Freigabe"
+  },
+  "sharing_password_mail_subject_with_label": {
+    "message": "Passwort zur Freigabe: $1"
+  },
+  "options_sharing_permissions_tooltip_title": {
+    "message": "🛡️ Standard-Berechtigungen"
+  },
+  "options_sharing_permissions_tooltip_line1": {
+    "message": "Diese Werte gelten als Vorgabe fuer neue Freigaben."
+  },
+  "options_sharing_permissions_tooltip_line2": {
+    "message": "Im Freigabe-Wizard koennen sie angepasst werden."
+  },
+  "options_sharing_permissions_tooltip_line3": {
+    "message": "Im Anhangsmodus ist Empfaengerzugriff immer nur Lesen."
+  },
+  "sharing_password_separate_tooltip_title": {
+    "message": "Coming soon (Pro feature)"
+  },
+  "sharing_password_separate_tooltip_line1": {
+    "message": "This option is disabled in this release."
+  },
+  "sharing_password_separate_tooltip_line2": {
+    "message": "Password delivery in a separate email will be available in a future Pro release."
+  },
+  "sharing_password_separate_tooltip_line3": {
+    "message": "For now, the password is included in the main share block."
+  },
+  "options_sharing_attachments_always_tooltip_title": {
+    "message": "📎 Immer ueber NC Connector"
+  },
+  "options_sharing_attachments_always_tooltip_line1": {
+    "message": "Neue Anhaenge werden aus der Verfassen-Mail entfernt und ueber NC Connector verarbeitet."
+  },
+  "options_sharing_attachments_always_tooltip_line2": {
+    "message": "Der Freigabe-Wizard startet direkt im Datei-Schritt."
+  },
+  "options_sharing_attachments_always_tooltip_line3": {
+    "message": "Die fertige Mail enthaelt Freigabelinks statt physischer Anhaenge."
+  },
+  "options_sharing_attachments_offer_tooltip_title": {
+    "message": "📏 Anhangs-Grenzwert"
+  },
+  "options_sharing_attachments_offer_tooltip_line1": {
+    "message": "Es wird die Gesamtgroesse aller Anhaenge ausgewertet."
+  },
+  "options_sharing_attachments_offer_tooltip_line2": {
+    "message": "Bei Ueberschreitung kannst du ueber NC Connector teilen oder die zuletzt ausgewaehlte Anhangsgruppe entfernen."
+  },
+  "options_sharing_attachments_offer_tooltip_line3": {
+    "message": "Die Entfernen-Aktion bringt die Mail wieder unter den Grenzwert."
+  },
+  "talk_option_moderator_title": {
+    "message": "👑 Moderator-Delegation"
+  },
+  "talk_option_moderator_line1": {
+    "message": "Der ausgewaehlte Benutzer wird nach der Raumerstellung befoerdert."
+  },
+  "talk_option_moderator_line2": {
+    "message": "Bei erfolgreicher Delegation verlaesst der Ersteller den Raum."
+  },
+  "talk_option_moderator_line3": {
+    "message": "Wenn Delegation fehlschlaegt, bleibt die Raumverantwortung beim Ersteller."
+  },
+  "sharing_password_mail_notify_title": {
+    "message": "NC Connector"
+  },
+  "sharing_password_mail_notify_success": {
+    "message": "Passwort-E-Mail wurde an $1 Empfaenger gesendet."
+  },
+  "sharing_password_mail_notify_failure": {
+    "message": "Automatischer Passwort-Mail-Versand fuer $1 Empfaenger fehlgeschlagen. Eine manuelle Vorlage wurde geoeffnet."
+  },
+  "sharing_password_mail_notify_manual_required": {
+    "message": "Automatischer Passwortversand fehlgeschlagen. Bitte senden Sie die Passwort-E-Mail manuell ueber die geoeffnete Vorlage."
+  }
 }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 

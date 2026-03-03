@@ -11,18 +11,20 @@ This add-on integrates Nextcloud Talk and Nextcloud Sharing into Thunderbird.
 - Debug logging across UI/background/experiment layers
 
 ## Architecture
-- modules/*: core logic for OCS requests, auth, Talk, Sharing, i18n, and background orchestration
+- modules/*: core logic for OCS requests, auth, Talk, Sharing, i18n, and split background orchestration (`bgState`, `bgComposeAttachments`, `bgComposeShareCleanup`, `bgComposePasswordDispatch`, `bgCompose`, `bgCalendar`, `bgRouter`)
+- `modules/hostPermissions.js`: centralized optional-host-permission gate reused by core/talk/sharing runtime modules
 - ui/*: HTML/JS dialogs and helpers (options, sharing wizard, talk dialog, popup sizing, DOM i18n)
 - experiments/calendar/*: Thunderbird calendar experiment API (items CRUD + item lifecycle events) used “as-is”
-- experiments/ncCalToolbar/*: minimal UI experiment to integrate with the calendar event editors (dialog + tab)
+- experiments/ncCalToolbar/*: minimal custom experiment for deterministic editor toolbar integration (dialog + tab)
+- experiments/ncComposePrefs/*: read-only compose preference bridge used to detect Thunderbird's built-in big-attachment setting and lock conflicting NC attachment automation
 
 Calendar integration (high level):
-- `experiments/ncCalToolbar` is responsible only for **editor UI integration**:
+- `experiments/ncCalToolbar` is responsible only for editor-targeted integration:
   - insert the Talk button in both editor variants
-  - provide an iCalendar snapshot on click
-  - apply title/location/description + `X-NCTALK-*` properties directly to the currently edited item
-  - signal “persisted vs discarded” to enable cleanup of unsaved rooms
-- All Talk/Sharing control logic remains in the WebExtension background (`modules/background.js`).
+  - provide deterministic click context + iCal snapshot (`editorId`)
+  - provide deterministic editor-targeted read/write (`getCurrent` / `updateCurrent`)
+  - signal tracked editor close state (`onTrackedEditorClosed`)
+- All Talk/Sharing control logic remains in the WebExtension background runtime modules (`modules/bgState.js`, `modules/bgComposeAttachments.js`, `modules/bgComposeShareCleanup.js`, `modules/bgComposePasswordDispatch.js`, `modules/bgCompose.js`, `modules/bgCalendar.js`, `modules/bgRouter.js`).
 - Persistent monitoring (lobby updates, delete-room-on-event-delete, delegation flow, participant auto-add) uses `browser.calendar.items.*` from `experiments/calendar` (unchanged).
 
 Data flow:
@@ -32,7 +34,7 @@ Data flow:
 4. UI dialogs call background via runtime messaging
 5. Results are written back into:
    - compose HTML via `browser.compose.*` APIs
-   - the currently edited calendar item via `ncCalToolbar` (editor context)
+   - the currently edited calendar item via `browser.ncCalToolbar.updateCurrent` (editor-targeted by `editorId`)
 6. Calendar lifecycle monitoring and persisted updates use `browser.calendar.items.*` (iCal format)
 
 ## Features
@@ -42,7 +44,22 @@ Data flow:
 - Applies defaults for share name, permissions, password, and expiry date
 - Honors Nextcloud password policies (min length + generator API with secure fallback)
 - Updates share metadata (note, label) after upload
+- Arms compose-share cleanup in background and removes the remote share folder if compose is closed without successful send
 - Handles duplicate names and remote path conflicts; surfaces errors from DAV/OCS
+- Optional separate password delivery for shares:
+  - default + wizard toggle: "send password in separate email"
+  - active only when password protection is enabled
+  - main share block hides inline password and shows a separate-password notice
+  - password-only follow-up mail is sent after the main compose message is sent (auto-send with timeout guard + manual fallback draft on send failure)
+  - successful password-mail delivery triggers a desktop success notification
+  - if manual fallback is closed without send, remote share cleanup removes the related share folder
+- Optional compose attachment automation:
+  - always route attachments via NC Connector, or
+  - route only when total attachment size exceeds configured threshold
+  - threshold prompt offers explicit choice: share via NC Connector or remove last selected attachments (remove action deletes the last selected attachment batch)
+  - attachment-mode wizard starts in step 3 with preloaded upload queue
+  - resulting compose block uses ZIP download URL (`/s/<token>/download`) and hides permission row
+  - options are locked with a guidance note while Thunderbird's own "Upload for files larger than" setting is active
 
 ### Talk
 - Checks Talk capabilities and core capabilities to decide event-conversation support
@@ -56,9 +73,9 @@ Data flow:
 - Honors Nextcloud password policies (min length + generator API with secure fallback)
 
 ### Calendar
-- Provides a Talk button inside the calendar event editors (dialog + tab) via a minimal UI experiment (`ncCalToolbar`)
+- Provides a Talk button inside the calendar event editors (dialog + tab) via `ncCalToolbar`
 - Clicking the button opens the Talk wizard as a real popup window (`browser.windows.create`, no `default_popup` panel)
-- Reads the currently edited item as iCal snapshot from the editor context on click (works for new/unsaved items too)
+- Reads the currently edited item as iCal snapshot via `browser.ncCalToolbar.getCurrent({ editorId, returnFormat: "ical" })` (works for new/unsaved items too)
 - Writes back into the open editor:
   - title/location/description (link + optional password/help text block)
   - `X-NCTALK-*` custom properties (TOKEN, URL, LOBBY, START, EVENT, OBJECTID, ADD-USERS, ADD-GUESTS, legacy ADD-PARTICIPANTS, DELEGATE, DELEGATE-NAME, DELEGATED, DELEGATE-READY)
@@ -70,8 +87,11 @@ Data flow:
 
 ### Logging and Debug
 - Enable debug mode in options to log detailed traces
-- Logs appear with channels [NCBG], [NCUI][Talk], [NCUI][Sharing], [NCCalToolbar]
+- Logs appear with channels [NCBG], [NCUI][Talk], [NCUI][Sharing], `[ncCalToolbar]`, plus calendar experiment logs from `[calendar.items]` when relevant
 - Background logs include OCS/DAV status and metadata decisions (only when debug is enabled)
+- Attachment automation logs include:
+  - threshold evaluation + decisions in `[NCBG]`
+  - attachment wizard/prompt flow in `[NCUI][Sharing]`
 
 ## Compatibility and Requirements
 - Thunderbird ESR 140 (strict_min_version 140.0, strict_max_version 140.*)
@@ -84,6 +104,7 @@ Data flow:
 - Base URL, user, and app password (manual) or Login Flow v2 (auto)
 - Debug mode for verbose logging
 - Sharing base path and default share name/permissions/password/expiry
+- Sharing attachment automation defaults (`sharingAttachmentsAlwaysConnector`, `sharingAttachmentsOfferAboveEnabled`, `sharingAttachmentsOfferAboveMb`)
 - Talk defaults: title, lobby, listable, room type (event vs normal), add users + add guests toggles
 Security notes:
 - Credentials are stored in browser.storage.local and used to build Basic auth headers

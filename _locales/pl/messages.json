@@ -1,331 +1,828 @@
 {
-  "extName": { "message": "NC Connector for Thunderbird" },
-  "extDescription": { "message": "Nextcloud Talk i Pliki bezproblemowo zintegrowane z Thunderbirdem" },
-  "ui_button_ok": { "message": "OK" },
-  "ui_button_cancel": { "message": "Anuluj" },
-  "ui_button_apply": { "message": "Zastosuj" },
-  "ui_button_apply_progress": { "message": "Zastosowywanie..." },
-  "ui_button_create_progress": { "message": "Tworzenie..." },
-  "ui_button_clear": { "message": "Wyczyść" },
-  "ui_insert_button_label": { "message": "Wstaw link Talk" },
-  "ui_create_heading": { "message": "Utwórz publiczną rozmowę" },
-  "ui_create_title_label": { "message": "Tytuł" },
-  "ui_create_add_participants_label": { "message": "Dodaj uczestników do pokoju" },
-  "ui_create_add_users_label": { "message": "Dodaj użytkowników" },
-  "ui_create_add_guests_label": { "message": "Dodaj gości" },
-  "ui_create_password_label": { "message": "Hasło (opcjonalne)" },
-  "talk_password_policy_error": { "message": "Hasło musi mieć co najmniej $1 znaków." },
-  "ui_create_password_placeholder": { "message": "Opcjonalne" },
-  "ui_password_generate_label": { "message": "Generuj" },
-  "ui_password_error_title": { "message": "Sprawdź hasło" },
-  "ui_password_error_text": { "message": "Wpisz co najmniej 5 znaków." },
-  "ui_create_lobby_label": { "message": "Poczekalnia do czasu rozpoczęcia" },
-  "ui_create_listable_label": { "message": "Pokaż w wyszukiwaniu" },
-  "talk_option_add_users_title": { "message": "👤 Dodaj użytkowników" },
-  "talk_option_add_users_line1": { "message": "Wewnętrzni użytkownicy Nextcloud zostaną dodani bezpośrednio do pokoju" },
-  "talk_option_add_users_line2": { "message": "Pokój jest od razu widoczny w Nextcloud Talk" },
-  "talk_option_add_guests_title": { "message": "🌍 Dodaj gości" },
-  "talk_option_add_guests_line1": { "message": "Goście również zostaną dodani bezpośrednio do pokoju" },
-  "talk_option_add_guests_line2": { "message": "⚠️ Otrzymają osobną (dodatkową) wiadomość e-mail z osobistym linkiem dostępu" },
-  "talk_option_listable_title": { "message": "🔍 Pokaż w wyszukiwaniu" },
-  "talk_option_listable_line1": { "message": "Pokój jest widoczny w wyszukiwarce Talk" },
-  "talk_option_listable_line2": { "message": "⚠️ Ułatwia ponowne znalezienie, ale jest wyszukiwalny dla wszystkich użytkowników." },
-  "talk_option_lobby_title": { "message": "🚪 Poczekalnia do czasu rozpoczęcia" },
-  "talk_option_lobby_line1": { "message": "Uczestnicy przed rozpoczęciem trafiają do poczekalni (lobby) i nie mogą jeszcze dołączyć do rozmowy" },
-  "talk_option_lobby_line2": { "message": "⚠️ Dołączenie jest możliwe dopiero od ustawionej godziny rozpoczęcia (lub gdy moderator zakończy poczekalnię)" },
-  "talk_option_lobby_line3": { "message": "Idealne, aby nikt nie wpadł zbyt wcześnie na spotkanie/webinar." },
-  "ui_create_roomtype_label": { "message": "Typ pokoju" },
-  "ui_create_mode_event": { "message": "Rozmowa wydarzenia" },
-  "ui_create_mode_standard": { "message": "Rozmowa grupowa" },
-  "ui_create_mode_event_short": { "message": "Wydarzenie" },
-  "ui_create_mode_standard_short": { "message": "Standard" },
-  "ui_create_mode_unsupported": { "message": "Rozmowy wydarzeń nie są obsługiwane przez serwer." },
-  "talk_roomtype_group_title": { "message": "🗨️ Rozmowa grupowa" },
-  "talk_roomtype_group_line1": { "message": "Trwała: pozostaje, dopóki nie zostanie ręcznie usunięta" },
-  "talk_roomtype_group_line2": { "message": "Na co dzień: idealna dla zespołów, działów, bieżących projektów i cyklicznych spotkań" },
-  "talk_roomtype_group_line3": { "message": "Z historią: cały czat można w każdej chwili przejrzeć" },
-  "talk_roomtype_event_title": { "message": "📅 Rozmowa wydarzenia" },
-  "talk_roomtype_event_line1": { "message": "Ograniczona czasowo: na konkretne spotkanie lub okazję" },
-  "talk_roomtype_event_line2": { "message": "Spontaniczna i lekka: odpowiednia na spotkania, szkolenia lub webinary" },
-  "talk_roomtype_event_line3": { "message": "Samooczyszczająca: po pewnym czasie jest automatycznie usuwana" },
-  "ui_create_moderator_label": { "message": "Moderator (opcjonalnie)" },
-  "ui_create_moderator_placeholder": { "message": "Wpisz nazwę użytkownika" },
-  "ui_create_moderator_hint": { "message": "Jeśli podano, moderacja zostanie przekazana temu użytkownikowi po utworzeniu, a Ty opuścisz pokój." },
-  "ui_delegate_selected_title": { "message": "Wybrano" },
-  "ui_delegate_selected_description": { "message": "Jeśli podano, moderacja zostanie przekazana temu użytkownikowi po utworzeniu, a Ty opuścisz pokój." },
-  "ui_delegate_status_searching": { "message": "Wyszukiwanie..." },
-  "ui_delegate_status_loading": { "message": "Ładowanie użytkowników..." },
-  "ui_delegate_status_none_with_email": { "message": "Brak dopasowań." },
-  "ui_delegate_status_none_found": { "message": "Nie znaleziono użytkowników." },
-  "ui_delegate_status_single": { "message": "1 dopasowanie." },
-  "ui_delegate_status_many": { "message": "$1 dopasowań." },
-  "ui_delegate_status_error": { "message": "Wyszukiwanie użytkowników nie powiodło się." },
-  "ui_create_password_short": { "message": "Hasło musi mieć co najmniej 5 znaków." },
-  "ui_create_send_failed": { "message": "Wysyłanie do skryptu tła nie powiodło się:\n$1" },
-  "ui_create_no_handler": { "message": "Nie zarejestrowano obsługi Nextcloud Talk. Przeładuj dodatek." },
-  "ui_create_unknown_error": { "message": "Nieznany błąd podczas tworzenia rozmowy." },
-  "ui_create_failed": { "message": "Nie można utworzyć Nextcloud Talk:\n$1\nSprawdź opcje." },
-  "ui_moderator_transfer_failed": { "message": "Nie można przekazać moderatora." },
-  "ui_moderator_transfer_failed_with_reason": { "message": "Nie można przekazać moderatora:\n$1" },
-  "ui_alert_title": { "message": "Nextcloud Talk" },
-  "ui_alert_room_created": { "message": "Utworzono pokój Talk \"$1\"." },
-  "ui_alert_link_inserted": { "message": "Wstawiono link Talk:\n$1" },
-  "ui_alert_location_missing": { "message": "(Uwaga: pole Lokalizacja nie zostało wypełnione automatycznie.)" },
-  "ui_alert_event_fallback": { "message": "Uwaga: serwer nie obsługuje rozmów wydarzeń. Utworzono rozmowę grupową." },
-  "ui_alert_generic_fallback": { "message": "(Uwaga: utworzono link zapasowy bez obsługi API.)" },
-  "ui_alert_reason": { "message": "Powód: $1" },
-  "ui_alert_pending_delegation": { "message": "Moderator zostanie przekazany podczas zapisu/wysyłki do: $1." },
-  "ui_alert_delegation_done": { "message": "Moderator przekazany do: $1." },
-  "ui_delegate_modal_title": { "message": "Przekazanie moderatora" },
-  "ui_alert_delegation_removed": { "message": "Zostałeś usunięty z rozmowy." },
-  "ui_alert_password_protected": { "message": "Uwaga: ta rozmowa jest chroniona hasłem." },
-  "ui_prompt_base_url": { "message": "Bazowy URL Nextcloud (np. https://cloud.example.com):" },
-  "ui_prompt_title": { "message": "Tytuł nowej publicznej rozmowy:" },
-  "ui_default_title": { "message": "Spotkanie" },
-  "ui_description_heading": { "message": "Nextcloud Talk" },
-  "ui_description_join_label": { "message": "Dołącz do spotkania teraz:" },
-  "ui_description_password_line": { "message": "Hasło: $1" },
-  "ui_description_help_label": { "message": "Potrzebujesz pomocy?" },
-  "ui_description_help_url": { "message": "https://docs.nextcloud.com/server/latest/user_manual/en/talk/join_a_call_or_chat_as_guest.html" },
-  "talk_dialog_title": { "message": "Nextcloud Talk" },
-  "talk_dialog_heading": { "message": "Nextcloud Talk" },
-  "talk_dialog_placeholder": { "message": "Ten samodzielny interfejs jest w budowie. Kontynuuj korzystanie z osadzonego okna Talk, dopóki migracja nie zostanie ukończona." },
-  "talk_dialog_close": { "message": "Zamknij" },
-  "talk_dialog_missing_window": { "message": "Nie można wykryć kontekstu okna kalendarza." },
-  "talk_dialog_ready": { "message": "Okno zainicjowane." },
-  "talk_error_window_id_missing": { "message": "Brak odwołania do okna." },
-  "talk_error_context_id_missing": { "message": "Brak kontekstu wydarzenia." },
-  "talk_error_init_failed": { "message": "Inicjalizacja okna nie powiodła się." },
-  "talk_error_snapshot_failed": { "message": "Nie można odczytać danych wydarzenia." },
-  "talk_status_loading_event": { "message": "Ładowanie wydarzenia z edytora…" },
-  "talk_error_editor_context_missing": { "message": "Nie można wykryć aktualnie edytowanego terminu. Upewnij się, że edytor terminu jest otwarty i spróbuj ponownie." },
-  "talk_error_create_failed": { "message": "Tworzenie pokoju nie powiodło się." },
-  "talk_error_title_missing": { "message": "Wpisz tytuł." },
-  "talk_error_create_missing_data": { "message": "Brak danych pokoju." },
-  "talk_error_window_reference": { "message": "Brak odwołania do okna." },
-  "talk_error_context_reference": { "message": "Brak kontekstu wydarzenia." },
-  "talk_error_apply_failed": { "message": "Nie można zastosować zmian do wydarzenia." },
-  "talk_section_event": { "message": "Wydarzenie" },
-  "talk_field_start": { "message": "Początek" },
-  "talk_field_end": { "message": "Koniec" },
-  "talk_field_location": { "message": "Lokalizacja" },
-  "talk_field_description": { "message": "Opis" },
-  "talk_section_settings": { "message": "Ustawienia Talk" },
-  "talk_section_room": { "message": "Pokój Talk" },
-  "talk_field_token": { "message": "Token" },
-  "talk_field_url": { "message": "Link" },
-  "talk_field_lobby": { "message": "Poczekalnia" },
-  "talk_field_start_epoch": { "message": "Znacznik czasu rozpoczęcia" },
-  "talk_password_toggle_label": { "message": "Ustaw hasło" },
-  "talk_dialog_legacy": { "message": "Otwórz starsze okno" },
-  "talk_button_apply_fields": { "message": "Zastosuj pola" },
-  "talk_button_create_room": { "message": "Utwórz pokój Talk" },
-  "talk_dialog_fields_saved": { "message": "Pola zostały zaktualizowane." },
-  "talk_dialog_fields_error": { "message": "Nie można zaktualizować pól." },
-  "open_url_title": { "message": "Otwórz link" },
-  "open_url_heading": { "message": "Otwórz link w przeglądarce" },
-  "open_url_instructions": { "message": "Skopiuj poniższy adres URL i wklej go do domyślnej przeglądarki." },
-  "open_url_copy": { "message": "Kopiuj URL" },
-  "open_url_close": { "message": "Zamknij" },
-  "open_url_copied": { "message": "URL skopiowany do schowka." },
-  "open_url_copy_failed": { "message": "Kopiowanie nie powiodło się. Skopiuj URL ręcznie." },
-  "talk_value_enabled": { "message": "Włączone" },
-  "talk_value_disabled": { "message": "Wyłączone" },
-  "ui_toolbar_tooltip": { "message": "Nextcloud Talk" },
-  "error_canvas_support_missing": { "message": "Brak obsługi canvas." },
-  "error_invalid_base64_length": { "message": "Nieprawidłowa długość Base64." },
-  "error_invalid_base64_data": { "message": "Nieprawidłowe dane Base64." },
-  "error_avatar_load_failed": { "message": "Nie można załadować awatara." },
-
-  "error_avatar_data_missing": { "message": "Brak danych awatara." },
-  "error_canvas_context_missing": { "message": "Kontekst canvas niedostępny." },
-  "error_image_decode_failed": { "message": "Nie można zdekodować obrazu." },
-  "error_image_size_unknown": { "message": "Nie można określić rozmiaru obrazu." },
-  "error_image_load_failed": { "message": "Nie można załadować obrazu." },
-  "error_pixel_data_missing": { "message": "Dane pikseli niedostępne." },
-  "error_credentials_missing": { "message": "Brak danych logowania Nextcloud (opcje dodatku)." },
-  "error_host_permission_missing": { "message": "Nie przyznano dostępu do skonfigurowanej instancji Nextcloud." },
-  "error_system_addressbook_failed": { "message": "Nie można załadować systemowej książki adresowej: $1" },
-  "error_lobby_set_failed": { "message": "Nie można ustawić poczekalni: $1" },
-  "error_lobby_set_failed_short": { "message": "Nie można ustawić poczekalni." },
-  "error_room_create_failed": { "message": "Nie można utworzyć pokoju." },
-  "error_token_missing_in_response": { "message": "Brak tokenu w odpowiedzi OCS." },
-  "error_room_token_missing": { "message": "Brak tokenu pokoju." },
-  "error_room_delete_failed": { "message": "Nie można usunąć pokoju: $1" },
-  "error_lobby_no_permission": { "message": "Brak uprawnień do zmiany poczekalni (HTTP 403)." },
-  "error_lobby_update_failed": { "message": "Aktualizacja poczekalni nie powiodła się (HTTP $1)." },
-  "error_ocs": { "message": "Błąd OCS: $1" },
-  "error_token_or_actor_missing": { "message": "Brak tokenu pokoju lub identyfikatora uczestnika." },
-  "error_participant_add_failed": { "message": "Nie można dodać uczestnika: $1" },
-  "error_moderator_id_missing": { "message": "Brak identyfikatora moderatora." },
-  "error_moderator_set_failed": { "message": "Nie można ustawić moderatora: $1" },
-  "error_leave_failed": { "message": "Opuszczenie pokoju nie powiodło się: $1" },
-  "error_delegation_data_missing": { "message": "Brak danych delegowania." },
-  "error_moderator_target_missing": { "message": "Identyfikator moderatora jest pusty." },
-  "error_participant_not_found": { "message": "Nie znaleziono uczestnika, sprawdź pisownię." },
-  "error_users_load_failed": { "message": "Nie można załadować użytkowników." },
-  "error_unknown_utility_request": { "message": "Nieznane żądanie narzędzia." },
-  "options_title": { "message": "NC Connector for Thunderbird – Ustawienia" },
-  "options_heading": { "message": "NC Connector for Thunderbird – Ustawienia" },
-  "options_base_url_label": { "message": "URL Nextcloud" },
-  "options_base_url_placeholder": { "message": "https://cloud.example.com" },
-  "options_user_label": { "message": "Nazwa użytkownika" },
-  "options_app_pass_label": { "message": "Hasło aplikacji" },
-  "options_debug_label": { "message": "Logowanie debug" },
-  "options_debug_hint": { "message": "Użyj konsoli do komunikatów diagnostycznych" },
-  "options_support_link": { "message": "PayPal: Darowizna" },
-  "options_save_button": { "message": "Zapisz" },
-  "options_status_saved": { "message": "Zapisano." },
-  "options_status_save_failed": { "message": "Zapisywanie nie powiodło się." },
-  "options_status_load_failed": { "message": "Nie można wczytać ustawień." },
-  "options_test_button": { "message": "Testuj połączenie" },
-  "options_test_running": { "message": "Testowanie połączenia..." },
-  "options_test_success": { "message": "Połączenie udane." },
-  "options_test_failed": { "message": "Połączenie nie powiodło się." },
-  "options_test_failed_auth": { "message": "Nazwa użytkownika lub hasło aplikacji jest nieprawidłowe." },
-  "options_test_missing": { "message": "Najpierw wpisz URL, nazwę użytkownika i hasło aplikacji." },
-  "options_permission_required": { "message": "Aby kontynuować, zezwól na dostęp do tej instancji Nextcloud." },
-  "options_tab_general": { "message": "Ogólne" },
-  "options_tab_sharing": { "message": "Udostępnianie" },
-  "options_tab_talklink": { "message": "Link Talk" },
-  "options_tab_advanced": { "message": "Zaawansowane" },
-  "options_tab_debug": { "message": "Debug" },
-  "options_tab_about": { "message": "O dodatku" },
-  "options_placeholder_sharing": { "message": "Konfiguracja wkrótce." },
-  "options_placeholder_advanced": { "message": "Ustawienia wkrótce." },
-  "options_advanced_language_heading": { "message": "Nadpisania języka" },
-  "options_share_block_lang_label": { "message": "Język bloku HTML udostępniania" },
-  "options_share_block_lang_hint": { "message": "Kontroluje język wstawianego bloku HTML udostępniania." },
-  "options_event_description_lang_label": { "message": "Język tekstu opisu Talk" },
-  "options_event_description_lang_hint": { "message": "Kontroluje język bloku tekstowego Talk w wydarzeniach." },
-  "options_lang_default": { "message": "Domyślny (UI)" },
-  "options_lang_en": { "message": "Angielski" },
-  "options_lang_de": { "message": "Niemiecki" },
-  "options_lang_fr": { "message": "Francuski" },
-  "options_about_version_label": { "message": "Wersja:" },
-  "options_about_copyright_label": { "message": "Copyright:" },
-  "options_about_license_label": { "message": "Licencja:" },
-  "options_about_license_value": { "message": "AGPL v3" },
-  "options_about_support_note": { "message": "Aby NC Connector for Thunderbird mógł nadal być bezpłatnie rozwijany i utrzymywany." },
-  "options_about_support_heading": { "message": "Wsparcie" },
-  "options_auth_heading": { "message": "Uwierzytelnianie" },
-  "options_auth_manual": { "message": "Ręcznie (wpisz nazwę użytkownika + hasło aplikacji)" },
-  "options_auth_login": { "message": "Zaloguj się do Nextcloud (pobierz hasło aplikacji automatycznie)" },
-  "options_loginflow_button": { "message": "Zaloguj się do Nextcloud..." },
-  "options_loginflow_starting": { "message": "Rozpoczynanie logowania..." },
-  "options_loginflow_browser": { "message": "Otworzono przeglądarkę. Potwierdź logowanie w Nextcloud..." },
-  "options_loginflow_success": { "message": "Logowanie udane. Skopiowano hasło aplikacji." },
-  "options_loginflow_failed": { "message": "Logowanie do Nextcloud nie powiodło się." },
-  "options_loginflow_missing": { "message": "Najpierw wpisz URL serwera." },
-  "compose_sharing_title": { "message": "Dodaj udostępnienie Nextcloud" },
-  "options_sharing_base_label": { "message": "Katalog bazowy" },
-  "options_sharing_base_hint": { "message": "Pliki są przechowywane w tym katalogu (np. \"90 Freigaben - extern\")." },
-  "options_sharing_defaults_heading": { "message": "Ustawienia domyślne" },
-  "options_sharing_default_share_name_label": { "message": "Nazwa udostępnienia" },
-  "options_sharing_default_permissions_label": { "message": "Domyślne uprawnienia" },
-  "options_sharing_default_perm_create": { "message": "Prześlij/Utwórz" },
-  "options_sharing_default_perm_write": { "message": "Edytuj" },
-  "options_sharing_default_perm_delete": { "message": "Usuń" },
-  "options_sharing_default_password_label": { "message": "Ustaw hasło" },
-  "options_sharing_default_expire_days_label": { "message": "Wygasanie (dni)" },
-  "options_talk_defaults_heading": { "message": "Ustawienia domyślne" },
-  "options_talk_default_title_label": { "message": "Tytuł" },
-  "options_talk_default_lobby_label": { "message": "Poczekalnia do czasu rozpoczęcia" },
-  "options_talk_default_listable_label": { "message": "Pokaż w wyszukiwaniu" },
-  "options_talk_default_add_participants_label": { "message": "Dodaj uczestników do pokoju" },
-  "options_talk_default_add_users_label": { "message": "Użytkownicy" },
-  "options_talk_default_add_guests_label": { "message": "Goście" },
-  "options_talk_default_password_label": { "message": "Ustaw hasło" },
-  "options_talk_default_roomtype_label": { "message": "Typ pokoju" },
-  "options_talk_default_roomtype_event": { "message": "Rozmowa wydarzenia" },
-  "options_talk_default_roomtype_standard": { "message": "Rozmowa grupowa" },
-  "sharing_wizard_title": { "message": "Udostępnianie Nextcloud" },
-  "sharing_header_hint": { "message": "NC Connector for Thunderbird" },
-  "sharing_step_general": { "message": "Udostępnienie" },
-  "sharing_share_name_label": { "message": "Nazwa udostępnienia" },
-  "sharing_share_placeholder": { "message": "np. Projekt X" },
-  "sharing_share_default": { "message": "Nazwa udostępnienia" },
-  "sharing_base_path_label": { "message": "Katalog bazowy" },
-  "sharing_base_path_hint": { "message": "Pliki są przechowywane w tym katalogu." },
-  "sharing_allow_upload_label": { "message": "Odbiorcy mogą przesyłać własne pliki" },
-  "sharing_step_security": { "message": "Uprawnienia" },
-  "sharing_permission_read": { "message": "Odczyt" },
-  "sharing_permission_create": { "message": "Prześlij" },
-  "sharing_permission_write": { "message": "Modyfikuj" },
-  "sharing_permission_delete": { "message": "Usuń" },
-  "sharing_password_toggle": { "message": "Ustaw hasło" },
-  "sharing_password_label": { "message": "Hasło" },
-  "sharing_password_generate": { "message": "Generuj" },
-  "sharing_expire_toggle": { "message": "Ustaw datę wygaśnięcia" },
-  "sharing_expire_label": { "message": "Data wygaśnięcia" },
-  "sharing_step_files": { "message": "Pliki" },
-  "sharing_files_hint": { "message": "Dodaj pliki lub foldery, które mają zostać przesłane." },
-  "sharing_add_files": { "message": "Wybierz pliki..." },
-  "sharing_clear_files": { "message": "Wyczyść listę" },
-  "sharing_allow_empty_label": { "message": "Kontynuuj bez plików (udostępnij tylko folder do przesyłania)" },
-  "sharing_step_note": { "message": "Notatka i zakończ" },
-  "sharing_note_toggle": { "message": "Dodaj notatkę dla odbiorców" },
-  "sharing_note_label": { "message": "Notatka" },
-  "sharing_note_placeholder": { "message": "Opcjonalna wiadomość dla odbiorców" },
-  "sharing_summary_share": { "message": "Nazwa udostępnienia" },
-  "sharing_summary_folder": { "message": "Folder" },
-  "sharing_summary_permissions": { "message": "Uprawnienia" },
-  "sharing_progress_label": { "message": "Tworzenie udostępnienia..." },
-  "sharing_button_back": { "message": "Wstecz" },
-  "sharing_button_cancel": { "message": "Anuluj" },
-  "sharing_button_next": { "message": "Dalej" },
-  "sharing_button_finish": { "message": "Utwórz udostępnienie" },
-  "sharing_status_preparing": { "message": "Przygotowywanie przesyłania..." },
-  "sharing_status_uploading": { "message": "Przesyłanie $3 ($1 / $2)..." },
-  "sharing_status_creating": { "message": "Tworzenie publicznego linku..." },
-  "sharing_status_done": { "message": "Udostępnienie wstawione pomyślnie." },
-  "sharing_status_error": { "message": "Wystąpił błąd." },
-  "sharing_error_share_name": { "message": "Wpisz nazwę udostępnienia." },
-  "sharing_error_password_missing": { "message": "Wpisz hasło." },
-  "sharing_error_expire_missing": { "message": "Wybierz datę wygaśnięcia." },
-  "sharing_error_no_files": { "message": "Dodaj co najmniej jeden plik lub włącz opcję kontynuowania bez plików." },
-  "sharing_error_missing_config": { "message": "Nie można wykryć okna tworzenia wiadomości." },
-  "sharing_error_insert_failed": { "message": "Nie można wstawić udostępnienia do wiadomości." },
-  "sharing_html_intro": { "message": "Chcę udostępnić pliki w bezpieczny sposób i chronić Twoją prywatność. Kliknij poniższy link, aby pobrać pliki." },
-  "sharing_html_password_label": { "message": "Hasło" },
-  "sharing_html_expire_label": { "message": "Data wygaśnięcia" },
-  "sharing_html_permissions_label": { "message": "Twoje uprawnienia" },
-  "sharing_html_download_label": { "message": "Link do pobrania" },
-  "sharing_html_footer": { "message": "$1 to rozwiązanie do bezpiecznej poczty e-mail i wymiany plików." },
-  "sharing_dialog_title": { "message": "Udostępnianie Nextcloud" },
-  "sharing_heading_permissions": { "message": "Ustawienia udostępnienia" },
-  "sharing_step_expire": { "message": "Data wygaśnięcia" },
-  "sharing_expire_hint": { "message": "Po tej dacie link nie będzie już dostępny." },
-  "sharing_step_files_title": { "message": "Wybierz pliki lub foldery" },
-  "sharing_base_path_info": { "message": "Katalog bazowy: $1" },
-  "sharing_files_table_path": { "message": "Ścieżka" },
-  "sharing_files_table_type": { "message": "Typ" },
-  "sharing_files_table_status": { "message": "Status" },
-  "sharing_button_add_files": { "message": "Dodaj pliki..." },
-  "sharing_button_add_folder": { "message": "Dodaj folder..." },
-  "sharing_button_remove": { "message": "Usuń" },
-  "sharing_button_upload": { "message": "Prześlij" },
-  "sharing_files_empty": { "message": "Nie wybrano plików." },
-  "sharing_file_type_file": { "message": "Plik" },
-  "sharing_file_type_folder": { "message": "Folder" },
-  "sharing_status_waiting": { "message": "Oczekiwanie" },
-  "sharing_status_done_row": { "message": "Gotowe" },
-  "sharing_status_error_row": { "message": "Błąd" },
-  "sharing_status_ready": { "message": "Przesyłanie zakończone." },
-  "sharing_status_uploading_bulk": { "message": "Przesyłanie plików..." },
-  "sharing_message_invalid_share_name": { "message": "Wpisz nazwę udostępnienia." },
-  "sharing_message_no_files": { "message": "Dodaj co najmniej jeden plik." },
-  "sharing_confirm_no_files_title": { "message": "Udostępnienie bez przesyłania" },
-  "sharing_confirm_no_files_message": { "message": "Nie dodano żadnych plików ani folderów do tego udostępnienia. Odbiorcy mogą przesyłać tylko własne pliki. Czy chcesz kontynuować?" },
-  "sharing_error_upload_required": { "message": "Prześlij pliki przed kontynuowaniem." },
-  "sharing_step_note_heading": { "message": "Notatka dla odbiorcy" },
-  "sharing_status_inserting": { "message": "Wstawianie bloku HTML..." },
-  "sharing_status_checking_folder": { "message": "Sprawdzanie dostępności folderu..." },
-  "sharing_error_folder_exists": { "message": "Folder udostępnienia o tej nazwie już istnieje. Wybierz inną nazwę." },
-  "sharing_prompt_rename_duplicate": { "message": "Plik \"$1\" już istnieje w kolejce. Wpisz nową nazwę." },
-  "sharing_prompt_rename_existing": { "message": "Plik \"$1\" już istnieje na serwerze. Wpisz nową nazwę." },
-  "sharing_message_rename_cancelled": { "message": "Przesyłanie anulowane, ponieważ nie podano nazwy zastępczej." },
-  "sharing_password_policy_error": { "message": "Hasło musi zawierać co najmniej 10 znaków, w tym małe i wielkie litery oraz znak specjalny." },
-  "sharing_html_intro_line": { "message": "Chcę udostępnić pliki w bezpieczny sposób i chronić Twoją prywatność. Kliknij poniższy link, aby pobrać pliki." },
-  "sharing_html_footer_line": { "message": "Nextcloud to rozwiązanie do bezpiecznej poczty e-mail i wymiany danych." }
+  "extName": {
+    "message": "NC Connector for Thunderbird"
+  },
+  "extDescription": {
+    "message": "Nextcloud Talk i Pliki bezproblemowo zintegrowane z Thunderbirdem"
+  },
+  "ui_button_ok": {
+    "message": "OK"
+  },
+  "ui_button_cancel": {
+    "message": "Anuluj"
+  },
+  "ui_button_create_progress": {
+    "message": "Tworzenie..."
+  },
+  "ui_button_clear": {
+    "message": "Wyczyść"
+  },
+  "ui_insert_button_label": {
+    "message": "Wstaw link Talk"
+  },
+  "ui_create_title_label": {
+    "message": "Tytuł"
+  },
+  "ui_create_add_users_label": {
+    "message": "Dodaj użytkowników"
+  },
+  "ui_create_add_guests_label": {
+    "message": "Dodaj gości"
+  },
+  "talk_password_policy_error": {
+    "message": "Hasło musi mieć co najmniej $1 znaków."
+  },
+  "ui_create_password_placeholder": {
+    "message": "Opcjonalne"
+  },
+  "ui_password_generate_label": {
+    "message": "Generuj"
+  },
+  "ui_password_error_title": {
+    "message": "Sprawdź hasło"
+  },
+  "ui_create_lobby_label": {
+    "message": "Poczekalnia do czasu rozpoczęcia"
+  },
+  "ui_create_listable_label": {
+    "message": "Pokaż w wyszukiwaniu"
+  },
+  "talk_option_add_users_title": {
+    "message": "👤 Dodaj użytkowników"
+  },
+  "talk_option_add_users_line1": {
+    "message": "Wewnętrzni użytkownicy Nextcloud zostaną dodani bezpośrednio do pokoju"
+  },
+  "talk_option_add_users_line2": {
+    "message": "Pokój jest od razu widoczny w Nextcloud Talk"
+  },
+  "talk_option_add_guests_title": {
+    "message": "🌍 Dodaj gości"
+  },
+  "talk_option_add_guests_line1": {
+    "message": "Goście również zostaną dodani bezpośrednio do pokoju"
+  },
+  "talk_option_add_guests_line2": {
+    "message": "⚠️ Otrzymają osobną (dodatkową) wiadomość e-mail z osobistym linkiem dostępu"
+  },
+  "talk_option_listable_title": {
+    "message": "🔍 Pokaż w wyszukiwaniu"
+  },
+  "talk_option_listable_line1": {
+    "message": "Pokój jest widoczny w wyszukiwarce Talk"
+  },
+  "talk_option_listable_line2": {
+    "message": "⚠️ Ułatwia ponowne znalezienie, ale jest wyszukiwalny dla wszystkich użytkowników."
+  },
+  "talk_option_lobby_title": {
+    "message": "🚪 Poczekalnia do czasu rozpoczęcia"
+  },
+  "talk_option_lobby_line1": {
+    "message": "Uczestnicy przed rozpoczęciem trafiają do poczekalni (lobby) i nie mogą jeszcze dołączyć do rozmowy"
+  },
+  "talk_option_lobby_line2": {
+    "message": "⚠️ Dołączenie jest możliwe dopiero od ustawionej godziny rozpoczęcia (lub gdy moderator zakończy poczekalnię)"
+  },
+  "talk_option_lobby_line3": {
+    "message": "Idealne, aby nikt nie wpadł zbyt wcześnie na spotkanie/webinar."
+  },
+  "ui_create_roomtype_label": {
+    "message": "Typ pokoju"
+  },
+  "ui_create_mode_event": {
+    "message": "Rozmowa wydarzenia"
+  },
+  "ui_create_mode_standard": {
+    "message": "Rozmowa grupowa"
+  },
+  "talk_roomtype_group_title": {
+    "message": "🗨️ Rozmowa grupowa"
+  },
+  "talk_roomtype_group_line1": {
+    "message": "Trwała: pozostaje, dopóki nie zostanie ręcznie usunięta"
+  },
+  "talk_roomtype_group_line2": {
+    "message": "Na co dzień: idealna dla zespołów, działów, bieżących projektów i cyklicznych spotkań"
+  },
+  "talk_roomtype_group_line3": {
+    "message": "Z historią: cały czat można w każdej chwili przejrzeć"
+  },
+  "talk_roomtype_event_title": {
+    "message": "📅 Rozmowa wydarzenia"
+  },
+  "talk_roomtype_event_line1": {
+    "message": "Ograniczona czasowo: na konkretne spotkanie lub okazję"
+  },
+  "talk_roomtype_event_line2": {
+    "message": "Spontaniczna i lekka: odpowiednia na spotkania, szkolenia lub webinary"
+  },
+  "talk_roomtype_event_line3": {
+    "message": "Samooczyszczająca: po pewnym czasie jest automatycznie usuwana"
+  },
+  "ui_create_moderator_label": {
+    "message": "Moderator (opcjonalnie)"
+  },
+  "ui_create_moderator_hint": {
+    "message": "Jeśli podano, moderacja zostanie przekazana temu użytkownikowi po utworzeniu, a Ty opuścisz pokój."
+  },
+  "ui_delegate_selected_title": {
+    "message": "Wybrano"
+  },
+  "ui_delegate_selected_description": {
+    "message": "Jeśli podano, moderacja zostanie przekazana temu użytkownikowi po utworzeniu, a Ty opuścisz pokój."
+  },
+  "ui_delegate_status_searching": {
+    "message": "Wyszukiwanie..."
+  },
+  "ui_delegate_status_loading": {
+    "message": "Ładowanie użytkowników..."
+  },
+  "ui_delegate_status_none_with_email": {
+    "message": "Brak dopasowań."
+  },
+  "ui_delegate_status_none_found": {
+    "message": "Nie znaleziono użytkowników."
+  },
+  "ui_delegate_status_single": {
+    "message": "1 dopasowanie."
+  },
+  "ui_delegate_status_many": {
+    "message": "$1 dopasowań."
+  },
+  "ui_delegate_status_error": {
+    "message": "Wyszukiwanie użytkowników nie powiodło się."
+  },
+  "ui_create_failed": {
+    "message": "Nie można utworzyć Nextcloud Talk:\n$1\nSprawdź opcje."
+  },
+  "ui_alert_pending_delegation": {
+    "message": "Moderator zostanie przekazany podczas zapisu/wysyłki do: $1."
+  },
+  "ui_delegate_modal_title": {
+    "message": "Przekazanie moderatora"
+  },
+  "ui_default_title": {
+    "message": "Spotkanie"
+  },
+  "ui_description_heading": {
+    "message": "Nextcloud Talk"
+  },
+  "ui_description_join_label": {
+    "message": "Dołącz do spotkania teraz:"
+  },
+  "ui_description_password_line": {
+    "message": "Hasło: $1"
+  },
+  "ui_description_help_label": {
+    "message": "Potrzebujesz pomocy?"
+  },
+  "ui_description_help_url": {
+    "message": "https://docs.nextcloud.com/server/latest/user_manual/en/talk/join_a_call_or_chat_as_guest.html"
+  },
+  "talk_dialog_title": {
+    "message": "Nextcloud Talk"
+  },
+  "talk_dialog_close": {
+    "message": "Zamknij"
+  },
+  "talk_error_context_id_missing": {
+    "message": "Brak kontekstu wydarzenia."
+  },
+  "talk_error_init_failed": {
+    "message": "Inicjalizacja okna nie powiodła się."
+  },
+  "talk_error_snapshot_failed": {
+    "message": "Nie można odczytać danych wydarzenia."
+  },
+  "talk_error_editor_context_missing": {
+    "message": "Nie można wykryć aktualnie edytowanego terminu. Upewnij się, że edytor terminu jest otwarty i spróbuj ponownie."
+  },
+  "talk_error_create_failed": {
+    "message": "Tworzenie pokoju nie powiodło się."
+  },
+  "talk_error_title_missing": {
+    "message": "Wpisz tytuł."
+  },
+  "talk_error_create_missing_data": {
+    "message": "Brak danych pokoju."
+  },
+  "talk_error_context_reference": {
+    "message": "Brak kontekstu wydarzenia."
+  },
+  "talk_error_apply_failed": {
+    "message": "Nie można zastosować zmian do wydarzenia."
+  },
+  "talk_section_settings": {
+    "message": "Ustawienia Talk"
+  },
+  "talk_password_toggle_label": {
+    "message": "Ustaw hasło"
+  },
+  "talk_button_create_room": {
+    "message": "Utwórz pokój Talk"
+  },
+  "open_url_title": {
+    "message": "Otwórz link"
+  },
+  "open_url_heading": {
+    "message": "Otwórz link w przeglądarce"
+  },
+  "open_url_instructions": {
+    "message": "Skopiuj poniższy adres URL i wklej go do domyślnej przeglądarki."
+  },
+  "open_url_copy": {
+    "message": "Kopiuj URL"
+  },
+  "open_url_close": {
+    "message": "Zamknij"
+  },
+  "open_url_copied": {
+    "message": "URL skopiowany do schowka."
+  },
+  "open_url_copy_failed": {
+    "message": "Kopiowanie nie powiodło się. Skopiuj URL ręcznie."
+  },
+  "error_credentials_missing": {
+    "message": "Brak danych logowania Nextcloud (opcje dodatku)."
+  },
+  "error_baseurl_https_required": {
+    "message": "Użyj adresu URL Nextcloud z HTTPS."
+  },
+  "error_host_permission_missing": {
+    "message": "Nie przyznano dostępu do skonfigurowanej instancji Nextcloud."
+  },
+  "error_system_addressbook_failed": {
+    "message": "Nie można załadować systemowej książki adresowej: $1"
+  },
+  "error_lobby_set_failed": {
+    "message": "Nie można ustawić poczekalni: $1"
+  },
+  "error_lobby_set_failed_short": {
+    "message": "Nie można ustawić poczekalni."
+  },
+  "error_room_create_failed": {
+    "message": "Nie można utworzyć pokoju."
+  },
+  "error_token_missing_in_response": {
+    "message": "Brak tokenu w odpowiedzi OCS."
+  },
+  "error_room_token_missing": {
+    "message": "Brak tokenu pokoju."
+  },
+  "error_room_delete_failed": {
+    "message": "Nie można usunąć pokoju: $1"
+  },
+  "error_lobby_no_permission": {
+    "message": "Brak uprawnień do zmiany poczekalni (HTTP 403)."
+  },
+  "error_lobby_update_failed": {
+    "message": "Aktualizacja poczekalni nie powiodła się (HTTP $1)."
+  },
+  "error_ocs": {
+    "message": "Błąd OCS: $1"
+  },
+  "error_token_or_actor_missing": {
+    "message": "Brak tokenu pokoju lub identyfikatora uczestnika."
+  },
+  "error_participant_add_failed": {
+    "message": "Nie można dodać uczestnika: $1"
+  },
+  "error_moderator_id_missing": {
+    "message": "Brak identyfikatora moderatora."
+  },
+  "error_moderator_set_failed": {
+    "message": "Nie można ustawić moderatora: $1"
+  },
+  "error_leave_failed": {
+    "message": "Opuszczenie pokoju nie powiodło się: $1"
+  },
+  "error_delegation_data_missing": {
+    "message": "Brak danych delegowania."
+  },
+  "error_moderator_target_missing": {
+    "message": "Identyfikator moderatora jest pusty."
+  },
+  "error_participant_not_found": {
+    "message": "Nie znaleziono uczestnika, sprawdź pisownię."
+  },
+  "error_unknown_utility_request": {
+    "message": "Nieznane żądanie narzędzia."
+  },
+  "options_title": {
+    "message": "NC Connector for Thunderbird – Ustawienia"
+  },
+  "options_base_url_label": {
+    "message": "URL Nextcloud"
+  },
+  "options_base_url_placeholder": {
+    "message": "https://cloud.example.com"
+  },
+  "options_user_label": {
+    "message": "Nazwa użytkownika"
+  },
+  "options_app_pass_label": {
+    "message": "Hasło aplikacji"
+  },
+  "options_debug_label": {
+    "message": "Logowanie debug"
+  },
+  "options_debug_hint": {
+    "message": "Użyj konsoli do komunikatów diagnostycznych"
+  },
+  "options_support_link": {
+    "message": "PayPal: Darowizna"
+  },
+  "options_save_button": {
+    "message": "Zapisz"
+  },
+  "options_status_saved": {
+    "message": "Zapisano."
+  },
+  "options_status_save_failed": {
+    "message": "Zapisywanie nie powiodło się."
+  },
+  "options_status_load_failed": {
+    "message": "Nie można wczytać ustawień."
+  },
+  "options_test_button": {
+    "message": "Testuj połączenie"
+  },
+  "options_test_running": {
+    "message": "Testowanie połączenia..."
+  },
+  "options_test_success": {
+    "message": "Połączenie udane."
+  },
+  "options_test_failed": {
+    "message": "Połączenie nie powiodło się."
+  },
+  "options_test_failed_auth": {
+    "message": "Nazwa użytkownika lub hasło aplikacji jest nieprawidłowe."
+  },
+  "options_test_missing": {
+    "message": "Najpierw wpisz URL, nazwę użytkownika i hasło aplikacji."
+  },
+  "options_permission_required": {
+    "message": "Aby kontynuować, zezwól na dostęp do tej instancji Nextcloud."
+  },
+  "options_tab_general": {
+    "message": "Ogólne"
+  },
+  "options_tab_sharing": {
+    "message": "Udostępnianie"
+  },
+  "options_tab_talklink": {
+    "message": "Link Talk"
+  },
+  "options_tab_advanced": {
+    "message": "Zaawansowane"
+  },
+  "options_tab_debug": {
+    "message": "Debug"
+  },
+  "options_tab_about": {
+    "message": "O dodatku"
+  },
+  "options_advanced_language_heading": {
+    "message": "Nadpisania języka"
+  },
+  "options_share_block_lang_label": {
+    "message": "Język bloku HTML udostępniania"
+  },
+  "options_share_block_lang_hint": {
+    "message": "Kontroluje język wstawianego bloku HTML udostępniania."
+  },
+  "options_event_description_lang_label": {
+    "message": "Język tekstu opisu Talk"
+  },
+  "options_event_description_lang_hint": {
+    "message": "Kontroluje język bloku tekstowego Talk w wydarzeniach."
+  },
+  "options_lang_default": {
+    "message": "Domyślny (UI)"
+  },
+  "options_about_version_label": {
+    "message": "Wersja:"
+  },
+  "options_about_copyright_label": {
+    "message": "Copyright:"
+  },
+  "options_about_license_label": {
+    "message": "Licencja:"
+  },
+  "options_about_license_value": {
+    "message": "AGPL v3"
+  },
+  "options_about_support_note": {
+    "message": "Aby NC Connector for Thunderbird mógł nadal być bezpłatnie rozwijany i utrzymywany."
+  },
+  "options_about_support_heading": {
+    "message": "Wsparcie"
+  },
+  "options_auth_heading": {
+    "message": "Uwierzytelnianie"
+  },
+  "options_auth_manual": {
+    "message": "Ręcznie (wpisz nazwę użytkownika + hasło aplikacji)"
+  },
+  "options_auth_login": {
+    "message": "Zaloguj się do Nextcloud (pobierz hasło aplikacji automatycznie)"
+  },
+  "options_loginflow_button": {
+    "message": "Zaloguj się do Nextcloud..."
+  },
+  "options_loginflow_starting": {
+    "message": "Rozpoczynanie logowania..."
+  },
+  "options_loginflow_browser": {
+    "message": "Otworzono przeglądarkę. Potwierdź logowanie w Nextcloud..."
+  },
+  "options_loginflow_success": {
+    "message": "Logowanie udane. Skopiowano hasło aplikacji."
+  },
+  "options_loginflow_failed": {
+    "message": "Logowanie do Nextcloud nie powiodło się."
+  },
+  "options_loginflow_missing": {
+    "message": "Najpierw wpisz URL serwera."
+  },
+  "compose_sharing_title": {
+    "message": "Dodaj udostępnienie Nextcloud"
+  },
+  "options_sharing_base_label": {
+    "message": "Katalog bazowy"
+  },
+  "options_sharing_base_hint": {
+    "message": "Pliki są przechowywane w tym katalogu (np. \"90 Freigaben - extern\")."
+  },
+  "options_sharing_defaults_heading": {
+    "message": "Ustawienia domyślne"
+  },
+  "options_sharing_default_share_name_label": {
+    "message": "Nazwa udostępnienia"
+  },
+  "options_sharing_default_permissions_label": {
+    "message": "Domyślne uprawnienia"
+  },
+  "options_sharing_default_perm_create": {
+    "message": "Prześlij/Utwórz"
+  },
+  "options_sharing_default_perm_write": {
+    "message": "Edytuj"
+  },
+  "options_sharing_default_perm_delete": {
+    "message": "Usuń"
+  },
+  "options_sharing_default_password_label": {
+    "message": "Ustaw hasło"
+  },
+  "options_sharing_default_expire_days_label": {
+    "message": "Wygasanie (dni)"
+  },
+  "options_sharing_attachments_heading": {
+    "message": "Załączniki"
+  },
+  "options_sharing_attachments_always_label": {
+    "message": "Zawsze obsługuj załączniki przez NC Connector"
+  },
+  "options_sharing_attachments_offer_label": {
+    "message": "Oferuj przesyłanie dla plików większych niż"
+  },
+  "options_sharing_attachments_offer_suffix": {
+    "message": "MB"
+  },
+  "options_talk_defaults_heading": {
+    "message": "Ustawienia domyślne"
+  },
+  "options_talk_default_title_label": {
+    "message": "Tytuł"
+  },
+  "options_talk_default_lobby_label": {
+    "message": "Poczekalnia do czasu rozpoczęcia"
+  },
+  "options_talk_default_listable_label": {
+    "message": "Pokaż w wyszukiwaniu"
+  },
+  "options_talk_default_add_participants_label": {
+    "message": "Dodaj uczestników do pokoju"
+  },
+  "options_talk_default_add_users_label": {
+    "message": "Użytkownicy"
+  },
+  "options_talk_default_add_guests_label": {
+    "message": "Goście"
+  },
+  "options_talk_default_password_label": {
+    "message": "Ustaw hasło"
+  },
+  "options_talk_default_roomtype_label": {
+    "message": "Typ pokoju"
+  },
+  "options_talk_default_roomtype_event": {
+    "message": "Rozmowa wydarzenia"
+  },
+  "options_talk_default_roomtype_standard": {
+    "message": "Rozmowa grupowa"
+  },
+  "sharing_share_name_label": {
+    "message": "Nazwa udostępnienia"
+  },
+  "sharing_share_placeholder": {
+    "message": "np. Projekt X"
+  },
+  "sharing_share_default": {
+    "message": "Nazwa udostępnienia"
+  },
+  "sharing_permission_read": {
+    "message": "Odczyt"
+  },
+  "sharing_permission_create": {
+    "message": "Prześlij"
+  },
+  "sharing_permission_write": {
+    "message": "Modyfikuj"
+  },
+  "sharing_permission_delete": {
+    "message": "Usuń"
+  },
+  "sharing_password_toggle": {
+    "message": "Ustaw hasło"
+  },
+  "sharing_password_generate": {
+    "message": "Generuj"
+  },
+  "sharing_expire_toggle": {
+    "message": "Ustaw datę wygaśnięcia"
+  },
+  "sharing_note_toggle": {
+    "message": "Dodaj notatkę dla odbiorców"
+  },
+  "sharing_note_placeholder": {
+    "message": "Opcjonalna wiadomość dla odbiorców"
+  },
+  "sharing_button_back": {
+    "message": "Wstecz"
+  },
+  "sharing_button_cancel": {
+    "message": "Anuluj"
+  },
+  "sharing_button_next": {
+    "message": "Dalej"
+  },
+  "sharing_button_finish": {
+    "message": "Utwórz udostępnienie"
+  },
+  "sharing_status_creating": {
+    "message": "Tworzenie publicznego linku..."
+  },
+  "sharing_status_error": {
+    "message": "Wystąpił błąd."
+  },
+  "sharing_error_insert_failed": {
+    "message": "Nie można wstawić udostępnienia do wiadomości."
+  },
+  "sharing_html_password_label": {
+    "message": "Hasło"
+  },
+  "sharing_html_expire_label": {
+    "message": "Data wygaśnięcia"
+  },
+  "sharing_html_permissions_label": {
+    "message": "Twoje uprawnienia"
+  },
+  "sharing_html_download_label": {
+    "message": "Link do pobrania"
+  },
+  "sharing_html_footer": {
+    "message": "$1 to rozwiązanie do bezpiecznej poczty e-mail i wymiany plików."
+  },
+  "sharing_dialog_title": {
+    "message": "Udostępnianie Nextcloud"
+  },
+  "sharing_heading_permissions": {
+    "message": "Ustawienia udostępnienia"
+  },
+  "sharing_step_expire": {
+    "message": "Data wygaśnięcia"
+  },
+  "sharing_expire_hint": {
+    "message": "Po tej dacie link nie będzie już dostępny."
+  },
+  "sharing_step_files_title": {
+    "message": "Wybierz pliki lub foldery"
+  },
+  "sharing_base_path_info": {
+    "message": "Katalog bazowy: $1"
+  },
+  "sharing_files_table_path": {
+    "message": "Ścieżka"
+  },
+  "sharing_files_table_type": {
+    "message": "Typ"
+  },
+  "sharing_files_table_status": {
+    "message": "Status"
+  },
+  "sharing_button_add_files": {
+    "message": "Dodaj pliki..."
+  },
+  "sharing_button_add_folder": {
+    "message": "Dodaj folder..."
+  },
+  "sharing_button_remove": {
+    "message": "Usuń"
+  },
+  "sharing_button_upload": {
+    "message": "Prześlij"
+  },
+  "sharing_files_empty": {
+    "message": "Nie wybrano plików."
+  },
+  "sharing_file_type_file": {
+    "message": "Plik"
+  },
+  "sharing_status_waiting": {
+    "message": "Oczekiwanie"
+  },
+  "sharing_status_done_row": {
+    "message": "Gotowe"
+  },
+  "sharing_status_error_row": {
+    "message": "Błąd"
+  },
+  "sharing_status_ready": {
+    "message": "Przesyłanie zakończone."
+  },
+  "sharing_status_uploading_bulk": {
+    "message": "Przesyłanie plików..."
+  },
+  "sharing_message_invalid_share_name": {
+    "message": "Wpisz nazwę udostępnienia."
+  },
+  "sharing_message_no_files": {
+    "message": "Dodaj co najmniej jeden plik."
+  },
+  "sharing_confirm_no_files_title": {
+    "message": "Udostępnienie bez przesyłania"
+  },
+  "sharing_confirm_no_files_message": {
+    "message": "Nie dodano żadnych plików ani folderów do tego udostępnienia. Odbiorcy mogą przesyłać tylko własne pliki. Czy chcesz kontynuować?"
+  },
+  "sharing_error_upload_required": {
+    "message": "Prześlij pliki przed kontynuowaniem."
+  },
+  "sharing_step_note_heading": {
+    "message": "Notatka dla odbiorcy"
+  },
+  "sharing_status_inserting": {
+    "message": "Wstawianie bloku HTML..."
+  },
+  "sharing_status_checking_folder": {
+    "message": "Sprawdzanie dostępności folderu..."
+  },
+  "sharing_error_folder_exists": {
+    "message": "Folder udostępnienia o tej nazwie już istnieje. Wybierz inną nazwę."
+  },
+  "sharing_prompt_rename_duplicate": {
+    "message": "Plik \"$1\" już istnieje w kolejce. Wpisz nową nazwę."
+  },
+  "sharing_message_rename_cancelled": {
+    "message": "Przesyłanie anulowane, ponieważ nie podano nazwy zastępczej."
+  },
+  "sharing_password_policy_error": {
+    "message": "Hasło musi zawierać co najmniej 10 znaków, w tym małe i wielkie litery oraz znak specjalny."
+  },
+  "sharing_html_intro_line": {
+    "message": "Chcę udostępnić pliki w bezpieczny sposób i chronić Twoją prywatność. Kliknij poniższy link, aby pobrać pliki."
+  },
+  "sharing_attachment_prompt_title": {
+    "message": "Przekroczono limit załączników"
+  },
+  "sharing_attachment_prompt_reason": {
+    "message": "Łączny rozmiar załączników to $1 i przekracza ustawiony limit $2. Ostatnio dodano: \"$3\" ($4)."
+  },
+  "sharing_attachment_prompt_share": {
+    "message": "Udostępnij przez NC Connector"
+  },
+  "sharing_attachment_prompt_remove_last": {
+    "message": "Usuń ostatnio wybrane załączniki"
+  },
+  "sharing_attachment_prompt_last_unknown": {
+    "message": "Nieznany załącznik"
+  },
+  "sharing_attachment_mode_reason_threshold": {
+    "message": "Przekroczono limit załączników: $1 > $2. Ostatnio dodano: \"$3\" ($4). Te załączniki zostaną udostępnione przez NC Connector."
+  },
+  "sharing_attachment_mode_reason_always": {
+    "message": "Tryb załączników jest aktywny. Wybrane załączniki zostaną udostępnione przez NC Connector."
+  },
+  "options_sharing_attachments_lock_title": {
+    "message": "Automatyzacja załączników wyłączona"
+  },
+  "options_sharing_attachments_lock_text": {
+    "message": "W Thunderbirdu jest włączona opcja „Prześlij dla plików większych niż” ($1 MB). To koliduje z automatyzacją załączników NC Connector. Poniższe opcje załączników są zablokowane."
+  },
+  "options_sharing_attachments_lock_step1": {
+    "message": "Otwórz Ustawienia Thunderbirda > Redagowanie > Załączniki."
+  },
+  "options_sharing_attachments_lock_step2": {
+    "message": "Wyłącz „Prześlij dla plików większych niż”."
+  },
+  "options_sharing_attachments_lock_step3": {
+    "message": "Otwórz ponownie te ustawienia dodatku."
+  },
+  "sharing_attachment_automation_locked_error": {
+    "message": "W Thunderbirdu jest włączona opcja „Prześlij dla plików większych niż” ($1 MB). To koliduje z automatyzacją załączników NC Connector. Poniższe opcje załączników są zablokowane."
+  },
+  "options_sharing_default_password_separate_label": {
+    "message": "Wyślij hasło osobno"
+  },
+  "sharing_password_separate_toggle": {
+    "message": "Wyślij hasło w osobnym e-mailu"
+  },
+  "sharing_html_password_separate_hint": {
+    "message": "Hasło zostanie wysłane w osobnym e-mailu."
+  },
+  "sharing_html_password_mail_intro": {
+    "message": "Oto hasło do wysłanego linku udostępniania."
+  },
+  "sharing_password_mail_subject": {
+    "message": "Hasło do udostępnionego linku"
+  },
+  "sharing_password_mail_subject_with_label": {
+    "message": "Hasło do udostępnionego linku: $1"
+  },
+  "options_sharing_permissions_tooltip_title": {
+    "message": "🛡️ Default permissions"
+  },
+  "options_sharing_permissions_tooltip_line1": {
+    "message": "These values are used as defaults for new shares."
+  },
+  "options_sharing_permissions_tooltip_line2": {
+    "message": "They can still be adjusted in the sharing wizard."
+  },
+  "options_sharing_permissions_tooltip_line3": {
+    "message": "In attachment mode, recipient permission is always read-only."
+  },
+  "sharing_password_separate_tooltip_title": {
+    "message": "Coming soon (Pro feature)"
+  },
+  "sharing_password_separate_tooltip_line1": {
+    "message": "This option is disabled in this release."
+  },
+  "sharing_password_separate_tooltip_line2": {
+    "message": "Password delivery in a separate email will be available in a future Pro release."
+  },
+  "sharing_password_separate_tooltip_line3": {
+    "message": "For now, the password is included in the main share block."
+  },
+  "options_sharing_attachments_always_tooltip_title": {
+    "message": "📎 Always via NC Connector"
+  },
+  "options_sharing_attachments_always_tooltip_line1": {
+    "message": "New attachments are removed from the compose mail and processed via NC Connector."
+  },
+  "options_sharing_attachments_always_tooltip_line2": {
+    "message": "The sharing wizard opens directly in the file step."
+  },
+  "options_sharing_attachments_always_tooltip_line3": {
+    "message": "The final mail contains share links instead of physical attachments."
+  },
+  "options_sharing_attachments_offer_tooltip_title": {
+    "message": "📏 Attachment threshold"
+  },
+  "options_sharing_attachments_offer_tooltip_line1": {
+    "message": "The total size of all attachments is evaluated."
+  },
+  "options_sharing_attachments_offer_tooltip_line2": {
+    "message": "If exceeded, you can share via NC Connector or remove the last selected attachment batch."
+  },
+  "options_sharing_attachments_offer_tooltip_line3": {
+    "message": "The remove action returns the mail to a below-threshold state."
+  },
+  "talk_option_moderator_title": {
+    "message": "👑 Moderator delegation"
+  },
+  "talk_option_moderator_line1": {
+    "message": "The selected user is promoted after room creation."
+  },
+  "talk_option_moderator_line2": {
+    "message": "On successful delegation, the creator leaves the room."
+  },
+  "talk_option_moderator_line3": {
+    "message": "If delegation fails, room ownership remains with the creator."
+  },
+  "sharing_password_mail_notify_title": {
+    "message": "NC Connector"
+  },
+  "sharing_password_mail_notify_success": {
+    "message": "Password email sent to $1 recipient(s)."
+  },
+  "sharing_password_mail_notify_failure": {
+    "message": "Automatic password email failed for $1 recipient(s). Manual send mail was opened."
+  },
+  "sharing_password_mail_notify_manual_required": {
+    "message": "Automatyczne wysylanie maila z haslem nie powiodlo sie. Wyslij recznie mail z haslem, korzystajac z otwartego szkicu."
+  }
 }
+
