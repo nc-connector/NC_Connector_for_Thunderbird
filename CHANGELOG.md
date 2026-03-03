@@ -6,9 +6,6 @@ This project targets **Thunderbird ESR 140.\***.
 
 ## 2.2.8
 
-Release package version is **2.2.8**.
-Functional delta documented here corresponds to **2.2.7 -> 2.2.8** only.
-
 ### Changed
 - `ncCalToolbar` was hardened for deterministic editor targeting in dialog and tab event editors.
 - Event write-back and cleanup paths were stabilized for open editors (including unsaved item flows).
@@ -49,4 +46,5 @@ Functional delta documented here corresponds to **2.2.7 -> 2.2.8** only.
 
 ### Notes
 - Invitee sync (users/guests) is applied **after saving** the event, driven by calendar item updates (official calendar experiment API under `experiments/calendar`, unchanged).
+
 
