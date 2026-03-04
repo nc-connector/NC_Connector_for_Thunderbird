@@ -20,6 +20,7 @@ Related docs:
   - [2.1 General (Nextcloud connection)](#21-general-nextcloud-connection)
   - [2.2 Sharing defaults](#22-sharing-defaults)
   - [2.3 Talk Link defaults](#23-talk-link-defaults)
+  - [System address book required for user search and moderator selection](#system-address-book-required-for-user-search-and-moderator-selection)
   - [2.4 Advanced: language overrides](#24-advanced-language-overrides)
   - [2.5 Debug](#25-debug)
   - [2.6 About & Support](#26-about--support)
@@ -92,7 +93,7 @@ These defaults are used by the **Sharing Wizard** (compose window).
 | Default permissions: Edit | `sharingDefaultPermWrite` | Enables editing for the share |
 | Default permissions: Delete | `sharingDefaultPermDelete` | Enables delete for the share |
 | Default: set password | `sharingDefaultPassword` | Pre-enables the password toggle in the wizard |
-| Default: send password in separate mail | `sharingDefaultPasswordSeparate` | Pre-enables the separate-password toggle in the wizard (only effective when password is enabled) |
+| Default: send password in separate mail | `sharingDefaultPasswordSeparate` | Control is visible but locked in 2.2.9 ("Coming soon (Pro feature)") |
 | Expiration (days) | `sharingDefaultExpireDays` | Default expiration time for new shares |
 | Always handle attachments via NC Connector | `sharingAttachmentsAlwaysConnector` | Immediately moves compose attachments into NC Connector share flow |
 | Offer upload for files larger than | `sharingAttachmentsOfferAboveEnabled` | Enables threshold-based decision popup in compose |
@@ -123,6 +124,35 @@ These defaults are used by the **Talk Wizard** (calendar event editor).
 Important behavior details:
 - **Invitee sync happens after saving the event**, driven by calendar item updates (not immediately when clicking the toolbar button).
 - “Guests” may trigger **additional invitation e-mails** from Nextcloud depending on server configuration and Talk version.
+
+### System address book required for user search and moderator selection
+
+The following features require a reachable **Nextcloud system address book**:
+- Talk wizard user search (internal users)
+- Moderator selection in the Talk wizard
+- “Add users” default in add-on settings
+
+If the system address book is unavailable, these controls are disabled in the UI and the tooltip links to this section.
+
+Nextcloud 31 (server config via `occ`):
+- `sudo -E -u www-data php occ config:app:set dav system_addressbook_exposed --value="yes"`
+
+Nextcloud >= 32:
+- Nextcloud -> Admin Settings -> Groupware -> System Address Book (enable it)
+
+Required in both versions:
+- Nextcloud Admin Settings -> Sharing: ensure username autocompletion / access to the system address book is enabled.
+- Otherwise only the current user may appear in user search.
+
+Repair hint (if Admin UI shows enabled but system address book is still effectively unavailable):
+
+1. Recreate and sync the DAV flag via `occ`:
+   - `sudo -E -u www-data php occ config:app:delete dav system_addressbook_exposed`
+   - `sudo -E -u www-data php occ config:app:set dav system_addressbook_exposed --value="yes"`
+   - `sudo -E -u www-data php occ dav:sync-system-addressbook`
+2. Verify in a browser with an authenticated Nextcloud session:
+   - `https://<cloud>/remote.php/dav/addressbooks/users/<user>/z-server-generated--system/?export`
+3. If the endpoint is reachable again, reopen add-on settings or Talk wizard so NC Connector re-checks availability.
 
 ### 2.4 Advanced: language overrides
 
@@ -246,7 +276,7 @@ Important:
 - The asset name must be **the same in every release** (constant file name).
 - Practical approach: upload an additional release asset named:
   - `nc4tb-latest.xpi`
-  alongside the versioned asset (e.g. `nc4tb-2.2.8.xpi`), ideally automated via GitHub Actions.
+  alongside the versioned asset (e.g. `nc4tb-2.2.9.xpi`), ideally automated via GitHub Actions.
 
 Note about signing:
 - In production environments, prefer ATN (signed). A self-hosted XPI may require signing depending on your Thunderbird build and deployment constraints.
