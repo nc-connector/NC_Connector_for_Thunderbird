@@ -180,7 +180,7 @@
     "message": "https://docs.nextcloud.com/server/latest/user_manual/fr/talk/join_a_call_or_chat_as_guest.html"
   },
   "talk_dialog_title": {
-    "message": "Nextcloud Talk"
+    "message": "Discussion Nextcloud"
   },
   "talk_dialog_close": {
     "message": "Fermer"
@@ -372,13 +372,13 @@
     "message": "Partage"
   },
   "options_tab_talklink": {
-    "message": "Talk Link"
+    "message": "Lien de discussion"
   },
   "options_tab_advanced": {
     "message": "Avancé"
   },
   "options_tab_debug": {
-    "message": "Debug"
+    "message": "Déboguer"
   },
   "options_tab_about": {
     "message": "À propos"
@@ -483,7 +483,7 @@
     "message": "Proposer le téléversement pour les fichiers supérieurs à"
   },
   "options_sharing_attachments_offer_suffix": {
-    "message": "Mo"
+    "message": "MB"
   },
   "options_talk_defaults_heading": {
     "message": "Parametres par defaut"
@@ -618,7 +618,7 @@
     "message": "Chemin"
   },
   "sharing_files_table_type": {
-    "message": "Type"
+    "message": "Taper"
   },
   "sharing_files_table_status": {
     "message": "Statut"
@@ -753,76 +753,102 @@
     "message": "Mot de passe du lien de partage : $1"
   },
   "options_sharing_permissions_tooltip_title": {
-    "message": "🛡️ Default permissions"
+    "message": "🛡️ Autorisations par défaut"
   },
   "options_sharing_permissions_tooltip_line1": {
-    "message": "These values are used as defaults for new shares."
+    "message": "Ces valeurs sont utilisées par défaut pour les nouveaux partages."
   },
   "options_sharing_permissions_tooltip_line2": {
-    "message": "They can still be adjusted in the sharing wizard."
+    "message": "Ils peuvent toujours être ajustés dans l'assistant de partage."
   },
   "options_sharing_permissions_tooltip_line3": {
-    "message": "In attachment mode, recipient permission is always read-only."
+    "message": "En mode pièce jointe, l'autorisation du destinataire est toujours en lecture seule."
   },
   "sharing_password_separate_tooltip_title": {
-    "message": "Coming soon (Pro feature)"
+    "message": "Bientôt disponible (fonctionnalité Pro)"
   },
   "sharing_password_separate_tooltip_line1": {
-    "message": "This option is disabled in this release."
+    "message": "Cette option est désactivée dans cette version."
   },
   "sharing_password_separate_tooltip_line2": {
-    "message": "Password delivery in a separate email will be available in a future Pro release."
+    "message": "La livraison du mot de passe dans un e-mail séparé sera disponible dans une future version Pro."
   },
   "sharing_password_separate_tooltip_line3": {
-    "message": "For now, the password is included in the main share block."
+    "message": "Pour l'instant, le mot de passe est inclus dans le bloc de partage principal."
   },
   "options_sharing_attachments_always_tooltip_title": {
-    "message": "📎 Always via NC Connector"
+    "message": "📎 Toujours via le connecteur NC"
   },
   "options_sharing_attachments_always_tooltip_line1": {
-    "message": "New attachments are removed from the compose mail and processed via NC Connector."
+    "message": "Les nouvelles pièces jointes sont supprimées du courrier de composition et traitées via NC Connector."
   },
   "options_sharing_attachments_always_tooltip_line2": {
-    "message": "The sharing wizard opens directly in the file step."
+    "message": "L'assistant de partage s'ouvre directement dans l'étape fichier."
   },
   "options_sharing_attachments_always_tooltip_line3": {
-    "message": "The final mail contains share links instead of physical attachments."
+    "message": "Le courrier final contient des liens de partage au lieu de pièces jointes physiques."
   },
   "options_sharing_attachments_offer_tooltip_title": {
-    "message": "📏 Attachment threshold"
+    "message": "📏 Seuil d'attachement"
   },
   "options_sharing_attachments_offer_tooltip_line1": {
-    "message": "The total size of all attachments is evaluated."
+    "message": "La taille totale de toutes les pièces jointes est évaluée."
   },
   "options_sharing_attachments_offer_tooltip_line2": {
-    "message": "If exceeded, you can share via NC Connector or remove the last selected attachment batch."
+    "message": "En cas de dépassement, vous pouvez partager via NC Connector ou supprimer le dernier lot de pièces jointes sélectionné."
   },
   "options_sharing_attachments_offer_tooltip_line3": {
-    "message": "The remove action returns the mail to a below-threshold state."
+    "message": "L'action de suppression renvoie le courrier à un état inférieur au seuil."
   },
   "talk_option_moderator_title": {
-    "message": "👑 Moderator delegation"
+    "message": "👑 Délégation des modérateurs"
   },
   "talk_option_moderator_line1": {
-    "message": "The selected user is promoted after room creation."
+    "message": "L'utilisateur sélectionné est promu après la création de la salle."
   },
   "talk_option_moderator_line2": {
-    "message": "On successful delegation, the creator leaves the room."
+    "message": "En cas de délégation réussie, le créateur quitte la salle."
   },
   "talk_option_moderator_line3": {
-    "message": "If delegation fails, room ownership remains with the creator."
+    "message": "Si la délégation échoue, la propriété de la salle reste la propriété du créateur."
+  },
+  "talk_system_addressbook_required_short": {
+    "message": "Nécessite un carnet d'adresses système Nextcloud actif."
+  },
+  "talk_system_addressbook_required_message": {
+    "message": "Cette fonctionnalité nécessite un carnet d'adresses système Nextcloud actif."
+  },
+  "talk_system_addressbook_admin_link_label": {
+    "message": "Guide de configuration"
   },
   "sharing_password_mail_notify_title": {
     "message": "NC Connector"
   },
   "sharing_password_mail_notify_success": {
-    "message": "Password email sent to $1 recipient(s)."
+    "message": "E-mail de mot de passe envoye a $1 destinataire(s)."
   },
   "sharing_password_mail_notify_failure": {
-    "message": "Automatic password email failed for $1 recipient(s). A manual draft was opened."
+    "message": "Lenvoi automatique de le-mail de mot de passe a echoue pour $1 destinataire(s). Un brouillon manuel a ete ouvert."
   },
   "sharing_password_mail_notify_manual_required": {
     "message": "Echec de lenvoi automatique du mot de passe. Veuillez envoyer manuellement le-mail de mot de passe via le brouillon ouvert."
+  },
+  "sharing_password_mail_notify_manual_required_select_sender": {
+    "message": "Lenvoi automatique du mot de passe a echoue. Si necessaire, selectionnez un expediteur dans le brouillon ouvert puis envoyez manuellement le-mail de mot de passe."
+  },
+  "options_about_homepage_label": {
+    "message": "Site web :"
+  },
+  "options_about_homepage_link": {
+    "message": "https://nc-connector.de"
+  },
+  "options_about_overview_text": {
+    "message": "Pourquoi plus qu'un simple module de liens de fichiers ?\nNC Connector ne couvre pas seulement les liens de fichiers, mais l'ensemble du workflow d'equipe dans le client mail.\n\nBase technique\n- Modules Thunderbird et Outlook utilisables directement, meme sans backend Nextcloud\n- Backend Nextcloud optionnel pour l'attribution centralisee des sieges et des politiques\n- Modele de sieges dans le backend : Community avec 1 siege gratuit, Pro a partir de 5 sieges (1 siege = 1 utilisateur Nextcloud)\n\n- Partage de fichiers avec mot de passe, date d'expiration et envoi separe du mot de passe en option\n- Creer et mettre a jour des reunions Talk directement depuis les rendez-vous du calendrier\n- Automatisation des pieces jointes avec des regles claires au lieu d'etapes manuelles\n- Attribution centralisee des sieges dans le backend Nextcloud (1 siege = 1 utilisateur Nextcloud)"
+  },
+  "options_about_more_info_label": {
+    "message": "Plus d'informations -->"
+  },
+  "options_about_more_info_link": {
+    "message": "Aller au site web"
   }
 }
-

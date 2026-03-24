@@ -180,7 +180,7 @@
     "message": "https://docs.nextcloud.com/server/latest/user_manual/de/talk/join_a_call_or_chat_as_guest.html"
   },
   "talk_dialog_title": {
-    "message": "Nextcloud Talk"
+    "message": "Nextcloud-Talk"
   },
   "talk_dialog_close": {
     "message": "Schließen"
@@ -312,7 +312,7 @@
     "message": "NC Connector for Thunderbird - Einstellungen"
   },
   "options_base_url_label": {
-    "message": "Nextcloud URL"
+    "message": "Nextcloud-URL"
   },
   "options_base_url_placeholder": {
     "message": "https://cloud.example.com"
@@ -372,13 +372,13 @@
     "message": "Freigabe"
   },
   "options_tab_talklink": {
-    "message": "Talk Link"
+    "message": "Talk-Link"
   },
   "options_tab_advanced": {
     "message": "Erweitert"
   },
   "options_tab_debug": {
-    "message": "Debug"
+    "message": "Debuggen"
   },
   "options_tab_about": {
     "message": "Über"
@@ -489,7 +489,7 @@
     "message": "Hochladen für Dateien größer als"
   },
   "options_sharing_attachments_offer_suffix": {
-    "message": "MB anbieten"
+    "message": "MB"
   },
   "options_talk_defaults_heading": {
     "message": "Default-Einstellungen"
@@ -633,7 +633,7 @@
     "message": "Entfernen"
   },
   "sharing_button_upload": {
-    "message": "Upload"
+    "message": "Hochladen"
   },
   "sharing_files_empty": {
     "message": "Keine Dateien ausgewählt."
@@ -765,16 +765,16 @@
     "message": "Im Anhangsmodus ist Empfaengerzugriff immer nur Lesen."
   },
   "sharing_password_separate_tooltip_title": {
-    "message": "Coming soon (Pro feature)"
+    "message": "Demnächst erhältlich (Pro-Funktion)"
   },
   "sharing_password_separate_tooltip_line1": {
-    "message": "This option is disabled in this release."
+    "message": "Diese Option ist in dieser Version deaktiviert."
   },
   "sharing_password_separate_tooltip_line2": {
-    "message": "Password delivery in a separate email will be available in a future Pro release."
+    "message": "Die Zustellung von Passwörtern in einer separaten E-Mail wird in einer zukünftigen Pro-Version verfügbar sein."
   },
   "sharing_password_separate_tooltip_line3": {
-    "message": "For now, the password is included in the main share block."
+    "message": "Das Passwort ist vorerst im Hauptfreigabeblock enthalten."
   },
   "options_sharing_attachments_always_tooltip_title": {
     "message": "📎 Immer ueber NC Connector"
@@ -812,6 +812,15 @@
   "talk_option_moderator_line3": {
     "message": "Wenn Delegation fehlschlaegt, bleibt die Raumverantwortung beim Ersteller."
   },
+  "talk_system_addressbook_required_short": {
+    "message": "Benoetigt ein aktiviertes Nextcloud-Systemadressbuch."
+  },
+  "talk_system_addressbook_required_message": {
+    "message": "Dieses Feature benoetigt ein aktiviertes Nextcloud-Systemadressbuch."
+  },
+  "talk_system_addressbook_admin_link_label": {
+    "message": "Einrichtungsanleitung"
+  },
   "sharing_password_mail_notify_title": {
     "message": "NC Connector"
   },
@@ -823,6 +832,23 @@
   },
   "sharing_password_mail_notify_manual_required": {
     "message": "Automatischer Passwortversand fehlgeschlagen. Bitte senden Sie die Passwort-E-Mail manuell ueber die geoeffnete Vorlage."
+  },
+  "sharing_password_mail_notify_manual_required_select_sender": {
+    "message": "Automatischer Passwortversand fehlgeschlagen. Waehlen Sie bei Bedarf im geoeffneten Entwurf einen Absender und senden Sie die Passwort-E-Mail manuell."
+  },
+  "options_about_homepage_label": {
+    "message": "Homepage:"
+  },
+  "options_about_homepage_link": {
+    "message": "https://nc-connector.de"
+  },
+  "options_about_overview_text": {
+    "message": "Warum mehr als ein Filelink-Addon?\nNC Connector deckt nicht nur Datei-Links ab, sondern den gesamten Team-Workflow im Mail-Client.\n\nTechnische Basis\n- Thunderbird- und Outlook-Add-ons direkt nutzbar, auch ohne Nextcloud-Backend\n- Optionales Nextcloud-Backend fuer zentrale Seat-Zuteilung und Richtlinien\n- Seat-Modell im Backend: Community mit 1 kostenlosem Seat, Pro ab 5 Seats (1 Seat = 1 Nextcloud-Benutzer)\n\n- Datei-Freigabe mit Passwort, Ablaufdatum und optional separater Passwortzustellung\n- Talk-Meetings direkt aus Kalenderterminen anlegen und aktualisieren\n- Anhangsautomatisierung mit klaren Regeln statt manueller Einzelschritte\n- Zentrale Seat-Zuteilung im Nextcloud-Backend (1 Seat = 1 Nextcloud-Benutzer)"
+  },
+  "options_about_more_info_label": {
+    "message": "Mehr Informationen -->"
+  },
+  "options_about_more_info_link": {
+    "message": "Zur Homepage"
   }
 }
-

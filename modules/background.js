@@ -12,6 +12,8 @@
  * - modules/bgComposeShareCleanup.js
  * - modules/bgComposePasswordDispatch.js
  * - modules/bgCompose.js (listener wiring)
+ * - modules/bgCalendarLifecycle.js
  * - modules/bgCalendar.js
+ * - modules/talkAddressbook.js
  * - modules/bgRouter.js
  */

@@ -92,14 +92,28 @@ this.calendar_calendars = class extends ExtensionAPI {
             }
 
             calendar.name = createProperties.name;
-            if (typeof createProperties.color != "undefined") {
+
+            if (createProperties.color != null) {
               calendar.setProperty("color", createProperties.color);
             }
-            if (typeof createProperties.visible != "undefined") {
+            if (createProperties.readOnly != null) {
+              calendar.setProperty("readOnly", createProperties.readOnly);
+            }
+            if (createProperties.enabled != null) {
+              calendar.setProperty("disabled", !createProperties.enabled);
+            }
+            if (createProperties.visible != null) {
               calendar.setProperty("calendar-main-in-composite", createProperties.visible);
             }
-            if (typeof createProperties.showReminders != "undefined") {
+            if (createProperties.showReminders != null) {
               calendar.setProperty("suppressAlarms", !createProperties.showReminders);
+            }
+            if (createProperties.capabilities != null) {
+              if (!isOwnCalendar(calendar, context.extension)) {
+                throw new ExtensionError("Cannot set capabilities on foreign calendar types");
+              }
+
+              calendar.setProperty("overrideCapabilities", JSON.stringify(createProperties.capabilities));
             }
 
             cal.manager.registerCalendar(calendar);
@@ -145,17 +159,30 @@ this.calendar_calendars = class extends ExtensionAPI {
             if (updateProperties.capabilities) {
               // TODO validate capability names
               const unwrappedCalendar = calendar.wrappedJSObject.mUncachedCalendar.wrappedJSObject;
-              unwrappedCalendar.capabilities = Object.assign({}, unwrappedCalendar.capabilities, updateProperties.capabilities);
-              calendar.setProperty("extensionCapabilities", JSON.stringify(unwrappedCalendar.capabilities));
+              let overrideCapabilities;
+              try {
+                overrideCapabilities = JSON.parse(calendar.getProperty("overrideCapabilities")) || {};
+              } catch(e) {
+                overrideCapabilities = {};
+              }
+              for (const [key, value] of Object.entries(updateProperties.capabilities)) {
+                if (value === null) {
+                  continue;
+                }
+                unwrappedCalendar.capabilities[key] = value;
+                overrideCapabilities[key] = value;
+              }
+
+              calendar.setProperty("overrideCapabilities", JSON.stringify(overrideCapabilities));
             }
 
             if (updateProperties.lastError !== undefined) {
               if (updateProperties.lastError === null) {
-                calendar.setProperty("currentStatus", Cr.NS_ERROR_FAILURE);
-                calendar.setProperty("lastErrorMessage", updateProperties.lastError);
-              } else {
                 calendar.setProperty("currentStatus", Cr.NS_OK);
                 calendar.setProperty("lastErrorMessage", "");
+              } else {
+                calendar.setProperty("currentStatus", Cr.NS_ERROR_FAILURE);
+                calendar.setProperty("lastErrorMessage", updateProperties.lastError);
               }
             }
           },

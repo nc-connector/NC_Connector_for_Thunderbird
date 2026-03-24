@@ -378,7 +378,7 @@
     "message": "Pokročilé"
   },
   "options_tab_debug": {
-    "message": "Debug"
+    "message": "Ladit"
   },
   "options_tab_about": {
     "message": "O doplňku"
@@ -753,76 +753,102 @@
     "message": "Heslo ke sdílenému odkazu: $1"
   },
   "options_sharing_permissions_tooltip_title": {
-    "message": "🛡️ Default permissions"
+    "message": "🛡️ Výchozí oprávnění"
   },
   "options_sharing_permissions_tooltip_line1": {
-    "message": "These values are used as defaults for new shares."
+    "message": "Tyto hodnoty se používají jako výchozí pro nové sdílené položky."
   },
   "options_sharing_permissions_tooltip_line2": {
-    "message": "They can still be adjusted in the sharing wizard."
+    "message": "Stále je lze upravit v průvodci sdílením."
   },
   "options_sharing_permissions_tooltip_line3": {
-    "message": "In attachment mode, recipient permission is always read-only."
+    "message": "V režimu přílohy je oprávnění příjemce vždy pouze pro čtení."
   },
   "sharing_password_separate_tooltip_title": {
-    "message": "Coming soon (Pro feature)"
+    "message": "Již brzy (funkce Pro)"
   },
   "sharing_password_separate_tooltip_line1": {
-    "message": "This option is disabled in this release."
+    "message": "Tato možnost je v tomto vydání zakázána."
   },
   "sharing_password_separate_tooltip_line2": {
-    "message": "Password delivery in a separate email will be available in a future Pro release."
+    "message": "Doručení hesla v samostatném e-mailu bude k dispozici v budoucí verzi Pro."
   },
   "sharing_password_separate_tooltip_line3": {
-    "message": "For now, the password is included in the main share block."
+    "message": "Heslo je prozatím obsaženo v hlavním sdíleném bloku."
   },
   "options_sharing_attachments_always_tooltip_title": {
-    "message": "📎 Always via NC Connector"
+    "message": "📎 Vždy přes NC konektor"
   },
   "options_sharing_attachments_always_tooltip_line1": {
-    "message": "New attachments are removed from the compose mail and processed via NC Connector."
+    "message": "Nové přílohy jsou odstraněny z nové zprávy a zpracovány pomocí NC Connector."
   },
   "options_sharing_attachments_always_tooltip_line2": {
-    "message": "The sharing wizard opens directly in the file step."
+    "message": "Průvodce sdílením se otevře přímo v kroku souboru."
   },
   "options_sharing_attachments_always_tooltip_line3": {
-    "message": "The final mail contains share links instead of physical attachments."
+    "message": "Konečný e-mail obsahuje odkazy na sdílení namísto fyzických příloh."
   },
   "options_sharing_attachments_offer_tooltip_title": {
-    "message": "📏 Attachment threshold"
+    "message": "📏 Hranice přílohy"
   },
   "options_sharing_attachments_offer_tooltip_line1": {
-    "message": "The total size of all attachments is evaluated."
+    "message": "Hodnotí se celková velikost všech příloh."
   },
   "options_sharing_attachments_offer_tooltip_line2": {
-    "message": "If exceeded, you can share via NC Connector or remove the last selected attachment batch."
+    "message": "Při překročení můžete sdílet pomocí NC konektoru nebo odebrat poslední vybranou dávku příloh."
   },
   "options_sharing_attachments_offer_tooltip_line3": {
-    "message": "The remove action returns the mail to a below-threshold state."
+    "message": "Akce odebrání vrátí poštu do podprahového stavu."
   },
   "talk_option_moderator_title": {
-    "message": "👑 Moderator delegation"
+    "message": "👑 Delegace moderátora"
   },
   "talk_option_moderator_line1": {
-    "message": "The selected user is promoted after room creation."
+    "message": "Po vytvoření místnosti bude vybraný uživatel povýšen."
   },
   "talk_option_moderator_line2": {
-    "message": "On successful delegation, the creator leaves the room."
+    "message": "Po úspěšném delegování tvůrce opustí místnost."
   },
   "talk_option_moderator_line3": {
-    "message": "If delegation fails, room ownership remains with the creator."
+    "message": "Pokud delegování selže, vlastnictví místnosti zůstává na tvůrci."
+  },
+  "talk_system_addressbook_required_short": {
+    "message": "Vyžaduje aktivní systémový adresář Nextcloud."
+  },
+  "talk_system_addressbook_required_message": {
+    "message": "Tato funkce vyžaduje aktivní systémový adresář Nextcloud."
+  },
+  "talk_system_addressbook_admin_link_label": {
+    "message": "Průvodce nastavením"
   },
   "sharing_password_mail_notify_title": {
     "message": "NC Connector"
   },
   "sharing_password_mail_notify_success": {
-    "message": "Password email sent to $1 recipient(s)."
+    "message": "E-mail s heslem byl odeslan $1 prijemci(um)."
   },
   "sharing_password_mail_notify_failure": {
-    "message": "Automatic password email failed for $1 recipient(s). Manual send mail was opened."
+    "message": "Automaticke odeslani e-mailu s heslem selhalo pro $1 prijemce. Otevren byl rucni koncept."
   },
   "sharing_password_mail_notify_manual_required": {
     "message": "Automaticke odeslani hesla selhalo. Odeslete prosim heslo rucne pomoci otevrene sablony."
+  },
+  "sharing_password_mail_notify_manual_required_select_sender": {
+    "message": "Automaticke odeslani hesla selhalo. Pokud je to potreba, vyberte v otevrenem konceptu odesilatele a odeslete e-mail s heslem rucne."
+  },
+  "options_about_homepage_label": {
+    "message": "Domovska stranka:"
+  },
+  "options_about_homepage_link": {
+    "message": "https://nc-connector.de"
+  },
+  "options_about_overview_text": {
+    "message": "Proc vic nez jen doplnek pro odkazy na soubory?\nNC Connector nepokryva jen odkazy na soubory, ale cely tymovy workflow v postovnim klientu.\n\nTechnicky zaklad\n- Doplnky pro Thunderbird a Outlook lze pouzivat primo, i bez backendu Nextcloud\n- Volitelny backend Nextcloud pro centralni pridelovani seatu a zasad\n- Model seatu v backendu: Community s 1 bezplatnym seatem, Pro od 5 seatu (1 seat = 1 uzivatel Nextcloud)\n\n- Sdileni souboru s heslem, datem vyprseni a volitelnym samostatnym dorucenim hesla\n- Vytvareni a aktualizace Talk schuzek primo z kalendarovych udalosti\n- Automatizace priloh s jasnymi pravidly misto rucnich jednotlivych kroku\n- Centralni pridelovani seatu v backendu Nextcloud (1 seat = 1 uzivatel Nextcloud)"
+  },
+  "options_about_more_info_label": {
+    "message": "Vice informaci -->"
+  },
+  "options_about_more_info_link": {
+    "message": "Prejit na domovskou stranku"
   }
 }
-

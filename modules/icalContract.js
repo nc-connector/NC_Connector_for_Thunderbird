@@ -147,6 +147,63 @@
   }
 
   /**
+   * Parse DTSTART of the first VEVENT into unix epoch seconds.
+   * Rules:
+   * - strict contract parsing only (no heuristic TZ fallbacks)
+   * - if TZID is present, it must be resolvable either by embedded VTIMEZONE
+   *   or by an explicit resolved zone id that matches TZID
+   *
+   * @param {string} ical
+   * @returns {number|null}
+   */
+  function parseEventStartUnixSeconds(ical){
+    try{
+      const context = resolveFirstEventContext(ical);
+      if (!context?.event){
+        return null;
+      }
+      const startProp = context.event.getFirstProperty("dtstart");
+      if (!startProp){
+        return null;
+      }
+      const startValue = startProp.getFirstValue();
+      if (!startValue || typeof startValue.toUnixTime !== "function"){
+        return null;
+      }
+
+      const tzid = String(startProp.getParameter("tzid") || "").trim();
+      if (tzid){
+        let hasEmbeddedZone = false;
+        if (context.root?.name === "vcalendar"){
+          const zones = context.root.getAllSubcomponents("vtimezone") || [];
+          hasEmbeddedZone = zones.some((zoneComp) => {
+            const zoneTzid = String(zoneComp?.getFirstPropertyValue("tzid") || "").trim();
+            return !!zoneTzid && zoneTzid.toLowerCase() === tzid.toLowerCase();
+          });
+        }
+        const resolvedZoneId = String(startValue?.zone?.tzid || "").trim();
+        const hasMatchingResolvedZone =
+          !!resolvedZoneId &&
+          resolvedZoneId.toLowerCase() === tzid.toLowerCase() &&
+          resolvedZoneId.toLowerCase() !== "floating" &&
+          resolvedZoneId.toLowerCase() !== "local";
+        if (!hasEmbeddedZone && !hasMatchingResolvedZone){
+          return null;
+        }
+      }
+
+      const unix = startValue.toUnixTime();
+      if (!Number.isFinite(unix)){
+        return null;
+      }
+      return Math.floor(unix);
+    }catch(error){
+      console.error("[NCIcal] parseEventStartUnixSeconds failed", error);
+      return null;
+    }
+  }
+
+  /**
    * Extract attendee values from the first VEVENT.
    * Returns raw values + EMAIL parameter to allow consumer-side normalization.
    *
@@ -267,6 +324,7 @@
     ensureIcal,
     stringifyValue,
     parseEventData,
+    parseEventStartUnixSeconds,
     extractEventAttendees,
     applyEventPropertyUpdates,
     parseVcardComponents

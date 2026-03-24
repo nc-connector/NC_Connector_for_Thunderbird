@@ -389,11 +389,15 @@ async function openSharingWizardWindow(tabId, launchContext = null){
     width: SHARING_POPUP_WIDTH,
     height: SHARING_POPUP_HEIGHT
   });
+  const focusApplied = await focusPopupWindowBestEffort(windowInfo, {
+    label: "sharing wizard popup"
+  });
   L("sharing wizard popup opened", {
     tabId,
     windowId: Number(windowInfo?.id) || 0,
     contextId: bgShortId(contextId, 24),
-    mode: launchContext?.mode || "default"
+    mode: launchContext?.mode || "default",
+    focusApplied
   });
   return windowInfo;
 }

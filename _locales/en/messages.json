@@ -812,6 +812,15 @@
   "talk_option_moderator_line3": {
     "message": "If delegation fails, room ownership remains with the creator."
   },
+  "talk_system_addressbook_required_short": {
+    "message": "Requires an active Nextcloud system address book."
+  },
+  "talk_system_addressbook_required_message": {
+    "message": "This feature requires an active Nextcloud system address book."
+  },
+  "talk_system_addressbook_admin_link_label": {
+    "message": "Setup guide"
+  },
   "sharing_password_mail_notify_title": {
     "message": "NC Connector"
   },
@@ -823,6 +832,23 @@
   },
   "sharing_password_mail_notify_manual_required": {
     "message": "Automatic password email failed. Please send the password email manually using the opened draft."
+  },
+  "sharing_password_mail_notify_manual_required_select_sender": {
+    "message": "Automatic password email failed. Please select a sender in the opened draft if needed, then send the password email manually."
+  },
+  "options_about_homepage_label": {
+    "message": "Homepage:"
+  },
+  "options_about_homepage_link": {
+    "message": "https://nc-connector.de"
+  },
+  "options_about_overview_text": {
+    "message": "Why more than a file-link add-in?\nNC Connector covers not only file links, but the complete team workflow in the mail client.\n\nTechnical foundation\n- Thunderbird and Outlook add-ins usable directly, also without Nextcloud backend\n- Optional Nextcloud backend for central seat assignment and policies\n- Seat model in backend: Community with 1 free seat, Pro from 5 seats (1 seat = 1 Nextcloud user)\n\n- File sharing with password, expiration date, and optional separate password delivery\n- Create and update Talk meetings directly from calendar appointments\n- Attachment automation with clear rules instead of manual single steps\n- Central seat assignment in the Nextcloud backend (1 seat = 1 Nextcloud user)"
+  },
+  "options_about_more_info_label": {
+    "message": "More information -->"
+  },
+  "options_about_more_info_link": {
+    "message": "Visit homepage"
   }
 }
-

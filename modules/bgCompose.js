@@ -33,7 +33,7 @@ browser.compose.onAttachmentAdded.addListener((tab, attachment) => {
 /**
  * Capture final recipients before send for queued password follow-up dispatch.
  */
-browser.compose.onBeforeSend.addListener((tab, details) => {
+browser.compose.onBeforeSend.addListener(async (tab, details) => {
   const tabId = Number(tab?.id);
   if (!Number.isInteger(tabId) || tabId <= 0){
     return {};
@@ -46,6 +46,13 @@ browser.compose.onBeforeSend.addListener((tab, details) => {
   try{
     if (hasPasswordDispatch){
       captureSeparatePasswordDispatchRecipients(tabId, details || {});
+      const queue = PASSWORD_MAIL_DISPATCH_BY_TAB.get(tabId);
+      const needsIdentityEnrichment = Array.isArray(queue) && queue.some((dispatch) => {
+        return !String(dispatch?.identityId || "").trim() || !String(dispatch?.from || "").trim();
+      });
+      if (needsIdentityEnrichment){
+        await enrichSeparatePasswordDispatchSourceIdentity(tabId, queue);
+      }
     }
     if (hasShareCleanup){
       setComposeShareCleanupSendPending(tabId, true, "before_send");
@@ -107,7 +114,12 @@ browser.compose.onAfterSend.addListener((tab, details) => {
       return;
     }
     try{
-      await enrichSeparatePasswordDispatchSourceIdentity(tabId, dispatchQueue);
+      const needsIdentityEnrichment = dispatchQueue.some((dispatch) => {
+        return !String(dispatch?.identityId || "").trim() || !String(dispatch?.from || "").trim();
+      });
+      if (needsIdentityEnrichment){
+        await enrichSeparatePasswordDispatchSourceIdentity(tabId, dispatchQueue);
+      }
       L("compose onAfterSend password dispatch trigger", {
         tabId,
         mode,

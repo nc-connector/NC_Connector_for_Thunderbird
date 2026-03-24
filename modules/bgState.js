@@ -15,7 +15,6 @@ const EVENT_TOKEN_MAP_KEY = "nctalkEventTokenMap";
 let DEBUG_ENABLED = false;
 let ROOM_META = {};
 let EVENT_TOKEN_MAP = {};
-const TALK_LINK_REGEX = /(https?:\/\/[^\s"'<>]+\/call\/([A-Za-z0-9_-]+))/i;
 const TALK_POPUP_WIDTH = 540;
 const TALK_POPUP_HEIGHT = 860;
 const SHARING_POPUP_WIDTH = 660;
@@ -39,6 +38,7 @@ const SHARING_WIZARD_CLEANUP_BY_WINDOW = new Map();
 const ATTACHMENT_DEFAULT_THRESHOLD_MB = NCSharingStorage.DEFAULT_ATTACHMENT_THRESHOLD_MB;
 const COMPOSE_SHARE_CLEANUP_SEND_GRACE_MS = 15000;
 const ROOM_CLEANUP_DELETE_DELAY_MS = 15 * 1000;
+const POPUP_FOCUS_RETRY_DELAYS_MS = [0, 120, 450];
 const ROOM_CLEANUP_BY_TOKEN = new Map();
 const ROOM_CLEANUP_BY_EDITOR = new Map();
 const INVITEE_SYNC_IN_FLIGHT = new Set();
@@ -70,6 +70,7 @@ const normalizeAttachmentThresholdMb = NCSharingStorage.normalizeAttachmentThres
         console.log("[NCBG] startup", {
           version: manifest?.version || "",
           hasApiCalendarItems: !!browser?.calendar?.items,
+          hasApiCalendarItemAction: !!browser?.calendarItemAction,
           hasApiNcCalToolbar: !!browser?.ncCalToolbar,
           hasApiNcCalToolbarGetCurrent: !!browser?.ncCalToolbar?.getCurrent,
           hasApiNcCalToolbarUpdateCurrent: !!browser?.ncCalToolbar?.updateCurrent,
@@ -110,6 +111,91 @@ function L(...a){
   }catch(error){
     console.error("[NCBG] debug log failed", error);
   }
+}
+
+/**
+ * Wait helper used by popup focus retries.
+ * @param {number} delayMs
+ * @returns {Promise<void>}
+ */
+function waitMs(delayMs){
+  const delay = Math.max(0, Number(delayMs) || 0);
+  if (!delay){
+    return Promise.resolve();
+  }
+  return new Promise((resolve) => {
+    setTimeout(resolve, delay);
+  });
+}
+
+/**
+ * Try to focus a popup window (best effort).
+ * Note: some desktop/window-manager policies intentionally block focus steal.
+ * @param {object} windowInfo
+ * @param {{label?:string,retryDelaysMs?:number[]}} options
+ * @returns {Promise<boolean>}
+ */
+async function focusPopupWindowBestEffort(windowInfo, options = {}){
+  const windowId = Number(windowInfo?.id);
+  if (!Number.isInteger(windowId) || windowId <= 0){
+    return false;
+  }
+  const label = typeof options.label === "string" && options.label.trim()
+    ? options.label.trim()
+    : "popup";
+  const retryDelays = Array.isArray(options.retryDelaysMs) && options.retryDelaysMs.length
+    ? options.retryDelaysMs
+    : POPUP_FOCUS_RETRY_DELAYS_MS;
+  const firstTabId = Number(windowInfo?.tabs?.[0]?.id);
+  for (let attempt = 0; attempt < retryDelays.length; attempt++){
+    const delayMs = Math.max(0, Number(retryDelays[attempt]) || 0);
+    if (delayMs > 0){
+      await waitMs(delayMs);
+    }
+    try{
+      await browser.windows.update(windowId, { focused: true });
+      if (Number.isInteger(firstTabId) && firstTabId > 0){
+        try{
+          await browser.tabs.update(firstTabId, { active: true });
+        }catch(error){
+          L(`${label} focus tab activation skipped`, {
+            windowId,
+            tabId: firstTabId,
+            attempt: attempt + 1,
+            delayMs,
+            error: error?.message || String(error)
+          });
+        }
+      }
+      const updated = await browser.windows.get(windowId);
+      const focused = !!updated?.focused;
+      L(`${label} focus attempt`, {
+        windowId,
+        attempt: attempt + 1,
+        delayMs,
+        focused
+      });
+      if (focused){
+        return true;
+      }
+    }catch(error){
+      const message = error?.message || String(error);
+      L(`${label} focus attempt failed`, {
+        windowId,
+        attempt: attempt + 1,
+        delayMs,
+        error: message
+      });
+      if (/invalid window id|no window with id/i.test(message)){
+        break;
+      }
+    }
+  }
+  L(`${label} focus not granted`, {
+    windowId,
+    reason: "wm_policy_or_race"
+  });
+  return false;
 }
 
 /**

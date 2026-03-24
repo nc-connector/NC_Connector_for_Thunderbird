@@ -5,6 +5,8 @@
  */
 "use strict";
 (function(global){
+  let runtimeDisconnectGuardInstalled = false;
+
   /**
    * Check whether a runtime messaging error is expected while the page unloads.
    * @param {string} message
@@ -20,12 +22,38 @@
   }
 
   /**
+   * Suppress known runtime-disconnect unhandled rejections during page teardown.
+   * This keeps the console free of expected "context unloaded"/"Conduits" noise.
+   */
+  function installRuntimeDisconnectGuard(){
+    if (runtimeDisconnectGuardInstalled){
+      return;
+    }
+    if (typeof global?.addEventListener !== "function"){
+      return;
+    }
+    runtimeDisconnectGuardInstalled = true;
+    global.addEventListener("unhandledrejection", (event) => {
+      try{
+        const reason = event?.reason;
+        const message = reason?.message || String(reason || "");
+        if (!isKnownRuntimeDisconnectError(message)){
+          return;
+        }
+        event?.preventDefault?.();
+      }catch(error){
+        // Ignore teardown-time guard failures.
+      }
+    });
+  }
+
+  /**
    * Convert debug payload values into transport-safe strings.
    * @param {any} value
    * @param {(scope:string,error:any)=>void} onError
    * @returns {string}
    */
-  function formatLogArg(value, onError){
+  function formatLogArg(value, reportError){
     if (value == null){
       return String(value);
     }
@@ -38,12 +66,12 @@
     try{
       return JSON.stringify(value);
     }catch(error){
-      onError?.("formatLogArg JSON stringify failed", error);
+      reportError?.("formatLogArg JSON stringify failed", error);
     }
     try{
       return String(value);
     }catch(error){
-      onError?.("formatLogArg String conversion failed", error);
+      reportError?.("formatLogArg String conversion failed", error);
       return Object.prototype.toString.call(value);
     }
   }
@@ -70,7 +98,22 @@
     if (!global.browser?.runtime?.sendMessage){
       return;
     }
+    installRuntimeDisconnectGuard();
     const onError = typeof config?.onError === "function" ? config.onError : null;
+    const reportError = (scope, error) => {
+      if (!onError){
+        return;
+      }
+      try{
+        onError(scope, error);
+      }catch(callbackError){
+        try{
+          console.error("[NCDebugForwarder] onError callback failed", callbackError);
+        }catch(logError){
+          // Ignore teardown-time logging errors.
+        }
+      }
+    };
     const detailsRaw = Array.isArray(config?.details)
       ? config.details
       : (config?.details == null ? [] : [config.details]);
@@ -78,31 +121,35 @@
       source: String(config?.source || "ui"),
       channel: String(config?.channel || "NCUI"),
       label: String(config?.label || "UI"),
-      text: formatLogArg(config?.text, onError)
+      text: formatLogArg(config?.text, reportError)
     };
     if (detailsRaw.length){
-      payload.details = detailsRaw.map((value) => formatLogArg(value, onError));
+      payload.details = detailsRaw.map((value) => formatLogArg(value, reportError));
     }
     try{
-      void global.browser.runtime.sendMessage({
+      const sendPromise = global.browser.runtime.sendMessage({
         type: "debug:log",
         payload
-      }).catch((error) => {
+      });
+      if (!sendPromise || typeof sendPromise.then !== "function"){
+        return;
+      }
+      void sendPromise.then(() => {}, (error) => {
         if (isPageUnloading){
           return;
         }
         const message = error?.message || String(error || "");
         if (isKnownRuntimeDisconnectError(message)){
-          onError?.("debug log forward skipped", message);
+          // Expected during page teardown.
           return;
         }
-        onError?.("debug log forward failed", error);
+        reportError("debug log forward failed", error);
       });
     }catch(error){
       if (isPageUnloading){
         return;
       }
-      onError?.("debug log send setup failed", error);
+      reportError("debug log send setup failed", error);
     }
   }
 
@@ -112,4 +159,3 @@
     forwardDebugLog
   };
 })(typeof window !== "undefined" ? window : (typeof globalThis !== "undefined" ? globalThis : this));
-

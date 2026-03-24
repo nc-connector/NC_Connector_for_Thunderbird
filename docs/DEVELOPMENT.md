@@ -5,7 +5,7 @@ This document is the **single source of truth** for developers maintaining or ex
 It complements:
 - `docs/ADDON_DESCRIPTION.md` (architecture overview)
 - `docs/ATN_REVIEW_CHECKLIST_INTERNAL.md` (internal review constraints you must not violate)
-- `docs/ATN_REVIEW_NOTES_2.2.8.md` (reviewer-facing release-specific notes)
+- `docs/ATN_REVIEW_NOTES_2.2.9.md` (reviewer-facing release-specific notes)
 
 ---
 
@@ -111,11 +111,13 @@ Key files you’ll touch most:
 - `modules/bgComposeShareCleanup.js` — compose-tab and wizard-window remote cleanup lifecycle
 - `modules/bgComposePasswordDispatch.js` — separate-password-mail dispatch and password policy fetch/generate
 - `modules/bgCompose.js` — compose/window/tab listener wiring
-- `modules/bgCalendar.js` — `ncCalToolbar` integration, calendar wizard contexts, room metadata mapping, and persisted calendar monitoring sync
+- `modules/bgCalendarLifecycle.js` — calendar wizard-context and room-cleanup lifecycle helpers
+- `modules/bgCalendar.js` — `ncCalToolbar` integration and persisted calendar monitoring sync
 - `modules/bgRouter.js` — `runtime.onMessage` dispatcher for Talk/Sharing/Options/UI bridge contracts
 - `modules/background.js` — thin bootstrap entrypoint
 - `modules/hostPermissions.js` — single host-permission gate used by core/talk/sharing runtime modules
 - `modules/nccore.js` — Nextcloud auth/login-flow helpers
+- `modules/talkAddressbook.js` — system addressbook fetch/cache/search/status helpers
 - `modules/talkcore.js` — Nextcloud Talk API helpers (OCS)
 - `modules/ncSharing.js` — Nextcloud sharing/DAV helpers used by the sharing wizard
 - `modules/icalContract.js` — shared iCal/vCard parser contract (powered by vendored `vendor/ical.js`)
@@ -123,6 +125,7 @@ Key files you’ll touch most:
 - `ui/talkDialog.html` + `ui/talkDialog.js` — Talk wizard UI
 - `ui/nextcloudSharingWizard.html` + `ui/nextcloudSharingWizard.js` — Sharing wizard UI
 - `ui/debugForwarder.js` — shared runtime debug forwarding helper for Talk + Sharing wizard UIs
+- `ui/addressbookUi.js` — shared system-addressbook tooltip lock helper used by Talk wizard + options
 - `ui/passwordPolicyClient.js` — shared password-policy fetch/generate helper for both wizards
 - `options.html` + `options.js` — settings UI
 
@@ -291,12 +294,12 @@ Reality in Thunderbird ESR 140:
 
 Current implementation:
 - `experiments/ncCalToolbar/**` provides only editor integration:
-  - reliable Talk button in both editor variants
+  - deterministic click/context bridge for the official `calendar_item_action` button in both editor variants
   - deterministic editor identity (`editorId`)
   - editor-targeted snapshot/write-back (`getCurrent` / `updateCurrent`)
   - tracked close lifecycle (`onTrackedEditorClosed`)
 - `experiments/calendar/**` remains untouched and is used only for persisted item monitoring.
-- Business logic remains in background runtime modules (`modules/bgState.js`, `modules/bgComposeAttachments.js`, `modules/bgComposeShareCleanup.js`, `modules/bgComposePasswordDispatch.js`, `modules/bgCompose.js`, `modules/bgCalendar.js`, `modules/bgRouter.js`).
+- Business logic remains in background runtime modules (`modules/bgState.js`, `modules/bgComposeAttachments.js`, `modules/bgComposeShareCleanup.js`, `modules/bgComposePasswordDispatch.js`, `modules/bgCompose.js`, `modules/bgCalendarLifecycle.js`, `modules/bgCalendar.js`, `modules/talkAddressbook.js`, `modules/talkcore.js`, `modules/bgRouter.js`).
 
 ### 7.2 Editor variants: dialog vs tab
 
@@ -332,7 +335,7 @@ Upstream direction:
 ### 7.3 `ncCalToolbar` API surface (editor-targeted)
 
 Entry / UI:
-- `browser.ncCalToolbar.onClicked(snapshot)` with `snapshot.editorId`
+- `browser.ncCalToolbar.onClicked(snapshot)` with `snapshot.editorId` (bridge bound to the official `calendarItemAction` button)
 
 Snapshot:
 - `browser.ncCalToolbar.getCurrent({ editorId, returnFormat: "ical" })`
@@ -346,7 +349,7 @@ Lifecycle:
 ### 7.4 Click snapshot & editor references
 
 On click, background receives:
-- `browser.ncCalToolbar.onClicked(snapshot)` as entrypoint
+- `browser.ncCalToolbar.onClicked(snapshot)` as entrypoint (forwarded from `calendar_item_action`)
 - snapshot payload includes:
 - an iCal snapshot of the **currently edited** item (`format: "ical"`, `item: "BEGIN:VCALENDAR..."`)
 - `calendarId` and `id` (note: `id` can be empty for new/unsaved items)
@@ -393,6 +396,9 @@ What happens:
    - `item` (iCal)
    - derived `event` + `metadata` snapshot
 3. Open `ui/talkDialog.html?contextId=...` as a **real popup window** via `browser.windows.create({ type: "popup" })`
+4. Run a best-effort popup focus request (`browser.windows.update({ focused: true })`) with short retries.
+   - focus requests are intentionally non-fatal
+   - desktop/window-manager focus-stealing policies can still keep the previous window focused
 
 Wizard initialization:
 - `ui/talkDialog.js` reads `contextId`
@@ -517,6 +523,8 @@ Entry point:
 - `compose_action` button opens the sharing wizard (popup window).
 - `compose.onAttachmentAdded` can auto-open the sharing wizard in attachment mode
   based on sharing options (`always` or threshold-based).
+- After popup creation, background performs best-effort focus retries.
+  Window-manager policy may still refuse foreground focus.
 
 Responsibilities:
 - The sharing wizard UI performs most DAV/OCS actions using shared modules.
@@ -554,15 +562,9 @@ Attachment mode specifics:
   - wizard-side cleanup is armed by window id in background; if the sharing wizard closes before finalize, background deletes the remote folder on `windows.onRemoved`
   - finalize explicitly clears the wizard cleanup entry before closing the popup
 - Password separation:
-  - Option + wizard toggle can send password in a dedicated follow-up mail.
-  - This toggle is only active when password protection is enabled.
-  - Main compose block omits the inline password and shows a dedicated hint when enabled.
-  - Background captures final recipients on `compose.onBeforeSend` and dispatches password-only mail on `compose.onAfterSend`.
-  - Dispatch path: first try `compose.sendMessage(..., { mode: "sendNow" })` with a timeout guard for stuck send attempts.
-  - If immediate send fails (or times out), background opens a prefilled compose draft as explicit manual fallback.
-  - If a manual fallback draft was opened, a dedicated desktop notification tells the user to send the password mail manually.
-  - If manual fallback draft closes without successful send, compose-share cleanup removes the remote share folder.
-  - If manual fallback draft cannot be opened at all, background performs immediate best-effort remote share cleanup.
+  - UI controls remain visible in options/wizard but are intentionally locked in 2.2.9.
+  - Lock text/tooltip: "Coming soon (Pro feature)".
+  - Runtime keeps password-only follow-up dispatch inactive in the normal UI flow for this release.
 - If Thunderbird's own big-attachment upload setting is enabled, add-on attachment automation settings are locked and a guidance block is shown in options.
 - The same lock is enforced live in background before evaluate/start/prompt-action and again at attachment-mode wizard finish.
 - On cancel, attachments are not restored to compose (explicit product decision).
@@ -599,6 +601,11 @@ Room settings:
 - `X-NCTALK-LOBBY` — `TRUE`/`FALSE`
 - `X-NCTALK-START` — Unix seconds (string)
 - `X-NCTALK-EVENT` — `"event"` or `"standard"`
+
+Lobby timer contract:
+- `X-NCTALK-START` is the single authoritative source for lobby timer updates.
+- Runtime lobby updates do not derive fallback timer values from `DTSTART/TZID`.
+- Missing/invalid `X-NCTALK-START` yields explicit error logging and skips lobby update.
 
 Invitee sync:
 - `X-NCTALK-ADD-USERS` — `TRUE`/`FALSE`
@@ -643,6 +650,7 @@ Options:
 Talk wizard:
 - `talk:initDialog`
 - `talk:getEventSnapshot`
+- `talk:getSystemAddressbookStatus`
 - `talk:createRoom`
 - `talk:searchUsers`
 - `talk:applyMetadata`
@@ -716,7 +724,8 @@ Common symptoms:
 
 - **Button missing in dialog editor**
   - Verify `experiments/ncCalToolbar` is registered in `manifest.json`.
-  - Check `[ncCalToolbar]` logs for toolbar insertion/context errors.
+  - Verify `calendar_item_action` + `calendarItemAction` are registered in `manifest.json`.
+  - Check `[ncCalToolbar]` logs for calendarItemAction binding/context errors.
 
 - **Wizard opens but writes nothing**
   - Verify `contextId` is present in the wizard URL.

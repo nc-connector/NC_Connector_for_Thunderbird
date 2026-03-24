@@ -10,6 +10,10 @@
   const LOG_LABEL = "Sharing";
   const i18n = NCI18n.translate;
   const toShortId = NCTalkTextUtils.shortId;
+  const isKnownRuntimeDisconnectError =
+    typeof window.NCDebugForwarder?.isKnownRuntimeDisconnectError === "function"
+      ? (message) => window.NCDebugForwarder.isKnownRuntimeDisconnectError(message)
+      : () => false;
   NCTalkDomI18n.translatePage(i18n, { titleKey: "sharing_attachment_prompt_title" });
 
   const params = new URLSearchParams(window.location.search);
@@ -101,19 +105,6 @@
   }
 
   /**
-   * Check if runtime message failure is expected during page teardown.
-   * @param {string} message
-   * @returns {boolean}
-   */
-  function isKnownRuntimeDisconnectError(message){
-    return (
-      message.includes("context unloaded") ||
-      message.includes("Conduits") ||
-      message.includes("Receiving end does not exist")
-    );
-  }
-
-  /**
    * Forward a structured debug line to background logger.
    * @param {string} text
    * @param {object|string|number|boolean|null} details
@@ -122,32 +113,25 @@
     if (isPageUnloading){
       return;
     }
-    try{
-      browser.runtime.sendMessage({
-        type: "debug:log",
-        payload: {
-          source: LOG_SOURCE,
-          channel: LOG_CHANNEL,
-          label: LOG_LABEL,
-          text: String(text || ""),
-          details: details == null ? [] : [details]
-        }
-      }).catch((error) => {
+    const forwardDebugLog = window.NCDebugForwarder?.forwardDebugLog;
+    if (typeof forwardDebugLog !== "function"){
+      return;
+    }
+    forwardDebugLog({
+      enabled: true,
+      isPageUnloading,
+      source: LOG_SOURCE,
+      channel: LOG_CHANNEL,
+      label: LOG_LABEL,
+      text: String(text || ""),
+      details: details == null ? [] : [details],
+      onError: (scope, error) => {
         if (isPageUnloading){
           return;
         }
-        const message = error?.message || String(error || "");
-        if (isKnownRuntimeDisconnectError(message)){
-          return;
-        }
-        console.error("[NCUI][AttachmentPrompt] debug log forward failed", error);
-      });
-    }catch(error){
-      if (isPageUnloading){
-        return;
+        console.error("[NCUI][AttachmentPrompt]", scope, error);
       }
-      console.error("[NCUI][AttachmentPrompt] debug log setup failed", error);
-    }
+    });
   }
 
 })();

@@ -753,76 +753,102 @@
     "message": "Password per link condiviso: $1"
   },
   "options_sharing_permissions_tooltip_title": {
-    "message": "🛡️ Default permissions"
+    "message": "🛡️ Autorizzazioni predefinite"
   },
   "options_sharing_permissions_tooltip_line1": {
-    "message": "These values are used as defaults for new shares."
+    "message": "Questi valori vengono utilizzati come predefiniti per le nuove condivisioni."
   },
   "options_sharing_permissions_tooltip_line2": {
-    "message": "They can still be adjusted in the sharing wizard."
+    "message": "Possono ancora essere modificati nella procedura guidata di condivisione."
   },
   "options_sharing_permissions_tooltip_line3": {
-    "message": "In attachment mode, recipient permission is always read-only."
+    "message": "In modalità allegato, l'autorizzazione del destinatario è sempre di sola lettura."
   },
   "sharing_password_separate_tooltip_title": {
-    "message": "Coming soon (Pro feature)"
+    "message": "Prossimamente (funzione Pro)"
   },
   "sharing_password_separate_tooltip_line1": {
-    "message": "This option is disabled in this release."
+    "message": "Questa opzione è disabilitata in questa versione."
   },
   "sharing_password_separate_tooltip_line2": {
-    "message": "Password delivery in a separate email will be available in a future Pro release."
+    "message": "L'invio della password in un'e-mail separata sarà disponibile in una futura versione Pro."
   },
   "sharing_password_separate_tooltip_line3": {
-    "message": "For now, the password is included in the main share block."
+    "message": "Per ora, la password è inclusa nel blocco di condivisione principale."
   },
   "options_sharing_attachments_always_tooltip_title": {
-    "message": "📎 Always via NC Connector"
+    "message": "📎 Sempre tramite connettore NC"
   },
   "options_sharing_attachments_always_tooltip_line1": {
-    "message": "New attachments are removed from the compose mail and processed via NC Connector."
+    "message": "I nuovi allegati vengono rimossi dalla composizione della posta ed elaborati tramite NC Connector."
   },
   "options_sharing_attachments_always_tooltip_line2": {
-    "message": "The sharing wizard opens directly in the file step."
+    "message": "La procedura guidata di condivisione si apre direttamente nel passaggio del file."
   },
   "options_sharing_attachments_always_tooltip_line3": {
-    "message": "The final mail contains share links instead of physical attachments."
+    "message": "L'e-mail finale contiene collegamenti di condivisione anziché allegati fisici."
   },
   "options_sharing_attachments_offer_tooltip_title": {
-    "message": "📏 Attachment threshold"
+    "message": "📏 Soglia di attaccamento"
   },
   "options_sharing_attachments_offer_tooltip_line1": {
-    "message": "The total size of all attachments is evaluated."
+    "message": "Viene valutata la dimensione totale di tutti gli allegati."
   },
   "options_sharing_attachments_offer_tooltip_line2": {
-    "message": "If exceeded, you can share via NC Connector or remove the last selected attachment batch."
+    "message": "Se superato, è possibile condividere tramite NC Connector o rimuovere l'ultimo batch di allegati selezionato."
   },
   "options_sharing_attachments_offer_tooltip_line3": {
-    "message": "The remove action returns the mail to a below-threshold state."
+    "message": "L'azione di rimozione riporta la posta a uno stato inferiore alla soglia."
   },
   "talk_option_moderator_title": {
-    "message": "👑 Moderator delegation"
+    "message": "👑Delegazione moderatore"
   },
   "talk_option_moderator_line1": {
-    "message": "The selected user is promoted after room creation."
+    "message": "L'utente selezionato viene promosso dopo la creazione della stanza."
   },
   "talk_option_moderator_line2": {
-    "message": "On successful delegation, the creator leaves the room."
+    "message": "In caso di delega riuscita, il creatore lascia la stanza."
   },
   "talk_option_moderator_line3": {
-    "message": "If delegation fails, room ownership remains with the creator."
+    "message": "Se la delega fallisce, la proprietà della stanza rimane del creatore."
+  },
+  "talk_system_addressbook_required_short": {
+    "message": "Richiede una rubrica attiva del sistema Nextcloud."
+  },
+  "talk_system_addressbook_required_message": {
+    "message": "Questa funzionalità richiede una rubrica attiva del sistema Nextcloud."
+  },
+  "talk_system_addressbook_admin_link_label": {
+    "message": "Guida all'installazione"
   },
   "sharing_password_mail_notify_title": {
     "message": "NC Connector"
   },
   "sharing_password_mail_notify_success": {
-    "message": "Password email sent to $1 recipient(s)."
+    "message": "E-mail con password inviata a $1 destinatario/i."
   },
   "sharing_password_mail_notify_failure": {
-    "message": "Automatic password email failed for $1 recipient(s). A manual draft was opened."
+    "message": "Invio automatico della password fallito per $1 destinatario/i. E stata aperta una bozza manuale."
   },
   "sharing_password_mail_notify_manual_required": {
     "message": "Invio automatico della password non riuscito. Invia manualmente lemail con la password usando la bozza aperta."
+  },
+  "sharing_password_mail_notify_manual_required_select_sender": {
+    "message": "Invio automatico della password non riuscito. Se necessario, seleziona un mittente nella bozza aperta e invia manualmente lemail con la password."
+  },
+  "options_about_homepage_label": {
+    "message": "Sito web:"
+  },
+  "options_about_homepage_link": {
+    "message": "https://nc-connector.de"
+  },
+  "options_about_overview_text": {
+    "message": "Perche piu di un semplice componente aggiuntivo per link ai file?\nNC Connector non copre solo i link ai file, ma l'intero workflow del team nel client di posta.\n\nBase tecnica\n- Componenti aggiuntivi Thunderbird e Outlook utilizzabili direttamente, anche senza backend Nextcloud\n- Backend Nextcloud opzionale per assegnazione centralizzata dei seat e delle policy\n- Modello seat nel backend: Community con 1 seat gratuito, Pro da 5 seat (1 seat = 1 utente Nextcloud)\n\n- Condivisione file con password, data di scadenza e invio separato della password opzionale\n- Creazione e aggiornamento delle riunioni Talk direttamente dagli appuntamenti del calendario\n- Automazione degli allegati con regole chiare invece di passaggi manuali\n- Assegnazione centralizzata dei seat nel backend Nextcloud (1 seat = 1 utente Nextcloud)"
+  },
+  "options_about_more_info_label": {
+    "message": "Maggiori informazioni -->"
+  },
+  "options_about_more_info_link": {
+    "message": "Vai al sito web"
   }
 }
-

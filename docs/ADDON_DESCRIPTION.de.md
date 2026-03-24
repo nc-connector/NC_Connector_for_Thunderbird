@@ -15,12 +15,12 @@ Dieses Add-on integriert Nextcloud Talk und Nextcloud-Freigaben in Thunderbird.
 - `modules/hostPermissions.js`: zentralisierte Optional-Host-Permission-Logik, wiederverwendet von Core/Talk/Freigabe-Laufzeitmodulen
 - ui/*: HTML/JS-Dialoge und Helfer (Optionen, Freigabe-Wizard, Talk Dialog, Popup Sizing, DOM i18n)
 - experiments/calendar/*: Thunderbird Kalender-Experiment-API (Items CRUD + Lifecycle-Events) wird “as-is” genutzt
-- experiments/ncCalToolbar/*: minimales Custom-Experiment für deterministische Editor-Toolbar-Integration (Dialog + Tab)
+- experiments/ncCalToolbar/*: minimales Custom-Experiment für deterministische Editor-Context-Bridge (Dialog + Tab)
 - experiments/ncComposePrefs/*: read-only Compose-Pref-Bridge, um Thunderbirds eingebaute Großanhang-Option zu erkennen und kollidierende NC-Anhangsautomatisierung zu sperren
 
 Kalender-Integration (high level):
 - `experiments/ncCalToolbar` übernimmt nur die editor-targeted Integration:
-  - Talk-Button in beide Editor-Varianten einfügen
+  - deterministische Klick-/Kontext-Bridge an den offiziellen `calendar_item_action`-Button in beiden Editor-Varianten binden
   - deterministischen Klick-Kontext + iCal-Snapshot liefern (`editorId`)
   - deterministischen editor-targeted Read/Write-Pfad bereitstellen (`getCurrent` / `updateCurrent`)
   - tracked Editor-Close-Signale liefern (`onTrackedEditorClosed`)
@@ -46,13 +46,9 @@ Datenfluss:
 - Aktualisiert Share-Metadaten (Notiz, Label) nach dem Upload
 - Armierung eines Compose-Cleanup im Background; bei geschlossenem Compose ohne erfolgreichen Versand wird der Remote-Share-Ordner entfernt
 - Behandelt doppelte Namen und Remote-Konflikte; Fehlerpfade aus DAV/OCS
-- Optionaler separater Passwortversand für Freigaben:
-  - Default + Wizard-Toggle: "Passwort separat senden"
-  - nur aktiv, wenn Passwortschutz aktiv ist
-  - Hauptmail blendet das Inline-Passwort aus und zeigt einen Hinweis auf die separate Passwortmail
-  - Passwort-Only-Follow-up wird nach Versand der Hauptmail gesendet (Auto-Send mit Timeout-Guard; bei Sendefehler mit manuellem Fallback-Entwurf)
-  - bei erfolgreichem Passwortversand wird eine Desktop-Erfolgsmeldung angezeigt
-  - wird der manuelle Fallback ohne Versand geschlossen, entfernt der Cleanup den zugehörigen Remote-Share-Ordner
+- Controls für separaten Passwortversand sind aktuell sichtbar, aber gesperrt:
+  - Default + Wizard-Toggle bleiben als "Coming soon (Pro feature)" sichtbar
+  - im normalen UI-Flow bleibt der Passwort-Only-Follow-up-Versand in dieser Version inaktiv
 - Optionale Compose-Anhang-Automatisierung:
   - Anhänge immer über NC Connector teilen, oder
   - nur bei Überschreiten eines konfigurierten Gesamtgrößen-Grenzwerts
@@ -73,12 +69,13 @@ Datenfluss:
 - Berücksichtigt Nextcloud Passwort-Policy (Mindestlänge + Generator-API mit sicherem Fallback)
 
 ### Kalender
-- Talk-Button in den Kalender-Termin-Editoren (Dialog + Tab) über `ncCalToolbar`
+- Talk-Button in den Kalender-Termin-Editoren (Dialog + Tab) über Standard-`calendar_item_action`
 - Klick öffnet den Talk Wizard als echtes Popup-Fenster (`browser.windows.create`, kein `default_popup` Panel)
 - Liest den aktuell bearbeiteten Termin als iCal-Snapshot über `browser.ncCalToolbar.getCurrent({ editorId, returnFormat: "ical" })` (funktioniert auch bei neuen/ungespeicherten Terminen)
 - Write-back direkt in den offenen Editor:
   - Titel/Ort/Beschreibung (Link + optionaler Passwort/Hilfe-Textblock)
   - `X-NCTALK-*` Custom Properties (TOKEN, URL, LOBBY, START, EVENT, OBJECTID, ADD-USERS, ADD-GUESTS, legacy ADD-PARTICIPANTS, DELEGATE, DELEGATE-NAME, DELEGATED, DELEGATE-READY)
+- Die Lobby-Zeitsynchronisierung nutzt `X-NCTALK-START` als einzige autoritative Quelle (keine Fallback-Ableitung aus `DTSTART/TZID`).
 - Persistentes Monitoring über die Kalender-Experiment-API “as-is”:
   - Lobby-Updates bei Termin-Verschiebung
   - Room-Delete bei Termin-Löschung

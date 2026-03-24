@@ -20,6 +20,7 @@
   });
 
   const LOG_PREFIX = "[NCUI][Talk]";
+  const SYSTEM_ADDRESSBOOK_ADMIN_URL = "https://github.com/nc-connector/NC_Connector_for_Thunderbird/blob/main/docs/ADMIN.md#system-address-book-required-for-user-search-and-moderator-selection";
   const params = new URLSearchParams(window.location.search);
   const contextId = (params.get("contextId") || "").trim();
   const titleInput = document.getElementById("titleInput");
@@ -48,6 +49,17 @@
   const delegateAvatarInitials = document.getElementById("delegateAvatarInitials");
   const delegateDropdown = document.getElementById("delegateDropdown");
   const delegateSection = document.querySelector(".delegate-section");
+  const addUsersToggleRow = document.getElementById("addUsersToggleRow");
+  const addUsersTooltipList = document.getElementById("addUsersTooltipList");
+  const addGuestsToggleRow = document.getElementById("addGuestsToggleRow");
+  const addGuestsTooltipList = document.getElementById("addGuestsTooltipList");
+  const addUsersAddressbookLockHint = document.getElementById("addUsersAddressbookLockHint");
+  const addGuestsAddressbookLockHint = document.getElementById("addGuestsAddressbookLockHint");
+  const delegateInputLabel = document.getElementById("delegateInputLabel");
+  const delegateTooltipList = document.getElementById("delegateTooltipList");
+  const delegateAddressbookLockHint = document.getElementById("delegateAddressbookLockHint");
+  const delegateAddressbookHelp = document.getElementById("delegateAddressbookHelp");
+  const systemAddressbookAdminLinkDelegateInline = document.getElementById("systemAddressbookAdminLinkDelegateInline");
   const messageBar = document.getElementById("messageBar");
   const okBtn = document.getElementById("okBtn");
   const cancelBtn = document.getElementById("cancelBtn");
@@ -115,8 +127,32 @@
       searchTimer: null,
       searchSeq: 0,
       alertLabel: ""
+    },
+    systemAddressbook: {
+      checked: false,
+      available: true,
+      error: ""
     }
   };
+
+  [systemAddressbookAdminLinkDelegateInline].forEach((link) => {
+    if (link){
+      link.href = SYSTEM_ADDRESSBOOK_ADMIN_URL;
+    }
+  });
+
+  /**
+   * Toggle one tooltip list between normal and lock-hint entries via shared UI helper.
+   * @param {HTMLElement|null} tooltipList
+   * @param {boolean} lockActive
+   */
+  function applySharedAddressbookTooltipState(tooltipList, lockActive){
+    const applyTooltipState = window.NCAddressbookUi?.applySystemAddressbookTooltipState;
+    if (typeof applyTooltipState !== "function"){
+      return;
+    }
+    applyTooltipState(tooltipList, lockActive);
+  }
   (async () => {
     try{
       const stored = await browser.storage.local.get(["debugEnabled"]);
@@ -297,6 +333,7 @@
       }
       await loadPasswordPolicy();
       await loadSnapshot();
+      await refreshSystemAddressbookAvailability({ forceRefresh: true });
     }catch(error){
       logUiError("init failed", error);
       setMessage(error?.message || String(error), true);
@@ -521,6 +558,9 @@
         }
       }
       hydrateDelegateFromMetadata(meta);
+      if (state.systemAddressbook.checked){
+        applySystemAddressbookAvailability(state.systemAddressbook.available, state.systemAddressbook.error);
+      }
   }
 
   /**
@@ -683,6 +723,15 @@
     });
     if (!applyFieldsResponse?.ok){
       throw new Error(applyFieldsResponse?.error || t("talk_error_apply_failed"));
+    }
+    // Re-apply metadata after field writes to keep X-NCTALK-* properties authoritative.
+    const reapplyMetaResponse = await browser.runtime.sendMessage({
+      type: "talk:applyMetadata",
+      contextId: state.contextId,
+      metadata
+    });
+    if (!reapplyMetaResponse?.ok){
+      throw new Error(reapplyMetaResponse?.error || t("talk_error_apply_failed"));
     }
     await browser.runtime.sendMessage({
       type: "talk:trackRoom",
@@ -971,6 +1020,11 @@
     if (!delegateInput){
       return;
     }
+    if (state.systemAddressbook.checked && !state.systemAddressbook.available){
+      updateDelegateStatus("");
+      hideDelegateDropdown(true);
+      return;
+    }
     if (state.delegate.searchTimer){
       window.clearTimeout(state.delegate.searchTimer);
     }
@@ -984,6 +1038,11 @@
    */
   async function performDelegateSearch(term){
     if (!delegateInput){
+      return;
+    }
+    if (state.systemAddressbook.checked && !state.systemAddressbook.available){
+      updateDelegateStatus("");
+      hideDelegateDropdown(true);
       return;
     }
     state.delegate.searchTimer = null;
@@ -1000,6 +1059,7 @@
       if (seq !== state.delegate.searchSeq){
         return;
       }
+      applySystemAddressbookAvailability(true, "");
       let items = [];
       if (response){
         if (response.ok && Array.isArray(response.users)){
@@ -1064,9 +1124,113 @@
         return;
       }
       console.error("[NCUI][Talk] delegate search failed", error);
-      updateDelegateStatus(error?.message || t("ui_delegate_status_error"), true);
+      const detail = t("talk_system_addressbook_required_message");
+      logUiError("delegate search unavailable", error);
+      applySystemAddressbookAvailability(false, detail);
+      updateDelegateStatus("");
       state.delegate.suggestions = [];
       hideDelegateDropdown(true);
+    }
+  }
+
+  /**
+   * Apply system-addressbook availability to Talk controls.
+   * @param {boolean} available
+   * @param {string} detail
+   */
+  function applySystemAddressbookAvailability(available, detail = ""){
+    const lockActive = !available;
+    state.systemAddressbook.checked = true;
+    state.systemAddressbook.available = !!available;
+    state.systemAddressbook.error = lockActive
+      ? (detail || t("talk_system_addressbook_required_message"))
+      : "";
+
+    if (addUsersToggle){
+      if (lockActive){
+        addUsersToggle.checked = false;
+      }
+      addUsersToggle.disabled = lockActive;
+    }
+    if (addGuestsToggle){
+      if (lockActive){
+        addGuestsToggle.checked = false;
+      }
+      addGuestsToggle.disabled = lockActive;
+    }
+    if (delegateInput){
+      delegateInput.disabled = lockActive;
+    }
+    if (delegateClearBtn){
+      delegateClearBtn.disabled = lockActive;
+    }
+    if (addUsersAddressbookLockHint){
+      addUsersAddressbookLockHint.textContent = state.systemAddressbook.error || t("talk_system_addressbook_required_message");
+    }
+    if (addGuestsAddressbookLockHint){
+      addGuestsAddressbookLockHint.textContent = state.systemAddressbook.error || t("talk_system_addressbook_required_message");
+    }
+    if (delegateAddressbookLockHint){
+      delegateAddressbookLockHint.textContent = state.systemAddressbook.error || t("talk_system_addressbook_required_message");
+    }
+    applySharedAddressbookTooltipState(addUsersTooltipList, lockActive);
+    applySharedAddressbookTooltipState(addGuestsTooltipList, lockActive);
+    applySharedAddressbookTooltipState(delegateTooltipList, lockActive);
+    if (delegateAddressbookHelp){
+      delegateAddressbookHelp.hidden = !lockActive;
+    }
+    if (addUsersToggleRow){
+      addUsersToggleRow.classList.toggle("is-disabled", lockActive);
+      addUsersToggleRow.title = lockActive ? state.systemAddressbook.error : "";
+    }
+    if (addGuestsToggleRow){
+      addGuestsToggleRow.classList.toggle("is-disabled", lockActive);
+      addGuestsToggleRow.title = lockActive ? state.systemAddressbook.error : "";
+    }
+    if (delegateInputLabel){
+      delegateInputLabel.classList.toggle("is-disabled", lockActive);
+      delegateInputLabel.title = lockActive ? state.systemAddressbook.error : "";
+    }
+    if (lockActive){
+      updateDelegateStatus("");
+    }
+    if (lockActive){
+      state.delegate.suggestions = [];
+      state.delegate.activeIndex = -1;
+      hideDelegateDropdown(true);
+    }
+    popupSizer?.scheduleSizeUpdate();
+  }
+
+  /**
+   * Query background for current system-addressbook reachability.
+   * @param {{forceRefresh?:boolean}} options
+   * @returns {Promise<boolean>}
+   */
+  async function refreshSystemAddressbookAvailability(options = {}){
+    const forceRefresh = !!options.forceRefresh;
+    try{
+      const response = await browser.runtime.sendMessage({
+        type: "talk:getSystemAddressbookStatus",
+        payload: { forceRefresh }
+      });
+      const status = response?.status || {};
+      const available = !!(response?.ok && status.available !== false);
+      const detail = available ? "" : t("talk_system_addressbook_required_message");
+      if (!available && (status.error || response?.error)){
+        logUiError("system addressbook unavailable", status.error || response.error);
+      }
+      applySystemAddressbookAvailability(available, detail);
+      logDebug("system addressbook status", {
+        available,
+        count: Number.isFinite(status.count) ? status.count : 0,
+        hasError: !!detail
+      });
+      return available;
+    }catch(error){
+      logUiError("system addressbook status failed", error);
+      applySystemAddressbookAvailability(false, t("talk_system_addressbook_required_message"));
+      return false;
     }
   }
 

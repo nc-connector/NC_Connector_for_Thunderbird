@@ -28,6 +28,9 @@ body{
   color:var(--tb-text);
   box-sizing:border-box;
 }
+[hidden]{
+  display:none !important;
+}
 
 .hero{
   background:var(--brand-blue);
@@ -105,6 +108,18 @@ footer{
 .donation-link img{width:24px; height:24px;}
 .about-list{list-style:none; padding-left:0; margin:0;}
 .about-list li{margin-bottom:6px;}
+.about-overview{
+  margin:14px 0;
+  white-space:pre-line;
+}
+.about-more-info-label{
+  margin:12px 0 6px 0;
+  font-weight:600;
+}
+.about-more-info-link{
+  display:inline-block;
+  margin-bottom:12px;
+}
 .tabs h2{margin-top:0;}
 .auth-block{border:1px solid var(--tb-border); border-radius:var(--tb-radius); padding:14px; margin:14px 0; background:var(--tb-surface);}
 .auth-block legend{font-weight:600; padding:0 4px;}
@@ -278,6 +293,8 @@ footer{
 .option-tooltip-list{margin:0; padding-left:18px;}
 .option-tooltip-list li{margin:0 0 4px 0; font-size:12px; color:var(--tb-text);}
 .option-tooltip-list li:last-child{margin-bottom:0;}
+.option-tooltip a{color:var(--brand-blue); text-decoration:underline;}
+.option-tooltip-wrap.is-disabled > span{color:var(--tb-muted);}
 .hint{margin:6px 0 0 0; font-size:12px; color:var(--tb-muted);}
 .attachments-lock{
   margin:10px 0 0 0;
@@ -304,6 +321,29 @@ footer{
 }
 .attachments-lock-steps li:last-child{
   margin-bottom:0;
+}
+.talk-addressbook-warning{
+  margin:0;
+  padding:10px 12px;
+  border:1px solid #b00020;
+  border-radius:var(--tb-radius);
+  background:rgba(176,0,32,0.08);
+}
+.talk-addressbook-warning-title{
+  margin:0 0 6px 0;
+  font-weight:700;
+  color:#b00020;
+}
+.talk-addressbook-warning-text{
+  margin:0;
+  font-size:12px;
+}
+.talk-addressbook-warning-link{
+  display:inline-block;
+  margin-top:8px;
+  font-size:12px;
+  color:var(--brand-blue);
+  text-decoration:underline;
 }
 </style>
 <div class="hero">
@@ -485,24 +525,37 @@ footer{
       <div class="row">
         <label data-i18n="options_talk_default_add_participants_label">Add participants to the room</label>
         <div class="checklist">
-          <label class="option-tooltip-wrap"><input id="talkDefaultAddUsers" type="checkbox"> <span data-i18n="options_talk_default_add_users_label">Users</span>
+          <label class="option-tooltip-wrap" id="talkDefaultAddUsersRow"><input id="talkDefaultAddUsers" type="checkbox"> <span data-i18n="options_talk_default_add_users_label">Users</span>
             <div class="option-tooltip" role="tooltip">
               <div class="option-tooltip-title" data-i18n="talk_option_add_users_title">👤 Add users</div>
-              <ul class="option-tooltip-list">
+              <ul class="option-tooltip-list" id="optionsAddUsersTooltipList">
                 <li data-i18n="talk_option_add_users_line1">Internal Nextcloud users are added directly to the room</li>
                 <li data-i18n="talk_option_add_users_line2">The room is immediately visible in Nextcloud Talk</li>
+                <li id="optionsAddUsersAddressbookLockHint" data-lock-hint="true" data-i18n="talk_system_addressbook_required_message" hidden>This feature requires an active Nextcloud system address book.</li>
               </ul>
             </div>
           </label>
-          <label class="option-tooltip-wrap"><input id="talkDefaultAddGuests" type="checkbox"> <span data-i18n="options_talk_default_add_guests_label">Guests</span>
+          <label class="option-tooltip-wrap" id="talkDefaultAddGuestsRow"><input id="talkDefaultAddGuests" type="checkbox"> <span data-i18n="options_talk_default_add_guests_label">Guests</span>
             <div class="option-tooltip" role="tooltip">
               <div class="option-tooltip-title" data-i18n="talk_option_add_guests_title">🌍 Add guests</div>
-              <ul class="option-tooltip-list">
+              <ul class="option-tooltip-list" id="optionsAddGuestsTooltipList">
                 <li data-i18n="talk_option_add_guests_line1">Guests are also added directly to the room</li>
                 <li data-i18n="talk_option_add_guests_line2">⚠️ They will receive a separate (additional) email with a personal access link</li>
+                <li id="optionsAddGuestsAddressbookLockHint" data-lock-hint="true" data-i18n="talk_system_addressbook_required_message" hidden>This feature requires an active Nextcloud system address book.</li>
               </ul>
             </div>
           </label>
+        </div>
+      </div>
+      <div class="row" id="talkAddressbookWarningRow" hidden>
+        <span aria-hidden="true"></span>
+        <div class="talk-addressbook-warning" role="alert">
+          <p class="talk-addressbook-warning-title">
+            <span aria-hidden="true">⚠️ </span>
+            <span data-i18n="talk_system_addressbook_required_short">Requires an active Nextcloud system address book.</span>
+          </p>
+          <p class="talk-addressbook-warning-text" data-i18n="talk_system_addressbook_required_message">This feature requires an active Nextcloud system address book.</p>
+          <a id="optionsTalkAddressbookAdminLink" class="talk-addressbook-warning-link" data-i18n="talk_system_addressbook_admin_link_label" target="_blank" rel="noopener noreferrer" href="https://github.com/nc-connector/NC_Connector_for_Thunderbird/blob/main/docs/ADMIN.md#system-address-book-required-for-user-search-and-moderator-selection">Setup guide</a>
         </div>
       </div>
       <div class="row">
@@ -585,8 +638,12 @@ footer{
     <ul class="about-list">
       <li><strong data-i18n="options_about_version_label">Version:</strong> <span id="aboutVersion">–</span></li>
       <li><strong data-i18n="options_about_copyright_label">Copyright:</strong> <span>2025 Bastian Kleinschmidt</span></li>
+      <li><strong data-i18n="options_about_homepage_label">Homepage:</strong> <a id="aboutHomepageLink" href="https://nc-connector.de" target="_blank" rel="noopener" data-i18n="options_about_homepage_link">https://nc-connector.de</a></li>
       <li><strong data-i18n="options_about_license_label">License:</strong> <a id="licenseLink" href="LICENSE.txt" target="_blank" rel="noopener" data-i18n="options_about_license_value">AGPL v3</a></li>
     </ul>
+    <p class="about-overview" data-i18n="options_about_overview_text"></p>
+    <p class="about-more-info-label" data-i18n="options_about_more_info_label"></p>
+    <a id="aboutMoreInfoLink" class="about-more-info-link" href="https://nc-connector.de" target="_blank" rel="noopener" data-i18n="options_about_more_info_link">Visit homepage</a>
     <p class="hint" data-i18n="options_about_support_note">So NC Connector for Thunderbird can continue to be maintained and improved for free.</p>
     <div class="donation">
       <strong data-i18n="options_about_support_heading">Support</strong>
@@ -609,6 +666,7 @@ footer{
 <script src="modules/textUtils.js"></script>
 <script src="modules/ncSharing.js"></script>
 <script src="ui/domI18n.js"></script>
+<script src="ui/addressbookUi.js"></script>
 <script src="options.js"></script>
 
 

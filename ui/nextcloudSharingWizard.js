@@ -1181,8 +1181,8 @@
         });
       }
       await clearWizardRemoteCleanup();
-      log('Share inserted');
       state.remoteFolderInfo = null;
+      cleanupPageResources();
       window.close();
     }catch(err){
       logUiError("finalize share failed", err);
@@ -1513,6 +1513,7 @@
   async function handleCancel(event){
     event?.preventDefault?.();
     log('Wizard cancel requested');
+    cleanupPageResources();
     window.close();
   }
 

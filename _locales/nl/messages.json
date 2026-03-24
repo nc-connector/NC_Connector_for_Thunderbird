@@ -180,7 +180,7 @@
     "message": "https://docs.nextcloud.com/server/latest/user_manual/en/talk/join_a_call_or_chat_as_guest.html"
   },
   "talk_dialog_title": {
-    "message": "Nextcloud Talk"
+    "message": "Volgendecloud Talk"
   },
   "talk_dialog_close": {
     "message": "Sluiten"
@@ -378,7 +378,7 @@
     "message": "Geavanceerd"
   },
   "options_tab_debug": {
-    "message": "Debug"
+    "message": "Foutopsporing"
   },
   "options_tab_about": {
     "message": "Over"
@@ -597,7 +597,7 @@
     "message": "$1 is een oplossing voor veilige e-mail en bestandsuitwisseling."
   },
   "sharing_dialog_title": {
-    "message": "Nextcloud share"
+    "message": "Volgendecloud-aandeel"
   },
   "sharing_heading_permissions": {
     "message": "Share-instellingen"
@@ -753,76 +753,102 @@
     "message": "Wachtwoord voor de deellink: $1"
   },
   "options_sharing_permissions_tooltip_title": {
-    "message": "🛡️ Default permissions"
+    "message": "🛡️ Standaardrechten"
   },
   "options_sharing_permissions_tooltip_line1": {
-    "message": "These values are used as defaults for new shares."
+    "message": "Deze waarden worden gebruikt als standaardwaarden voor nieuwe aandelen."
   },
   "options_sharing_permissions_tooltip_line2": {
-    "message": "They can still be adjusted in the sharing wizard."
+    "message": "Ze kunnen nog steeds worden aangepast in de deelwizard."
   },
   "options_sharing_permissions_tooltip_line3": {
-    "message": "In attachment mode, recipient permission is always read-only."
+    "message": "In de bijlagemodus is de toestemming van de ontvanger altijd alleen-lezen."
   },
   "sharing_password_separate_tooltip_title": {
-    "message": "Coming soon (Pro feature)"
+    "message": "Binnenkort beschikbaar (Pro-functie)"
   },
   "sharing_password_separate_tooltip_line1": {
-    "message": "This option is disabled in this release."
+    "message": "Deze optie is uitgeschakeld in deze release."
   },
   "sharing_password_separate_tooltip_line2": {
-    "message": "Password delivery in a separate email will be available in a future Pro release."
+    "message": "Wachtwoordlevering in een aparte e-mail zal beschikbaar zijn in een toekomstige Pro-release."
   },
   "sharing_password_separate_tooltip_line3": {
-    "message": "For now, the password is included in the main share block."
+    "message": "Voorlopig is het wachtwoord opgenomen in het hoofdshareblok."
   },
   "options_sharing_attachments_always_tooltip_title": {
-    "message": "📎 Always via NC Connector"
+    "message": "📎 Altijd via NC-connector"
   },
   "options_sharing_attachments_always_tooltip_line1": {
-    "message": "New attachments are removed from the compose mail and processed via NC Connector."
+    "message": "Nieuwe bijlagen worden verwijderd uit de opgestelde e-mail en verwerkt via NC Connector."
   },
   "options_sharing_attachments_always_tooltip_line2": {
-    "message": "The sharing wizard opens directly in the file step."
+    "message": "De deelwizard wordt direct in de bestandsstap geopend."
   },
   "options_sharing_attachments_always_tooltip_line3": {
-    "message": "The final mail contains share links instead of physical attachments."
+    "message": "De laatste e-mail bevat deellinks in plaats van fysieke bijlagen."
   },
   "options_sharing_attachments_offer_tooltip_title": {
-    "message": "📏 Attachment threshold"
+    "message": "📏 Hechtingsdrempel"
   },
   "options_sharing_attachments_offer_tooltip_line1": {
-    "message": "The total size of all attachments is evaluated."
+    "message": "De totale grootte van alle bijlagen wordt geëvalueerd."
   },
   "options_sharing_attachments_offer_tooltip_line2": {
-    "message": "If exceeded, you can share via NC Connector or remove the last selected attachment batch."
+    "message": "Bij overschrijding kunt u delen via NC Connector of de laatst geselecteerde bijlagebatch verwijderen."
   },
   "options_sharing_attachments_offer_tooltip_line3": {
-    "message": "The remove action returns the mail to a below-threshold state."
+    "message": "Met de verwijderactie keert de e-mail terug naar een status onder de drempelwaarde."
   },
   "talk_option_moderator_title": {
-    "message": "👑 Moderator delegation"
+    "message": "👑 Moderatordelegatie"
   },
   "talk_option_moderator_line1": {
-    "message": "The selected user is promoted after room creation."
+    "message": "De geselecteerde gebruiker wordt gepromoveerd nadat de ruimte is aangemaakt."
   },
   "talk_option_moderator_line2": {
-    "message": "On successful delegation, the creator leaves the room."
+    "message": "Bij succesvolle delegatie verlaat de maker de kamer."
   },
   "talk_option_moderator_line3": {
-    "message": "If delegation fails, room ownership remains with the creator."
+    "message": "Als het delegeren mislukt, blijft het eigendom van de ruimte bij de maker."
+  },
+  "talk_system_addressbook_required_short": {
+    "message": "Vereist een actief Nextcloud-systeemadresboek."
+  },
+  "talk_system_addressbook_required_message": {
+    "message": "Voor deze functie is een actief Nextcloud-systeemadresboek vereist."
+  },
+  "talk_system_addressbook_admin_link_label": {
+    "message": "Installatiehandleiding"
   },
   "sharing_password_mail_notify_title": {
     "message": "NC Connector"
   },
   "sharing_password_mail_notify_success": {
-    "message": "Password email sent to $1 recipient(s)."
+    "message": "Wachtwoordmail verzonden naar $1 ontvanger(s)."
   },
   "sharing_password_mail_notify_failure": {
-    "message": "Automatic password email failed for $1 recipient(s). A manual draft was opened."
+    "message": "Automatisch verzenden van de wachtwoordmail is mislukt voor $1 ontvanger(s). Er is een handmatig concept geopend."
   },
   "sharing_password_mail_notify_manual_required": {
     "message": "Automatisch verzenden van de wachtwoordmail is mislukt. Verzend de wachtwoordmail handmatig via het geopende concept."
+  },
+  "sharing_password_mail_notify_manual_required_select_sender": {
+    "message": "Automatisch verzenden van de wachtwoordmail is mislukt. Selecteer indien nodig een afzender in het geopende concept en verzend de wachtwoordmail handmatig."
+  },
+  "options_about_homepage_label": {
+    "message": "Startpagina:"
+  },
+  "options_about_homepage_link": {
+    "message": "https://nc-connector.de"
+  },
+  "options_about_overview_text": {
+    "message": "Waarom meer dan een filelink-add-on?\nNC Connector dekt niet alleen bestandslinks af, maar de volledige teamworkflow in de e-mailclient.\n\nTechnische basis\n- Thunderbird- en Outlook-add-ons direct bruikbaar, ook zonder Nextcloud-backend\n- Optionele Nextcloud-backend voor centrale seat-toewijzing en beleid\n- Seat-model in de backend: Community met 1 gratis seat, Pro vanaf 5 seats (1 seat = 1 Nextcloud-gebruiker)\n\n- Bestandsdeling met wachtwoord, vervaldatum en optionele aparte wachtwoordverzending\n- Talk-vergaderingen direct vanuit agenda-afspraken aanmaken en bijwerken\n- Bijlage-automatisering met duidelijke regels in plaats van handmatige losse stappen\n- Centrale seat-toewijzing in de Nextcloud-backend (1 seat = 1 Nextcloud-gebruiker)"
+  },
+  "options_about_more_info_label": {
+    "message": "Meer informatie -->"
+  },
+  "options_about_more_info_link": {
+    "message": "Ga naar de homepage"
   }
 }
-

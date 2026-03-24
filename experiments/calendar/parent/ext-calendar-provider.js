@@ -8,6 +8,22 @@ var { ExtensionUtils: { ExtensionError } } = ChromeUtils.importESModule("resourc
 var { cal } = ChromeUtils.importESModule("resource:///modules/calendar/calUtils.sys.mjs");
 var { ExtensionSupport } = ChromeUtils.importESModule("resource:///modules/ExtensionSupport.sys.mjs");
 
+var { CalItipEmailTransport } = ChromeUtils.importESModule("resource:///modules/CalItipEmailTransport.sys.mjs");
+
+// TODO move me
+// Have the server take care of scheduling. This can be de-duplicated in
+// CalItipEmailTransport.sys.mjs
+class CalItipNoEmailTransport extends CalItipEmailTransport {
+  wrappedJSObject = this;
+  QueryInterface = ChromeUtils.generateQI(["calIItipTransport"]);
+
+  sendItems() {
+    return true;
+  }
+}
+
+
+
 // TODO move me
 function getNewCalendarWindow() {
   // This window is missing a windowtype attribute
@@ -143,13 +159,15 @@ class ExtCalendar extends cal.provider.BaseClass {
   set id(val) {
     super.id = val;
     if (this.id && this.uri) {
+      let overrideCapabilities;
       try {
-        this.capabilities = JSON.parse(super.getProperty("extensionCapabilities"));
+        overrideCapabilities = JSON.parse(super.getProperty("overrideCapabilities")) || {};
       } catch (e) {
-        this.capabilities = null;
+        overrideCapabilities = {};
       }
 
-      this.capabilities ??= this.extension.manifest.calendar_provider.capabilities || {};
+      const manifestCapabilities = this.extension.manifest.calendar_provider.capabilities || {};
+      this.capabilities = Object.assign({}, manifestCapabilities, overrideCapabilities);
 
       this.extension.emit("calendar.provider.onInit", this);
     }
@@ -162,6 +180,14 @@ class ExtCalendar extends cal.provider.BaseClass {
     if (this.id && this.uri) {
       this.extension.emit("calendar.provider.onInit", this);
     }
+  }
+
+  get supportsScheduling() {
+    return this.capabilities.scheduling != "none";
+  }
+
+  getSchedulingSupport() {
+    return this;
   }
 
   setProperty(name, value) {
@@ -187,6 +213,16 @@ class ExtCalendar extends cal.provider.BaseClass {
         if (this.capabilities.organizerName) {
           return this.capabilities.organizerName;
         }
+        break;
+      case "imip.identity.disabled":
+        return this.capabilities.scheduling == "none";
+      case "itip.transport":
+        if (this.capabilities.scheduling == "server") {
+          return new CalItipNoEmailTransport();
+        } else if (this.capabilities.scheduling == "none") {
+          return null;
+        }
+        // Else fall through and have super return the client email transport
         break;
 
       case "readOnly":
@@ -225,11 +261,11 @@ class ExtCalendar extends cal.provider.BaseClass {
       case "capabilities.events.supported":
         return !(this.capabilities.events === false);
       case "capabilities.removeModes":
-        return Array.isArray(this.capabilities.remove_modes)
-          ? this.capabilities.remove_modes
+        return Array.isArray(this.capabilities.removeModes)
+          ? this.capabilities.removeModes
           : ["unsubscribe"];
       case "requiresNetwork":
-        return !(this.capabilities.requires_network === false);
+        return !(this.capabilities.requiresNetwork === false);
     }
 
     return super.getProperty(name);
@@ -278,7 +314,7 @@ class ExtCalendar extends cal.provider.BaseClass {
       return item;
     } catch (e) {
       let code;
-      if (e.message.startsWith("NetworkError")) {
+      if (e.message?.startsWith("NetworkError")) {
         code = Cr.NS_ERROR_NET_INTERRUPT;
       } else if (e instanceof ItemError) {
         code = e.xpcomReason;
@@ -286,7 +322,7 @@ class ExtCalendar extends cal.provider.BaseClass {
         code = e.result || Cr.NS_ERROR_FAILURE;
       }
 
-      throw new Components.Exception(e.message, code);
+      throw new Components.Exception(e.message || e, code);
     }
   }
 
@@ -354,7 +390,7 @@ class ExtCalendar extends cal.provider.BaseClass {
       return item;
     } catch (e) {
       let code;
-      if (e.message.startsWith("NetworkError")) {
+      if (e.message?.startsWith("NetworkError")) {
         code = Cr.NS_ERROR_NET_INTERRUPT;
       } else if (e instanceof ItemError) {
         if (e.reason == ItemError.CONFLICT) {
@@ -370,7 +406,7 @@ class ExtCalendar extends cal.provider.BaseClass {
       } else {
         code = e.result || Cr.NS_ERROR_FAILURE;
       }
-      throw new Components.Exception(e.message, code);
+      throw new Components.Exception(e.message || e, code);
     }
   }
 
@@ -403,7 +439,7 @@ class ExtCalendar extends cal.provider.BaseClass {
       this.observers.notify("onDeleteItem", [aItem]);
     } catch (e) {
       let code;
-      if (e.message.startsWith("NetworkError")) {
+      if (e.message?.startsWith("NetworkError")) {
         code = Cr.NS_ERROR_NET_INTERRUPT;
       } else if (e instanceof ItemError) {
         if (e.reason == ItemError.CONFLICT) {
@@ -420,7 +456,7 @@ class ExtCalendar extends cal.provider.BaseClass {
         code = e.result || Cr.NS_ERROR_FAILURE;
       }
 
-      throw new Components.Exception(e.message, code);
+      throw new Components.Exception(e.message || e, code);
     }
     return aItem;
   }
@@ -447,11 +483,17 @@ class ExtCalendar extends cal.provider.BaseClass {
   async replayChangesOn(aListener) {
     this.offlineStorage.startBatch();
     try {
-      await this.extension.emit("calendar.provider.onSync", this);
-      aListener.onResult({ status: Cr.NS_OK }, null);
-    } catch (e) {
-      console.error(e);
-      aListener.onResult({ status: e.result || Cr.NS_ERROR_FAILURE }, e.message || e);
+      let status = Cr.NS_OK
+      let detail = null;
+      try {
+        await this.extension.emit("calendar.provider.onSync", this);
+      } catch (e) {
+        status = e.result || Cr.NS_ERROR_FAILURE;
+        detail = e.message || e;
+        console.error(e);
+      }
+
+      aListener.onResult({ status }, detail);
     } finally {
       this.offlineStorage.endBatch();
     }
@@ -527,7 +569,7 @@ this.calendar_provider = class extends ExtensionAPI {
           win.gIdentityNotification.removeAllNotifications();
         }
 
-        const minRefresh = calendar.capabilities?.minimumRefresh;
+        const minRefresh = calendar.capabilities?.minimumRefreshInterval;
 
         if (minRefresh) {
           const refInterval = win.document.getElementById("calendar-refreshInterval-menupopup");
@@ -607,6 +649,22 @@ this.calendar_provider = class extends ExtensionAPI {
 
           win.gAddonAdvance = new EventEmitter();
         }
+
+        const origCheckRequired = win.checkRequired;
+        win.checkRequired = () => {
+          origCheckRequired();
+          const addonPanel = win.document.getElementById("panel-addon-calendar-settings");
+          if (addonPanel.hidden) {
+            return;
+          }
+
+          const dialog = win.document.getElementById("calendar-creation-dialog");
+          if (addonPanel.dataset.addonNoForward == "true") {
+            dialog.setAttribute("buttondisabledaccept", "true");
+          } else {
+            dialog.removeAttribute("buttondisabledaccept");
+          }
+        };
       }
     });
   }
@@ -821,7 +879,7 @@ this.calendar_provider = class extends ExtensionAPI {
 
 
           // New calendar dialog
-          async setAdvanceAction({ forward, back, label }) {
+          async setAdvanceAction({ forward, back, label, canForward }) {
             const window = getNewCalendarWindow();
             if (!window) {
               throw new ExtensionError("New calendar wizard is not open");
@@ -842,6 +900,11 @@ this.calendar_provider = class extends ExtensionAPI {
             addonPanel.setAttribute("buttonlabelaccept", label);
             if (!addonPanel.hidden) {
               window.updateButton("accept", addonPanel);
+            }
+
+            if (typeof canForward === "boolean") {
+              addonPanel.dataset.addonNoForward = !canForward
+              window.checkRequired();
             }
           },
           onAdvanceNewCalendar: new EventManager({

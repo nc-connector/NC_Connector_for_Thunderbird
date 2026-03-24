@@ -14,8 +14,8 @@ Dies ist ein Community-Projekt und kein offizielles Produkt der Nextcloud GmbH.
 Termin öffnen, Nextcloud Talk wählen, Raum konfigurieren, Moderator definieren. Optional können eingeladene Teilnehmer direkt in den Raum übernommen werden (getrennt nach internen Nextcloud-Benutzern und externen E-Mail-Gästen). Der Wizard schreibt Titel/Ort/Beschreibung inklusive Hilfe-Link automatisch in den Termin.
 - **Sharing deluxe** 
 Compose-Button Nextcloud Freigabe hinzufügen startet den Freigabe-Assistenten mit Upload-Queue, Passwortgenerator, Ablaufdatum und Notizfeld. Die fertige Freigabe landet als formatiertes HTML direkt in der E-Mail.
-- **Passwort separat versenden**
-  Optional kann das Freigabe-Passwort in einer separaten Follow-up-Mail versendet werden; im Hauptblock bleibt das Inline-Passwort dann verborgen.
+- **Passwort separat ("Coming soon (Pro feature)")**
+  Die Controls für den separaten Passwortversand sind sichtbar, aber in dieser Version gesperrt.
 - **Anhang-Automatisierung**
 Optional lassen sich Anhänge direkt über NC Connector leiten (immer oder ab einer konfigurierbaren Gesamtgröße). Bei Grenzwertüberschreitung kann der Nutzer zwischen Teilen über NC Connector und Entfernen der zuletzt ausgewählten Anhangsgruppe wählen.
 - **Enterprise-Sicherheit** 
@@ -32,12 +32,14 @@ Siehe [`CHANGELOG.md`](https://github.com/nc-connector/NC_Connector_for_Thunderb
 ## Funktionsüberblick
 
 ### Nextcloud Talk direkt aus dem Termin
+- Der Talk-Button in Termin-Editoren wird über Thunderbirds Standard-`calendar_item_action` bereitgestellt.
 - Talk-Popup mit Lobby, Passwort, Listbarkeit, Raumtyp und Moderatorensuche.
 - Automatische Einträge von Titel, Ort, Beschreibung (inkl. Hilfe-Link und Passwort) in das Terminfenster.
+- Die Lobby-Zeitsynchronisierung verwendet `X-NCTALK-START` (UTC-Epoch-Sekunden) als autoritativen Wert.
 - Room-Tracking, Lobby-Updates, Delegations-Workflow und Cleanup, falls der Termin verworfen oder verschoben wird.
 - Kalender-Änderungen (Drag-and-drop oder Dialog-Edit) halten Lobby/Startzeit des Talk-Raums synchron.
 - Optionales Teilnehmer-Sync nach dem Speichern des Termins:
-  - **Benutzer:** interne Nextcloud-Benutzer werden direkt dem Raum hinzugefügt.
+  - **Benutzer:** interne Nextcloud-Benutzer werden direkt dem Raum hinzugefügt (benötigt aktiven Zugriff auf das Nextcloud-Systemadressbuch).
   - **Gäste:** externe E-Mail-Adressen werden als Gäste eingeladen (ggf. zusätzliche Einladung per E-Mail durch Nextcloud).
 
 ### Nextcloud Sharing im Compose-Fenster
@@ -45,12 +47,10 @@ Siehe [`CHANGELOG.md`](https://github.com/nc-connector/NC_Connector_for_Thunderb
 - Upload-Queue mit Duplikatprüfung, Fortschrittsanzeige und optionaler Freigabe.
 - Automatische HTML-Bausteine mit Link, Passwort, Ablaufdatum und optionaler Notiz.
 - Wenn eine Freigabe eingefügt wurde, die Mail aber ohne erfolgreichen Versand geschlossen wird, wird der Freigabe-Ordner serverseitig automatisch aufgeräumt.
-- Optionaler separater Passwortversand:
-  - Default + Wizard-Toggle: "Passwort separat senden"
-  - nur aktiv, wenn Passwortschutz aktiv ist
-  - Hauptmail blendet Inline-Passwort aus und zeigt einen Hinweis auf die separate Passwortmail
-  - Passwortmail wird nach dem Versand der Hauptmail automatisch versendet (bei Fehler mit manuellem Fallback)
-  - bei erfolgreichem Passwortversand wird eine Desktop-Erfolgsmeldung angezeigt
+- Separater Passwortversand ist in dieser Version sichtbar, aber deaktiviert:
+  - Default + Wizard-Toggle bleiben als gesperrte Controls sichtbar
+  - Tooltip: "Coming soon (Pro feature)"
+  - der Runtime-Pfad für den Passwort-Only-Follow-up-Versand ist im normalen UI-Flow inaktiv
 - Optionale Anhang-Automatisierung:
   - "Anhänge immer über NC Connector"
   - "Hochladen für Dateien größer als X MB anbieten" auf Basis der Gesamtgröße
@@ -66,16 +66,20 @@ Siehe [`CHANGELOG.md`](https://github.com/nc-connector/NC_Connector_for_Thunderb
 ## Systemvoraussetzungen
 - Thunderbird ESR 140.X (Windows/macOS/Linux)
 - Nextcloud mit Talk & Freigabe (DAV) aktiviert
+- Aktivierter Zugriff auf das Nextcloud-Systemadressbuch (erforderlich für Moderator-/Benutzersuche und die Teilnehmer-Toggles "Benutzer hinzufügen" / "Gäste hinzufügen")
 - App-Passwort oder Login Flow V2
 
 ## Installation
 1. Aktuelle XPI 
-`nc4tb-2.2.8.xpi` (oder aktuelles Release-Artefakt) in Thunderbird installieren (`Add-ons -> Zahnrad -> Add-on aus Datei installieren`).
+`nc4tb-2.2.9.xpi` (oder aktuelles Release-Artefakt) in Thunderbird installieren (`Add-ons -> Zahnrad -> Add-on aus Datei installieren`).
 2. Thunderbird neu starten.
 3. In den Add-on-Optionen Basis-URL, Benutzer und App-Passwort hinterlegen oder den Login Flow starten.
 
 ## Support & Feedback
 - **Fehleranalyse:** Debug-Modus in den Optionen aktivieren; relevante Logs erscheinen als [NCBG], [NCUI][Talk], [NCUI][Sharing] und [ncCalToolbar] in der Entwickler-Konsole von Thunderbird.
+- **Systemadressbuch-Mismatch (im Admin-UI aktiv, faktisch aber nicht erreichbar):** siehe Admin-Guide Abschnitt
+  ["System address book required for user search and moderator selection"](https://github.com/nc-connector/NC_Connector_for_Thunderbird/blob/main/docs/ADMIN.md#system-address-book-required-for-user-search-and-moderator-selection)
+  für die `occ`-Reparatursequenz und die DAV-Export-Prüf-URL.
 
 Viel Erfolg beim sicheren, professionellen Arbeiten mit NC Connector for Thunderbird!
 

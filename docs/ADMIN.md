@@ -131,6 +131,7 @@ The following features require a reachable **Nextcloud system address book**:
 - Talk wizard user search (internal users)
 - Moderator selection in the Talk wizard
 - “Add users” default in add-on settings
+- “Add guests” default in add-on settings
 
 If the system address book is unavailable, these controls are disabled in the UI and the tooltip links to this section.
 
@@ -184,7 +185,9 @@ When enabled, logs appear with prefixes such as:
 
 The “About” tab shows:
 - current add-on version
+- homepage link (`https://nc-connector.de`)
 - license information (AGPL v3)
+- technical overview text and a “More information” homepage link
 - donation link
 
 ---

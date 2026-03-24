@@ -20,6 +20,7 @@ const OPAQUE_EDITOR_ID_PATTERN =
   /^ed-[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/;
 const BRIDGE_SYMBOL = Symbol("nc-cal-toolbar-editor-context-bridge");
 const TAB_EDITOR_MODES = new Set(["calendarEvent", "calendarTask"]);
+const STARTUP_RETRY_DELAYS_MS = [40, 80, 150, 300, 500, 800, 1200, 1800];
 
 /**
  * Create an opaque editor identifier.
@@ -177,6 +178,7 @@ this.ncCalToolbar = class extends ExtensionAPI {
     this._listenerRegistered = false;
     this._startupRetryCount = 0;
     this._startupRetryPending = false;
+    this._startupRetryTimer = null;
     this._registerWindowListenerWhenReady();
   }
 
@@ -196,6 +198,10 @@ this.ncCalToolbar = class extends ExtensionAPI {
     }
     if (this._listenerId) {
       this._listenerId = null;
+    }
+    if (this._startupRetryTimer) {
+      clearTimeout(this._startupRetryTimer);
+      this._startupRetryTimer = null;
     }
     this._startupRetryPending = false;
     this._startupRetryCount = 0;
@@ -272,15 +278,25 @@ this.ncCalToolbar = class extends ExtensionAPI {
     if (this._listenerRegistered || !this._listenerId) {
       return;
     }
+    if (this._startupRetryTimer) {
+      clearTimeout(this._startupRetryTimer);
+      this._startupRetryTimer = null;
+    }
     const extensionSupport = this._getExtensionSupport();
     if (!extensionSupport) {
       this._startupRetryCount = Number(this._startupRetryCount || 0) + 1;
+      const delayIndex = Math.min(
+        this._startupRetryCount - 1,
+        STARTUP_RETRY_DELAYS_MS.length - 1
+      );
+      const delayMs = STARTUP_RETRY_DELAYS_MS[delayIndex];
       if (this._startupRetryCount == 1 || this._startupRetryCount % 10 == 0) {
         this._logError("startup: ExtensionSupport unavailable, retry scheduled", null, {
           attempt: this._startupRetryCount,
+          delayMs,
         });
       }
-      if (this._startupRetryCount >= 50) {
+      if (this._startupRetryCount >= 120) {
         this._logError("startup: ExtensionSupport unavailable after retry limit", null, {
           attempts: this._startupRetryCount,
         });
@@ -290,10 +306,11 @@ this.ncCalToolbar = class extends ExtensionAPI {
         return;
       }
       this._startupRetryPending = true;
-      Services.tm.dispatchToMainThread(() => {
+      this._startupRetryTimer = setTimeout(() => {
+        this._startupRetryTimer = null;
         this._startupRetryPending = false;
         this._registerWindowListenerWhenReady();
-      });
+      }, delayMs);
       return;
     }
     extensionSupport.registerWindowListener(this._listenerId, {
@@ -380,11 +397,11 @@ this.ncCalToolbar = class extends ExtensionAPI {
   }
 
   /**
-   * Compute extension-scoped button ID.
+   * Compute extension-scoped id of the official calendarItemAction toolbarbutton.
    * @returns {string}
    */
   _buttonId() {
-    return `${makeWidgetId(this.extension.id)}-ncCalToolbar-button`;
+    return `${makeWidgetId(this.extension.id)}-calendarItemAction-toolbarbutton`;
   }
 
   /**
@@ -499,11 +516,11 @@ this.ncCalToolbar = class extends ExtensionAPI {
    *   editor identity for tab editors on ESR 140.
    * - A manual window/context mapping already existed in add-on 2.2.7
    *   (`windowId`/`dialogOuterId` based).
-   * - Reason for hardening in 2.2.8: in tab-editor flows, `windowId` could only
+   * - Reason for hardening in 2.3.0: in tab-editor flows, `windowId` could only
    *   identify the 3-pane host window, while editor operations resolved through
    *   selected `currentTabInfo`. After tab switches or with multiple open editor
    *   tabs, this could target the wrong editor context.
-   * - In 2.2.8 this was tightened to opaque `editorId` mapping to achieve a
+   * - In 2.3.0 this was tightened to opaque `editorId` mapping to achieve a
    *   deterministic API contract aligned with upstream PR #65.
    * - Remove this correlation once upstream calendar APIs provide the same
    *   deterministic editor-targeting contract.
@@ -821,7 +838,7 @@ this.ncCalToolbar = class extends ExtensionAPI {
   }
 
   /**
-   * Ensure toolbar button exists in target editor toolbar.
+   * Ensure command listener is bound to the official calendarItemAction button.
    * @param {Window} window
    */
   _ensureButton(window) {
@@ -842,17 +859,31 @@ this.ncCalToolbar = class extends ExtensionAPI {
       return;
     }
     const buttonId = this._buttonId();
-    if (window.document.getElementById(buttonId)) {
+    const button = window.document.getElementById(buttonId);
+    if (!button) {
+      if ((window.location?.href || "").startsWith(EVENT_DIALOG_URL)) {
+        const observer = new window.MutationObserver(() => {
+          observer.disconnect();
+          this._ensureButton(window);
+        });
+        observer.observe(window.document.documentElement, { childList: true, subtree: true });
+        window.setTimeout(() => observer.disconnect(), 5000);
+      }
       return;
     }
-    const button = window.document.createXULElement("toolbarbutton");
-    button.id = buttonId;
-    button.setAttribute("class", "toolbarbutton-1");
-    button.setAttribute("label", this.extension.localize("__MSG_ui_insert_button_label__"));
-    button.setAttribute("tooltiptext", this.extension.localize("__MSG_ui_insert_button_label__"));
-    button.setAttribute("type", "button");
-    button.setAttribute("image", this.extension.getURL("icons/app-16.png"));
-    button.addEventListener("command", () => {
+
+    if (!this._commandBindingByWindow) {
+      this._commandBindingByWindow = new WeakMap();
+    }
+    const currentBinding = this._commandBindingByWindow.get(window);
+    if (currentBinding?.button == button) {
+      return;
+    }
+    if (currentBinding?.button && currentBinding?.onCommand) {
+      currentBinding.button.removeEventListener("command", currentBinding.onCommand);
+    }
+
+    const onCommand = () => {
       const click = this._clickContext(window);
       if (!click) {
         console.error("[ncCalToolbar] click ignored: could not resolve editor context");
@@ -869,19 +900,21 @@ this.ncCalToolbar = class extends ExtensionAPI {
         return;
       }
       this._emitClicked(snapshot);
-    });
-    toolbar.appendChild(button);
+    };
+    button.addEventListener("command", onCommand);
+    this._commandBindingByWindow.set(window, { button, onCommand });
   }
 
   /**
-   * Remove injected toolbar button from one window.
+   * Remove button command listener from one window.
    * @param {Window} window
    */
   _removeButton(window) {
-    const node = window?.document?.getElementById(this._buttonId()) || null;
-    if (node) {
-      node.remove();
+    const binding = this._commandBindingByWindow?.get(window) || null;
+    if (binding?.button && binding?.onCommand) {
+      binding.button.removeEventListener("command", binding.onCommand);
     }
+    this._commandBindingByWindow?.delete(window);
   }
 
   /**
@@ -1449,6 +1482,3 @@ this.ncCalToolbar = class extends ExtensionAPI {
     };
   }
 };
-
-
-

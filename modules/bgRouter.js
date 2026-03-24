@@ -21,6 +21,16 @@ function messageError(type, error){
 }
 
 /**
+ * Read the canonical top-level runtime message context id.
+ * Legacy payload-based variants are intentionally not accepted here.
+ * @param {any} msg
+ * @returns {string}
+ */
+function readMessageContextId(msg){
+  return typeof msg?.contextId === "string" ? msg.contextId.trim() : "";
+}
+
+/**
  * Central runtime.onMessage dispatcher.
  * Keep this as the single message contract entrypoint for UI/background calls.
  */
@@ -62,8 +72,16 @@ browser.runtime.onMessage.addListener((msg, sender) => {
       return messageError("talk:searchUsers", e);
     }
   }
+  if (msg.type === "talk:getSystemAddressbookStatus"){
+    try{
+      const status = await NCTalkCore.getSystemAddressbookStatus(msg.payload || {});
+      return { ok:true, status };
+    }catch(e){
+      return messageError("talk:getSystemAddressbookStatus", e);
+    }
+  }
   if (msg.type === "talk:initDialog"){
-    const contextId = msg.contextId ?? msg?.payload?.contextId;
+    const contextId = readMessageContextId(msg);
     if (!contextId){
       return { ok:false, error: bgI18n("talk_error_context_id_missing") };
     }
@@ -75,7 +93,7 @@ browser.runtime.onMessage.addListener((msg, sender) => {
     return { ok:true };
   }
   if (msg.type === "talk:getEventSnapshot"){
-    const contextId = msg.contextId ?? msg?.payload?.contextId;
+    const contextId = readMessageContextId(msg);
     if (!contextId){
       return { ok:false, error: bgI18n("talk_error_context_id_missing") };
     }
@@ -91,7 +109,7 @@ browser.runtime.onMessage.addListener((msg, sender) => {
     };
   }
   if (msg.type === "talk:applyEventFields"){
-    const contextId = msg.contextId ?? msg?.payload?.contextId;
+    const contextId = readMessageContextId(msg);
     if (!contextId){
       return { ok:false, error: bgI18n("talk_error_context_id_missing") };
     }
@@ -190,7 +208,7 @@ browser.runtime.onMessage.addListener((msg, sender) => {
     }
   }
   if (msg.type === "talk:applyMetadata"){
-    const contextId = msg.contextId ?? msg?.payload?.contextId;
+    const contextId = readMessageContextId(msg);
     if (!contextId){
       return { ok:false, error: bgI18n("talk_error_context_id_missing") };
     }
@@ -298,7 +316,7 @@ browser.runtime.onMessage.addListener((msg, sender) => {
     }
   }
   if (msg.type === "talk:registerCleanup"){
-    const contextId = msg.contextId ?? msg?.payload?.contextId;
+    const contextId = readMessageContextId(msg);
     if (!contextId){
       return { ok:false, error: bgI18n("talk_error_context_id_missing") };
     }

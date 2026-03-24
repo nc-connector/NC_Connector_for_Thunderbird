@@ -186,6 +186,21 @@ textarea{
 .delegate-status:empty{
   display:none;
 }
+.delegate-addressbook-help{
+  border:1px solid #b00020;
+  border-radius:var(--tb-radius);
+  background:rgba(176,0,32,0.08);
+  color:#b00020;
+  padding:8px 10px;
+  font-size:12px;
+  line-height:1.4;
+}
+.delegate-addressbook-help a{
+  display:inline-block;
+  margin-top:6px;
+  color:var(--brand-blue);
+  text-decoration:underline;
+}
 .delegate-selected{
   display:flex;
   align-items:center;
@@ -391,6 +406,13 @@ textarea{
 }
 .option-tooltip-list li:last-child{
   margin-bottom:0;
+}
+.option-tooltip a{
+  color:var(--brand-blue);
+  text-decoration:underline;
+}
+.option-tooltip-wrap.is-disabled > span{
+  color:var(--tb-muted);
 }
 .section-heading{
   font-weight:600;
@@ -671,25 +693,27 @@ textarea{
       </div>
       <div class="section section-options">
         <div class="section-heading" data-i18n="talk_section_settings">Talk Settings</div>
-        <label class="checkbox-row option-tooltip-wrap">
+        <label class="checkbox-row option-tooltip-wrap" id="addUsersToggleRow">
           <input type="checkbox" id="addUsersToggle">
           <span data-i18n="ui_create_add_users_label">Add users</span>
           <div class="option-tooltip" role="tooltip">
             <div class="option-tooltip-title" data-i18n="talk_option_add_users_title">👤 Add users</div>
-            <ul class="option-tooltip-list">
+            <ul class="option-tooltip-list" id="addUsersTooltipList">
               <li data-i18n="talk_option_add_users_line1">Internal Nextcloud users are added directly to the room</li>
               <li data-i18n="talk_option_add_users_line2">The room is immediately visible in Nextcloud Talk</li>
+              <li id="addUsersAddressbookLockHint" data-lock-hint="true" data-i18n="talk_system_addressbook_required_message" hidden>This feature requires an active Nextcloud system address book.</li>
             </ul>
           </div>
         </label>
-        <label class="checkbox-row option-tooltip-wrap">
+        <label class="checkbox-row option-tooltip-wrap" id="addGuestsToggleRow">
           <input type="checkbox" id="addGuestsToggle">
           <span data-i18n="ui_create_add_guests_label">Add guests</span>
           <div class="option-tooltip" role="tooltip">
             <div class="option-tooltip-title" data-i18n="talk_option_add_guests_title">🌍 Add guests</div>
-            <ul class="option-tooltip-list">
+            <ul class="option-tooltip-list" id="addGuestsTooltipList">
               <li data-i18n="talk_option_add_guests_line1">Guests are also added directly to the room</li>
               <li data-i18n="talk_option_add_guests_line2">⚠️ They will receive a separate (additional) email with a personal access link</li>
+              <li id="addGuestsAddressbookLockHint" data-lock-hint="true" data-i18n="talk_system_addressbook_required_message" hidden>This feature requires an active Nextcloud system address book.</li>
             </ul>
           </div>
         </label>
@@ -718,14 +742,15 @@ textarea{
         </label>
       </div>
       <div class="section delegate-section">
-        <label for="delegateInput" class="option-tooltip-wrap">
+        <label for="delegateInput" class="option-tooltip-wrap" id="delegateInputLabel">
           <span data-i18n="ui_create_moderator_label">Moderator (optional)</span>
           <div class="option-tooltip" role="tooltip">
             <div class="option-tooltip-title" data-i18n="talk_option_moderator_title">👑 Moderator delegation</div>
-            <ul class="option-tooltip-list">
+            <ul class="option-tooltip-list" id="delegateTooltipList">
               <li data-i18n="talk_option_moderator_line1">The selected user is promoted after room creation.</li>
               <li data-i18n="talk_option_moderator_line2">On successful delegation, the creator leaves the room.</li>
               <li data-i18n="talk_option_moderator_line3">If delegation fails, room ownership remains with the creator.</li>
+              <li id="delegateAddressbookLockHint" data-lock-hint="true" data-i18n="talk_system_addressbook_required_message" hidden>This feature requires an active Nextcloud system address book.</li>
             </ul>
           </div>
         </label>
@@ -738,6 +763,10 @@ textarea{
             <div class="delegate-dropdown" id="delegateDropdown"></div>
           </div>
           <div class="delegate-status" id="delegateStatus"></div>
+          <div class="delegate-addressbook-help" id="delegateAddressbookHelp" hidden>
+            <div data-i18n="talk_system_addressbook_required_message">This feature requires an active Nextcloud system address book.</div>
+            <a id="systemAddressbookAdminLinkDelegateInline" data-i18n="talk_system_addressbook_admin_link_label" target="_blank" rel="noopener noreferrer" href="https://github.com/nc-connector/NC_Connector_for_Thunderbird/blob/main/docs/ADMIN.md#system-address-book-required-for-user-search-and-moderator-selection">Setup guide</a>
+          </div>
           <div class="delegate-selected" id="delegateSelected" hidden>
             <div class="delegate-avatar">
               <img id="delegateAvatarImg" alt="">
@@ -770,6 +799,7 @@ textarea{
   <script src="password.js"></script>
   <script src="passwordPolicyClient.js"></script>
   <script src="debugForwarder.js"></script>
+  <script src="addressbookUi.js"></script>
   <script src="domI18n.js"></script>
   <script src="talkDialog.js"></script>
 </body>

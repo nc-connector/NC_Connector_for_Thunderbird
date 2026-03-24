@@ -259,13 +259,21 @@ async function enrichSeparatePasswordDispatchSourceIdentity(tabId, queue){
       hasFrom: !!from
     });
   }catch(error){
+    const errorMessage = error?.message || String(error);
+    if (errorMessage.includes("Invalid tab ID")){
+      L("sharing separate password source identity enrich skipped (tab closed)", {
+        tabId,
+        error: errorMessage
+      });
+      return;
+    }
     console.error("[NCBG] sharing separate password source identity enrich failed", {
       tabId,
-      error: error?.message || String(error)
+      error: errorMessage
     });
     L("sharing separate password source identity enrich failed", {
       tabId,
-      error: error?.message || String(error)
+      error: errorMessage
     });
   }
 }
@@ -348,19 +356,14 @@ async function showPasswordMailSuccessNotification(recipientCount){
 }
 
 /**
- * Show a desktop notification when automatic password-mail delivery failed
- * and a manual follow-up compose was opened.
- * @param {number} recipientCount
- * @returns {Promise<void>}
- */
-
-/**
  * Show a desktop notification that manual password-mail send is required.
  * @param {number} recipientCount
+ * @param {{requireSenderSelection?:boolean}} options
  * @returns {Promise<void>}
  */
-async function showPasswordMailManualRequiredNotification(recipientCount){
+async function showPasswordMailManualRequiredNotification(recipientCount, options = {}){
   const count = Math.max(0, Number(recipientCount) || 0);
+  const requireSenderSelection = !!options?.requireSenderSelection;
   if (count <= 0){
     return;
   }
@@ -373,15 +376,19 @@ async function showPasswordMailManualRequiredNotification(recipientCount){
   }
   try{
     const notificationId = `nc-password-mail-manual-${Date.now()}-${Math.floor(Math.random() * 100000)}`;
+    const messageKey = requireSenderSelection
+      ? "sharing_password_mail_notify_manual_required_select_sender"
+      : "sharing_password_mail_notify_manual_required";
     await browser.notifications.create(notificationId, {
       type: "basic",
       title: bgI18n("sharing_password_mail_notify_title"),
-      message: bgI18n("sharing_password_mail_notify_manual_required", [String(count)]),
+      message: bgI18n(messageKey, [String(count)]),
       iconUrl: browser.runtime.getURL("icons/app-32.png")
     });
     L("sharing separate password manual-required notification shown", {
       notificationId,
-      recipients: count
+      recipients: count,
+      requireSenderSelection
     });
   }catch(error){
     console.error("[NCBG] sharing separate password manual-required notification failed", {
@@ -393,7 +400,14 @@ async function showPasswordMailManualRequiredNotification(recipientCount){
       error: error?.message || String(error)
     });
   }
-}async function showPasswordMailFailureNotification(recipientCount){
+}
+
+/**
+ * Show a desktop notification that automatic password-mail delivery failed.
+ * @param {number} recipientCount
+ * @returns {Promise<void>}
+ */
+async function showPasswordMailFailureNotification(recipientCount){
   const count = Math.max(0, Number(recipientCount) || 0);
   if (count <= 0){
     return;
@@ -469,12 +483,14 @@ async function openManualPasswordComposeFallback(sourceTabId, dispatch, failedCo
  */
 async function sendComposeNowWithTimeout(composeTabId, timeoutMs = PASSWORD_MAIL_AUTO_SEND_TIMEOUT_MS){
   let timeoutId = null;
+  let timeoutTriggered = false;
   const sendPromise = browser.compose.sendMessage(composeTabId, { mode: "sendNow" });
   try{
     await Promise.race([
       sendPromise,
       new Promise((_, reject) => {
         timeoutId = setTimeout(() => {
+          timeoutTriggered = true;
           reject(new Error("password_mail_send_timeout"));
         }, Math.max(1000, Number(timeoutMs) || PASSWORD_MAIL_AUTO_SEND_TIMEOUT_MS));
       })
@@ -484,7 +500,15 @@ async function sendComposeNowWithTimeout(composeTabId, timeoutMs = PASSWORD_MAIL
       clearTimeout(timeoutId);
     }
     // Prevent late unhandled rejection noise when timeout won the race.
-    sendPromise.catch(() => {});
+    sendPromise.catch((error) => {
+      if (!timeoutTriggered){
+        return;
+      }
+      console.error("[NCBG] password mail send late rejection after timeout", {
+        composeTabId,
+        error: error?.message || String(error)
+      });
+    });
   }
 }
 
@@ -577,6 +601,7 @@ async function sendSeparatePasswordMail(tabId, queue){
   let autoSendFailedCount = 0;
   let manualFallbackOpenedCount = 0;
   let manualFallbackFailedCount = 0;
+  let manualFallbackNeedsSenderCount = 0;
   for (const dispatch of queue){
     const autoComposeDetails = {
       to: dispatch.to,
@@ -646,6 +671,9 @@ async function sendSeparatePasswordMail(tabId, queue){
         const manualComposeTabId = await openManualPasswordComposeFallback(tabId, dispatch, composeTabId, "auto_send_failed");
         await armManualPasswordFallbackCleanup(tabId, manualComposeTabId, dispatch);
         manualFallbackOpenedCount++;
+        if (!String(dispatch?.identityId || "").trim() && !String(dispatch?.from || "").trim()){
+          manualFallbackNeedsSenderCount++;
+        }
       }catch(fallbackError){
         manualFallbackFailedCount++;
         console.error("[NCBG] sharing separate password mail manual fallback failed", {
@@ -677,11 +705,14 @@ async function sendSeparatePasswordMail(tabId, queue){
     recipients: recipientCount,
     autoSendFailedCount,
     manualFallbackOpenedCount,
-    manualFallbackFailedCount
+    manualFallbackFailedCount,
+    manualFallbackNeedsSenderCount
   });
   await showPasswordMailFailureNotification(recipientCount);
   if (manualFallbackOpenedCount > 0){
-    await showPasswordMailManualRequiredNotification(recipientCount);
+    await showPasswordMailManualRequiredNotification(recipientCount, {
+      requireSenderSelection: manualFallbackNeedsSenderCount > 0
+    });
   }
 }
 

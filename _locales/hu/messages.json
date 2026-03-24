@@ -753,76 +753,102 @@
     "message": "Jelszó a megosztott hivatkozáshoz: $1"
   },
   "options_sharing_permissions_tooltip_title": {
-    "message": "🛡️ Default permissions"
+    "message": "🛡️ Alapértelmezett engedélyek"
   },
   "options_sharing_permissions_tooltip_line1": {
-    "message": "These values are used as defaults for new shares."
+    "message": "Ezek az értékek az új megosztások alapértelmezett értékei."
   },
   "options_sharing_permissions_tooltip_line2": {
-    "message": "They can still be adjusted in the sharing wizard."
+    "message": "A megosztási varázslóban továbbra is módosíthatók."
   },
   "options_sharing_permissions_tooltip_line3": {
-    "message": "In attachment mode, recipient permission is always read-only."
+    "message": "Csatolási módban a címzett engedélye mindig csak olvasható."
   },
   "sharing_password_separate_tooltip_title": {
-    "message": "Coming soon (Pro feature)"
+    "message": "Hamarosan (Pro funkció)"
   },
   "sharing_password_separate_tooltip_line1": {
-    "message": "This option is disabled in this release."
+    "message": "Ez az opció le van tiltva ebben a kiadásban."
   },
   "sharing_password_separate_tooltip_line2": {
-    "message": "Password delivery in a separate email will be available in a future Pro release."
+    "message": "A jelszó külön e-mailben történő kézbesítése egy jövőbeli Pro kiadásban lesz elérhető."
   },
   "sharing_password_separate_tooltip_line3": {
-    "message": "For now, the password is included in the main share block."
+    "message": "A jelszó egyelőre a fő megosztási blokkban található."
   },
   "options_sharing_attachments_always_tooltip_title": {
-    "message": "📎 Always via NC Connector"
+    "message": "📎 Mindig NC csatlakozón keresztül"
   },
   "options_sharing_attachments_always_tooltip_line1": {
-    "message": "New attachments are removed from the compose mail and processed via NC Connector."
+    "message": "Az új mellékleteket a rendszer eltávolítja a levelezőlevélből, és az NC Connector segítségével dolgozza fel őket."
   },
   "options_sharing_attachments_always_tooltip_line2": {
-    "message": "The sharing wizard opens directly in the file step."
+    "message": "A megosztási varázsló közvetlenül a fájl lépésben nyílik meg."
   },
   "options_sharing_attachments_always_tooltip_line3": {
-    "message": "The final mail contains share links instead of physical attachments."
+    "message": "Az utolsó levél fizikai mellékletek helyett megosztási hivatkozásokat tartalmaz."
   },
   "options_sharing_attachments_offer_tooltip_title": {
-    "message": "📏 Attachment threshold"
+    "message": "📏 Kötődési küszöb"
   },
   "options_sharing_attachments_offer_tooltip_line1": {
-    "message": "The total size of all attachments is evaluated."
+    "message": "A rendszer kiértékeli az összes melléklet teljes méretét."
   },
   "options_sharing_attachments_offer_tooltip_line2": {
-    "message": "If exceeded, you can share via NC Connector or remove the last selected attachment batch."
+    "message": "Ha túllépi, megoszthatja az NC csatlakozón keresztül, vagy eltávolíthatja az utoljára kiválasztott mellékletet."
   },
   "options_sharing_attachments_offer_tooltip_line3": {
-    "message": "The remove action returns the mail to a below-threshold state."
+    "message": "Az eltávolítási művelet visszaállítja a levelet a küszöbérték alatti állapotba."
   },
   "talk_option_moderator_title": {
-    "message": "👑 Moderator delegation"
+    "message": "👑 Moderátor delegáció"
   },
   "talk_option_moderator_line1": {
-    "message": "The selected user is promoted after room creation."
+    "message": "A kiválasztott felhasználó előléptetésre kerül a szoba létrehozása után."
   },
   "talk_option_moderator_line2": {
-    "message": "On successful delegation, the creator leaves the room."
+    "message": "Sikeres delegálás esetén az alkotó elhagyja a termet."
   },
   "talk_option_moderator_line3": {
-    "message": "If delegation fails, room ownership remains with the creator."
+    "message": "Ha a delegálás sikertelen, a szoba tulajdonjoga a készítőnél marad."
+  },
+  "talk_system_addressbook_required_short": {
+    "message": "Aktív Nextcloud rendszercímjegyzéket igényel."
+  },
+  "talk_system_addressbook_required_message": {
+    "message": "Ehhez a funkcióhoz aktív Nextcloud rendszercímjegyzék szükséges."
+  },
+  "talk_system_addressbook_admin_link_label": {
+    "message": "Beállítási útmutató"
   },
   "sharing_password_mail_notify_title": {
     "message": "NC Connector"
   },
   "sharing_password_mail_notify_success": {
-    "message": "Password email sent to $1 recipient(s)."
+    "message": "A jelszo e-mail elkuldve $1 cimzettnek."
   },
   "sharing_password_mail_notify_failure": {
-    "message": "Automatic password email failed for $1 recipient(s). Manual send mail was opened."
+    "message": "Az automatikus jelszo-e-mail kuldes $1 cimzettnel sikertelen volt. Egy kezi piszkozat megnyilt."
   },
   "sharing_password_mail_notify_manual_required": {
     "message": "Az automatikus jelszo-e-mail kuldes sikertelen volt. Kerjuk, kuldje el kezzel a jelszo e-mailt a megnyitott piszkozatbol."
+  },
+  "sharing_password_mail_notify_manual_required_select_sender": {
+    "message": "Az automatikus jelszo-e-mail kuldes sikertelen volt. Szukseg eseten valasszon feladot a megnyitott piszkozatban, majd kuldje el kezzel a jelszo e-mailt."
+  },
+  "options_about_homepage_label": {
+    "message": "Honlap:"
+  },
+  "options_about_homepage_link": {
+    "message": "https://nc-connector.de"
+  },
+  "options_about_overview_text": {
+    "message": "Miert tobb, mint egy fajllink-bovitmeny?\nAz NC Connector nem csak a fajlhivatkozasokat fedi le, hanem a teljes csapatmunkafolyamatot a levelezo kliensben.\n\nTechnikai alap\n- Thunderbird- es Outlook-bovitmenyek kozvetlenul hasznalhatok, Nextcloud backend nelkul is\n- Opcionális Nextcloud backend a kozponti seat-kiosztashoz es szabalyzatokhoz\n- Seat modell a backendben: Community 1 ingyenes seattel, Pro 5 seattol (1 seat = 1 Nextcloud-felhasznalo)\n\n- Fajlmegosztas jelszoval, lejarati datummal es opcionalis kulon jelszokezbesitessel\n- Talk megbeszelesek letrehozasa es frissitese kozvetlenul naptarbejegyzesekbol\n- Melleklet-automatizalas egyertelmu szabalyokkal a kezi lepesek helyett\n- Kozponti seat-kiosztas a Nextcloud backendben (1 seat = 1 Nextcloud-felhasznalo)"
+  },
+  "options_about_more_info_label": {
+    "message": "Tovabbi informaciok -->"
+  },
+  "options_about_more_info_link": {
+    "message": "Ugras a honlapra"
   }
 }
-

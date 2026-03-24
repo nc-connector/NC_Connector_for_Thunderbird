@@ -9,12 +9,14 @@ const DEFAULT_SHARING_EXPIRE_DAYS = 7;
 const DEFAULT_SHARING_ATTACHMENT_THRESHOLD_MB = NCSharingStorage.DEFAULT_ATTACHMENT_THRESHOLD_MB;
 const DEFAULT_SHARING_SHARE_NAME = i18n("sharing_share_default") || "Share name";
 const DEFAULT_TALK_TITLE = i18n("ui_default_title") || "Meeting";
+const NC_CONNECTOR_HOMEPAGE_URL = "https://nc-connector.de";
 const FALLBACK_POPUP_WIDTH = 520;
 const FALLBACK_POPUP_HEIGHT = 320;
 const SHARING_KEYS = NCSharingStorage.SHARING_KEYS;
 const normalizeAttachmentThresholdMb = NCSharingStorage.normalizeAttachmentThresholdMb;
 const OPTIONS_LOG_PREFIX = "[NCOPT]";
 const SEPARATE_PASSWORD_FEATURE_ENABLED = false;
+const SYSTEM_ADDRESSBOOK_ADMIN_URL = "https://github.com/nc-connector/NC_Connector_for_Thunderbird/blob/main/docs/ADMIN.md#system-address-book-required-for-user-search-and-moderator-selection";
 
 /**
  * Log internal options-page errors.
@@ -57,7 +59,15 @@ const talkDefaultTitleInput = document.getElementById("talkDefaultTitle");
 const talkDefaultLobbyInput = document.getElementById("talkDefaultLobby");
 const talkDefaultListableInput = document.getElementById("talkDefaultListable");
 const talkDefaultAddUsersInput = document.getElementById("talkDefaultAddUsers");
+const talkDefaultAddUsersRow = document.getElementById("talkDefaultAddUsersRow");
+const optionsAddUsersTooltipList = document.getElementById("optionsAddUsersTooltipList");
+const optionsAddUsersAddressbookLockHint = document.getElementById("optionsAddUsersAddressbookLockHint");
 const talkDefaultAddGuestsInput = document.getElementById("talkDefaultAddGuests");
+const talkDefaultAddGuestsRow = document.getElementById("talkDefaultAddGuestsRow");
+const optionsAddGuestsTooltipList = document.getElementById("optionsAddGuestsTooltipList");
+const optionsAddGuestsAddressbookLockHint = document.getElementById("optionsAddGuestsAddressbookLockHint");
+const talkAddressbookWarningRow = document.getElementById("talkAddressbookWarningRow");
+const optionsTalkAddressbookAdminLink = document.getElementById("optionsTalkAddressbookAdminLink");
 const talkDefaultPasswordInput = document.getElementById("talkDefaultPassword");
 const talkDefaultRoomTypePicker = document.getElementById("talkDefaultRoomTypePicker");
 const talkDefaultRoomTypeButton = document.getElementById("talkDefaultRoomTypeButton");
@@ -74,6 +84,22 @@ const SUPPORTED_OVERRIDE_LOCALES = getSupportedOverrideLocales();
 const LANG_OPTIONS = new Set(["default", ...SUPPORTED_OVERRIDE_LOCALES]);
 initLanguageOverrideSelects();
 initTalkDefaultRoomTypePicker();
+if (optionsTalkAddressbookAdminLink){
+  optionsTalkAddressbookAdminLink.href = SYSTEM_ADDRESSBOOK_ADMIN_URL;
+}
+
+/**
+ * Toggle one tooltip list between normal and lock-hint entries via shared UI helper.
+ * @param {HTMLElement|null} tooltipList
+ * @param {boolean} lockActive
+ */
+function applySharedAddressbookTooltipState(tooltipList, lockActive){
+  const applyTooltipState = window.NCAddressbookUi?.applySystemAddressbookTooltipState;
+  if (typeof applyTooltipState !== "function"){
+    return;
+  }
+  applyTooltipState(tooltipList, lockActive);
+}
 
 /**
  * Read the list of supported locale folders for language override settings.
@@ -383,9 +409,71 @@ async function load(){
   if (eventDescriptionLangSelect){
     eventDescriptionLangSelect.value = normalizeLangChoice(stored.eventDescriptionLang);
   }
+  await refreshTalkSystemAddressbookState({ forceRefresh: true });
   setTalkDefaultRoomType(stored.talkDefaultRoomType);
   setAuthMode(stored.authMode || "manual");
   updateAuthModeUI();
+}
+
+/**
+ * Apply system-addressbook lock state to talk-default controls.
+ * @param {boolean} locked
+ * @param {string} detail
+ */
+function applyTalkSystemAddressbookLockState(locked, detail = ""){
+  const lockActive = !!locked;
+  if (talkDefaultAddUsersInput){
+    talkDefaultAddUsersInput.disabled = lockActive;
+  }
+  if (talkDefaultAddGuestsInput){
+    talkDefaultAddGuestsInput.disabled = lockActive;
+  }
+  if (talkDefaultAddUsersRow){
+    talkDefaultAddUsersRow.classList.toggle("is-disabled", lockActive);
+    talkDefaultAddUsersRow.title = lockActive ? detail : "";
+  }
+  if (talkDefaultAddGuestsRow){
+    talkDefaultAddGuestsRow.classList.toggle("is-disabled", lockActive);
+    talkDefaultAddGuestsRow.title = lockActive ? detail : "";
+  }
+  if (optionsAddUsersAddressbookLockHint){
+    optionsAddUsersAddressbookLockHint.textContent = detail || i18n("talk_system_addressbook_required_message");
+  }
+  if (optionsAddGuestsAddressbookLockHint){
+    optionsAddGuestsAddressbookLockHint.textContent = detail || i18n("talk_system_addressbook_required_message");
+  }
+  applySharedAddressbookTooltipState(optionsAddUsersTooltipList, lockActive);
+  applySharedAddressbookTooltipState(optionsAddGuestsTooltipList, lockActive);
+  if (talkAddressbookWarningRow){
+    talkAddressbookWarningRow.hidden = !lockActive;
+  }
+}
+
+/**
+ * Read and apply current system-addressbook availability.
+ * @param {{forceRefresh?:boolean}} options
+ * @returns {Promise<void>}
+ */
+async function refreshTalkSystemAddressbookState(options = {}){
+  const forceRefresh = !!options.forceRefresh;
+  try{
+    const response = await browser.runtime.sendMessage({
+      type: "talk:getSystemAddressbookStatus",
+      payload: { forceRefresh }
+    });
+    const status = response?.status || {};
+    const locked = !(response?.ok && status.available !== false);
+    const detail = locked
+      ? i18n("talk_system_addressbook_required_message")
+      : "";
+    if (locked && (status.error || response?.error)){
+      logOptionsError("system addressbook unavailable", status.error || response.error);
+    }
+    applyTalkSystemAddressbookLockState(locked, detail);
+  }catch(error){
+    logOptionsError("system addressbook status check failed", error);
+    applyTalkSystemAddressbookLockState(true, i18n("talk_system_addressbook_required_message"));
+  }
 }
 
 /**
@@ -550,6 +638,7 @@ async function save(){
     shareBlockLang,
     eventDescriptionLang
   });
+  await refreshTalkSystemAddressbookState({ forceRefresh: true });
   showStatus(i18n("options_status_saved"));
 }
 
@@ -607,8 +696,11 @@ window.addEventListener("focus", async () => {
   try{
     await refreshComposeAttachmentConflictState();
     updateAttachmentThresholdState();
+    // Focus refresh keeps UI state current, but should prefer cache to avoid
+    // repeated forced network probes while switching windows.
+    await refreshTalkSystemAddressbookState({ forceRefresh: false });
   }catch(error){
-    logOptionsError("attachment lock refresh failed", error);
+    logOptionsError("options focus refresh failed", error);
   }
 });
 
@@ -678,6 +770,12 @@ function initTabs(){
       panel.classList.toggle("active", panel.id === `tab-${id}`);
     });
     activeId = id;
+    if (id === "talk"){
+      // Talk tab opens should always refresh addressbook availability once.
+      void refreshTalkSystemAddressbookState({ forceRefresh: true }).catch((error) => {
+        logOptionsError("talk tab system addressbook refresh failed", error);
+      });
+    }
   };
   buttons.forEach((btn) => {
     btn.addEventListener("click", () => activate(btn.dataset.tab));
@@ -720,6 +818,14 @@ function initAbout(){
   const licenseLink = document.getElementById("licenseLink");
   if (licenseLink && browser?.runtime?.getURL){
     licenseLink.href = browser.runtime.getURL("LICENSE.txt");
+  }
+  const homepageLink = document.getElementById("aboutHomepageLink");
+  if (homepageLink){
+    homepageLink.href = NC_CONNECTOR_HOMEPAGE_URL;
+  }
+  const moreInfoLink = document.getElementById("aboutMoreInfoLink");
+  if (moreInfoLink){
+    moreInfoLink.href = NC_CONNECTOR_HOMEPAGE_URL;
   }
 }
 

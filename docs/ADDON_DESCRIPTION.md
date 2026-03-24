@@ -15,12 +15,12 @@ This add-on integrates Nextcloud Talk and Nextcloud Sharing into Thunderbird.
 - `modules/hostPermissions.js`: centralized optional-host-permission gate reused by core/talk/sharing runtime modules
 - ui/*: HTML/JS dialogs and helpers (options, sharing wizard, talk dialog, popup sizing, DOM i18n)
 - experiments/calendar/*: Thunderbird calendar experiment API (items CRUD + item lifecycle events) used “as-is”
-- experiments/ncCalToolbar/*: minimal custom experiment for deterministic editor toolbar integration (dialog + tab)
+- experiments/ncCalToolbar/*: minimal custom experiment for deterministic editor context bridging (dialog + tab)
 - experiments/ncComposePrefs/*: read-only compose preference bridge used to detect Thunderbird's built-in big-attachment setting and lock conflicting NC attachment automation
 
 Calendar integration (high level):
 - `experiments/ncCalToolbar` is responsible only for editor-targeted integration:
-  - insert the Talk button in both editor variants
+  - bind deterministic click/context handling to the official `calendar_item_action` button in both editor variants
   - provide deterministic click context + iCal snapshot (`editorId`)
   - provide deterministic editor-targeted read/write (`getCurrent` / `updateCurrent`)
   - signal tracked editor close state (`onTrackedEditorClosed`)
@@ -46,13 +46,9 @@ Data flow:
 - Updates share metadata (note, label) after upload
 - Arms compose-share cleanup in background and removes the remote share folder if compose is closed without successful send
 - Handles duplicate names and remote path conflicts; surfaces errors from DAV/OCS
-- Optional separate password delivery for shares:
-  - default + wizard toggle: "send password in separate email"
-  - active only when password protection is enabled
-  - main share block hides inline password and shows a separate-password notice
-  - password-only follow-up mail is sent after the main compose message is sent (auto-send with timeout guard + manual fallback draft on send failure)
-  - successful password-mail delivery triggers a desktop success notification
-  - if manual fallback is closed without send, remote share cleanup removes the related share folder
+- Separate password delivery controls are currently visible but locked:
+  - default + wizard toggle remains visible as "Coming soon (Pro feature)"
+  - normal UI flow keeps password-only follow-up dispatch inactive in this release
 - Optional compose attachment automation:
   - always route attachments via NC Connector, or
   - route only when total attachment size exceeds configured threshold
@@ -73,12 +69,13 @@ Data flow:
 - Honors Nextcloud password policies (min length + generator API with secure fallback)
 
 ### Calendar
-- Provides a Talk button inside the calendar event editors (dialog + tab) via `ncCalToolbar`
+- Provides a Talk button inside the calendar event editors (dialog + tab) via standard `calendar_item_action`
 - Clicking the button opens the Talk wizard as a real popup window (`browser.windows.create`, no `default_popup` panel)
 - Reads the currently edited item as iCal snapshot via `browser.ncCalToolbar.getCurrent({ editorId, returnFormat: "ical" })` (works for new/unsaved items too)
 - Writes back into the open editor:
   - title/location/description (link + optional password/help text block)
   - `X-NCTALK-*` custom properties (TOKEN, URL, LOBBY, START, EVENT, OBJECTID, ADD-USERS, ADD-GUESTS, legacy ADD-PARTICIPANTS, DELEGATE, DELEGATE-NAME, DELEGATED, DELEGATE-READY)
+- Lobby timer synchronization uses `X-NCTALK-START` as the single authoritative source (no fallback derivation from `DTSTART/TZID`).
 - Uses the calendar experiment API “as-is” for persisted monitoring:
   - lobby updates when the event time changes
   - delete room when an event is removed

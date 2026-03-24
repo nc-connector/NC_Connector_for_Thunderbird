@@ -2,7 +2,7 @@
     "manifest_version":  2,
     "default_locale":  "de",
     "name":  "__MSG_extName__",
-    "version":  "2.2.8",
+    "version":  "2.2.9",
     "description":  "__MSG_extDescription__",
     "developer":  {
                      "name":  "Bastian Kleinschmidt"
@@ -36,12 +36,14 @@
                                        "modules/icalContract.js",
                                        "modules/bgState.js",
                                        "modules/nccore.js",
+                                       "modules/talkAddressbook.js",
                                        "modules/talkcore.js",
                                        "modules/ncSharing.js",
                                        "modules/bgComposeAttachments.js",
                                        "modules/bgComposeShareCleanup.js",
                                        "modules/bgComposePasswordDispatch.js",
                                        "modules/bgCompose.js",
+                                       "modules/bgCalendarLifecycle.js",
                                        "modules/bgCalendar.js",
                                        "modules/bgRouter.js",
                                        "modules/background.js"
@@ -54,6 +56,14 @@
                                                 "32":  "icons/app-32.png"
                                             }
                        },
+    "calendar_item_action":  {
+                                 "default_icon":  {
+                                                      "16":  "icons/app-16.png",
+                                                      "32":  "icons/app-32.png"
+                                                  },
+                                 "default_title":  "__MSG_ui_insert_button_label__",
+                                 "type":  "button"
+                             },
     "options_ui":  {
                        "page":  "options.html",
                        "browser_style":  true,
@@ -135,6 +145,23 @@
                                                                               ]
                                                                 }
                                                   },
+                            "calendarItemAction":  {
+                                                       "schema":  "experiments/calendar/schema/calendarItemAction.json",
+                                                       "parent":  {
+                                                                      "scopes":  [
+                                                                                     "addon_parent"
+                                                                                 ],
+                                                                      "script":  "experiments/calendar/parent/ext-calendarItemAction.js",
+                                                                      "events":  [
+                                                                                     "startup"
+                                                                                 ],
+                                                                      "paths":  [
+                                                                                    [
+                                                                                        "calendarItemAction"
+                                                                                    ]
+                                                                                ]
+                                                                  }
+                                                   },
                             "ncCalToolbar":  {
                                                  "schema":  "experiments/ncCalToolbar/schema.json",
                                                  "parent":  {

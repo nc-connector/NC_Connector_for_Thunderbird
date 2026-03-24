@@ -180,7 +180,7 @@
     "message": "https://docs.nextcloud.com/server/latest/user_manual/en/talk/join_a_call_or_chat_as_guest.html"
   },
   "talk_dialog_title": {
-    "message": "Nextcloud Talk"
+    "message": "Следующее облако"
   },
   "talk_dialog_close": {
     "message": "Закрыть"
@@ -489,7 +489,7 @@
     "message": "Предлагать загрузку для файлов больше"
   },
   "options_sharing_attachments_offer_suffix": {
-    "message": "МБ"
+    "message": "MB"
   },
   "options_talk_defaults_heading": {
     "message": "Настройки по умолчанию"
@@ -753,76 +753,102 @@
     "message": "Пароль к ссылке общего доступа: $1"
   },
   "options_sharing_permissions_tooltip_title": {
-    "message": "🛡️ Default permissions"
+    "message": "🛡️ Разрешения по умолчанию"
   },
   "options_sharing_permissions_tooltip_line1": {
-    "message": "These values are used as defaults for new shares."
+    "message": "Эти значения используются по умолчанию для новых общих ресурсов."
   },
   "options_sharing_permissions_tooltip_line2": {
-    "message": "They can still be adjusted in the sharing wizard."
+    "message": "Их по-прежнему можно настроить в мастере общего доступа."
   },
   "options_sharing_permissions_tooltip_line3": {
-    "message": "In attachment mode, recipient permission is always read-only."
+    "message": "В режиме вложения разрешение получателя всегда доступно только для чтения."
   },
   "sharing_password_separate_tooltip_title": {
-    "message": "Coming soon (Pro feature)"
+    "message": "Скоро (функция Pro)"
   },
   "sharing_password_separate_tooltip_line1": {
-    "message": "This option is disabled in this release."
+    "message": "Эта опция отключена в этом выпуске."
   },
   "sharing_password_separate_tooltip_line2": {
-    "message": "Password delivery in a separate email will be available in a future Pro release."
+    "message": "Доставка пароля в отдельном электронном письме будет доступна в будущей версии Pro."
   },
   "sharing_password_separate_tooltip_line3": {
-    "message": "For now, the password is included in the main share block."
+    "message": "На данный момент пароль включен в основной общий блок."
   },
   "options_sharing_attachments_always_tooltip_title": {
-    "message": "📎 Always via NC Connector"
+    "message": "📎 Всегда через разъем NC"
   },
   "options_sharing_attachments_always_tooltip_line1": {
-    "message": "New attachments are removed from the compose mail and processed via NC Connector."
+    "message": "Новые вложения удаляются из создаваемого письма и обрабатываются через NC Connector."
   },
   "options_sharing_attachments_always_tooltip_line2": {
-    "message": "The sharing wizard opens directly in the file step."
+    "message": "Мастер общего доступа открывается непосредственно на этапе создания файла."
   },
   "options_sharing_attachments_always_tooltip_line3": {
-    "message": "The final mail contains share links instead of physical attachments."
+    "message": "Последнее письмо содержит ссылки для общего доступа вместо физических вложений."
   },
   "options_sharing_attachments_offer_tooltip_title": {
-    "message": "📏 Attachment threshold"
+    "message": "📏 Порог привязанности"
   },
   "options_sharing_attachments_offer_tooltip_line1": {
-    "message": "The total size of all attachments is evaluated."
+    "message": "Оценивается общий размер всех вложений."
   },
   "options_sharing_attachments_offer_tooltip_line2": {
-    "message": "If exceeded, you can share via NC Connector or remove the last selected attachment batch."
+    "message": "Если превышено, вы можете поделиться через NC Connector или удалить последний выбранный пакет вложений."
   },
   "options_sharing_attachments_offer_tooltip_line3": {
-    "message": "The remove action returns the mail to a below-threshold state."
+    "message": "Действие удаления возвращает почту в состояние ниже порогового значения."
   },
   "talk_option_moderator_title": {
-    "message": "👑 Moderator delegation"
+    "message": "👑 Модераторская делегация"
   },
   "talk_option_moderator_line1": {
-    "message": "The selected user is promoted after room creation."
+    "message": "Выбранный пользователь получает повышение после создания комнаты."
   },
   "talk_option_moderator_line2": {
-    "message": "On successful delegation, the creator leaves the room."
+    "message": "В случае успешного делегирования создатель покидает комнату."
   },
   "talk_option_moderator_line3": {
-    "message": "If delegation fails, room ownership remains with the creator."
+    "message": "Если делегирование не удалось, право собственности на комнату остается за создателем."
+  },
+  "talk_system_addressbook_required_short": {
+    "message": "Требуется активная адресная книга системы Nextcloud."
+  },
+  "talk_system_addressbook_required_message": {
+    "message": "Для этой функции требуется активная адресная книга системы Nextcloud."
+  },
+  "talk_system_addressbook_admin_link_label": {
+    "message": "Руководство по настройке"
   },
   "sharing_password_mail_notify_title": {
     "message": "NC Connector"
   },
   "sharing_password_mail_notify_success": {
-    "message": "Password email sent to $1 recipient(s)."
+    "message": "Письмо с паролем отправлено $1 получателю(ям)."
   },
   "sharing_password_mail_notify_failure": {
-    "message": "Automatic password email failed for $1 recipient(s). Manual send mail was opened."
+    "message": "Ne udalos avtomaticheski otpravit pismo s parolem dlya $1 poluchatelya(ey). Otkryt chernovik dlya ruchnoy otpravki."
   },
   "sharing_password_mail_notify_manual_required": {
     "message": "Ne udalos avtomaticheski otpravit pismo s parolem. Otpravte pismo s parolem vruchnuyu iz otkrytogo chernovika."
+  },
+  "sharing_password_mail_notify_manual_required_select_sender": {
+    "message": "Ne udalos avtomaticheski otpravit pismo s parolem. Pri neobkhodimosti vyberite otpravitelya v otkrytom chernovike i otpravte pismo s parolem vruchnuyu."
+  },
+  "options_about_homepage_label": {
+    "message": "Домашняя страница:"
+  },
+  "options_about_homepage_link": {
+    "message": "https://nc-connector.de"
+  },
+  "options_about_overview_text": {
+    "message": "Почему это больше, чем просто дополнение для файловых ссылок?\nNC Connector покрывает не только файловые ссылки, но и весь командный workflow в почтовом клиенте.\n\nТехническая база\n- Дополнения Thunderbird и Outlook можно использовать напрямую, даже без backend Nextcloud\n- Опциональный backend Nextcloud для централизованного распределения seat и политик\n- Модель seat в backend: Community с 1 бесплатным seat, Pro от 5 seat (1 seat = 1 пользователь Nextcloud)\n\n- Обмен файлами с паролем, сроком действия и опциональной отдельной отправкой пароля\n- Создание и обновление встреч Talk напрямую из событий календаря\n- Автоматизация вложений с понятными правилами вместо ручных отдельных шагов\n- Централизованное распределение seat в backend Nextcloud (1 seat = 1 пользователь Nextcloud)"
+  },
+  "options_about_more_info_label": {
+    "message": "Больше информации -->"
+  },
+  "options_about_more_info_link": {
+    "message": "Перейти на сайт"
   }
 }
-

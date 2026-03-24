@@ -180,7 +180,7 @@
     "message": "https://docs.nextcloud.com/server/latest/user_manual/en/talk/join_a_call_or_chat_as_guest.html"
   },
   "talk_dialog_title": {
-    "message": "Nextcloud Talk"
+    "message": "下一個雲端談話"
   },
   "talk_dialog_close": {
     "message": "關閉"
@@ -312,7 +312,7 @@
     "message": "NC Connector for Thunderbird – 設定"
   },
   "options_base_url_label": {
-    "message": "Nextcloud URL"
+    "message": "下一個雲端網址"
   },
   "options_base_url_placeholder": {
     "message": "https://cloud.example.com"
@@ -753,76 +753,102 @@
     "message": "共享連結密碼：$1"
   },
   "options_sharing_permissions_tooltip_title": {
-    "message": "🛡️ Default permissions"
+    "message": "🛡️預設權限"
   },
   "options_sharing_permissions_tooltip_line1": {
-    "message": "These values are used as defaults for new shares."
+    "message": "這些值用作新股的預設值。"
   },
   "options_sharing_permissions_tooltip_line2": {
-    "message": "They can still be adjusted in the sharing wizard."
+    "message": "它們仍然可以在共用精靈中進行調整。"
   },
   "options_sharing_permissions_tooltip_line3": {
-    "message": "In attachment mode, recipient permission is always read-only."
+    "message": "在附件模式下，收件者權限始終為唯讀。"
   },
   "sharing_password_separate_tooltip_title": {
-    "message": "Coming soon (Pro feature)"
+    "message": "即將推出（專業版功能）"
   },
   "sharing_password_separate_tooltip_line1": {
-    "message": "This option is disabled in this release."
+    "message": "此版本中停用此選項。"
   },
   "sharing_password_separate_tooltip_line2": {
-    "message": "Password delivery in a separate email will be available in a future Pro release."
+    "message": "未來的專業版將提供透過單獨電子郵件發送密碼的功能。"
   },
   "sharing_password_separate_tooltip_line3": {
-    "message": "For now, the password is included in the main share block."
+    "message": "目前，密碼包含在主共享區塊中。"
   },
   "options_sharing_attachments_always_tooltip_title": {
-    "message": "📎 Always via NC Connector"
+    "message": "📎 始終透過 NC 連接器"
   },
   "options_sharing_attachments_always_tooltip_line1": {
-    "message": "New attachments are removed from the compose mail and processed via NC Connector."
+    "message": "新附件將從撰寫郵件中刪除並透過 NC 連接器進行處理。"
   },
   "options_sharing_attachments_always_tooltip_line2": {
-    "message": "The sharing wizard opens directly in the file step."
+    "message": "共用精靈直接在文件步驟中開啟。"
   },
   "options_sharing_attachments_always_tooltip_line3": {
-    "message": "The final mail contains share links instead of physical attachments."
+    "message": "最終郵件包含共用連結而不是實體附件。"
   },
   "options_sharing_attachments_offer_tooltip_title": {
-    "message": "📏 Attachment threshold"
+    "message": "📏 依戀閾值"
   },
   "options_sharing_attachments_offer_tooltip_line1": {
-    "message": "The total size of all attachments is evaluated."
+    "message": "評估所有附件的總大小。"
   },
   "options_sharing_attachments_offer_tooltip_line2": {
-    "message": "If exceeded, you can share via NC Connector or remove the last selected attachment batch."
+    "message": "如果超出，您可以透過 NC Connector 共用或刪除最後選取的附件批次。"
   },
   "options_sharing_attachments_offer_tooltip_line3": {
-    "message": "The remove action returns the mail to a below-threshold state."
+    "message": "刪除操作會將郵件傳回低於閾值的狀態。"
   },
   "talk_option_moderator_title": {
-    "message": "👑 Moderator delegation"
+    "message": "👑 主持人代表團"
   },
   "talk_option_moderator_line1": {
-    "message": "The selected user is promoted after room creation."
+    "message": "所選用戶在創建房間後將被提升。"
   },
   "talk_option_moderator_line2": {
-    "message": "On successful delegation, the creator leaves the room."
+    "message": "成功委派後，創建者將離開房間。"
   },
   "talk_option_moderator_line3": {
-    "message": "If delegation fails, room ownership remains with the creator."
+    "message": "若委派失敗，房間所有權仍歸創作者所有。"
+  },
+  "talk_system_addressbook_required_short": {
+    "message": "需要有效的 Nextcloud 系統通訊錄。"
+  },
+  "talk_system_addressbook_required_message": {
+    "message": "此功能需要活動的 Nextcloud 系統通訊錄。"
+  },
+  "talk_system_addressbook_admin_link_label": {
+    "message": "設定指南"
   },
   "sharing_password_mail_notify_title": {
     "message": "NC Connector"
   },
   "sharing_password_mail_notify_success": {
-    "message": "Password email sent to $1 recipient(s)."
+    "message": "密碼郵件已傳送給 $1 位收件人。"
   },
   "sharing_password_mail_notify_failure": {
-    "message": "Automatic password email failed for $1 recipient(s). Manual send mail was opened."
+    "message": "向 $1 位收件人自動傳送密碼郵件失敗。已開啟手動草稿。"
   },
   "sharing_password_mail_notify_manual_required": {
     "message": "密碼郵件自動傳送失敗。請使用已開啟的草稿手動傳送密碼郵件。"
+  },
+  "sharing_password_mail_notify_manual_required_select_sender": {
+    "message": "密碼郵件自動傳送失敗。如有需要，請在已開啟的草稿中選擇寄件者，再手動傳送密碼郵件。"
+  },
+  "options_about_homepage_label": {
+    "message": "首頁："
+  },
+  "options_about_homepage_link": {
+    "message": "https://nc-connector.de"
+  },
+  "options_about_overview_text": {
+    "message": "為什麼不只是檔案連結外掛？\nNC Connector 不僅支援檔案連結，還涵蓋郵件用戶端中的完整團隊工作流程。\n\n技術基礎\n- Thunderbird 與 Outlook 外掛可直接使用，即使沒有 Nextcloud 後端也可以\n- 可選的 Nextcloud 後端，用於集中分配席位與策略\n- 後端席位模型：Community 含 1 個免費席位，Pro 從 5 個席位起（1 個席位 = 1 個 Nextcloud 使用者）\n\n- 檔案分享支援密碼、到期日期，以及可選的分開寄送密碼\n- 可直接從行事曆事件建立並更新 Talk 會議\n- 附件自動化採用明確規則，取代手動逐步操作\n- Nextcloud 後端中的集中席位分配（1 個席位 = 1 個 Nextcloud 使用者）"
+  },
+  "options_about_more_info_label": {
+    "message": "更多資訊 -->"
+  },
+  "options_about_more_info_link": {
+    "message": "前往首頁"
   }
 }
-

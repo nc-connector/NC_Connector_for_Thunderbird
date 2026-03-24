@@ -11,7 +11,8 @@
  */
 
 /**
- * Entry point from ncCalToolbar button click in event dialog/tab editor.
+ * Entry point from the official calendar_item_action button.
+ * Click context/snapshot is provided by the ncCalToolbar bridge API.
  */
 browser.ncCalToolbar?.onClicked?.addListener((snapshot) => {
   return (async () => {
@@ -21,6 +22,20 @@ browser.ncCalToolbar?.onClicked?.addListener((snapshot) => {
         console.error("[NCBG] ncCalToolbar.onClicked missing or invalid editorId");
         return;
       }
+
+      // Fire-and-forget preflight only. The wizard performs its own live status
+      // refresh, so Talk button responsiveness must not depend on this request.
+      void NCTalkCore.getSystemAddressbookStatus({ forceRefresh: false })
+        .then((status) => {
+          L("system addressbook check on talk click", {
+            available: !!status?.available,
+            count: Number.isFinite(status?.count) ? status.count : 0,
+            hasError: !!status?.error
+          });
+        })
+        .catch((error) => {
+          console.error("[NCBG] system addressbook check on talk click failed", error);
+        });
 
       const getCurrentApi = browser.ncCalToolbar?.getCurrent;
       if (typeof getCurrentApi !== "function"){
@@ -73,11 +88,19 @@ browser.ncCalToolbar?.onClicked?.addListener((snapshot) => {
         calendarId: context.item?.calendarId || "",
         itemId: context.item?.id || ""
       });
-      await browser.windows.create({
+      const popupWindow = await browser.windows.create({
         type: "popup",
         url: url.toString(),
         width: TALK_POPUP_WIDTH,
         height: TALK_POPUP_HEIGHT
+      });
+      const focusApplied = await focusPopupWindowBestEffort(popupWindow, {
+        label: "talk wizard popup"
+      });
+      L("talk wizard popup focus", {
+        contextId,
+        windowId: Number(popupWindow?.id) || 0,
+        focusApplied
       });
     }catch(e){
       console.error("[NCBG] ncCalToolbar.onClicked error", e);
@@ -95,212 +118,6 @@ browser.ncCalToolbar?.onTrackedEditorClosed?.addListener((event) => {
     console.error("[NCBG] ncCalToolbar.onTrackedEditorClosed handler failed", e);
   }
 });
-
-/**
- * Normalize and validate an editor id for room-cleanup tracking.
- * @param {string} editorId
- * @returns {string}
- */
-function makeRoomCleanupEditorKey(editorId){
-  if (typeof editorId !== "string"){
-    return "";
-  }
-  const value = editorId.trim();
-  if (!value){
-    return "";
-  }
-  return /^ed-[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/.test(value) ? value : "";
-}
-
-/**
- * Remove one pending room cleanup entry and clear its timer.
- * @param {string} token
- * @param {string} reason
- */
-function removeRoomCleanupEntry(token, reason = ""){
-  if (!token) return;
-  const entry = ROOM_CLEANUP_BY_TOKEN.get(token);
-  if (!entry){
-    return;
-  }
-  if (entry.timerId){
-    try{
-      clearTimeout(entry.timerId);
-    }catch(error){
-      console.error("[NCBG] clear cleanup timer failed", error);
-    }
-    entry.timerId = null;
-  }
-  ROOM_CLEANUP_BY_TOKEN.delete(token);
-  if (entry.editorKey && ROOM_CLEANUP_BY_EDITOR.get(entry.editorKey) === token){
-    ROOM_CLEANUP_BY_EDITOR.delete(entry.editorKey);
-  }
-  L("room cleanup cleared", { token: shortToken(token), reason: reason || "" });
-}
-
-/**
- * Schedule deferred room deletion for discarded/superseded editors.
- * @param {string} token
- * @param {string} reason
- * @param {number} delayMs
- */
-function scheduleRoomCleanupDelete(token, reason = "", delayMs = ROOM_CLEANUP_DELETE_DELAY_MS){
-  if (!token) return;
-  const entry = ROOM_CLEANUP_BY_TOKEN.get(token);
-  if (!entry){
-    L("room cleanup ignored (not pending)", { token: shortToken(token), reason: reason || "" });
-    return;
-  }
-  if (entry.timerId){
-    return;
-  }
-  entry.scheduleNonce = (Number(entry.scheduleNonce) || 0) + 1;
-  const scheduleNonce = entry.scheduleNonce;
-  const delay = Math.max(0, Number(delayMs) || 0);
-  entry.timerId = setTimeout(() => {
-    (async () => {
-      const current = ROOM_CLEANUP_BY_TOKEN.get(token);
-      if (!current){
-        return;
-      }
-      if (current !== entry || current.scheduleNonce !== scheduleNonce){
-        L("room cleanup skipped (stale timer)", {
-          token: shortToken(token),
-          reason: reason || ""
-        });
-        return;
-      }
-      current.timerId = null;
-      removeRoomCleanupEntry(token, `delete:${reason || ""}`);
-      try{
-        L("room cleanup delete", { token: shortToken(token), reason: reason || "" });
-        await NCTalkCore.deleteTalkRoom({ token });
-        await deleteRoomMeta(token);
-      }catch(e){
-        console.error("[NCBG] room cleanup delete failed", e);
-      }
-    })().catch((e) => console.error("[NCBG] room cleanup delete failed", e));
-  }, delay);
-  L("room cleanup scheduled", { token: shortToken(token), delayMs: delay, reason: reason || "" });
-}
-
-/**
- * Handle editor-close lifecycle signals from ncCalToolbar.
- * @param {{editorId?:string,action?:string,reason?:string}} event
- */
-function handleCalendarItemsEditorClosed(event){
-  const editorKey = makeRoomCleanupEditorKey(event?.editorId);
-  const action = typeof event?.action === "string" ? event.action : "";
-  const reason = typeof event?.reason === "string" ? event.reason : "";
-  if (!editorKey || !action){
-    return;
-  }
-  const token = ROOM_CLEANUP_BY_EDITOR.get(editorKey);
-  L("ncCalToolbar.onTrackedEditorClosed", {
-    editorKey,
-    token: token ? shortToken(token) : "",
-    action,
-    reason
-  });
-  if (!token){
-    return;
-  }
-  if (action === "persisted"){
-    removeRoomCleanupEntry(token, `persisted:${reason}`);
-    return;
-  }
-  if (action === "discarded"){
-    scheduleRoomCleanupDelete(token, reason || "discarded");
-    return;
-  }
-  if (action === "superseded"){
-    scheduleRoomCleanupDelete(token, reason || "superseded", 0);
-  }
-}
-
-/**
- * Drop stale calendar wizard contexts.
- */
-function pruneCalendarWizardContexts(){
-  const cutoff = Date.now() - CALENDAR_WIZARD_CONTEXT_TTL_MS;
-  for (const [contextId, entry] of CALENDAR_WIZARD_CONTEXTS.entries()){
-    if (!entry || typeof entry.created !== "number" || entry.created < cutoff){
-      CALENDAR_WIZARD_CONTEXTS.delete(contextId);
-    }
-  }
-}
-
-/**
- * Create a unique id for one calendar wizard context.
- * @returns {string}
- */
-function createCalendarWizardContextId(){
-  const rand = Math.random().toString(16).slice(2);
-  return `${Date.now()}-${rand}`;
-}
-
-/**
- * Persist one calendar wizard context.
- * @param {string} contextId
- * @param {object} entry
- * @returns {object}
- */
-function setCalendarWizardContext(contextId, entry){
-  pruneCalendarWizardContexts();
-  const next = Object.assign({}, entry || {}, { created: Date.now() });
-  CALENDAR_WIZARD_CONTEXTS.set(contextId, next);
-  return next;
-}
-
-/**
- * Read one calendar wizard context by id.
- * @param {string} contextId
- * @returns {object|null}
- */
-function getCalendarWizardContext(contextId){
-  if (!contextId) return null;
-  pruneCalendarWizardContexts();
-  return CALENDAR_WIZARD_CONTEXTS.get(contextId) || null;
-}
-
-/**
- * Remove one calendar wizard context.
- * @param {string} contextId
- */
-function deleteCalendarWizardContext(contextId){
-  if (!contextId) return;
-  CALENDAR_WIZARD_CONTEXTS.delete(contextId);
-}
-
-/**
- * Refresh parsed event/metadata snapshot for a wizard context entry.
- * @param {object} entry
- */
-function refreshCalendarWizardContextSnapshot(entry){
-  if (!entry?.item?.item){
-    return;
-  }
-  const ical = String(entry.item.item || "");
-  try{
-    entry.metadata = extractTalkMetadataFromIcal(ical) || {};
-  }catch(error){
-    console.error("[NCBG] extractTalkMetadataFromIcal failed", error);
-    entry.metadata = entry.metadata || {};
-  }
-  try{
-    const { props, dtStart, dtEnd } = parseIcalEventData(ical);
-    entry.event = {
-      title: props["SUMMARY"] || "",
-      location: props["LOCATION"] || "",
-      description: props["DESCRIPTION"] || "",
-      startTimestamp: parseIcalDateTime(dtStart?.value || "", dtStart?.tzid || null),
-      endTimestamp: parseIcalDateTime(dtEnd?.value || "", dtEnd?.tzid || null)
-    };
-  }catch(error){
-    console.error("[NCBG] parseIcalEventData failed", error);
-    entry.event = entry.event || {};
-  }
-}
 
 // Calendar event editor integration uses the custom `ncCalToolbar` experiment
 // for deterministic editor context, snapshot and editor-targeted write-back.
@@ -471,10 +288,18 @@ async function applyCalendarLobbyUpdate(payload = {}){
     });
   }
 
-  const startTs = incomingStart ?? metaStart;
-  if (typeof startTs !== "number"){
-    return { ok:false, error: bgI18n("error_unknown_utility_request") };
+  if (typeof incomingStart !== "number"){
+    console.error("[NCBG] calendar lobby update blocked: X-NCTALK-START missing/invalid", {
+      token: shortToken(token),
+      startTimestamp: payload?.startTimestamp
+    });
+    L("calendar lobby update blocked: X-NCTALK-START missing/invalid", {
+      token: shortToken(token),
+      startTimestamp: payload?.startTimestamp
+    });
+    return { ok:false, skipped:true, reason:"missingOrInvalidXTalkStart" };
   }
+  const startTs = incomingStart;
   if (metaStart === startTs){
     L("calendar lobby update skipped (unchanged start)", {
       token: shortToken(token),
@@ -533,6 +358,7 @@ function getIcalContractApi(){
     typeof NCIcalContract === "undefined" ||
     !NCIcalContract ||
     typeof NCIcalContract.parseEventData !== "function" ||
+    typeof NCIcalContract.parseEventStartUnixSeconds !== "function" ||
     typeof NCIcalContract.extractEventAttendees !== "function" ||
     typeof NCIcalContract.applyEventPropertyUpdates !== "function"
   ){
@@ -746,16 +572,33 @@ function parseNumberProp(value){
 }
 
 /**
- * Calculate the time zone offset for a Date in a specific time zone.
+ * Determine whether a timezone id looks like an IANA zone.
+ * Windows ids like "W. Europe Standard Time" are intentionally excluded.
+ * @param {string} timeZone
+ * @returns {boolean}
+ */
+function isLikelyIanaTimeZone(timeZone){
+  if (typeof timeZone !== "string") return false;
+  const value = timeZone.trim();
+  if (!value) return false;
+  return /^[A-Za-z_]+(?:\/[A-Za-z0-9_+\-]+)+$/.test(value);
+}
+
+/**
+ * Calculate the time zone offset for a Date in a specific IANA time zone.
+ * Returns null for unsupported/non-IANA zones.
  * @param {string} timeZone
  * @param {Date} date
  * @returns {number|null}
  */
 function getTimeZoneOffsetMs(timeZone, date){
-  let values = null;
+  const tz = String(timeZone || "").trim();
+  if (!isLikelyIanaTimeZone(tz)){
+    return null;
+  }
   try{
     const dtf = new Intl.DateTimeFormat("en-US", {
-      timeZone,
+      timeZone: tz,
       hour12: false,
       year: "numeric",
       month: "2-digit",
@@ -765,7 +608,7 @@ function getTimeZoneOffsetMs(timeZone, date){
       second: "2-digit"
     });
     const parts = dtf.formatToParts(date);
-    values = {};
+    const values = {};
     for (const part of parts){
       if (part.type !== "literal"){
         values[part.type] = part.value;
@@ -780,23 +623,14 @@ function getTimeZoneOffsetMs(timeZone, date){
       Number(values.second)
     );
     return asUTC - date.getTime();
-  }catch(error){
-    console.error("[NCBG] time zone offset resolution failed", {
-      timeZone: String(timeZone || ""),
-      values: values || null,
-      error: error?.message || String(error)
-    });
-    L("time zone offset resolution failed", {
-      timeZone: String(timeZone || ""),
-      values: values || null,
-      error: error?.message || String(error)
-    });
+  }catch{
     return null;
   }
 }
 
 /**
- * Convert local date parts in a time zone to a UTC timestamp.
+ * Convert local date parts in an IANA time zone to a UTC timestamp.
+ * Returns null for unsupported/non-IANA zones.
  * @param {number} year
  * @param {number} month
  * @param {number} day
@@ -804,16 +638,21 @@ function getTimeZoneOffsetMs(timeZone, date){
  * @param {number} minute
  * @param {number} second
  * @param {string} tzid
- * @returns {number}
+ * @returns {number|null}
  */
 function zonedTimeToUtc(year, month, day, hour, minute, second, tzid){
   const utcGuess = Date.UTC(year, month - 1, day, hour, minute, second);
   const offset = tzid ? getTimeZoneOffsetMs(tzid, new Date(utcGuess)) : null;
-  return offset == null ? utcGuess : utcGuess - offset;
+  if (offset == null){
+    return null;
+  }
+  return utcGuess - offset;
 }
 
 /**
  * Parse an iCalendar DATE or DATE-TIME into unix seconds.
+ * This parser is only used for UI/event snapshots, not as lobby-time authority.
+ * Lobby updates use X-NCTALK-START only.
  * @param {string} rawValue
  * @param {string} tzid
  * @returns {number|null}
@@ -857,18 +696,17 @@ function parseIcalDateTime(rawValue, tzid){
       return Math.floor(Date.UTC(year, month - 1, day, hour, minute, second) / 1000);
     }
     if (normalizedTzid){
-      return Math.floor(zonedTimeToUtc(year, month, day, hour, minute, second, normalizedTzid) / 1000);
+      const utcTimestamp = zonedTimeToUtc(year, month, day, hour, minute, second, normalizedTzid);
+      if (utcTimestamp != null){
+        return Math.floor(utcTimestamp / 1000);
+      }
     }
     const local = new Date(year, month - 1, day, hour, minute, second);
     if (Number.isNaN(local.getTime())){
       return null;
     }
     return Math.floor(local.getTime() / 1000);
-  }catch(error){
-    console.error("[NCBG] parseIcalDateTime failed", {
-      rawValue: value,
-      tzid: normalizedTzid || ""
-    }, error);
+  }catch{
     return null;
   }
 }
@@ -887,31 +725,58 @@ function parseIcalEventData(ical){
 }
 
 /**
- * Extract Talk link/token from iCal properties.
+ * Parse VEVENT DTSTART into unix epoch seconds through the shared contract.
+ * No heuristic timezone fallbacks are allowed.
+ * @param {string} ical
+ * @returns {number|null}
+ */
+function parseEventStartUnixSeconds(ical){
+  const contract = getIcalContractApi();
+  if (!contract){
+    return null;
+  }
+  return contract.parseEventStartUnixSeconds(ical);
+}
+
+const TALK_URL_TOKEN_REGEX = /https?:\/\/[^\s"'<>]+\/call\/([A-Za-z0-9_-]+)/i;
+
+/**
+ * Extract Talk token/url strictly from contract properties.
+ * Contract priority:
+ * 1) X-NCTALK-TOKEN / X-NCTALK-URL
+ * 2) deterministic URL token extraction from LOCATION/URL as interop bridge
+ *
+ * Note: Lobby timer authority remains X-NCTALK-START only.
  * @param {object} props
  * @returns {{token:string,url:string}|null}
  */
 function extractTalkLinkFromProps(props){
-  const propToken = props["X-NCTALK-TOKEN"];
+  const propToken = typeof props["X-NCTALK-TOKEN"] === "string" ? props["X-NCTALK-TOKEN"].trim() : "";
   if (propToken){
-    const propUrl = props["X-NCTALK-URL"];
+    const propUrl = typeof props["X-NCTALK-URL"] === "string" ? props["X-NCTALK-URL"].trim() : "";
     return {
       token: propToken,
       url: propUrl || ""
     };
   }
-  const candidates = [
-    props["LOCATION"],
-    props["DESCRIPTION"],
-    props["URL"],
-    props["SUMMARY"]
-  ];
-  for (const text of candidates){
-    if (!text) continue;
-    const match = TALK_LINK_REGEX.exec(text);
-    if (match){
-      return { url: match[1], token: match[2] };
+
+  const candidates = [props["LOCATION"], props["URL"]];
+  for (const candidate of candidates){
+    if (typeof candidate !== "string"){
+      continue;
     }
+    const match = TALK_URL_TOKEN_REGEX.exec(candidate);
+    if (!match){
+      continue;
+    }
+    const token = String(match[1] || "").trim();
+    if (!token){
+      continue;
+    }
+    return {
+      token,
+      url: String(match[0] || "").trim()
+    };
   }
   return null;
 }
@@ -922,11 +787,9 @@ function extractTalkLinkFromProps(props){
  * @returns {object}
  */
 function extractTalkMetadataFromIcal(ical){
-  const { props, dtStart, dtEnd } = parseIcalEventData(ical);
+  const { props } = parseIcalEventData(ical);
   const link = extractTalkLinkFromProps(props) || {};
   const startProp = parseNumberProp(props["X-NCTALK-START"]);
-  const startFromDt = parseIcalDateTime(dtStart?.value || "", dtStart?.tzid || null);
-  const endFromDt = parseIcalDateTime(dtEnd?.value || "", dtEnd?.tzid || null);
   const delegateReadyRaw = props["X-NCTALK-DELEGATE-READY"];
   const addParticipantsLegacy = parseBooleanProp(props["X-NCTALK-ADD-PARTICIPANTS"]);
   const hasAddUsers = Object.prototype.hasOwnProperty.call(props, "X-NCTALK-ADD-USERS");
@@ -942,10 +805,7 @@ function extractTalkMetadataFromIcal(ical){
     url: link.url || "",
     title: props["SUMMARY"] || "",
     lobbyEnabled: parseBooleanProp(props["X-NCTALK-LOBBY"]),
-    startProp,
-    startFromDt,
-    startTimestamp: startProp ?? startFromDt,
-    endTimestamp: endFromDt,
+    startTimestamp: startProp,
     eventConversation: (() => {
       const raw = props["X-NCTALK-EVENT"];
       if (!raw) return null;
@@ -1013,21 +873,73 @@ async function handleCalendarItemUpsert(item){
     if (!item || item.type !== "event"){
       return;
     }
-    const meta = extractTalkMetadataFromIcal(item.item || "");
+    const icalPayload = String(item.item || "");
+    const meta = extractTalkMetadataFromIcal(icalPayload);
     if (!meta?.token){
       return;
+    }
+    const startFromEvent = parseEventStartUnixSeconds(icalPayload);
+    if (typeof startFromEvent === "number" && Number.isFinite(startFromEvent)){
+      if (meta.startTimestamp !== startFromEvent){
+        const synced = await updateCalendarItemProps(item, { "X-NCTALK-START": String(startFromEvent) });
+        if (!synced){
+          console.error("[NCBG] calendar contract start sync failed", {
+            token: shortToken(meta.token),
+            from: meta.startTimestamp,
+            to: startFromEvent
+          });
+          L("calendar contract start sync failed", {
+            token: shortToken(meta.token),
+            from: meta.startTimestamp,
+            to: startFromEvent
+          });
+          return;
+        }
+        L("calendar contract start synced", {
+          token: shortToken(meta.token),
+          from: meta.startTimestamp,
+          to: startFromEvent
+        });
+        // Stop this cycle. The follow-up onUpdated from the X-NCTALK-START write
+        // is the single authoritative path for lobby update and room-meta update.
+        return;
+      }
+      meta.startTimestamp = startFromEvent;
+    }else{
+      console.error("[NCBG] calendar contract start parse failed", {
+        token: shortToken(meta.token)
+      });
+      L("calendar contract start parse failed", {
+        token: shortToken(meta.token)
+      });
+      // Keep the authoritative X-NCTALK-START value from metadata when DTSTART
+      // cannot be parsed (for example unsupported external TZIDs from other clients).
+      if (!(typeof meta.startTimestamp === "number" && Number.isFinite(meta.startTimestamp))){
+        meta.startTimestamp = null;
+      }
     }
     removeRoomCleanupEntry(meta.token, "calendar_upsert");
     await setEventTokenEntry(item.calendarId, item.id, { token: meta.token, url: meta.url });
 
-    if (typeof meta.startTimestamp === "number" && meta.lobbyEnabled !== false){
-      await applyCalendarLobbyUpdate({
-        token: meta.token,
-        startTimestamp: meta.startTimestamp,
-        delegateId: meta.delegateId || "",
-        delegated: meta.delegated === true,
-        lobbyEnabled: meta.lobbyEnabled
-      });
+    if (meta.lobbyEnabled !== false){
+      if (typeof meta.startTimestamp === "number"){
+        await applyCalendarLobbyUpdate({
+          token: meta.token,
+          startTimestamp: meta.startTimestamp,
+          delegateId: meta.delegateId || "",
+          delegated: meta.delegated === true,
+          lobbyEnabled: meta.lobbyEnabled
+        });
+      }else{
+        console.error("[NCBG] calendar lobby update skipped: X-NCTALK-START missing/invalid", {
+          token: shortToken(meta.token),
+          startTimestamp: meta.startTimestamp
+        });
+        L("calendar lobby update skipped: X-NCTALK-START missing/invalid", {
+          token: shortToken(meta.token),
+          startTimestamp: meta.startTimestamp
+        });
+      }
     }
 
     const updates = {};
@@ -1049,13 +961,6 @@ async function handleCalendarItemUpsert(item){
     }
     if (Object.keys(updates).length){
       await setRoomMeta(meta.token, updates);
-    }
-
-    if (typeof meta.startFromDt === "number"){
-      const shouldPersist = meta.startProp == null || Math.abs(meta.startFromDt - meta.startProp) >= 1;
-      if (shouldPersist){
-        await updateCalendarItemProps(item, { "X-NCTALK-START": String(Math.floor(meta.startFromDt)) });
-      }
     }
 
     if (meta.addUsers === true || meta.addGuests === true){
@@ -1083,7 +988,7 @@ async function handleCalendarItemUpsert(item){
             try{
               await addInviteesToTalkRoom({
                 token: meta.token,
-                ical: item.item,
+                ical: icalPayload,
                 addUsers: meta.addUsers === true,
                 addGuests: meta.addGuests === true
               });

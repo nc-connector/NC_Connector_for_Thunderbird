@@ -180,7 +180,7 @@
     "message": "https://docs.nextcloud.com/server/latest/user_manual/en/talk/join_a_call_or_chat_as_guest.html"
   },
   "talk_dialog_title": {
-    "message": "Nextcloud Talk"
+    "message": "ネクストクラウドトーク"
   },
   "talk_dialog_close": {
     "message": "閉じる"
@@ -753,76 +753,102 @@
     "message": "共有リンクのパスワード: $1"
   },
   "options_sharing_permissions_tooltip_title": {
-    "message": "🛡️ Default permissions"
+    "message": "🛡️ デフォルトの権限"
   },
   "options_sharing_permissions_tooltip_line1": {
-    "message": "These values are used as defaults for new shares."
+    "message": "これらの値は、新しい共有のデフォルトとして使用されます。"
   },
   "options_sharing_permissions_tooltip_line2": {
-    "message": "They can still be adjusted in the sharing wizard."
+    "message": "これらは共有ウィザードで引き続き調整できます。"
   },
   "options_sharing_permissions_tooltip_line3": {
-    "message": "In attachment mode, recipient permission is always read-only."
+    "message": "添付ファイル モードでは、受信者のアクセス許可は常に読み取り専用です。"
   },
   "sharing_password_separate_tooltip_title": {
-    "message": "Coming soon (Pro feature)"
+    "message": "近日公開予定 (Pro 機能)"
   },
   "sharing_password_separate_tooltip_line1": {
-    "message": "This option is disabled in this release."
+    "message": "このオプションはこのリリースでは無効になっています。"
   },
   "sharing_password_separate_tooltip_line2": {
-    "message": "Password delivery in a separate email will be available in a future Pro release."
+    "message": "将来の Pro リリースでは、別の電子メールでのパスワード配信が利用可能になる予定です。"
   },
   "sharing_password_separate_tooltip_line3": {
-    "message": "For now, the password is included in the main share block."
+    "message": "現時点では、パスワードはメインの共有ブロックに含まれています。"
   },
   "options_sharing_attachments_always_tooltip_title": {
-    "message": "📎 Always via NC Connector"
+    "message": "📎 常にNCコネクタ経由"
   },
   "options_sharing_attachments_always_tooltip_line1": {
-    "message": "New attachments are removed from the compose mail and processed via NC Connector."
+    "message": "新しい添付ファイルはメール作成から削除され、NC コネクタ経由で処理されます。"
   },
   "options_sharing_attachments_always_tooltip_line2": {
-    "message": "The sharing wizard opens directly in the file step."
+    "message": "共有ウィザードはファイルステップで直接開きます。"
   },
   "options_sharing_attachments_always_tooltip_line3": {
-    "message": "The final mail contains share links instead of physical attachments."
+    "message": "最終的なメールには、物理​​的な添付ファイルではなく、共有リンクが含まれています。"
   },
   "options_sharing_attachments_offer_tooltip_title": {
-    "message": "📏 Attachment threshold"
+    "message": "📏 添付ファイルのしきい値"
   },
   "options_sharing_attachments_offer_tooltip_line1": {
-    "message": "The total size of all attachments is evaluated."
+    "message": "すべての添付ファイルの合計サイズが評価されます。"
   },
   "options_sharing_attachments_offer_tooltip_line2": {
-    "message": "If exceeded, you can share via NC Connector or remove the last selected attachment batch."
+    "message": "超過した場合は、NC コネクタ経由で共有するか、最後に選択した添付ファイル バッチを削除できます。"
   },
   "options_sharing_attachments_offer_tooltip_line3": {
-    "message": "The remove action returns the mail to a below-threshold state."
+    "message": "削除アクションにより、メールはしきい値以下の状態に戻ります。"
   },
   "talk_option_moderator_title": {
-    "message": "👑 Moderator delegation"
+    "message": "👑 モデレーター代表団"
   },
   "talk_option_moderator_line1": {
-    "message": "The selected user is promoted after room creation."
+    "message": "選択したユーザーはルーム作成後に昇格されます。"
   },
   "talk_option_moderator_line2": {
-    "message": "On successful delegation, the creator leaves the room."
+    "message": "委任が成功すると、作成者はルームから退出します。"
   },
   "talk_option_moderator_line3": {
-    "message": "If delegation fails, room ownership remains with the creator."
+    "message": "委任が失敗した場合、ルームの所有権は作成者に残ります。"
+  },
+  "talk_system_addressbook_required_short": {
+    "message": "アクティブな Nextcloud システムのアドレス帳が必要です。"
+  },
+  "talk_system_addressbook_required_message": {
+    "message": "この機能には、アクティブな Nextcloud システム アドレス帳が必要です。"
+  },
+  "talk_system_addressbook_admin_link_label": {
+    "message": "セットアップガイド"
   },
   "sharing_password_mail_notify_title": {
     "message": "NC Connector"
   },
   "sharing_password_mail_notify_success": {
-    "message": "Password email sent to $1 recipient(s)."
+    "message": "$1 件の宛先へパスワードメールを送信しました。"
   },
   "sharing_password_mail_notify_failure": {
-    "message": "Automatic password email failed for $1 recipient(s). Manual send mail was opened."
+    "message": "$1 件の宛先へのパスワードメール自動送信に失敗しました。手動送信用の下書きが開きました。"
   },
   "sharing_password_mail_notify_manual_required": {
     "message": "パスワードメールの自動送信に失敗しました。開かれた下書きを使って手動で送信してください。"
+  },
+  "sharing_password_mail_notify_manual_required_select_sender": {
+    "message": "パスワードメールの自動送信に失敗しました。必要に応じて開いた下書きで送信者を選択し、手動でパスワードメールを送信してください。"
+  },
+  "options_about_homepage_label": {
+    "message": "ホームページ:"
+  },
+  "options_about_homepage_link": {
+    "message": "https://nc-connector.de"
+  },
+  "options_about_overview_text": {
+    "message": "なぜ単なるファイルリンクアドオン以上なのか？\nNC Connector は、ファイルリンクだけでなく、メールクライアント内のチームワークフロー全体をカバーします。\n\n技術基盤\n- Thunderbird と Outlook のアドオンを、Nextcloud バックエンドがなくても直接利用可能\n- シート割り当てとポリシーを一元管理するための任意の Nextcloud バックエンド\n- バックエンドのシートモデル: Community は無料 1 シート、Pro は 5 シートから（1 シート = 1 Nextcloud ユーザー）\n\n- パスワード・有効期限・任意の別メールでのパスワード送信に対応したファイル共有\n- カレンダー予定から Talk ミーティングを直接作成・更新\n- 手動の個別作業ではなく、明確なルールによる添付ファイル自動化\n- Nextcloud バックエンドでのシート一元割り当て（1 シート = 1 Nextcloud ユーザー）"
+  },
+  "options_about_more_info_label": {
+    "message": "詳細情報 -->"
+  },
+  "options_about_more_info_link": {
+    "message": "ホームページを開く"
   }
 }
-

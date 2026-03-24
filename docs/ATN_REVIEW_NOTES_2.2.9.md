@@ -1,8 +1,8 @@
-# Reviewer Notes - 2.2.8
+# Reviewer Notes - 2.2.9
 NC Connector for Thunderbird (`{4a35421f-0906-439c-bff2-8eef39e2baee}`)
 
 This document summarizes the currently implemented reviewer-relevant contract
-for add-on version 2.2.8.
+for add-on version 2.2.9.
 
 ---
 
@@ -19,8 +19,8 @@ for add-on version 2.2.8.
 The active editor integration is provided by `experiments/ncCalToolbar/**` and
 is intentionally minimal:
 
-- deterministic toolbar button in event dialog and event tab
-- click entrypoint via `ncCalToolbar.onClicked`
+- deterministic Talk button via standard `calendar_item_action` in event dialog and event tab
+- click entrypoint via `ncCalToolbar.onClicked` bridge (bound to official `calendarItemAction` button)
 - deterministic editor targeting via opaque `editorId`
 - editor snapshot read via `ncCalToolbar.getCurrent({ editorId, returnFormat: "ical" })`
 - editor write-back via `ncCalToolbar.updateCurrent({ editorId, fields, properties, returnFormat })`
@@ -28,7 +28,8 @@ is intentionally minimal:
 
 All business logic stays in the background runtime modules (`modules/bgState.js`,
 `modules/bgComposeAttachments.js`, `modules/bgComposeShareCleanup.js`, `modules/bgComposePasswordDispatch.js`,
-`modules/bgCompose.js`, `modules/bgCalendar.js`, `modules/bgRouter.js`) and uses calendar APIs only
+`modules/bgCompose.js`, `modules/bgCalendarLifecycle.js`, `modules/bgCalendar.js`, `modules/talkAddressbook.js`,
+`modules/talkcore.js`, `modules/bgRouter.js`) and uses calendar APIs only
 for persisted monitoring (`browser.calendar.items.onCreated/onUpdated/onRemoved`).
 
 ---
@@ -40,10 +41,12 @@ for persisted monitoring (`browser.calendar.items.onCreated/onUpdated/onRemoved`
 3) Wizard can read/write unsaved editor state through `editorId` targeting.
 4) Cleanup flow handles persisted/discarded/superseded editor close actions.
 5) Event move/delete handling remains driven by official calendar item events.
+6) Talk/Sharing wizard windows use best-effort focus retries after popup creation; focus requests remain non-fatal due to OS/window-manager policy.
+7) Lobby timer updates consume `X-NCTALK-START` as authoritative value; no runtime fallback from `DTSTART/TZID` is used.
 
 ---
 
-## Reviewer Alignment Notes (2.2.8)
+## Reviewer Alignment Notes (2.2.9)
 
 - No trial-and-error fallbacks in core paths.
 - Catch blocks in active paths log errors.
@@ -56,6 +59,16 @@ for persisted monitoring (`browser.calendar.items.onCreated/onUpdated/onRemoved`
   aligned with ATN guidance for experiment scripts.
 - This `ExtensionSupport` global usage was runtime-validated on Thunderbird ESR
   140 in both editor variants (dialog + tab).
+- `manifest.json` uses standard `calendar_item_action` + `calendarItemAction`
+  experiment API; `ncCalToolbar` no longer injects its own toolbar button.
+- On current ESR 140 builds, startup may log
+  `Warning processing calendar_item_action: An unexpected property was found in the WebExtension manifest.`
+  This warning is non-fatal in our runtime validation (button + click flow still works in dialog/tab),
+  and is tracked as an ESR parser-compatibility caveat while keeping the official action path.
+- Talk user/moderator controls are guarded by live system-addressbook checks;
+  unavailable server-side addressbook state is surfaced as explicit UI lock guidance.
+- Separate-password UI controls are intentionally visible but locked in this release;
+  no active separate-password runtime path is exposed via normal wizard/options flow.
 
 Known temporary deviation:
 - The editor context bridge still includes scoped tab/window correlation inside
