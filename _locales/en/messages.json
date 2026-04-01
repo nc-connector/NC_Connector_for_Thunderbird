@@ -407,6 +407,9 @@
   "options_about_copyright_label": {
     "message": "Copyright:"
   },
+  "options_about_homepage_label": {
+    "message": "Homepage:"
+  },
   "options_about_license_label": {
     "message": "License:"
   },
@@ -731,6 +734,9 @@
   "options_sharing_attachments_lock_step3": {
     "message": "Reopen these add-on settings."
   },
+  "options_sharing_attachments_lock_admin_link_label": {
+    "message": "System-wide rollout guide for administrators"
+  },
   "sharing_attachment_automation_locked_error": {
     "message": "Thunderbird's \"Upload for files larger than\" option is enabled ($1 MB). This conflicts with NC Connector attachment automation. The attachment options below are locked."
   },
@@ -763,18 +769,6 @@
   },
   "options_sharing_permissions_tooltip_line3": {
     "message": "In attachment mode, recipient permission is always read-only."
-  },
-  "sharing_password_separate_tooltip_title": {
-    "message": "Coming soon (Pro feature)"
-  },
-  "sharing_password_separate_tooltip_line1": {
-    "message": "This option is disabled in this release."
-  },
-  "sharing_password_separate_tooltip_line2": {
-    "message": "Password delivery in a separate email will be available in a future Pro release."
-  },
-  "sharing_password_separate_tooltip_line3": {
-    "message": "For now, the password is included in the main share block."
   },
   "options_sharing_attachments_always_tooltip_title": {
     "message": "📎 Always via NC Connector"
@@ -836,19 +830,40 @@
   "sharing_password_mail_notify_manual_required_select_sender": {
     "message": "Automatic password email failed. Please select a sender in the opened draft if needed, then send the password email manually."
   },
-  "options_about_homepage_label": {
-    "message": "Homepage:"
-  },
   "options_about_homepage_link": {
     "message": "https://nc-connector.de"
   },
   "options_about_overview_text": {
-    "message": "Why more than a file-link add-in?\nNC Connector covers not only file links, but the complete team workflow in the mail client.\n\nTechnical foundation\n- Thunderbird and Outlook add-ins usable directly, also without Nextcloud backend\n- Optional Nextcloud backend for central seat assignment and policies\n- Seat model in backend: Community with 1 free seat, Pro from 5 seats (1 seat = 1 Nextcloud user)\n\n- File sharing with password, expiration date, and optional separate password delivery\n- Create and update Talk meetings directly from calendar appointments\n- Attachment automation with clear rules instead of manual single steps\n- Central seat assignment in the Nextcloud backend (1 seat = 1 Nextcloud user)"
+    "message": "More than file links\n\nNC Connector combines secure file sharing, Talk meetings, and attachment automation directly in Thunderbird and Outlook. This keeps important team workflows where they belong: in the mail and calendar client.\n\nWhat NC Connector covers\n- File sharing with password, expiration date, and optional separate password delivery\n- Create and update Talk meetings directly from calendar appointments\n- Attachment automation with clear rules instead of manual individual steps\n- Consistent sharing and invitation blocks directly in the familiar workflow\n\nOptional with Nextcloud backend\n- Central Seat assignment and policy management\n- Custom templates and designs for shares and Talk invitations\n- Separate password delivery and central control for organizations\n- 1 Seat = 1 Nextcloud user\n\nWithout backend, the add-ins remain directly usable. With backend, central control for teams and organizations is added."
   },
   "options_about_more_info_label": {
     "message": "More information -->"
   },
   "options_about_more_info_link": {
     "message": "Visit homepage"
+  },
+  "policy_warning_title": {
+    "message": "Backend policy is currently unavailable."
+  },
+  "policy_warning_license_invalid": {
+    "message": "Your NC Connector license or seat is currently not valid. Local settings are used. Please contact your Nextcloud administrator."
+  },
+  "policy_warning_admin_link_label": {
+    "message": "Open admin setup guide"
+  },
+  "policy_admin_controlled_tooltip": {
+    "message": "Admin controlled"
+  },
+  "options_lang_custom": {
+    "message": "Custom (backend template)"
+  },
+  "sharing_password_separate_backend_required_tooltip": {
+    "message": "This feature requires the Nextcloud backend."
+  },
+  "sharing_password_separate_no_seat_tooltip": {
+    "message": "Your administrator must assign an NC Connector seat to your account for this feature."
+  },
+  "sharing_password_separate_paused_tooltip": {
+    "message": "Your NC Connector seat is currently paused. Please contact your Nextcloud administrator."
   }
 }

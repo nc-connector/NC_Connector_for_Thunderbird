@@ -14,26 +14,15 @@ const NCCore = (() => {
   const coreShortId = NCTalkTextUtils.shortId;
 
   /**
-   * Log NCCore internal errors (with L(...) when available).
-   * @param {string} scope
-   * @param {any} error
-   * @param {object} details
-   */
-  function logNCCoreError(scope, error, details = undefined){
-    if (typeof L === "function"){
-      try{
-        L(scope, {
-          error: error?.message || String(error),
-          details: details || null
-        });
-        return;
-      }catch(logError){
-        console.error("[NCCore]", scope, error, details || "", logError);
-        return;
-      }
-    }
-    console.error("[NCCore]", scope, error, details || "");
-  }
+ * Log NCCore internal errors.
+ * Errors must stay visible even when debug logging is disabled.
+ * @param {string} scope
+ * @param {any} error
+ * @param {object} details
+ */
+function logNCCoreError(scope, error, details = undefined){
+  console.error("[NCCore]", scope, error, details || "");
+}
 
   /**
    * Build a localized login-flow error and mark it as fatal.

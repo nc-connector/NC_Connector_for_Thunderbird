@@ -27,24 +27,13 @@ function hostPermissionError(){
 }
 
 /**
- * Log Talk core internal errors (uses L(...) when available).
+ * Log Talk core internal errors.
+ * Errors must stay visible even when debug logging is disabled.
  * @param {string} scope
  * @param {any} error
  * @param {object} details
  */
 function logTalkCoreError(scope, error, details = undefined){
-  if (typeof L === "function"){
-    try{
-      L(scope, {
-        error: error?.message || String(error),
-        details: details || null
-      });
-      return;
-    }catch(logError){
-      console.error("[NCTalk]", scope, error, details || "", logError);
-      return;
-    }
-  }
   console.error("[NCTalk]", scope, error, details || "");
 }
 
@@ -80,14 +69,6 @@ function noteEventSupport(value, reason){
   EVENT_SUPPORT_CACHE.value = value;
   EVENT_SUPPORT_CACHE.reason = reason || "";
   EVENT_SUPPORT_CACHE.expires = Date.now() + EVENT_SUPPORT_TTL;
-}
-
-/**
- * Cache a negative event support result with a reason.
- * @param {string} reason - Why event conversations are unavailable
- */
-function markEventSupportUnsupported(reason){
-  noteEventSupport(false, reason || "");
 }
 
 /**
@@ -347,10 +328,6 @@ async function getEventConversationSupport(){
   return { supported:null, reason: aggregatedReason };
 }
 /**
- * Generate a simple random token for pseudo fallbacks.
- */
-function randToken(len=10){ const a="abcdefghijklmnopqrstuvwxyz0123456789"; let s=""; for(let i=0;i<len;i++) s+=a[Math.floor(Math.random()*a.length)]; return s; }
-/**
  * Trim and normalize room descriptions.
  */
 function sanitizeDescription(desc){
@@ -428,10 +405,16 @@ async function descriptionI18n(lang, key, substitutions = []){
  * Build the plain-text Talk description block for calendar events.
  * @param {string} url
  * @param {string} password
+ * @param {string} languageOverride
  * @returns {Promise<string>}
  */
-async function buildStandardTalkDescription(url, password){
-  const lang = await getEventDescriptionLang();
+async function buildStandardTalkDescription(url, password, languageOverride = ""){
+  const override = typeof NCI18nOverride !== "undefined" && typeof NCI18nOverride.normalizeLanguageOverride === "function"
+    ? NCI18nOverride.normalizeLanguageOverride(languageOverride, { allowCustom: true })
+    : String(languageOverride || "").trim().toLowerCase();
+  const lang = (override && override !== "default" && override !== "custom")
+    ? override
+    : await getEventDescriptionLang();
   const heading = await descriptionI18n(lang, "ui_description_heading");
   const joinLabel = await descriptionI18n(lang, "ui_description_join_label");
   const passwordLine = password
@@ -455,8 +438,8 @@ async function buildStandardTalkDescription(url, password){
 }
 
 /**
- * Create a Talk room with optional event binding and fallbacks.
- * @returns {Promise<{url:string,token:string,fallback:boolean,reason:string|null,description:string}>}
+ * Create one Talk room using exactly one server-side create path.
+ * @returns {Promise<{url:string,token:string,reason:string|null,description:string}>}
  */
 async function createTalkPublicRoom({
   title,
@@ -502,190 +485,163 @@ async function createTalkPublicRoom({
       supported: supportInfo.supported,
       reason: supportInfo.reason || ""
     });
-  }
-  const attempts = [];
-  if (attemptEvent && supportInfo.supported !== false){
-    attempts.push({ includeEvent:true });
-  }
-  attempts.push({ includeEvent:false });
-  let lastError = null;
-  for (const attempt of attempts){
-    L("create attempt start", { includeEvent: attempt.includeEvent });
-    const body = {
-      roomType: ROOM_TYPE_PUBLIC,
-      type: ROOM_TYPE_PUBLIC,
-      roomName: title || "Meeting",
-      listable: listableScope,
-      participants: {}
-    };
-    if (password) body.password = password;
-    if (cleanedDescription) body.description = cleanedDescription;
-    if (attempt.includeEvent){
-      body.objectType = "event";
-      body.objectId = String(objectId).trim();
+    if (supportInfo.supported === false){
+      const detail = supportInfo.reason || bgI18n("error_room_create_failed");
+      const error = localizedError("error_ocs", [detail]);
+      error.fatal = true;
+      error.status = 0;
+      error.response = "";
+      error.meta = null;
+      error.payload = null;
+      throw error;
     }
-    const res = await fetch(createUrl, { method:"POST", headers, body: JSON.stringify(body) });
-    L("create attempt status", { includeEvent: attempt.includeEvent, status: res.status, ok: res.ok });
-    const raw = await res.text();
-    let data = null;
+  }
+
+  const includeEvent = attemptEvent;
+  L("create attempt start", { includeEvent });
+  const body = {
+    roomType: ROOM_TYPE_PUBLIC,
+    type: ROOM_TYPE_PUBLIC,
+    roomName: title || "Meeting",
+    listable: listableScope,
+    participants: {}
+  };
+  if (password) body.password = password;
+  if (cleanedDescription) body.description = cleanedDescription;
+  if (includeEvent){
+    body.objectType = "event";
+    body.objectId = String(objectId).trim();
+  }
+
+  const res = await fetch(createUrl, { method:"POST", headers, body: JSON.stringify(body) });
+  L("create attempt status", { includeEvent, status: res.status, ok: res.ok });
+  const raw = await res.text();
+  let data = null;
+  try{
+    data = raw ? JSON.parse(raw) : null;
+  }catch(error){
+    logTalkCoreError("room create json parse failed", error, {
+      includeEvent,
+      responseSample: String(raw || "").slice(0, 160)
+    });
+  }
+  if (!res.ok){
+    const meta = data?.ocs?.meta || {};
+    const payload = data?.ocs?.data || {};
+    L("create attempt failure", {
+      includeEvent,
+      status: res.status,
+      meta: meta?.message || null,
+      error: payload?.error || null
+    });
+    if (includeEvent){
+      noteEventSupport(false, payload?.error || meta?.message || "");
+    }
+    const parts = [];
+    if (meta.message && meta.message !== meta.status) parts.push(meta.message);
+    if (payload.error) parts.push(payload.error);
+    if (Array.isArray(payload.errors)) parts.push(...payload.errors);
+    if (meta.statuscode) parts.push("Status code " + meta.statuscode);
+    if (res.status) parts.push("HTTP " + res.status + " " + res.statusText);
+    const detail = parts.filter(Boolean).join(" / ") || raw || (res.status + " " + res.statusText);
+    const error = localizedError("error_ocs", [detail]);
+    error.fatal = true;
+    error.status = res.status;
+    error.response = raw;
+    error.meta = meta;
+    error.payload = payload;
+    throw error;
+  }
+  if (includeEvent){
+    noteEventSupport(true, "");
+  }
+
+  const token = data?.ocs?.data?.token || data?.ocs?.data?.roomToken || data?.token || data?.data?.token;
+  if (!token){
+    throw localizedError("error_token_missing_in_response");
+  }
+  L("create attempt success", {
+    includeEvent,
+    token: shortToken(token)
+  });
+
+  const url = base + "/call/" + token;
+  if (enableLobby){
     try{
-      data = raw ? JSON.parse(raw) : null;
+      const lobbyUrl = base + "/ocs/v2.php/apps/spreed/api/v4/room/" + token + "/webinar/lobby";
+      const lobbyPayload = { state: 1 };
+      if (typeof startTimestamp === "number" && Number.isFinite(startTimestamp) && startTimestamp > 0){
+        let timerVal = startTimestamp;
+        if (timerVal > 1e12) timerVal = Math.floor(timerVal / 1000);
+        lobbyPayload.timer = Math.floor(timerVal);
+      }
+      L("set lobby payload", lobbyPayload);
+      const lobbyRes = await fetch(lobbyUrl, { method:"PUT", headers, body: JSON.stringify(lobbyPayload) });
+      if (!lobbyRes.ok){
+        const lobbyText = await lobbyRes.text().catch((error) => {
+          logTalkCoreError("lobby response read failed", error);
+          return "";
+        });
+        L("lobby set failed", lobbyRes.status, lobbyRes.statusText, lobbyText);
+        throw localizedError("error_lobby_set_failed", [lobbyText || (lobbyRes.status + " " + lobbyRes.statusText)]);
+      }
+      L("lobby set success", {
+        token: shortToken(token),
+        timer: lobbyPayload.timer ?? null
+      });
     }catch(error){
-      logTalkCoreError("room create json parse failed", error, {
-        includeEvent: attempt.includeEvent,
-        responseSample: String(raw || "").slice(0, 160)
+      logTalkCoreError("lobby update error", error, {
+        token: shortToken(token)
       });
+      throw error;
     }
-    if (!res.ok){
-      const meta = data?.ocs?.meta || {};
-      const payload = data?.ocs?.data || {};
-      L("create attempt failure", {
-        includeEvent: attempt.includeEvent,
-        status: res.status,
-        meta: meta?.message || null,
-        error: payload?.error || null
-      });
-      if (attempt.includeEvent && isEventConversationError(meta, payload, raw)){
-        markEventSupportUnsupported(payload?.error || meta?.message || "");
-        L("event conversation rejected by server, falling back");
-        continue;
-      }
-      const parts = [];
-      if (meta.message && meta.message !== meta.status) parts.push(meta.message);
-      if (payload.error) parts.push(payload.error);
-      if (Array.isArray(payload.errors)) parts.push(...payload.errors);
-      if (meta.statuscode) parts.push("Status code " + meta.statuscode);
-      if (res.status) parts.push("HTTP " + res.status + " " + res.statusText);
-      const detail = parts.filter(Boolean).join(" / ") || raw || (res.status + " " + res.statusText);
-      const err = localizedError("error_ocs", [detail]);
-      err.fatal = true;
-      err.status = res.status;
-      err.response = raw;
-      err.meta = meta;
-      err.payload = payload;
-      lastError = err;
-      break;
-    }
-    if (attempt.includeEvent){
-      noteEventSupport(true, "");
-    }
-    let token = data?.ocs?.data?.token || data?.ocs?.data?.roomToken || data?.token || data?.data?.token;
-    if (!token){
-      lastError = localizedError("error_token_missing_in_response");
-      break;
-    }
-    L("create attempt success", {
-      includeEvent: attempt.includeEvent,
-      token: shortToken(token)
-    });
-    const url = base + "/call/" + token;
-    if (enableLobby){
-      try{
-        const lobbyUrl = base + "/ocs/v2.php/apps/spreed/api/v4/room/" + token + "/webinar/lobby";
-        const lobbyPayload = { state: 1 };
-        if (typeof startTimestamp === "number" && Number.isFinite(startTimestamp) && startTimestamp > 0){
-          let timerVal = startTimestamp;
-          if (timerVal > 1e12) timerVal = Math.floor(timerVal / 1000);
-          lobbyPayload.timer = Math.floor(timerVal);
-        }
-        L("set lobby payload", lobbyPayload);
-        const lobbyRes = await fetch(lobbyUrl, { method:"PUT", headers, body: JSON.stringify(lobbyPayload) });
-        if (!lobbyRes.ok){
-          const lobbyText = await lobbyRes.text().catch((error) => {
-            logTalkCoreError("lobby response read failed", error);
-            return "";
-          });
-          L("lobby set failed", lobbyRes.status, lobbyRes.statusText, lobbyText);
-          throw localizedError("error_lobby_set_failed", [lobbyText || (lobbyRes.status + " " + lobbyRes.statusText)]);
-        }
-        L("lobby set success", {
-          token: shortToken(token),
-          timer: lobbyPayload.timer ?? null
-        });
-      }catch(e){
-        console.error("[NCTalk] lobby update error", {
-          token: shortToken(token),
-          error: e?.message || String(e)
-        });
-        L("lobby update error", e?.message || String(e));
-        return { url, token, fallback:true, reason: e?.message || bgI18n("error_lobby_set_failed_short") };
-      }
-    }
-    if (enableListable){
-      try{
-        const listableUrl = base + "/ocs/v2.php/apps/spreed/api/v4/room/" + token + "/listable";
-        const listableRes = await fetch(listableUrl, { method:"PUT", headers, body: JSON.stringify({ scope: listableScope }) });
-        if (!listableRes.ok){
-          L("listable set failed status", listableRes.status, listableRes.statusText);
-        } else {
-          L("listable set success", {
-            token: shortToken(token),
-            scope: listableScope
-          });
-        }
-      }catch(e){
-        console.error("[NCTalk] listable update error", {
-          token: shortToken(token),
-          error: e?.message || String(e)
-        });
-        L("listable update error", e?.message || String(e));
-      }
-    }
-    const finalDescription = await buildRoomDescription(description, url, password);
-    const allowDescriptionUpdate = !(attempt.includeEvent && eventConversation);
-    if (allowDescriptionUpdate && finalDescription && finalDescription !== cleanedDescription){
-      try{
-        const descUrl = base + "/ocs/v2.php/apps/spreed/api/v4/room/" + token + "/description";
-        const descRes = await fetch(descUrl, { method:"PUT", headers, body: JSON.stringify({ description: finalDescription }) });
-        if (!descRes.ok){
-          L("description set failed status", descRes.status, descRes.statusText);
-        } else {
-          L("description update success", { token: shortToken(token) });
-        }
-      }catch(e){
-        console.error("[NCTalk] description update error", {
-          token: shortToken(token),
-          error: e?.message || String(e)
-        });
-        L("description update error", e?.message || String(e));
-      }
-    }
-    const fallbackFlag = attemptEvent && !attempt.includeEvent;
-    const fallbackReason = fallbackFlag ? supportInfo.reason || "Event conversation not available." : null;
-    L("create attempt complete", {
-      includeEvent: attempt.includeEvent,
-      token: shortToken(token),
-      fallback: fallbackFlag,
-      reason: fallbackReason
-    });
-    return {
-      url,
-      token,
-      fallback: fallbackFlag,
-      reason: fallbackReason,
-      description: finalDescription || cleanedDescription || ""
-    };
   }
-  if (lastError){
-    if (lastError.fatal){
-      L("create attempt fatal", {
-        message: lastError?.message || "",
-        status: lastError?.status || null
+  if (enableListable){
+    try{
+      const listableUrl = base + "/ocs/v2.php/apps/spreed/api/v4/room/" + token + "/listable";
+      const listableRes = await fetch(listableUrl, { method:"PUT", headers, body: JSON.stringify({ scope: listableScope }) });
+      if (!listableRes.ok){
+        L("listable set failed status", listableRes.status, listableRes.statusText);
+      }else{
+        L("listable set success", {
+          token: shortToken(token),
+          scope: listableScope
+        });
+      }
+    }catch(error){
+      logTalkCoreError("listable update error", error, {
+        token: shortToken(token)
       });
-      throw lastError;
     }
-    L("create via OCS failed, fallback to pseudo url:", lastError?.message);
-    const fallbackToken = randToken(10);
-    L("create fallback token", { token: shortToken(fallbackToken) });
-    return {
-      url: base + "/call/" + fallbackToken,
-      token: fallbackToken,
-      fallback: true,
-      reason: lastError?.message || String(lastError)
-    };
   }
-  L("create talk room failed", "unknown error");
-  throw localizedError("error_room_create_failed");
+  const finalDescription = await buildRoomDescription(description, url, password);
+  const allowDescriptionUpdate = !(includeEvent && eventConversation);
+  if (allowDescriptionUpdate && finalDescription && finalDescription !== cleanedDescription){
+    try{
+      const descUrl = base + "/ocs/v2.php/apps/spreed/api/v4/room/" + token + "/description";
+      const descRes = await fetch(descUrl, { method:"PUT", headers, body: JSON.stringify({ description: finalDescription }) });
+      if (!descRes.ok){
+        L("description set failed status", descRes.status, descRes.statusText);
+      }else{
+        L("description update success", { token: shortToken(token) });
+      }
+    }catch(error){
+      logTalkCoreError("description update error", error, {
+        token: shortToken(token)
+      });
+    }
+  }
+  L("create attempt complete", {
+    includeEvent,
+    token: shortToken(token),
+    reason: null
+  });
+  return {
+    url,
+    token,
+    reason: null,
+    description: finalDescription || cleanedDescription || ""
+  };
 }
 /**
  * Update lobby state (and optional start time) for an existing room.

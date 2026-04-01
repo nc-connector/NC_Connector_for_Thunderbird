@@ -407,6 +407,9 @@
   "options_about_copyright_label": {
     "message": "版权："
   },
+  "options_about_homepage_label": {
+    "message": "主页："
+  },
   "options_about_license_label": {
     "message": "许可："
   },
@@ -731,6 +734,9 @@
   "options_sharing_attachments_lock_step3": {
     "message": "重新打开这些附加组件设置。"
   },
+  "options_sharing_attachments_lock_admin_link_label": {
+    "message": "面向管理员的系统级部署提示"
+  },
   "sharing_attachment_automation_locked_error": {
     "message": "Thunderbird 的“上传大于以下大小的文件”选项已启用（$1 MB）。这会与 NC Connector 的附件自动化冲突。下方附件选项已被锁定。"
   },
@@ -763,18 +769,6 @@
   },
   "options_sharing_permissions_tooltip_line3": {
     "message": "在附件模式下，收件人权限始终为只读。"
-  },
-  "sharing_password_separate_tooltip_title": {
-    "message": "即将推出（专业版功能）"
-  },
-  "sharing_password_separate_tooltip_line1": {
-    "message": "此版本中禁用此选项。"
-  },
-  "sharing_password_separate_tooltip_line2": {
-    "message": "未来的专业版将提供通过单独电子邮件发送密码的功能。"
-  },
-  "sharing_password_separate_tooltip_line3": {
-    "message": "目前，密码包含在主共享块中。"
   },
   "options_sharing_attachments_always_tooltip_title": {
     "message": "📎 始终通过 NC 连接器"
@@ -836,19 +830,40 @@
   "sharing_password_mail_notify_manual_required_select_sender": {
     "message": "密码邮件自动发送失败。如有需要，请在已打开的草稿中选择发件人，然后手动发送密码邮件。"
   },
-  "options_about_homepage_label": {
-    "message": "主页："
-  },
   "options_about_homepage_link": {
     "message": "https://nc-connector.de"
   },
   "options_about_overview_text": {
-    "message": "为什么不仅仅是一个文件链接插件？\nNC Connector 不仅支持文件链接，还覆盖邮件客户端中的完整团队工作流。\n\n技术基础\n- Thunderbird 和 Outlook 插件可直接使用，即使没有 Nextcloud 后端也可以\n- 可选 Nextcloud 后端，用于集中分配席位和策略\n- 后端席位模型：Community 含 1 个免费席位，Pro 从 5 个席位起（1 个席位 = 1 个 Nextcloud 用户）\n\n- 文件共享支持密码、到期日期，以及可选的单独密码邮件发送\n- 可直接从日历事件创建和更新 Talk 会议\n- 附件自动化采用明确规则，替代手动逐步操作\n- Nextcloud 后端中的集中席位分配（1 个席位 = 1 个 Nextcloud 用户）"
+    "message": "不只是文件链接\n\nNC Connector 将安全文件共享、Talk 会议和附件自动化直接整合到 Thunderbird 和 Outlook 中。这样，重要的团队工作流程就能保留在它应在的位置：邮件与日历客户端中。\n\nNC Connector 覆盖的内容\n- 带密码、到期日期以及可选单独发送密码的文件共享\n- 直接从日历事件创建和更新 Talk 会议\n- 以清晰规则实现附件自动化，而不是手动逐个处理\n- 在熟悉的工作流程中直接插入统一的共享块和邀请块\n\n可选搭配 Nextcloud 后端\n- 集中的 Seat 分配和策略管理\n- 用于分享和 Talk 邀请的自定义模板与设计\n- 独立密码投递以及面向组织的集中控制\n- 1 Seat = 1 个 Nextcloud 用户\n\n即使没有后端，这些附加组件也可直接使用。有了后端后，还会增加面向团队和组织的集中控制。"
   },
   "options_about_more_info_label": {
     "message": "更多信息 -->"
   },
   "options_about_more_info_link": {
     "message": "访问主页"
+  },
+  "policy_warning_title": {
+    "message": "后端策略当前不可用。"
+  },
+  "policy_warning_license_invalid": {
+    "message": "您的 NC Connector 许可证或席位分配当前无效。将使用本地设置。请联系您的 Nextcloud 管理员。"
+  },
+  "policy_warning_admin_link_label": {
+    "message": "打开管理员设置指南"
+  },
+  "policy_admin_controlled_tooltip": {
+    "message": "由管理员控制"
+  },
+  "options_lang_custom": {
+    "message": "自定义（后端模板）"
+  },
+  "sharing_password_separate_backend_required_tooltip": {
+    "message": "此功能需要 Nextcloud 后端。"
+  },
+  "sharing_password_separate_no_seat_tooltip": {
+    "message": "要使用此功能，管理员必须为您的账户分配 NC Connector 席位。"
+  },
+  "sharing_password_separate_paused_tooltip": {
+    "message": "您的 NC Connector 席位当前已暂停。请联系您的 Nextcloud 管理员。"
   }
 }

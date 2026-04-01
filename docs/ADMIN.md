@@ -35,7 +35,8 @@ Related docs:
   - [4.4 Rollout option B: GitHub Releases (“always latest”)](#44-rollout-option-b-github-releases-always-latest)
   - [4.5 Example policies.json](#45-example-policiesjson)
   - [4.6 Example Ansible task (Linux)](#46-example-ansible-task-linux)
-  - [4.7 Verifying policies & troubleshooting](#47-verifying-policies--troubleshooting)
+  - [4.7 Attachment automation prerequisite: disable competing Thunderbird compose features](#47-attachment-automation-prerequisite-disable-competing-thunderbird-compose-features)
+  - [4.8 Verifying policies & troubleshooting](#48-verifying-policies--troubleshooting)
 - [5. Notes about “system-wide configuration”](#5-notes-about-system-wide-configuration)
 
 ---
@@ -93,7 +94,7 @@ These defaults are used by the **Sharing Wizard** (compose window).
 | Default permissions: Edit | `sharingDefaultPermWrite` | Enables editing for the share |
 | Default permissions: Delete | `sharingDefaultPermDelete` | Enables delete for the share |
 | Default: set password | `sharingDefaultPassword` | Pre-enables the password toggle in the wizard |
-| Default: send password in separate mail | `sharingDefaultPasswordSeparate` | Control is visible but locked in 2.2.9 ("Coming soon (Pro feature)") |
+| Default: send password in separate mail | `sharingDefaultPasswordSeparate` | Pre-enables the separate-password toggle in the wizard (only effective when password is enabled) |
 | Expiration (days) | `sharingDefaultExpireDays` | Default expiration time for new shares |
 | Always handle attachments via NC Connector | `sharingAttachmentsAlwaysConnector` | Immediately moves compose attachments into NC Connector share flow |
 | Offer upload for files larger than | `sharingAttachmentsOfferAboveEnabled` | Enables threshold-based decision popup in compose |
@@ -125,13 +126,39 @@ Important behavior details:
 - **Invitee sync happens after saving the event**, driven by calendar item updates (not immediately when clicking the toolbar button).
 - “Guests” may trigger **additional invitation e-mails** from Nextcloud depending on server configuration and Talk version.
 
+### 2.3.1 Optional NC Connector backend policies
+
+If the optional Nextcloud backend app `ncc_backend_4mc` is installed, Thunderbird also evaluates:
+- `/apps/ncc_backend_4mc/api/v1/status`
+
+Runtime behavior:
+- checked when Talk wizard opens
+- checked when Sharing wizard opens
+- checked when add-on settings open and when add-on settings are saved
+- valid active seat => backend policy values apply and `policy_editable=false` fields are locked in the UI
+- missing backend / no seat / invalid seat => local add-on settings remain active
+- if the backend is unreachable, Thunderbird falls back to the locally saved add-on settings
+- if the backend is reachable but the license/seat state is no longer usable, Thunderbird also falls back to the locally saved add-on settings
+- invalid seat states remain visible in the UI so users can contact their administrator
+- separate password delivery is only available when the backend endpoint exists and the current user has an active assigned seat
+- backend custom templates stay inactive until the corresponding language override is set to `custom`
+- the `custom` option is only shown when the backend endpoint exists and stays disabled unless the effective backend policy for that domain is actually `custom` and provides a template
+- if `custom` is selected but the backend template is empty or unavailable, Thunderbird falls back to the local UI-default text block
+- `policy.talk.event_description_type` may be `html` or `plain_text`; when `html` is active, Thunderbird writes the Talk block into the rich event description editor as HTML and keeps a plain-text representation alongside it for non-HTML consumers
+
+Central policy can currently control:
+- Talk defaults and lock state
+- Sharing defaults and lock state
+- share HTML/password templates
+- Talk description language / custom invitation template
+
 ### System address book required for user search and moderator selection
 
 The following features require a reachable **Nextcloud system address book**:
 - Talk wizard user search (internal users)
 - Moderator selection in the Talk wizard
-- “Add users” default in add-on settings
-- “Add guests” default in add-on settings
+- "Add users" default in add-on settings
+- "Add guests" default in add-on settings
 
 If the system address book is unavailable, these controls are disabled in the UI and the tooltip links to this section.
 
@@ -166,7 +193,12 @@ The add-on can override the language used for generated text blocks.
 
 Values:
 - `default` → use Thunderbird UI language
+- `custom` → use the backend-provided template (option only shown when the NC Connector backend endpoint exists and only enabled when the effective backend policy for that domain is actually `custom` and provides a template)
 - or a supported locale folder name (see `Translations.md`, e.g. `de`, `en`, `pt_BR`, `zh_TW`, …)
+
+Important:
+- `custom` only activates backend templates when the policy payload actually contains the respective template key.
+- Empty/missing backend templates fall back to the local UI-default block.
 
 ### 2.5 Debug
 
@@ -279,7 +311,7 @@ Important:
 - The asset name must be **the same in every release** (constant file name).
 - Practical approach: upload an additional release asset named:
   - `nc4tb-latest.xpi`
-  alongside the versioned asset (e.g. `nc4tb-2.2.9.xpi`), ideally automated via GitHub Actions.
+  alongside the versioned asset (e.g. `nc4tb-3.0.0.xpi`), ideally automated via GitHub Actions.
 
 Note about signing:
 - In production environments, prefer ATN (signed). A self-hosted XPI may require signing depending on your Thunderbird build and deployment constraints.
@@ -348,7 +380,152 @@ Here is a cleaned-up example:
           }
 ```
 
-### 4.7 Verifying policies & troubleshooting
+### 4.7 Attachment automation prerequisite: disable competing Thunderbird compose features
+
+If you want **NC Connector attachment automation** to be the only active compose flow, administrators should also disable Thunderbird’s own competing compose prompts centrally.
+
+Why this is necessary:
+- NC Connector can route attachments into its own sharing flow (`always` or `offer above threshold`).
+- Thunderbird itself still has native compose features for:
+  - **Check for missing attachments**
+  - **Upload for files larger than ...**
+- Per reviewer constraints and the add-on’s limited experiment scope, **NC Connector must not change these Thunderbird-wide compose settings itself**.
+- Therefore, if you want a deterministic admin-managed rollout, disable and lock these Thunderbird settings via `policies.json`.
+
+Relevant Thunderbird preferences:
+- `mail.compose.attachment_reminder`
+  - controls **Check for missing attachments**
+- `mail.compose.big_attachments.notify`
+  - controls **Upload for files larger than ...**
+- `mail.compose.big_attachments.threshold_kb`
+  - controls the native Thunderbird threshold value in **KB**
+
+Recommended lock state when NC Connector attachment automation should own the workflow:
+- `mail.compose.attachment_reminder` => `false` / `locked`
+- `mail.compose.big_attachments.notify` => `false` / `locked`
+- `mail.compose.big_attachments.threshold_kb` => `5120` / `locked`
+
+Notes:
+- `5120` KB is Thunderbird’s default threshold value (5 MB). Once `mail.compose.big_attachments.notify=false`, the threshold is effectively inactive, but keeping it explicitly locked avoids drift and makes the admin intent visible.
+- Merge the example below into your existing `policies.json`; do not create a second policy file.
+
+Official references:
+- Thunderbird Enterprise Policies — `Preferences` policy:
+  - `https://thunderbird.github.io/policy-templates/templates/esr140/#preferences`
+- Thunderbird compose preferences source:
+  - `https://searchfox.org/comm-central/source/mail/components/preferences/compose.inc.xhtml`
+
+Example `policies.json` snippet:
+
+```json
+{
+  "policies": {
+    "Preferences": {
+      "mail.compose.attachment_reminder": {
+        "Value": false,
+        "Status": "locked"
+      },
+      "mail.compose.big_attachments.notify": {
+        "Value": false,
+        "Status": "locked"
+      },
+      "mail.compose.big_attachments.threshold_kb": {
+        "Value": 5120,
+        "Status": "locked"
+      }
+    }
+  }
+}
+```
+
+Example merged `policies.json` (force-install NC Connector + lock Thunderbird native attachment prompts):
+
+```json
+{
+  "policies": {
+    "ExtensionSettings": {
+      "*": {
+        "installation_mode": "allowed"
+      },
+      "{4a35421f-0906-439c-bff2-8eef39e2baee}": {
+        "installation_mode": "force_installed",
+        "install_url": "https://services.addons.thunderbird.net/thunderbird/downloads/latest/nc4tb/addon-989342-latest.xpi",
+        "updates_disabled": false
+      }
+    },
+    "Preferences": {
+      "mail.compose.attachment_reminder": {
+        "Value": false,
+        "Status": "locked"
+      },
+      "mail.compose.big_attachments.notify": {
+        "Value": false,
+        "Status": "locked"
+      },
+      "mail.compose.big_attachments.threshold_kb": {
+        "Value": 5120,
+        "Status": "locked"
+      }
+    }
+  }
+}
+```
+
+Example Ansible task (Linux) that deploys both the add-on policy and the native compose locks:
+
+```yaml
+- name: Thunderbird - force install nc4tb and disable native attachment prompts
+  hosts: all
+  become: true
+
+  vars:
+    tb_distribution_dir: "/usr/lib/thunderbird/distribution"
+    addon_guid: "{4a35421f-0906-439c-bff2-8eef39e2baee}"
+    nc4tb_latest_url: "https://services.addons.thunderbird.net/thunderbird/downloads/latest/nc4tb/addon-989342-latest.xpi"
+
+  tasks:
+    - name: Ensure Thunderbird distribution directory exists
+      ansible.builtin.file:
+        path: "{{ tb_distribution_dir }}"
+        state: directory
+        mode: "0755"
+
+    - name: Deploy policies.json with nc4tb and locked native compose attachment prefs
+      ansible.builtin.copy:
+        dest: "{{ tb_distribution_dir }}/policies.json"
+        mode: "0644"
+        content: |
+          {
+            "policies": {
+              "ExtensionSettings": {
+                "*": {
+                  "installation_mode": "allowed"
+                },
+                "{{ addon_guid }}": {
+                  "installation_mode": "force_installed",
+                  "install_url": "{{ nc4tb_latest_url }}",
+                  "updates_disabled": false
+                }
+              },
+              "Preferences": {
+                "mail.compose.attachment_reminder": {
+                  "Value": false,
+                  "Status": "locked"
+                },
+                "mail.compose.big_attachments.notify": {
+                  "Value": false,
+                  "Status": "locked"
+                },
+                "mail.compose.big_attachments.threshold_kb": {
+                  "Value": 5120,
+                  "Status": "locked"
+                }
+              }
+            }
+          }
+```
+
+### 4.8 Verifying policies & troubleshooting
 
 Verification checklist:
 1. Open `about:policies` in Thunderbird.
@@ -356,6 +533,7 @@ Verification checklist:
 3. Restart Thunderbird and check:
    - Add-on is installed automatically
    - Updates are enabled (unless you intentionally disabled them)
+   - Thunderbird’s own compose options for missing attachments / large-attachment upload are no longer user-changeable if you locked them
 
 Common issues:
 - **Wrong path:** policy file is not read → `about:policies` shows nothing.
@@ -376,5 +554,3 @@ If you need “preseeded” settings for many users, typical approaches are:
 - use a central onboarding guide and require users to complete Login Flow v2
 
 (A future enhancement could use `browser.storage.managed` to read admin-provided settings, but this is not implemented currently.)
-
-

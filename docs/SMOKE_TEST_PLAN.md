@@ -2,7 +2,7 @@
 
 Version scope:
 - `2.2.9`
-- `2.3.0`
+- `3.0.0`
 
 ## 1. Scope
 
@@ -16,16 +16,16 @@ This plan covers end-to-end smoke checks for:
 
 Known version delta:
 - `2.2.9`: separate password mail is feature-gated (disabled).
-- `2.3.0`: separate password mail is enabled.
+- `3.0.0`: separate password mail is enabled.
 
 ## 2. Test Matrix
 
 | Matrix ID | Version | Separate Password Mail |
 |---|---|---|
 | M1 | 2.2.9 | Disabled (gated) |
-| M2 | 2.3.0 | Enabled |
+| M2 | 3.0.0 | Enabled |
 
-Run all cases at least once on M1 and M2, except cases marked `2.3.0 only`.
+Run all cases at least once on M1 and M2, except cases marked `3.0.0 only`.
 
 ## 3. Preconditions
 
@@ -129,13 +129,13 @@ Run all cases at least once on M1 and M2, except cases marked `2.3.0 only`.
 
 - [ ] `P-01` `2.2.9`: feature is disabled/gated in settings and sharing wizard.
   - Pass: control is non-functional and clearly marked as gated.
-- [ ] `P-02` `2.3.0 only`: auto-send success path.
+- [ ] `P-02` `3.0.0 only`: auto-send success path.
   - Pass: password mail sent, success notification shown.
-- [ ] `P-03` `2.3.0 only`: auto-send failure path.
+- [ ] `P-03` `3.0.0 only`: auto-send failure path.
   - Pass: failure notification shown; manual action guidance shown.
-- [ ] `P-04` `2.3.0 only`: fallback compose opens sendable draft.
+- [ ] `P-04` `3.0.0 only`: fallback compose opens sendable draft.
   - Pass: user can manually send password mail.
-- [ ] `P-05` `2.3.0 only`: fallback opened but not sent, then tab closed.
+- [ ] `P-05` `3.0.0 only`: fallback opened but not sent, then tab closed.
   - Pass: share cleanup is executed.
 
 ### H. Focus Behavior

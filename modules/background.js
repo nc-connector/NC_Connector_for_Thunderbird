@@ -8,12 +8,12 @@
  * Bootstrap entrypoint.
  * Runtime listeners and feature handlers are registered in:
  * - modules/bgState.js
+ * - modules/talkAddressbook.js
+ * - modules/bgCalendarLifecycle.js
  * - modules/bgComposeAttachments.js
  * - modules/bgComposeShareCleanup.js
  * - modules/bgComposePasswordDispatch.js
  * - modules/bgCompose.js (listener wiring)
- * - modules/bgCalendarLifecycle.js
  * - modules/bgCalendar.js
- * - modules/talkAddressbook.js
  * - modules/bgRouter.js
  */

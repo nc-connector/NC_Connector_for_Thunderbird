@@ -180,7 +180,7 @@
     "message": "https://docs.nextcloud.com/server/latest/user_manual/en/talk/join_a_call_or_chat_as_guest.html"
   },
   "talk_dialog_title": {
-    "message": "Volgendecloud Talk"
+    "message": "Nextcloud Talk"
   },
   "talk_dialog_close": {
     "message": "Sluiten"
@@ -407,6 +407,9 @@
   "options_about_copyright_label": {
     "message": "Auteursrecht:"
   },
+  "options_about_homepage_label": {
+    "message": "Startpagina:"
+  },
   "options_about_license_label": {
     "message": "Licentie:"
   },
@@ -597,7 +600,7 @@
     "message": "$1 is een oplossing voor veilige e-mail en bestandsuitwisseling."
   },
   "sharing_dialog_title": {
-    "message": "Volgendecloud-aandeel"
+    "message": "Nextcloud-share"
   },
   "sharing_heading_permissions": {
     "message": "Share-instellingen"
@@ -731,6 +734,9 @@
   "options_sharing_attachments_lock_step3": {
     "message": "Open deze add-on-instellingen opnieuw."
   },
+  "options_sharing_attachments_lock_admin_link_label": {
+    "message": "Aanwijzing voor systeemuitrol door beheerders"
+  },
   "sharing_attachment_automation_locked_error": {
     "message": "De Thunderbird-optie „Uploaden voor bestanden groter dan” is ingeschakeld ($1 MB). Dit conflicteert met de bijlage-automatisering van NC Connector. De onderstaande bijlage-opties zijn vergrendeld."
   },
@@ -763,18 +769,6 @@
   },
   "options_sharing_permissions_tooltip_line3": {
     "message": "In de bijlagemodus is de toestemming van de ontvanger altijd alleen-lezen."
-  },
-  "sharing_password_separate_tooltip_title": {
-    "message": "Binnenkort beschikbaar (Pro-functie)"
-  },
-  "sharing_password_separate_tooltip_line1": {
-    "message": "Deze optie is uitgeschakeld in deze release."
-  },
-  "sharing_password_separate_tooltip_line2": {
-    "message": "Wachtwoordlevering in een aparte e-mail zal beschikbaar zijn in een toekomstige Pro-release."
-  },
-  "sharing_password_separate_tooltip_line3": {
-    "message": "Voorlopig is het wachtwoord opgenomen in het hoofdshareblok."
   },
   "options_sharing_attachments_always_tooltip_title": {
     "message": "📎 Altijd via NC-connector"
@@ -836,19 +830,40 @@
   "sharing_password_mail_notify_manual_required_select_sender": {
     "message": "Automatisch verzenden van de wachtwoordmail is mislukt. Selecteer indien nodig een afzender in het geopende concept en verzend de wachtwoordmail handmatig."
   },
-  "options_about_homepage_label": {
-    "message": "Startpagina:"
-  },
   "options_about_homepage_link": {
     "message": "https://nc-connector.de"
   },
   "options_about_overview_text": {
-    "message": "Waarom meer dan een filelink-add-on?\nNC Connector dekt niet alleen bestandslinks af, maar de volledige teamworkflow in de e-mailclient.\n\nTechnische basis\n- Thunderbird- en Outlook-add-ons direct bruikbaar, ook zonder Nextcloud-backend\n- Optionele Nextcloud-backend voor centrale seat-toewijzing en beleid\n- Seat-model in de backend: Community met 1 gratis seat, Pro vanaf 5 seats (1 seat = 1 Nextcloud-gebruiker)\n\n- Bestandsdeling met wachtwoord, vervaldatum en optionele aparte wachtwoordverzending\n- Talk-vergaderingen direct vanuit agenda-afspraken aanmaken en bijwerken\n- Bijlage-automatisering met duidelijke regels in plaats van handmatige losse stappen\n- Centrale seat-toewijzing in de Nextcloud-backend (1 seat = 1 Nextcloud-gebruiker)"
+    "message": "Meer dan alleen bestandslinks\n\nNC Connector brengt veilig bestanden delen, Talk-vergaderingen en automatisering van bijlagen direct samen in Thunderbird en Outlook. Zo blijven belangrijke teamworkflows waar ze horen: in de mail- en agenda-client.\n\nWat NC Connector afdekt\n- Bestanden delen met wachtwoord, vervaldatum en optionele aparte verzending van het wachtwoord\n- Talk-vergaderingen direct vanuit agenda-afspraken aanmaken en bijwerken\n- Automatisering van bijlagen met duidelijke regels in plaats van losse handmatige stappen\n- Eenduidige deel- en uitnodigingsblokken direct in de vertrouwde workflow\n\nOptioneel met Nextcloud-backend\n- Centrale Seat-toewijzing en beleidsbeheer\n- Eigen sjablonen en ontwerpen voor shares en Talk-uitnodigingen\n- Aparte wachtwoordverzending en centrale aansturing voor organisaties\n- 1 Seat = 1 Nextcloud-gebruiker\n\nZonder backend blijven de add-ons direct bruikbaar. Met backend komt daar centrale aansturing voor teams en organisaties bij."
   },
   "options_about_more_info_label": {
     "message": "Meer informatie -->"
   },
   "options_about_more_info_link": {
     "message": "Ga naar de homepage"
+  },
+  "policy_warning_title": {
+    "message": "Het backendbeleid is momenteel niet beschikbaar."
+  },
+  "policy_warning_license_invalid": {
+    "message": "Uw NC Connector-licentie of seat-toewijzing is momenteel niet geldig. Lokale instellingen worden gebruikt. Neem contact op met uw Nextcloud-beheerder."
+  },
+  "policy_warning_admin_link_label": {
+    "message": "Handleiding voor beheerders openen"
+  },
+  "policy_admin_controlled_tooltip": {
+    "message": "Door beheerder beheerd"
+  },
+  "options_lang_custom": {
+    "message": "Aangepast (backendsjabloon)"
+  },
+  "sharing_password_separate_backend_required_tooltip": {
+    "message": "Deze functie vereist de Nextcloud-backend."
+  },
+  "sharing_password_separate_no_seat_tooltip": {
+    "message": "Uw beheerder moet voor deze functie een NC Connector-seat aan uw account toewijzen."
+  },
+  "sharing_password_separate_paused_tooltip": {
+    "message": "Uw NC Connector-seat is momenteel gepauzeerd. Neem contact op met uw Nextcloud-beheerder."
   }
 }

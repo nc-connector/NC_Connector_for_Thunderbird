@@ -322,6 +322,10 @@ footer{
 .attachments-lock-steps li:last-child{
   margin-bottom:0;
 }
+.attachments-lock-link{
+  margin:8px 0 0 0;
+  font-size:12px;
+}
 .talk-addressbook-warning{
   margin:0;
   padding:10px 12px;
@@ -345,6 +349,32 @@ footer{
   color:var(--brand-blue);
   text-decoration:underline;
 }
+.policy-warning-row{
+  margin:10px 18px 0 18px;
+}
+.policy-warning{
+  border:1px solid #b00020;
+  border-radius:var(--tb-radius);
+  background:rgba(176,0,32,0.08);
+  color:#b00020;
+  padding:10px 12px;
+}
+.policy-warning-title{
+  margin:0;
+  font-weight:700;
+}
+.policy-warning-text{
+  margin:6px 0 0 0;
+  font-size:12px;
+  line-height:1.45;
+}
+.policy-warning-link{
+  display:inline-block;
+  margin-top:8px;
+  font-size:12px;
+  color:var(--brand-blue);
+  text-decoration:underline;
+}
 </style>
 <div class="hero">
   <img src="ui/assets/header-solid-blue-328x96.png" alt="NC Connector">
@@ -357,6 +387,16 @@ footer{
     <button type="button" class="tab-btn" data-tab="advanced" data-i18n="options_tab_advanced">Advanced</button>
     <button type="button" class="tab-btn" data-tab="debug" data-i18n="options_tab_debug">Debug</button>
     <button type="button" class="tab-btn" data-tab="about" data-i18n="options_tab_about">About</button>
+  </div>
+  <div class="policy-warning-row" id="policyWarningRow" hidden>
+    <div class="policy-warning" role="alert">
+      <p class="policy-warning-title">
+        <span aria-hidden="true">⚠️ </span>
+        <span data-i18n="policy_warning_title">Backend policy is currently unavailable.</span>
+      </p>
+      <p class="policy-warning-text" id="policyWarningText" data-i18n="policy_warning_license_invalid">Your NC Connector license or seat is currently not valid. Local settings are used. Please contact your Nextcloud administrator.</p>
+      <a id="policyWarningAdminLink" class="policy-warning-link" data-i18n="policy_warning_admin_link_label" target="_blank" rel="noopener noreferrer" href="https://github.com/nc-connector/NC_Connector_for_Thunderbird/blob/main/docs/ADMIN.md">Open admin setup guide</a>
+    </div>
   </div>
   <section id="tab-general" class="tab-panel active">
     <div class="row"><label for="baseUrl" data-i18n="options_base_url_label">Nextcloud URL</label><input id="baseUrl" type="url" data-i18n-placeholder="options_base_url_placeholder" placeholder="https://cloud.example.com"></div>
@@ -379,7 +419,7 @@ footer{
     <div class="row"><label for="appPass" data-i18n="options_app_pass_label">App password</label><input id="appPass" type="password"></div>
   </section>
   <section id="tab-sharing" class="tab-panel">
-    <div class="row row-inset">
+    <div class="row row-inset" id="sharingBaseRow">
       <label for="sharingBase" data-i18n="options_sharing_base_label">Base directory</label>
       <div class="field-stack">
         <input id="sharingBase" type="text">
@@ -388,13 +428,13 @@ footer{
     </div>
     <fieldset class="auth-block">
       <legend data-i18n="options_sharing_defaults_heading">Default settings</legend>
-      <div class="row">
+      <div class="row" id="sharingDefaultShareNameRow">
         <label for="sharingDefaultShareName" data-i18n="options_sharing_default_share_name_label">Share name</label>
         <div class="field-stack">
           <input id="sharingDefaultShareName" type="text">
         </div>
       </div>
-      <div class="row">
+      <div class="row" id="sharingDefaultPermissionsRow">
         <label class="option-tooltip-wrap">
           <span data-i18n="options_sharing_default_permissions_label">Default permissions</span>
           <div class="option-tooltip" role="tooltip">
@@ -412,29 +452,21 @@ footer{
           <label><input id="sharingDefaultPermDelete" type="checkbox"> <span data-i18n="options_sharing_default_perm_delete">Delete</span></label>
         </div>
       </div>
-      <div class="row">
+      <div class="row" id="sharingDefaultPasswordRow">
         <label for="sharingDefaultPassword" data-i18n="options_sharing_default_password_label">Set password</label>
         <div class="boolean-control">
           <input id="sharingDefaultPassword" type="checkbox">
         </div>
       </div>
       <div class="row" id="sharingDefaultPasswordSeparateRow">
-        <label for="sharingDefaultPasswordSeparate" class="option-tooltip-wrap">
+        <label for="sharingDefaultPasswordSeparate">
           <span data-i18n="options_sharing_default_password_separate_label">Send password separately</span>
-          <div class="option-tooltip" role="tooltip">
-            <div class="option-tooltip-title" data-i18n="sharing_password_separate_tooltip_title">✉️ Send password separately</div>
-            <ul class="option-tooltip-list">
-              <li data-i18n="sharing_password_separate_tooltip_line1">The main share block does not include an inline password.</li>
-              <li data-i18n="sharing_password_separate_tooltip_line2">The password is sent in a follow-up email to the same recipients.</li>
-              <li data-i18n="sharing_password_separate_tooltip_line3">If auto-send fails, a manual fallback draft is opened.</li>
-            </ul>
-          </div>
         </label>
         <div class="boolean-control">
           <input id="sharingDefaultPasswordSeparate" type="checkbox">
         </div>
       </div>
-      <div class="row">
+      <div class="row" id="sharingDefaultExpireDaysRow">
         <label for="sharingDefaultExpireDays" data-i18n="options_sharing_default_expire_days_label">Expiration (days)</label>
         <input id="sharingDefaultExpireDays" type="number" min="1" step="1">
       </div>
@@ -481,17 +513,20 @@ footer{
           <li data-i18n="options_sharing_attachments_lock_step2">Disable "Upload for files larger than".</li>
           <li data-i18n="options_sharing_attachments_lock_step3">Reopen these add-on settings.</li>
         </ol>
+        <p class="attachments-lock-link">
+          <a id="sharingAttachmentsAdminLink" class="policy-warning-link" data-i18n="options_sharing_attachments_lock_admin_link_label" target="_blank" rel="noopener noreferrer" href="https://github.com/nc-connector/NC_Connector_for_Thunderbird/blob/main/docs/ADMIN.md#47-attachment-automation-prerequisite-disable-competing-thunderbird-compose-features">System-wide rollout guide for administrators</a>
+        </p>
       </div>
     </fieldset>
   </section>
   <section id="tab-talklink" class="tab-panel">
     <fieldset class="auth-block">
       <legend data-i18n="options_talk_defaults_heading">Default settings</legend>
-      <div class="row">
+      <div class="row" id="talkDefaultTitleRow">
         <label for="talkDefaultTitle" data-i18n="options_talk_default_title_label">Title</label>
         <input id="talkDefaultTitle" type="text">
       </div>
-      <div class="row">
+      <div class="row" id="talkDefaultLobbyRow">
         <label for="talkDefaultLobby" class="option-tooltip-wrap">
           <span data-i18n="options_talk_default_lobby_label">Lobby until start time</span>
           <div class="option-tooltip" role="tooltip">
@@ -507,7 +542,7 @@ footer{
           <input id="talkDefaultLobby" type="checkbox">
         </div>
       </div>
-      <div class="row">
+      <div class="row" id="talkDefaultListableRow">
         <label for="talkDefaultListable" class="option-tooltip-wrap">
           <span data-i18n="options_talk_default_listable_label">Show in search</span>
           <div class="option-tooltip" role="tooltip">
@@ -558,13 +593,13 @@ footer{
           <a id="optionsTalkAddressbookAdminLink" class="talk-addressbook-warning-link" data-i18n="talk_system_addressbook_admin_link_label" target="_blank" rel="noopener noreferrer" href="https://github.com/nc-connector/NC_Connector_for_Thunderbird/blob/main/docs/ADMIN.md#system-address-book-required-for-user-search-and-moderator-selection">Setup guide</a>
         </div>
       </div>
-      <div class="row">
+      <div class="row" id="talkDefaultPasswordRow">
         <label for="talkDefaultPassword" data-i18n="options_talk_default_password_label">Set password</label>
         <div class="boolean-control">
           <input id="talkDefaultPassword" type="checkbox">
         </div>
       </div>
-      <div class="row">
+      <div class="row" id="talkDefaultRoomTypeRow">
         <label for="talkDefaultRoomType" data-i18n="options_talk_default_roomtype_label">Room type</label>
         <div class="roomtype-picker" id="talkDefaultRoomTypePicker">
           <button type="button" class="roomtype-button" id="talkDefaultRoomTypeButton" aria-haspopup="listbox" aria-expanded="false">
@@ -609,14 +644,14 @@ footer{
   <section id="tab-advanced" class="tab-panel">
     <fieldset class="auth-block">
       <legend data-i18n="options_advanced_language_heading">Language overrides</legend>
-      <div class="row">
+      <div class="row" id="shareBlockLangRow">
         <label for="shareBlockLang" data-i18n="options_share_block_lang_label">Language for sharing HTML block</label>
         <div>
           <select id="shareBlockLang"></select>
           <p class="hint" data-i18n="options_share_block_lang_hint">Controls the language of the inserted sharing HTML block.</p>
         </div>
       </div>
-      <div class="row">
+      <div class="row" id="eventDescriptionLangRow">
         <label for="eventDescriptionLang" data-i18n="options_event_description_lang_label">Language for Talk description text</label>
         <div>
           <select id="eventDescriptionLang"></select>

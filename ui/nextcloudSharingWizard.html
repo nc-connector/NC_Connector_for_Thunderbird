@@ -103,6 +103,28 @@ textarea{
 }
 .dialog-message.error{color:#b00020;}
 .dialog-message.success{color:#11883a;}
+.policy-warning{
+  border:1px solid #b00020;
+  border-radius:var(--tb-radius);
+  background:rgba(176,0,32,0.08);
+  color:#b00020;
+  padding:8px 10px;
+  margin:0 var(--dialog-pad-right) 0 var(--dialog-pad-left);
+  font-size:12px;
+  line-height:1.4;
+}
+.policy-warning-title{
+  font-weight:700;
+}
+.policy-warning a{
+  display:inline-block;
+  margin-top:6px;
+  color:var(--brand-blue);
+  text-decoration:underline;
+}
+.is-disabled{
+  opacity:.6;
+}
 .nc-dialog-content{
   padding:var(--dialog-gap) var(--dialog-pad-right) var(--dialog-gap) var(--dialog-pad-left);
   flex:1;
@@ -189,15 +211,6 @@ textarea:focus{
   gap:8px;
   margin:10px 0;
 }
-.checkbox-row.is-disabled{
-  color:var(--tb-muted);
-}
-#passwordSeparateRow.is-disabled{
-  opacity:1;
-}
-#passwordSeparateRow.is-disabled > span{
-  color:var(--tb-muted);
-}
 .checkbox-row input[type="checkbox"]{
   accent-color:var(--dialog-accent);
 }
@@ -217,9 +230,6 @@ textarea:focus{
   background:var(--tb-bg);
   box-shadow:var(--tb-shadow);
   z-index:40;
-}
-#passwordSeparateRow .option-tooltip{
-  z-index:60;
 }
 .option-tooltip-wrap:hover .option-tooltip,
 .option-tooltip-wrap:focus-within .option-tooltip{
@@ -450,44 +460,41 @@ tbody tr.uploading .status-progress .bar span{
       <img src="assets/header-solid-blue-328x96.png" alt="NC Connector">
     </div>
     <div class="dialog-message" id="messageBar"></div>
+    <div class="policy-warning" id="policyWarningRow" hidden>
+      <div class="policy-warning-title"><span aria-hidden="true">⚠️ </span><span data-i18n="policy_warning_title">Backend policy is currently unavailable.</span></div>
+      <div id="policyWarningText" data-i18n="policy_warning_license_invalid">Your NC Connector license or seat is currently not valid. Local settings are used. Please contact your Nextcloud administrator.</div>
+      <a id="policyWarningAdminLink" data-i18n="policy_warning_admin_link_label" target="_blank" rel="noopener noreferrer" href="https://github.com/nc-connector/NC_Connector_for_Thunderbird/blob/main/docs/ADMIN.md">Open admin setup guide</a>
+    </div>
     <div class="nc-dialog-content" data-wizard-ready="false">
 <section class="wizard-step active" data-step="1">
         <h2 data-i18n="sharing_heading_permissions">Share settings</h2>
-        <div class="form-row">
+        <div class="form-row" id="shareNameRow">
           <label for="shareName" data-i18n="sharing_share_name_label">Share name</label>
           <input id="shareName" type="text" data-i18n-placeholder="sharing_share_placeholder" placeholder="e.g. Project X">
         </div>
-        <label class="checkbox-row">
+        <label class="checkbox-row" id="permReadRow">
           <input type="checkbox" id="permRead" checked disabled>
           <span data-i18n="sharing_permission_read">Read</span>
         </label>
-        <label class="checkbox-row">
+        <label class="checkbox-row" id="permCreateRow">
           <input type="checkbox" id="permCreate">
           <span data-i18n="sharing_permission_create">Upload</span>
         </label>
-        <label class="checkbox-row">
+        <label class="checkbox-row" id="permWriteRow">
           <input type="checkbox" id="permWrite">
           <span data-i18n="sharing_permission_write">Modify</span>
         </label>
-        <label class="checkbox-row">
+        <label class="checkbox-row" id="permDeleteRow">
           <input type="checkbox" id="permDelete">
           <span data-i18n="sharing_permission_delete">Delete</span>
         </label>
-        <label class="checkbox-row">
+        <label class="checkbox-row" id="passwordToggleRow">
           <input type="checkbox" id="passwordToggle">
           <span data-i18n="sharing_password_toggle">Set password</span>
         </label>
-        <label class="checkbox-row option-tooltip-wrap" id="passwordSeparateRow">
+        <label class="checkbox-row" id="passwordSeparateRow">
           <input type="checkbox" id="passwordSeparateToggle">
           <span data-i18n="sharing_password_separate_toggle">Send password in separate email</span>
-          <div class="option-tooltip" role="tooltip">
-            <div class="option-tooltip-title" data-i18n="sharing_password_separate_tooltip_title">✉️ Send password separately</div>
-            <ul class="option-tooltip-list">
-              <li data-i18n="sharing_password_separate_tooltip_line1">The main share block does not include an inline password.</li>
-              <li data-i18n="sharing_password_separate_tooltip_line2">The password is sent in a follow-up email to the same recipients.</li>
-              <li data-i18n="sharing_password_separate_tooltip_line3">If auto-send fails, a manual fallback draft is opened.</li>
-            </ul>
-          </div>
         </label>
         <div class="inline-field" id="passwordFields">
           <input id="passwordInput" type="text" autocomplete="new-password" placeholder="********">
@@ -497,7 +504,7 @@ tbody tr.uploading .status-progress .bar span{
 
       <section class="wizard-step" data-step="2">
         <h2 data-i18n="sharing_step_expire">Expiration date</h2>
-        <label class="checkbox-row">
+        <label class="checkbox-row" id="expireToggleRow">
           <input type="checkbox" id="expireToggle" checked>
           <span data-i18n="sharing_expire_toggle">Set expiration date</span>
         </label>

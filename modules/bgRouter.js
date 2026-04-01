@@ -64,6 +64,14 @@ browser.runtime.onMessage.addListener((msg, sender) => {
   if (msg.type === "passwordPolicy:generate"){
     return await generatePasswordViaPolicy(msg?.payload?.policy || {});
   }
+  if (msg.type === "policy:getStatus"){
+    try{
+      const status = await NCPolicyRuntime.getPolicyStatus();
+      return { ok:true, status };
+    }catch(e){
+      return messageError("policy:getStatus", e);
+    }
+  }
   if (msg.type === "talk:searchUsers"){
     try{
       const users = await NCTalkCore.searchSystemAddressbook(msg.payload || {});
@@ -125,22 +133,9 @@ browser.runtime.onMessage.addListener((msg, sender) => {
         itemId: context.item?.id || "",
         hasTitle: typeof fields.title === "string",
         hasLocation: typeof fields.location === "string",
-        hasDescription: typeof fields.description === "string"
+        hasDescription: typeof fields.description === "string",
+        hasDescriptionHtml: typeof fields.descriptionHtml === "string"
       });
-      const updates = {};
-      if (typeof fields.title === "string"){
-        updates["SUMMARY"] = fields.title;
-      }
-      if (typeof fields.location === "string"){
-        updates["LOCATION"] = fields.location;
-      }
-      if (typeof fields.description === "string"){
-        updates["DESCRIPTION"] = fields.description;
-      }
-      const baseIcal = context.item?.item || "";
-      const { ical } = applyIcalPropertyUpdates(baseIcal, updates);
-      context.item.item = ical;
-      refreshCalendarWizardContextSnapshot(context);
 
       if (!browser?.ncCalToolbar?.updateCurrent){
         console.error("[NCBG] ncCalToolbar.updateCurrent missing");
@@ -160,6 +155,9 @@ browser.runtime.onMessage.addListener((msg, sender) => {
       if (typeof fields.description === "string"){
         fieldsPayload.description = fields.description;
       }
+      if (typeof fields.descriptionHtml === "string"){
+        fieldsPayload.descriptionHtml = fields.descriptionHtml;
+      }
       const applyResponse = await browser.ncCalToolbar.updateCurrent({
         editorId,
         fields: fieldsPayload,
@@ -168,10 +166,11 @@ browser.runtime.onMessage.addListener((msg, sender) => {
       if (!applyResponse || applyResponse.format !== "ical" || typeof applyResponse.item !== "string"){
         throw new Error(bgI18n("talk_error_apply_failed"));
       }
+      context.item.item = applyResponse.item;
+      refreshCalendarWizardContextSnapshot(context);
       return { ok:true };
     }catch(e){
       console.error("[NCBG] talk:applyEventFields error", { contextId, error: e?.message || String(e) });
-      L("talk:applyEventFields error", { contextId, error: e?.message || String(e) });
       return { ok:false, error: e?.message || String(e) };
     }
   }

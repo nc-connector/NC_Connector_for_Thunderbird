@@ -407,6 +407,9 @@
   "options_about_copyright_label": {
     "message": "Direitos autorais:"
   },
+  "options_about_homepage_label": {
+    "message": "Pagina inicial:"
+  },
   "options_about_license_label": {
     "message": "Licença:"
   },
@@ -731,6 +734,9 @@
   "options_sharing_attachments_lock_step3": {
     "message": "Abra novamente estas configurações do complemento."
   },
+  "options_sharing_attachments_lock_admin_link_label": {
+    "message": "Orientação para implantação em todo o sistema"
+  },
   "sharing_attachment_automation_locked_error": {
     "message": "A opção do Thunderbird \"Enviar arquivos maiores que\" está ativada ($1 MB). Isso entra em conflito com a automação de anexos do NC Connector. As opções de anexos abaixo estão bloqueadas."
   },
@@ -763,18 +769,6 @@
   },
   "options_sharing_permissions_tooltip_line3": {
     "message": "No modo de anexo, a permissão do destinatário é sempre somente leitura."
-  },
-  "sharing_password_separate_tooltip_title": {
-    "message": "Em breve (recurso Pro)"
-  },
-  "sharing_password_separate_tooltip_line1": {
-    "message": "Esta opção está desativada nesta versão."
-  },
-  "sharing_password_separate_tooltip_line2": {
-    "message": "A entrega da senha em um e-mail separado estará disponível em uma versão Pro futura."
-  },
-  "sharing_password_separate_tooltip_line3": {
-    "message": "Por enquanto, a senha está incluída no bloco de compartilhamento principal."
   },
   "options_sharing_attachments_always_tooltip_title": {
     "message": "📎 Sempre via conector NC"
@@ -836,19 +830,40 @@
   "sharing_password_mail_notify_manual_required_select_sender": {
     "message": "O envio automatico do e-mail de senha falhou. Se necessario, selecione um remetente no rascunho aberto e envie manualmente o e-mail de senha."
   },
-  "options_about_homepage_label": {
-    "message": "Pagina inicial:"
-  },
   "options_about_homepage_link": {
     "message": "https://nc-connector.de"
   },
   "options_about_overview_text": {
-    "message": "Por que mais do que um complemento de link de arquivos?\nO NC Connector nao cobre apenas links de arquivos, mas todo o fluxo de trabalho da equipe no cliente de e-mail.\n\nBase tecnica\n- Complementos para Thunderbird e Outlook utilizaveis diretamente, tambem sem backend Nextcloud\n- Backend Nextcloud opcional para atribuicao central de seats e politicas\n- Modelo de seats no backend: Community com 1 seat gratuito, Pro a partir de 5 seats (1 seat = 1 usuario Nextcloud)\n\n- Compartilhamento de arquivos com senha, data de expiracao e envio separado de senha opcional\n- Criar e atualizar reunioes Talk diretamente a partir de eventos de calendario\n- Automacao de anexos com regras claras em vez de etapas manuais isoladas\n- Atribuicao central de seats no backend Nextcloud (1 seat = 1 usuario Nextcloud)"
+    "message": "Mais do que links de arquivos\n\nO NC Connector reúne compartilhamento seguro de arquivos, reuniões no Talk e automação de anexos diretamente no Thunderbird e no Outlook. Assim, os fluxos de trabalho importantes da equipe permanecem onde devem estar: no cliente de e-mail e calendário.\n\nO que o NC Connector cobre\n- Compartilhamento de arquivos com senha, data de expiração e envio separado opcional da senha\n- Criação e atualização de reuniões no Talk diretamente a partir de eventos do calendário\n- Automação de anexos com regras claras em vez de etapas manuais isoladas\n- Blocos consistentes de compartilhamento e convite diretamente no fluxo de trabalho habitual\n\nOpcionalmente com backend Nextcloud\n- Atribuição central de Seats e gerenciamento de políticas\n- Modelos e designs próprios para shares e convites do Talk\n- Envio separado de senha e controle central para organizações\n- 1 Seat = 1 usuário Nextcloud\n\nSem backend, os complementos continuam utilizáveis diretamente. Com backend, soma-se o controle central para equipes e organizações."
   },
   "options_about_more_info_label": {
     "message": "Mais informacoes -->"
   },
   "options_about_more_info_link": {
     "message": "Ir para a pagina inicial"
+  },
+  "policy_warning_title": {
+    "message": "A política de backend está indisponível no momento."
+  },
+  "policy_warning_license_invalid": {
+    "message": "A licença ou a atribuição de seat do NC Connector não é válida no momento. As configurações locais serão usadas. Entre em contato com o administrador do Nextcloud."
+  },
+  "policy_warning_admin_link_label": {
+    "message": "Abrir guia de configuração do administrador"
+  },
+  "policy_admin_controlled_tooltip": {
+    "message": "Controlado pelo administrador"
+  },
+  "options_lang_custom": {
+    "message": "Personalizado (modelo do backend)"
+  },
+  "sharing_password_separate_backend_required_tooltip": {
+    "message": "Este recurso requer o backend do Nextcloud."
+  },
+  "sharing_password_separate_no_seat_tooltip": {
+    "message": "Seu administrador deve atribuir um seat do NC Connector à sua conta para este recurso."
+  },
+  "sharing_password_separate_paused_tooltip": {
+    "message": "Seu seat do NC Connector está pausado no momento. Entre em contato com o administrador do Nextcloud."
   }
 }

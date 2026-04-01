@@ -120,7 +120,7 @@
     "message": "Selbstaufräumend: wird nach einiger Zeit automatisch entfernt"
   },
   "ui_create_moderator_label": {
-    "message": "Moderator (optional)"
+    "message": "Optionaler Moderator"
   },
   "ui_create_moderator_hint": {
     "message": "Bei Angabe wird die Moderation nach Erstellung an diesen Benutzer übertragen und Sie verlassen den Raum."
@@ -406,6 +406,9 @@
   },
   "options_about_copyright_label": {
     "message": "Copyright:"
+  },
+  "options_about_homepage_label": {
+    "message": "Homepage:"
   },
   "options_about_license_label": {
     "message": "Lizenz:"
@@ -731,6 +734,9 @@
   "options_sharing_attachments_lock_step3": {
     "message": "Öffne diese Add-on-Einstellungen erneut."
   },
+  "options_sharing_attachments_lock_admin_link_label": {
+    "message": "Hinweis für systemweiten Rollout durch Administratoren"
+  },
   "sharing_attachment_automation_locked_error": {
     "message": "In Thunderbird ist die Option „Hochladen für Dateien größer als“ aktiviert ($1 MB). Das kollidiert mit der NC Connector Anhangs-Automatisierung. Die Anhangsoptionen unten sind deshalb gesperrt."
   },
@@ -763,18 +769,6 @@
   },
   "options_sharing_permissions_tooltip_line3": {
     "message": "Im Anhangsmodus ist Empfaengerzugriff immer nur Lesen."
-  },
-  "sharing_password_separate_tooltip_title": {
-    "message": "Demnächst erhältlich (Pro-Funktion)"
-  },
-  "sharing_password_separate_tooltip_line1": {
-    "message": "Diese Option ist in dieser Version deaktiviert."
-  },
-  "sharing_password_separate_tooltip_line2": {
-    "message": "Die Zustellung von Passwörtern in einer separaten E-Mail wird in einer zukünftigen Pro-Version verfügbar sein."
-  },
-  "sharing_password_separate_tooltip_line3": {
-    "message": "Das Passwort ist vorerst im Hauptfreigabeblock enthalten."
   },
   "options_sharing_attachments_always_tooltip_title": {
     "message": "📎 Immer ueber NC Connector"
@@ -836,19 +830,40 @@
   "sharing_password_mail_notify_manual_required_select_sender": {
     "message": "Automatischer Passwortversand fehlgeschlagen. Waehlen Sie bei Bedarf im geoeffneten Entwurf einen Absender und senden Sie die Passwort-E-Mail manuell."
   },
-  "options_about_homepage_label": {
-    "message": "Homepage:"
-  },
   "options_about_homepage_link": {
     "message": "https://nc-connector.de"
   },
   "options_about_overview_text": {
-    "message": "Warum mehr als ein Filelink-Addon?\nNC Connector deckt nicht nur Datei-Links ab, sondern den gesamten Team-Workflow im Mail-Client.\n\nTechnische Basis\n- Thunderbird- und Outlook-Add-ons direkt nutzbar, auch ohne Nextcloud-Backend\n- Optionales Nextcloud-Backend fuer zentrale Seat-Zuteilung und Richtlinien\n- Seat-Modell im Backend: Community mit 1 kostenlosem Seat, Pro ab 5 Seats (1 Seat = 1 Nextcloud-Benutzer)\n\n- Datei-Freigabe mit Passwort, Ablaufdatum und optional separater Passwortzustellung\n- Talk-Meetings direkt aus Kalenderterminen anlegen und aktualisieren\n- Anhangsautomatisierung mit klaren Regeln statt manueller Einzelschritte\n- Zentrale Seat-Zuteilung im Nextcloud-Backend (1 Seat = 1 Nextcloud-Benutzer)"
+    "message": "Mehr als nur Datei-Links\n\nNC Connector verbindet sichere Datei-Freigaben, Talk-Besprechungen und Anhangsautomatisierung direkt mit Thunderbird und Outlook. So bleiben wichtige Team-Workflows dort, wo sie gebraucht werden: im Mail- und Kalender-Client.\n\nWas NC Connector abdeckt\n- Datei-Freigaben mit Passwort, Ablaufdatum und optional separater Passwortzustellung\n- Talk-Meetings direkt aus Kalenderterminen erstellen und aktualisieren\n- Anhangsautomatisierung mit klaren Regeln statt manueller Einzelschritte\n- Einheitliche Freigabe- und Einladungsblöcke direkt im gewohnten Arbeitsablauf\n\nOptional mit Nextcloud-Backend\n- Zentrale Seat-Zuteilung und Richtlinienverwaltung\n- Eigene Vorlagen und Designs für Freigaben und Talk-Einladungen\n- Separate Passwortzustellung und zentrale Steuerung für Organisationen\n- 1 Seat entspricht 1 Nextcloud-Benutzer\n\nOhne Backend bleiben die Add-ons direkt nutzbar. Mit Backend kommt zentrale Steuerung für Teams und Organisationen hinzu."
   },
   "options_about_more_info_label": {
     "message": "Mehr Informationen -->"
   },
   "options_about_more_info_link": {
     "message": "Zur Homepage"
+  },
+  "policy_warning_title": {
+    "message": "Backend-Policy ist derzeit nicht verfügbar."
+  },
+  "policy_warning_license_invalid": {
+    "message": "Ihre NC Connector Lizenz oder Seat-Zuweisung ist derzeit nicht gültig. Es werden lokale Einstellungen verwendet. Bitte wenden Sie sich an Ihren Nextcloud-Administrator."
+  },
+  "policy_warning_admin_link_label": {
+    "message": "Admin-Einrichtungsanleitung öffnen"
+  },
+  "policy_admin_controlled_tooltip": {
+    "message": "Vom Administrator gesteuert"
+  },
+  "options_lang_custom": {
+    "message": "Benutzerdefiniert (Backend-Vorlage)"
+  },
+  "sharing_password_separate_backend_required_tooltip": {
+    "message": "Dieses Feature benötigt das Nextcloud-Backend."
+  },
+  "sharing_password_separate_no_seat_tooltip": {
+    "message": "Ihr Administrator muss Ihnen für dieses Feature einen NC Connector Seat zuweisen."
+  },
+  "sharing_password_separate_paused_tooltip": {
+    "message": "Ihr NC Connector Seat ist derzeit pausiert. Bitte wenden Sie sich an Ihren Nextcloud-Administrator."
   }
 }

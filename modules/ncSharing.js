@@ -413,7 +413,7 @@
   }
 
   /**
-   * Create a Nextcloud share via OCS.
+   * Create a Nextcloud share via the documented OCS create endpoint.
    * @param {string} baseUrl
    * @param {string} relativeFolder
    * @param {string} authHeader
@@ -421,9 +421,10 @@
    * @param {string} password
    * @param {string} expireDate
    * @param {boolean} publicUpload
+   * @param {string} label
    * @returns {Promise<{url:string,token:string,id:string}>}
    */
-  async function requestShare(baseUrl, relativeFolder, authHeader, perms, password, expireDate, publicUpload){
+  async function requestShare(baseUrl, relativeFolder, authHeader, perms, password, expireDate, publicUpload, label){
     const url = baseUrl.replace(/\/+$/, "") + "/ocs/v2.php/apps/files_sharing/api/v1/shares";
     const params = new URLSearchParams();
     params.append("path", "/" + normalizeRelativePath(relativeFolder));
@@ -437,6 +438,9 @@
     }
     if (publicUpload){
       params.append("publicUpload", "true");
+    }
+    if (label){
+      params.append("label", label);
     }
     const response = await NCOcs.ocsRequest({
       url,
@@ -463,24 +467,26 @@
   }
 
   /**
-   * Update share metadata (label, note, permissions, expiry, password).
+   * Update mutable share metadata through the documented OCS update endpoint.
    * @param {object} options
    * @returns {Promise<void>}
    */
-  async function updateShareMetadata({ baseUrl, shareId, authHeader, note, permissions, expireDate, password, label }){
+  async function updateShareMetadata({ baseUrl, shareId, authHeader, note, permissions, expireDate, password, publicUpload }){
     if (!shareId){
       return;
     }
     const url = baseUrl.replace(/\/+$/, "") + `/ocs/v2.php/apps/files_sharing/api/v1/shares/${shareId}`;
-    const payload = {
-      permissions: String(buildPermissionMask(permissions || {})),
-      attributes: "[]",
-      note: typeof note === "string" ? note : "",
-      expireDate: expireDate || "",
-      label: label || "",
-      password: password || "",
-      hideDownload: "false"
-    };
+    const payload = new URLSearchParams();
+    payload.append("permissions", String(buildPermissionMask(permissions || {})));
+    payload.append("publicUpload", publicUpload ? "true" : "false");
+    payload.append("note", typeof note === "string" ? note : "");
+    payload.append("attributes", "[]");
+    if (expireDate){
+      payload.append("expireDate", expireDate);
+    }
+    if (password){
+      payload.append("password", password);
+    }
     const response = await NCOcs.ocsRequest({
       url,
       method: "PUT",
@@ -488,9 +494,9 @@
         "Authorization": authHeader,
         "OCS-APIREQUEST": "true",
         "Accept": "application/json",
-        "Content-Type": "application/json"
+        "Content-Type": "application/x-www-form-urlencoded"
       },
-      body: JSON.stringify(payload)
+      body: payload
     });
     const raw = response.raw || "";
     const data = response.data;
@@ -583,62 +589,207 @@
   }
 
   /**
+   * Resolve the effective share-block language (policy-first, storage fallback).
+   * @param {object} request
+   * @returns {Promise<string>}
+   */
+  async function resolveShareBlockLanguage(request){
+    const policyLang = String(request?.policyShare?.language_share_html_block || "").trim();
+    if (policyLang){
+      if (typeof NCI18nOverride !== "undefined" && typeof NCI18nOverride.normalizeLanguageOverride === "function"){
+        return NCI18nOverride.normalizeLanguageOverride(policyLang, { allowCustom: true });
+      }
+      return policyLang;
+    }
+    const storedLang = await getShareBlockLang();
+    if (typeof NCI18nOverride !== "undefined" && typeof NCI18nOverride.normalizeLanguageOverride === "function"){
+      return NCI18nOverride.normalizeLanguageOverride(storedLang, { allowCustom: true });
+    }
+    return storedLang;
+  }
+
+  /**
+   * Resolve a custom policy template for the current rendering mode.
+   * @param {object} request
+   * @param {boolean} passwordOnly
+   * @param {string} shareLang
+   * @returns {string}
+   */
+  function getPolicyTemplate(request, passwordOnly, shareLang){
+    if (String(shareLang || "").toLowerCase() !== "custom"){
+      return "";
+    }
+    const policyShare = request?.policyShare;
+    if (!policyShare || typeof policyShare !== "object"){
+      return "";
+    }
+    const key = passwordOnly ? "share_password_template" : "share_html_block_template";
+    const template = String(policyShare[key] || "");
+    return template.trim();
+  }
+
+  /**
+   * Build a plain permissions text for non-HTML placeholders.
+   * @param {object} perms
+   * @param {object} labels
+   * @returns {string}
+   */
+  function buildPermissionsText(perms, labels = {}){
+    const safePerms = perms || {};
+    const entries = [
+      { label: labels.read || i18n("sharing_permission_read"), enabled: !!safePerms.read },
+      { label: labels.create || i18n("sharing_permission_create"), enabled: !!safePerms.create },
+      { label: labels.write || i18n("sharing_permission_write"), enabled: !!safePerms.write },
+      { label: labels.delete || i18n("sharing_permission_delete"), enabled: !!safePerms.delete }
+    ];
+    return entries
+      .filter((entry) => entry.enabled)
+      .map((entry) => entry.label)
+      .join(", ");
+  }
+
+  /**
+   * Build the permissions badge table for custom HTML template placeholders.
+   * @param {object} perms
+   * @param {object} labels
+   * @returns {string}
+   */
+  function buildPermissionsTemplateHtml(perms, labels = {}){
+    return buildPermissionsBadges(perms, labels);
+  }
+
+  /**
+   * Replace all placeholders in a template string.
+   * @param {string} template
+   * @param {Record<string,string>} replacements
+   * @returns {string}
+   */
+  function applyTemplateReplacements(template, replacements){
+    let output = String(template || "");
+    Object.keys(replacements || {}).forEach((key) => {
+      const token = `{${key}}`;
+      output = output.split(token).join(String(replacements[key] || ""));
+    });
+    return output;
+  }
+
+  /**
+   * Remove one placeholder row from backend-provided HTML templates.
+   * This is used to reduce the custom share block for attachment mode.
+   * @param {string} template
+   * @param {string} placeholder
+   * @returns {string}
+   */
+  function stripTemplateRow(template, placeholder){
+    const token = `{${String(placeholder || "").trim()}}`;
+    if (!token || token === "{}"){
+      return String(template || "");
+    }
+    let output = String(template || "");
+    const tokenIndex = output.indexOf(token);
+    if (tokenIndex < 0){
+      return output;
+    }
+    const lower = output.toLowerCase();
+    const rowStart = lower.lastIndexOf("<tr", tokenIndex);
+    const rowEnd = lower.indexOf("</tr>", tokenIndex);
+    if (rowStart >= 0 && rowEnd >= 0 && rowEnd >= rowStart){
+      output = output.slice(0, rowStart) + output.slice(rowEnd + 5);
+    }
+    return output.split(token).join("");
+  }
+
+  /**
    * Build the HTML block inserted into the compose body.
    * @param {object} result
    * @param {object} request
    * @returns {Promise<string>}
    */
   async function buildHtmlBlock(result, request){
-    const shareLang = await getShareBlockLang();
+    const shareLang = await resolveShareBlockLanguage(request);
     const headerImage = await getHeaderBase64();
     const passwordOnly = !!request?.passwordOnly;
     const hidePassword = !!request?.hidePassword;
     const showPasswordSeparateHint = !!request?.showPasswordSeparateHint;
-    const paragraphs = [];
-    if (!passwordOnly && request?.noteEnabled && request?.note){
-      paragraphs.push(`<p style="margin:0 0 14px 0;line-height:1.4;">${escapeHtml(request.note)}</p>`);
-    }
-    const introLine = passwordOnly
-      ? await tShare(shareLang, "sharing_html_password_mail_intro")
-      : await tShare(shareLang, "sharing_html_intro_line");
-    if (introLine){
-      paragraphs.push(`<p style="margin:0 0 14px 0;line-height:1.4;">${escapeHtml(introLine)}<br /></p>`);
-    }
+    const customTemplate = getPolicyTemplate(request, passwordOnly, shareLang);
+    const effectiveLang = String(shareLang || "").toLowerCase() === "custom" && !customTemplate
+      ? "default"
+      : shareLang;
     const shareUrl = String(result?.shareUrl || "");
     const downloadUrl = request?.zipDownload
       ? buildZipDownloadUrl(shareUrl)
       : shareUrl;
-    const downloadLink = `<a href="${escapeHtml(downloadUrl)}" style="color:#0082C9;text-decoration:none;">${escapeHtml(downloadUrl)}</a>`;
     const permissionLabels = {
-      read: await tShare(shareLang, "sharing_permission_read"),
-      create: await tShare(shareLang, "sharing_permission_create"),
-      write: await tShare(shareLang, "sharing_permission_write"),
-      delete: await tShare(shareLang, "sharing_permission_delete")
+      read: await tShare(effectiveLang, "sharing_permission_read"),
+      create: await tShare(effectiveLang, "sharing_permission_create"),
+      write: await tShare(effectiveLang, "sharing_permission_write"),
+      delete: await tShare(effectiveLang, "sharing_permission_delete")
     };
+    const permissionsText = request?.hidePermissions
+      ? ""
+      : buildPermissionsText(result.permissions, permissionLabels);
+    const permissionsHtml = request?.hidePermissions
+      ? ""
+      : buildPermissionsTemplateHtml(result.permissions, permissionLabels);
+    const noteText = (!passwordOnly && request?.noteEnabled && request?.note)
+      ? escapeHtml(String(request.note || "")).replace(/\r?\n/g, "<br />")
+      : "";
+    let passwordText = "";
+    if (passwordOnly){
+      passwordText = escapeHtml(result.password || "");
+    }else if (hidePassword && showPasswordSeparateHint && result.password){
+      passwordText = escapeHtml(await tShare(effectiveLang, "sharing_html_password_separate_hint"));
+    }else if (!hidePassword){
+      passwordText = escapeHtml(result.password || "");
+    }
+    if (customTemplate){
+      const effectiveTemplate = request?.hidePermissions
+        ? stripTemplateRow(customTemplate, "RIGHTS")
+        : customTemplate;
+      return applyTemplateReplacements(effectiveTemplate, {
+        URL: escapeHtml(downloadUrl || ""),
+        PASSWORD: passwordText,
+        EXPIRATIONDATE: escapeHtml(result.expireDate || ""),
+        RIGHTS: permissionsHtml,
+        NOTE: noteText
+      });
+    }
+
+    const paragraphs = [];
+    if (noteText){
+      paragraphs.push(`<p style="margin:0 0 14px 0;line-height:1.4;">${noteText}</p>`);
+    }
+    const introLine = passwordOnly
+      ? await tShare(effectiveLang, "sharing_html_password_mail_intro")
+      : await tShare(effectiveLang, "sharing_html_intro_line");
+    if (introLine){
+      paragraphs.push(`<p style="margin:0 0 14px 0;line-height:1.4;">${escapeHtml(introLine)}<br /></p>`);
+    }
+    const downloadLink = `<a href="${escapeHtml(downloadUrl)}" style="color:#0082C9;text-decoration:none;">${escapeHtml(downloadUrl)}</a>`;
     const rows = [];
     if (passwordOnly){
       const badge = `<span style="display:inline-block;font-family:'Consolas','Courier New',monospace;padding:2px 6px;border:1px solid #c7c7c7;border-radius:3px;-ms-user-select:all;user-select:all;" ondblclick="window.getSelection().selectAllChildren(this);" onclick="window.getSelection().selectAllChildren(this);">${escapeHtml(result.password || "")}</span>`;
-      rows.push(buildTableRow(await tShare(shareLang, "sharing_html_password_label"), badge));
+      rows.push(buildTableRow(await tShare(effectiveLang, "sharing_html_password_label"), badge));
     }else{
-      rows.push(buildTableRow(await tShare(shareLang, "sharing_html_download_label"), downloadLink));
+      rows.push(buildTableRow(await tShare(effectiveLang, "sharing_html_download_label"), downloadLink));
       if (result.password && !hidePassword){
         const badge = `<span style="display:inline-block;font-family:'Consolas','Courier New',monospace;padding:2px 6px;border:1px solid #c7c7c7;border-radius:3px;-ms-user-select:all;user-select:all;" ondblclick="window.getSelection().selectAllChildren(this);" onclick="window.getSelection().selectAllChildren(this);">${escapeHtml(result.password)}</span>`;
-        rows.push(buildTableRow(await tShare(shareLang, "sharing_html_password_label"), badge));
+        rows.push(buildTableRow(await tShare(effectiveLang, "sharing_html_password_label"), badge));
       }
       if (showPasswordSeparateHint && result.password){
-        rows.push(buildTableRow(await tShare(shareLang, "sharing_html_password_label"), escapeHtml(await tShare(shareLang, "sharing_html_password_separate_hint"))));
+        rows.push(buildTableRow(await tShare(effectiveLang, "sharing_html_password_label"), escapeHtml(await tShare(effectiveLang, "sharing_html_password_separate_hint"))));
       }
       if (result.expireDate){
-        rows.push(buildTableRow(await tShare(shareLang, "sharing_html_expire_label"), escapeHtml(result.expireDate)));
+        rows.push(buildTableRow(await tShare(effectiveLang, "sharing_html_expire_label"), escapeHtml(result.expireDate)));
       }
       if (!request?.hidePermissions){
-        rows.push(buildTableRow(await tShare(shareLang, "sharing_html_permissions_label"), buildPermissionsBadges(result.permissions, permissionLabels)));
+        rows.push(buildTableRow(await tShare(effectiveLang, "sharing_html_permissions_label"), buildPermissionsBadges(result.permissions, permissionLabels)));
       }
     }
     const nextcloudAnchor = `<a href="https://nextcloud.com/" style="color:#0082C9;text-decoration:none;">Nextcloud</a>`;
     const footer = passwordOnly
       ? ""
-      : ((await tShare(shareLang, "sharing_html_footer", [nextcloudAnchor])) || "");
+      : ((await tShare(effectiveLang, "sharing_html_footer", [nextcloudAnchor])) || "");
     const footerHtml = footer
       ? `<div style="padding:10px 18px 16px 18px;font-size:9pt;font-style:italic;">
           ${footer}
@@ -652,8 +803,8 @@
         <table role="presentation" width="640" style="border-collapse:collapse;width:640px;margin:0;background-color:transparent;">
           <tr>
             <td style="padding:0;background-color:#0082C9;text-align:center;height:32px;">
-              <a href="https://github.com/nc-connector/NC_Connector_for_Thunderbird" style="display:inline-block;text-decoration:none;" target="_blank" rel="noopener">
-                <img alt="NC Connector" style="display:block;width:auto;height:32px;max-width:164px;object-fit:contain;border:0;margin:0 auto;" src="data:image/png;base64,${headerImage}" />
+              <a href="https://nc-connector.de" style="display:inline-block;text-decoration:none;" target="_blank" rel="noopener">
+                <img style="display:block;width:auto;height:32px;max-width:164px;object-fit:contain;border:0;margin:0 auto;" src="data:image/png;base64,${headerImage}" />
               </a>
             </td>
           </tr>
@@ -725,18 +876,24 @@
     if (!base){
       return "";
     }
-    const parsed = new URL(base);
-    const pathSegments = parsed.pathname.split("/").filter(Boolean);
-    const shareSegmentIndex = pathSegments.lastIndexOf("s");
-    if (shareSegmentIndex < 0 || shareSegmentIndex + 1 >= pathSegments.length){
-      throw new Error("Invalid Nextcloud public share URL");
+    try{
+      const parsed = new URL(base);
+      const pathSegments = parsed.pathname.split("/").filter(Boolean);
+      const shareSegmentIndex = pathSegments.lastIndexOf("s");
+      if (shareSegmentIndex < 0 || shareSegmentIndex + 1 >= pathSegments.length){
+        throw new Error("Invalid Nextcloud public share URL");
+      }
+      const token = pathSegments[shareSegmentIndex + 1];
+      const normalized = pathSegments.slice(0, shareSegmentIndex + 2);
+      normalized.push("download");
+      parsed.pathname = "/" + normalized.join("/");
+      parsed.search = "";
+      parsed.hash = "";
+      return parsed.toString();
+    }catch(error){
+      logInternalError("buildZipDownloadUrl failed", error);
+      return base;
     }
-    const normalized = pathSegments.slice(0, shareSegmentIndex + 2);
-    normalized.push("download");
-    parsed.pathname = "/" + normalized.join("/");
-    parsed.search = "";
-    parsed.hash = "";
-    return parsed.toString();
   }
 
   /**
@@ -766,7 +923,6 @@
     const authHeader = NCOcs.buildAuthHeader(opts.user, opts.appPass);
     const davRoot = `${opts.baseUrl.replace(/\/+$/, "")}/remote.php/dav/files/${encodeURIComponent(opts.user)}`;
     logDebug(opts, "folders:ensure", { relativeBase, relativeFolder });
-    await ensureFolderExists(davRoot, relativeBase, authHeader);
     await ensureFolderExists(davRoot, relativeFolder, authHeader);
     const noteEnabled = !!request?.noteEnabled;
     const noteValue = noteEnabled ? String(request?.note || "").trim() : "";
@@ -815,30 +971,9 @@
       request.permissions,
       request.passwordEnabled ? (request.password || "") : "",
       request.expireEnabled ? (request.expireDate || "") : "",
-      !!request.permissions?.create);
+      !!request.permissions?.create,
+      normalizedShareName);
     logDebug(opts, "share:created", { url: share.url });
-    if (share.id){
-      logDebug(opts, "share:updateRequest", {
-        shareId: share.id,
-        hasNote: !!(noteEnabled && noteValue),
-        label: normalizedShareName
-      });
-      await updateShareMetadata({
-        baseUrl: opts.baseUrl,
-        shareId: share.id,
-        authHeader,
-        note: noteEnabled ? noteValue : "",
-        permissions: request.permissions,
-        expireDate: request.expireEnabled ? (request.expireDate || "") : "",
-        password: request.passwordEnabled ? (request.password || "") : "",
-        label: normalizedShareName
-      });
-      logDebug(opts, "share:metadataUpdated", {
-        shareId: share.id,
-        hasNote: !!(noteEnabled && noteValue),
-        label: normalizedShareName
-      });
-    }
 
     const resultPayload = {
       shareUrl: share.url,
@@ -910,7 +1045,7 @@
       permissions: shareInfo.permissions,
       expireDate: shareInfo.expireDate || "",
       password: shareInfo.password || "",
-      label: normalizedLabel
+      publicUpload: !!shareInfo.permissions?.create
     });
     logDebug(opts, "share:updateMeta:done", { shareId: shareInfo.shareId });
   }

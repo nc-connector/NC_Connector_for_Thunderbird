@@ -91,10 +91,6 @@ function scheduleComposeAttachmentEvaluation(tabId){
   const timerId = setTimeout(() => {
     ATTACHMENT_EVAL_TIMER_BY_TAB.delete(tabId);
     evaluateComposeAttachmentThreshold(tabId).catch((error) => {
-      L("compose attachment evaluation failed", {
-        tabId,
-        error: error?.message || String(error)
-      });
       console.error("[NCBG] evaluateComposeAttachmentThreshold failed", error);
     });
   }, ATTACHMENT_EVAL_DEBOUNCE_MS);
@@ -181,7 +177,7 @@ function markComposeAttachmentSuppressed(tabId, suppressed){
 async function getComposeBigAttachmentSettingsLive(){
   const readApi = browser?.ncComposePrefs?.getBigAttachmentSettings;
   if (typeof readApi !== "function"){
-    L("compose big-attachment settings check failed", {
+    console.error("[NCBG] compose big-attachment settings check failed", {
       reason: "api_missing"
     });
     throw new Error("ncComposePrefs.getBigAttachmentSettings API missing");
@@ -226,6 +222,17 @@ async function assertAttachmentAutomationAllowed(stage, tabId, details = {}){
 }
 
 /**
+ * Return true when a backend share policy explicitly contains a key.
+ * @param {object} policyStatus
+ * @param {string} key
+ * @returns {boolean}
+ */
+function hasAttachmentAutomationPolicyKey(policyStatus, key){
+  const sharePolicy = policyStatus?.policy?.share;
+  return !!sharePolicy && Object.prototype.hasOwnProperty.call(sharePolicy, key);
+}
+
+/**
  * Read compose attachment automation settings from storage.
  * @returns {Promise<{alwaysConnector:boolean,offerAboveEnabled:boolean,thresholdMb:number,thresholdBytes:number}>}
  */
@@ -236,11 +243,47 @@ async function getComposeAttachmentAutomationSettings(){
     keys.attachmentsOfferAboveEnabled,
     keys.attachmentsOfferAboveMb
   ]);
-  const alwaysConnector = !!stored[keys.attachmentsAlwaysConnector];
-  const offerAboveEnabled = stored[keys.attachmentsOfferAboveEnabled] !== undefined
+  let alwaysConnector = !!stored[keys.attachmentsAlwaysConnector];
+  let offerAboveEnabled = stored[keys.attachmentsOfferAboveEnabled] !== undefined
     ? !!stored[keys.attachmentsOfferAboveEnabled]
     : true;
-  const thresholdMb = normalizeAttachmentThresholdMb(stored[keys.attachmentsOfferAboveMb]);
+  let thresholdMb = normalizeAttachmentThresholdMb(stored[keys.attachmentsOfferAboveMb]);
+
+  if (typeof NCPolicyRuntime !== "undefined" && NCPolicyRuntime?.getPolicyStatus){
+    try{
+      const policyStatus = await NCPolicyRuntime.getPolicyStatus();
+      if (policyStatus?.policyActive){
+        if (NCPolicyRuntime.isLocked(policyStatus, "share", "attachments_always_via_ncconnector")){
+          alwaysConnector = !!NCPolicyRuntime.readPolicyValue(
+            policyStatus,
+            "share",
+            "attachments_always_via_ncconnector"
+          );
+        }
+        if (
+          NCPolicyRuntime.isLocked(policyStatus, "share", "attachments_min_size_mb")
+          && hasAttachmentAutomationPolicyKey(policyStatus, "attachments_min_size_mb")
+        ){
+          const policyThreshold = NCPolicyRuntime.readPolicyValue(
+            policyStatus,
+            "share",
+            "attachments_min_size_mb"
+          );
+          if (policyThreshold == null){
+            offerAboveEnabled = false;
+          }else{
+            thresholdMb = normalizeAttachmentThresholdMb(Number(policyThreshold) || 0);
+            offerAboveEnabled = true;
+          }
+        }
+      }
+    }catch(error){
+      L("compose attachment automation policy status fallback", {
+        reason: "policy_runtime_failed",
+        error: error?.message || String(error)
+      });
+    }
+  }
   return {
     alwaysConnector,
     offerAboveEnabled: !alwaysConnector && offerAboveEnabled,
@@ -593,11 +636,6 @@ async function showComposeAttachmentThresholdPrompt({
     });
     return decisionPromise;
   }catch(error){
-    L("compose attachment prompt open failed", {
-      promptId: bgShortId(promptId, 24),
-      tabId,
-      error: error?.message || String(error)
-    });
     console.error("[NCBG] compose attachment prompt open failed", error);
     resolveAttachmentPrompt(promptId, "dismiss", "open_failed");
     throw error;

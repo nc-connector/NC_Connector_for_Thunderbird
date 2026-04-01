@@ -312,7 +312,7 @@
     "message": "NC Connector for Thunderbird – Beállítások"
   },
   "options_base_url_label": {
-    "message": "Nextcloud URL"
+    "message": "Nextcloud URL-cim"
   },
   "options_base_url_placeholder": {
     "message": "https://cloud.example.com"
@@ -406,6 +406,9 @@
   },
   "options_about_copyright_label": {
     "message": "Szerzői jog:"
+  },
+  "options_about_homepage_label": {
+    "message": "Honlap:"
   },
   "options_about_license_label": {
     "message": "Licenc:"
@@ -731,6 +734,9 @@
   "options_sharing_attachments_lock_step3": {
     "message": "Nyisd meg újra ezeket a kiegészítő-beállításokat."
   },
+  "options_sharing_attachments_lock_admin_link_label": {
+    "message": "Tájékoztató rendszerszintű bevezetéshez"
+  },
   "sharing_attachment_automation_locked_error": {
     "message": "A Thunderbird „Feltöltés ekkora fájlméret felett” beállítása be van kapcsolva ($1 MB). Ez ütközik az NC Connector melléklet-automatizálásával. Az alábbi mellékletopciók zárolva vannak."
   },
@@ -763,18 +769,6 @@
   },
   "options_sharing_permissions_tooltip_line3": {
     "message": "Csatolási módban a címzett engedélye mindig csak olvasható."
-  },
-  "sharing_password_separate_tooltip_title": {
-    "message": "Hamarosan (Pro funkció)"
-  },
-  "sharing_password_separate_tooltip_line1": {
-    "message": "Ez az opció le van tiltva ebben a kiadásban."
-  },
-  "sharing_password_separate_tooltip_line2": {
-    "message": "A jelszó külön e-mailben történő kézbesítése egy jövőbeli Pro kiadásban lesz elérhető."
-  },
-  "sharing_password_separate_tooltip_line3": {
-    "message": "A jelszó egyelőre a fő megosztási blokkban található."
   },
   "options_sharing_attachments_always_tooltip_title": {
     "message": "📎 Mindig NC csatlakozón keresztül"
@@ -836,19 +830,40 @@
   "sharing_password_mail_notify_manual_required_select_sender": {
     "message": "Az automatikus jelszo-e-mail kuldes sikertelen volt. Szukseg eseten valasszon feladot a megnyitott piszkozatban, majd kuldje el kezzel a jelszo e-mailt."
   },
-  "options_about_homepage_label": {
-    "message": "Honlap:"
-  },
   "options_about_homepage_link": {
     "message": "https://nc-connector.de"
   },
   "options_about_overview_text": {
-    "message": "Miert tobb, mint egy fajllink-bovitmeny?\nAz NC Connector nem csak a fajlhivatkozasokat fedi le, hanem a teljes csapatmunkafolyamatot a levelezo kliensben.\n\nTechnikai alap\n- Thunderbird- es Outlook-bovitmenyek kozvetlenul hasznalhatok, Nextcloud backend nelkul is\n- Opcionális Nextcloud backend a kozponti seat-kiosztashoz es szabalyzatokhoz\n- Seat modell a backendben: Community 1 ingyenes seattel, Pro 5 seattol (1 seat = 1 Nextcloud-felhasznalo)\n\n- Fajlmegosztas jelszoval, lejarati datummal es opcionalis kulon jelszokezbesitessel\n- Talk megbeszelesek letrehozasa es frissitese kozvetlenul naptarbejegyzesekbol\n- Melleklet-automatizalas egyertelmu szabalyokkal a kezi lepesek helyett\n- Kozponti seat-kiosztas a Nextcloud backendben (1 seat = 1 Nextcloud-felhasznalo)"
+    "message": "Több mint fájllinkek\n\nAz NC Connector a biztonságos fájlmegosztást, a Talk megbeszéléseket és a mellékletautomatizálást közvetlenül a Thunderbirdhöz és az Outlookhoz kapcsolja. Így a fontos csapatmunkafolyamatok ott maradnak, ahová valók: a levelező- és naptárkliensben.\n\nMit fed le az NC Connector\n- Fájlmegosztás jelszóval, lejárati dátummal és opcionális külön jelszóküldéssel\n- Talk megbeszélések létrehozása és frissítése közvetlenül a naptárbejegyzésekből\n- Mellékletautomatizálás világos szabályokkal a kézi egyedi lépések helyett\n- Egységes megosztási és meghívóblokkok közvetlenül a megszokott munkafolyamatban\n\nOpcionálisan Nextcloud backenddel\n- Központi Seat-kiosztás és szabályzatkezelés\n- Saját sablonok és megjelenések a megosztásokhoz és a Talk meghívókhoz\n- Külön jelszóküldés és központi vezérlés szervezetek számára\n- 1 Seat = 1 Nextcloud felhasználó\n\nBackend nélkül a bővítmények közvetlenül használhatók maradnak. Backenddel központi vezérlés érhető el csapatok és szervezetek számára."
   },
   "options_about_more_info_label": {
     "message": "Tovabbi informaciok -->"
   },
   "options_about_more_info_link": {
     "message": "Ugras a honlapra"
+  },
+  "policy_warning_title": {
+    "message": "A háttérszabályzat jelenleg nem érhető el."
+  },
+  "policy_warning_license_invalid": {
+    "message": "Az NC Connector licence vagy a seat-hozzárendelés jelenleg nem érvényes. A helyi beállítások lesznek használva. Kérjük, forduljon a Nextcloud rendszergazdájához."
+  },
+  "policy_warning_admin_link_label": {
+    "message": "Adminisztrátori beállítási útmutató megnyitása"
+  },
+  "policy_admin_controlled_tooltip": {
+    "message": "Rendszergazda által vezérelt"
+  },
+  "options_lang_custom": {
+    "message": "Egyeni (backend sablon)"
+  },
+  "sharing_password_separate_backend_required_tooltip": {
+    "message": "Ehhez a funkcióhoz a Nextcloud backend szükséges."
+  },
+  "sharing_password_separate_no_seat_tooltip": {
+    "message": "A rendszergazdának ehhez a funkcióhoz NC Connector seatet kell hozzárendelnie a fiókjához."
+  },
+  "sharing_password_separate_paused_tooltip": {
+    "message": "Az Ön NC Connector seatje jelenleg szünetel. Kérjük, forduljon a Nextcloud rendszergazdájához."
   }
 }

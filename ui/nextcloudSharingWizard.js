@@ -25,7 +25,7 @@
   const LOG_CHANNEL = 'NCUI';
   const LOG_PREFIX = `[${LOG_CHANNEL}][${LOG_LABEL}]`;
   const SHARING_KEYS = NCSharingStorage.SHARING_KEYS;
-  const SEPARATE_PASSWORD_FEATURE_ENABLED = false;
+  const POLICY_ADMIN_URL = "https://github.com/nc-connector/NC_Connector_for_Thunderbird/blob/main/docs/ADMIN.md";
 
   /**
    * Log internal UI errors in a deterministic way.
@@ -38,6 +38,198 @@
     }catch(logError){
       console.error(LOG_PREFIX, scope, error?.message || String(error), logError?.message || String(logError));
     }
+  }
+
+  /**
+   * Return the localized admin-control hint.
+   * @returns {string}
+   */
+  function getAdminControlledHint(){
+    return i18n("policy_admin_controlled_tooltip") || "Admin controlled";
+  }
+
+  /**
+   * Return true when the backend endpoint exists.
+   * @returns {boolean}
+   */
+  function isBackendEndpointAvailable(){
+    return !!state.policy.status?.endpointAvailable;
+  }
+
+  /**
+   * Return true when the current user has an active backend seat.
+   * @returns {boolean}
+   */
+  function hasBackendSeatEntitlement(){
+    const status = state.policy.status?.status;
+    const seatState = String(status?.seatState || "").trim().toLowerCase();
+    return !!(
+      isBackendEndpointAvailable()
+      && status?.seatAssigned
+      && status?.isValid
+      && seatState === "active"
+    );
+  }
+
+  /**
+   * Return true when separate password delivery is available.
+   * @returns {boolean}
+   */
+  function isSeparatePasswordFeatureAvailable(){
+    return hasBackendSeatEntitlement();
+  }
+
+  /**
+   * Return the tooltip shown when separate password delivery is unavailable.
+   * @returns {string}
+   */
+  function getSeparatePasswordUnavailableHint(){
+    const status = state.policy.status?.status;
+    const seatState = String(status?.seatState || "").trim().toLowerCase();
+    if (!isBackendEndpointAvailable()){
+      return i18n("sharing_password_separate_backend_required_tooltip")
+        || "This feature requires the Nextcloud backend.";
+    }
+    if (!status?.seatAssigned){
+      return i18n("sharing_password_separate_no_seat_tooltip")
+        || "Your administrator must assign an NC Connector seat to your account for this feature.";
+    }
+    if (!status?.isValid || seatState !== "active"){
+      return i18n("sharing_password_separate_paused_tooltip")
+        || "Your NC Connector seat is currently paused. Please contact your Nextcloud administrator.";
+    }
+    return "";
+  }
+
+  /**
+   * Read one share policy value from runtime state.
+   * @param {string} key
+   * @returns {any}
+   */
+  function readPolicyShareValue(key){
+    const sharePolicy = state.policy?.share;
+    if (!sharePolicy || typeof sharePolicy !== "object"){
+      return null;
+    }
+    return Object.prototype.hasOwnProperty.call(sharePolicy, key)
+      ? sharePolicy[key]
+      : null;
+  }
+
+  /**
+   * Return true when a share setting is admin-locked.
+   * @param {string} key
+   * @returns {boolean}
+   */
+  function isPolicyLock(key){
+    if (!state.policy?.active){
+      return false;
+    }
+    const editable = state.policy?.editable;
+    if (!editable || typeof editable !== "object"){
+      return false;
+    }
+    return editable[key] === false;
+  }
+
+  /**
+   * Convert policy values to booleans with fallback.
+   * @param {any} value
+   * @param {boolean} fallback
+   * @returns {boolean}
+   */
+  function coercePolicyBoolean(value, fallback){
+    if (value === true){
+      return true;
+    }
+    if (value === false){
+      return false;
+    }
+    return fallback;
+  }
+
+  /**
+   * Convert policy values to integers with fallback.
+   * @param {any} value
+   * @param {number} fallback
+   * @returns {number}
+   */
+  function coercePolicyInt(value, fallback){
+    const parsed = Number.parseInt(String(value ?? ""), 10);
+    if (!Number.isFinite(parsed)){
+      return fallback;
+    }
+    return parsed;
+  }
+
+  /**
+   * Convert policy values to non-empty strings with fallback.
+   * @param {any} value
+   * @param {string} fallback
+   * @returns {string}
+   */
+  function coercePolicyString(value, fallback){
+    const text = String(value ?? "").trim();
+    return text || fallback;
+  }
+
+  /**
+   * Render policy warning visibility in the sharing wizard.
+   */
+  function applyPolicyWarningUi(){
+    if (!dom.policyWarningRow){
+      return;
+    }
+    const visible = !!state.policy.warningVisible;
+    dom.policyWarningRow.hidden = !visible;
+    if (!visible){
+      return;
+    }
+    let warningText = i18n("policy_warning_license_invalid")
+      || "Your NC Connector license or seat is currently not valid. Local settings are used. Please contact your Nextcloud administrator.";
+    if (state.policy.warningCode === "license_invalid"){
+      warningText = i18n("policy_warning_license_invalid")
+        || "Your NC Connector license or seat is currently not valid. Local settings are used. Please contact your Nextcloud administrator.";
+    }
+    if (dom.policyWarningText){
+      dom.policyWarningText.textContent = warningText;
+    }
+  }
+
+  /**
+   * Fetch the backend policy status and cache it in wizard state.
+   * @returns {Promise<void>}
+   */
+  async function refreshPolicyStatus(){
+    try{
+      const response = await browser.runtime.sendMessage({
+        type: "policy:getStatus"
+      });
+      const status = response?.ok ? (response.status || null) : null;
+      const sharePolicy = status?.policy?.share;
+      const editable = status?.policyEditable?.share;
+      const active = !!(
+        status?.policyActive
+        && sharePolicy
+        && typeof sharePolicy === "object"
+        && editable
+        && typeof editable === "object"
+      );
+      state.policy.status = status;
+      state.policy.active = active;
+      state.policy.share = active ? sharePolicy : null;
+      state.policy.editable = active ? editable : null;
+      state.policy.warningVisible = !!status?.warning?.visible;
+      state.policy.warningCode = String(status?.warning?.code || "");
+      log('Policy status', {
+        active,
+        warning: state.policy.warningCode || "",
+        mode: status?.mode || ""
+      });
+    }catch(error){
+      logUiError("policy status fetch failed", error);
+    }
+    applyPolicyWarningUi();
   }
 
   const state = {
@@ -66,7 +258,15 @@
     debugEnabled: false,
     wizardWindowId: 0,
     remoteFolderInfo: null,
-    pathColumnScrollLeft: 0
+    pathColumnScrollLeft: 0,
+    policy: {
+      status: null,
+      active: false,
+      share: null,
+      editable: null,
+      warningVisible: false,
+      warningCode: ""
+    }
   };
   const dom = {};
   const i18n = NCI18n.translate;
@@ -86,6 +286,9 @@
    */
   async function init(){
     cacheElements();
+    if (dom.policyWarningAdminLink){
+      dom.policyWarningAdminLink.href = POLICY_ADMIN_URL;
+    }
     setWizardReady(false);
     NCTalkDomI18n.translatePage(i18n, { titleKey: "sharing_dialog_title" });
     try{
@@ -93,6 +296,7 @@
       state.launchContextId = parseLaunchContextId();
       state.wizardWindowId = await resolveWizardWindowId();
       attachEvents();
+      await refreshPolicyStatus();
       if (NCSharingStorage?.migrateLegacySharingKeys){
         await NCSharingStorage.migrateLegacySharingKeys();
       }
@@ -146,17 +350,27 @@
    */
   function cacheElements(){
     dom.content = document.querySelector('.nc-dialog-content');
+    dom.policyWarningRow = document.getElementById('policyWarningRow');
+    dom.policyWarningText = document.getElementById('policyWarningText');
+    dom.policyWarningAdminLink = document.getElementById('policyWarningAdminLink');
     dom.steps = Array.from(document.querySelectorAll('.wizard-step'));
+    dom.shareNameRow = document.getElementById('shareNameRow');
     dom.shareName = document.getElementById('shareName');
+    dom.permReadRow = document.getElementById('permReadRow');
+    dom.permCreateRow = document.getElementById('permCreateRow');
+    dom.permWriteRow = document.getElementById('permWriteRow');
+    dom.permDeleteRow = document.getElementById('permDeleteRow');
     dom.permCreate = document.getElementById('permCreate');
     dom.permWrite = document.getElementById('permWrite');
     dom.permDelete = document.getElementById('permDelete');
+    dom.passwordToggleRow = document.getElementById('passwordToggleRow');
     dom.passwordToggle = document.getElementById('passwordToggle');
     dom.passwordSeparateRow = document.getElementById('passwordSeparateRow');
     dom.passwordSeparateToggle = document.getElementById('passwordSeparateToggle');
     dom.passwordFields = document.getElementById('passwordFields');
     dom.passwordInput = document.getElementById('passwordInput');
     dom.passwordGenerate = document.getElementById('passwordGenerate');
+    dom.expireToggleRow = document.getElementById('expireToggleRow');
     dom.expireToggle = document.getElementById('expireToggle');
     dom.expireFields = document.getElementById('expireFields');
     dom.expireDate = document.getElementById('expireDate');
@@ -257,6 +471,7 @@
       if (dom.expireToggle.checked && !dom.expireDate.value){
         dom.expireDate.value = getDefaultExpireDate();
       }
+      applyPolicyControlLocks();
       invalidateUpload();
       log('expire toggle', dom.expireToggle.checked);
     });
@@ -343,11 +558,46 @@
     if (stored[SHARING_KEYS.defaultPassword] !== undefined){
       state.defaults.passwordEnabled = !!stored[SHARING_KEYS.defaultPassword];
     }
-    state.defaults.passwordSeparate = false;
+    if (stored[SHARING_KEYS.defaultPasswordSeparate] !== undefined){
+      state.defaults.passwordSeparate = !!stored[SHARING_KEYS.defaultPasswordSeparate];
+    }
     state.defaults.expireDays = NCTalkTextUtils.normalizeExpireDays(
       stored[SHARING_KEYS.defaultExpireDays],
       DEFAULT_EXPIRE_DAYS
     );
+    if (state.policy.active){
+      state.defaults.shareName = coercePolicyString(
+        readPolicyShareValue("share_name_template"),
+        state.defaults.shareName
+      );
+      state.defaults.permCreate = coercePolicyBoolean(
+        readPolicyShareValue("share_permission_upload"),
+        state.defaults.permCreate
+      );
+      state.defaults.permWrite = coercePolicyBoolean(
+        readPolicyShareValue("share_permission_edit"),
+        state.defaults.permWrite
+      );
+      state.defaults.permDelete = coercePolicyBoolean(
+        readPolicyShareValue("share_permission_delete"),
+        state.defaults.permDelete
+      );
+      state.defaults.passwordEnabled = coercePolicyBoolean(
+        readPolicyShareValue("share_set_password"),
+        state.defaults.passwordEnabled
+      );
+      state.defaults.passwordSeparate = coercePolicyBoolean(
+        readPolicyShareValue("share_send_password_separately"),
+        state.defaults.passwordSeparate
+      );
+      state.defaults.expireDays = NCTalkTextUtils.normalizeExpireDays(
+        coercePolicyInt(readPolicyShareValue("share_expire_days"), state.defaults.expireDays),
+        state.defaults.expireDays
+      );
+    }
+    if (!isSeparatePasswordFeatureAvailable()){
+      state.defaults.passwordSeparate = false;
+    }
   }
   /**
    * Fetch the live password policy from Nextcloud.
@@ -368,7 +618,10 @@
    */
   async function loadBasePath(){
     try{
-      const basePath = await NCSharing.getFileLinkBasePath();
+      const policyBasePath = state.policy.active
+        ? coercePolicyString(readPolicyShareValue("share_base_directory"), "")
+        : "";
+      const basePath = policyBasePath || await NCSharing.getFileLinkBasePath();
       state.basePath = basePath || '';
       if (dom.basePathLabel){
         dom.basePathLabel.textContent = state.basePath || '';
@@ -606,17 +859,36 @@
    * @param {boolean} enabled
    */
   function applyPasswordToggleState(enabled){
+    const lockPassword = isPolicyLock("share_set_password");
+    const lockSeparate = isPolicyLock("share_send_password_separately");
+    const featureUnavailable = !isSeparatePasswordFeatureAvailable();
+    const adminHint = getAdminControlledHint();
+    if (dom.passwordToggle){
+      dom.passwordToggle.disabled = lockPassword;
+      dom.passwordToggle.title = lockPassword ? adminHint : "";
+    }
+    if (dom.passwordToggleRow){
+      dom.passwordToggleRow.classList.toggle("is-disabled", lockPassword);
+      dom.passwordToggleRow.title = lockPassword ? adminHint : "";
+    }
     dom.passwordFields.classList.toggle('hidden', !enabled);
     dom.passwordInput.disabled = !enabled;
     dom.passwordGenerate.disabled = !enabled;
-    const separatePasswordEnabled = SEPARATE_PASSWORD_FEATURE_ENABLED && enabled;
     if (dom.passwordSeparateToggle){
-      dom.passwordSeparateToggle.disabled = !separatePasswordEnabled;
-      if (!separatePasswordEnabled){
+      dom.passwordSeparateToggle.disabled = !enabled || lockSeparate || featureUnavailable;
+      dom.passwordSeparateToggle.title = featureUnavailable
+        ? getSeparatePasswordUnavailableHint()
+        : (lockSeparate ? adminHint : "");
+      if (!enabled || featureUnavailable){
         dom.passwordSeparateToggle.checked = false;
       }
     }
-    dom.passwordSeparateRow?.classList.toggle('is-disabled', !separatePasswordEnabled);
+    if (dom.passwordSeparateRow){
+      dom.passwordSeparateRow.classList.toggle("is-disabled", !enabled || lockSeparate || featureUnavailable);
+      dom.passwordSeparateRow.title = featureUnavailable
+        ? getSeparatePasswordUnavailableHint()
+        : (lockSeparate ? adminHint : "");
+    }
     if (!enabled){
       dom.passwordInput.value = '';
     }
@@ -641,9 +913,7 @@
     dom.passwordToggle.checked = enabled;
     applyPasswordToggleState(enabled);
     if (dom.passwordSeparateToggle){
-      dom.passwordSeparateToggle.checked = enabled
-        && SEPARATE_PASSWORD_FEATURE_ENABLED
-        && !!state.defaults.passwordSeparate;
+      dom.passwordSeparateToggle.checked = enabled && !!state.defaults.passwordSeparate;
     }
     if (enabled && !dom.passwordInput.value){
       dom.passwordInput.value = await generatePasswordFromPolicy();
@@ -651,6 +921,70 @@
     dom.expireToggle.checked = true;
     dom.expireFields.classList.remove('hidden');
     dom.expireDate.value = getDefaultExpireDate();
+    applyPolicyControlLocks();
+  }
+
+  /**
+   * Apply admin lock state from backend policy to editable controls.
+   */
+  function applyPolicyControlLocks(){
+    const adminHint = getAdminControlledHint();
+    const lockShareName = isPolicyLock("share_name_template");
+    const lockPermUpload = isPolicyLock("share_permission_upload");
+    const lockPermEdit = isPolicyLock("share_permission_edit");
+    const lockPermDelete = isPolicyLock("share_permission_delete");
+    const lockExpireDays = isPolicyLock("share_expire_days");
+
+    if (dom.shareName){
+      dom.shareName.disabled = lockShareName;
+      dom.shareName.title = lockShareName ? adminHint : "";
+    }
+    if (dom.shareNameRow){
+      dom.shareNameRow.classList.toggle("is-disabled", lockShareName);
+      dom.shareNameRow.title = lockShareName ? adminHint : "";
+    }
+
+    if (dom.permCreate){
+      dom.permCreate.disabled = lockPermUpload;
+      dom.permCreate.title = lockPermUpload ? adminHint : "";
+    }
+    if (dom.permWrite){
+      dom.permWrite.disabled = lockPermEdit;
+      dom.permWrite.title = lockPermEdit ? adminHint : "";
+    }
+    if (dom.permDelete){
+      dom.permDelete.disabled = lockPermDelete;
+      dom.permDelete.title = lockPermDelete ? adminHint : "";
+    }
+    if (dom.permCreateRow){
+      dom.permCreateRow.classList.toggle("is-disabled", lockPermUpload);
+      dom.permCreateRow.title = lockPermUpload ? adminHint : "";
+    }
+    if (dom.permWriteRow){
+      dom.permWriteRow.classList.toggle("is-disabled", lockPermEdit);
+      dom.permWriteRow.title = lockPermEdit ? adminHint : "";
+    }
+    if (dom.permDeleteRow){
+      dom.permDeleteRow.classList.toggle("is-disabled", lockPermDelete);
+      dom.permDeleteRow.title = lockPermDelete ? adminHint : "";
+    }
+
+    if (dom.expireToggle){
+      dom.expireToggle.disabled = lockExpireDays;
+      dom.expireToggle.title = lockExpireDays ? adminHint : "";
+      if (lockExpireDays){
+        dom.expireToggle.checked = true;
+      }
+    }
+    if (dom.expireDate){
+      const disableDate = lockExpireDays || !dom.expireToggle.checked;
+      dom.expireDate.disabled = disableDate;
+      dom.expireDate.title = lockExpireDays ? adminHint : "";
+    }
+    if (dom.expireToggleRow){
+      dom.expireToggleRow.classList.toggle("is-disabled", lockExpireDays);
+      dom.expireToggleRow.title = lockExpireDays ? adminHint : "";
+    }
   }
 
   /**
@@ -1045,6 +1379,7 @@
         basePath: state.basePath,
         shareDate: shareContext.shareDate.toISOString(),
         folderInfo: shareContext.folderInfo,
+        policyShare: state.policy.active ? state.policy.share : null,
         permissions,
         passwordEnabled: !!dom.passwordToggle.checked,
         password: dom.passwordInput.value,
@@ -1151,6 +1486,7 @@
       }
       setMessage(i18n('sharing_status_inserting'), 'info');
       const html = await NCSharing.buildHtmlBlock(state.uploadResult.shareInfo, {
+        policyShare: state.policy.active ? state.policy.share : null,
         noteEnabled,
         note,
         hidePermissions: attachmentMode,
@@ -1168,6 +1504,7 @@
       await insertIntoCompose(html);
       if (separatePasswordMail){
         const passwordMailHtml = await NCSharing.buildHtmlBlock(state.uploadResult.shareInfo, {
+          policyShare: state.policy.active ? state.policy.share : null,
           passwordOnly: true
         });
         await registerSeparatePasswordDispatch({
@@ -1196,8 +1533,8 @@
    * @returns {boolean}
    */
   function isSeparatePasswordMailEnabled(){
-    return !!SEPARATE_PASSWORD_FEATURE_ENABLED
-      && !!dom.passwordToggle?.checked
+    return !!dom.passwordToggle?.checked
+      && isSeparatePasswordFeatureAvailable()
       && !!dom.passwordSeparateToggle?.checked
       && !!state.uploadResult?.shareInfo?.password;
   }

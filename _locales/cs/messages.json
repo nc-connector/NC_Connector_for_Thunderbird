@@ -407,6 +407,9 @@
   "options_about_copyright_label": {
     "message": "Copyright:"
   },
+  "options_about_homepage_label": {
+    "message": "Domovska stranka:"
+  },
   "options_about_license_label": {
     "message": "Licence:"
   },
@@ -731,6 +734,9 @@
   "options_sharing_attachments_lock_step3": {
     "message": "Znovu otevřete tato nastavení doplňku."
   },
+  "options_sharing_attachments_lock_admin_link_label": {
+    "message": "Pokyn pro systémové nasazení pro správce"
+  },
   "sharing_attachment_automation_locked_error": {
     "message": "V Thunderbirdu je zapnutá možnost „Nahrávat soubory větší než“ ($1 MB). To je v konfliktu s automatizací příloh NC Connectoru. Níže uvedené možnosti příloh jsou uzamčeny."
   },
@@ -763,18 +769,6 @@
   },
   "options_sharing_permissions_tooltip_line3": {
     "message": "V režimu přílohy je oprávnění příjemce vždy pouze pro čtení."
-  },
-  "sharing_password_separate_tooltip_title": {
-    "message": "Již brzy (funkce Pro)"
-  },
-  "sharing_password_separate_tooltip_line1": {
-    "message": "Tato možnost je v tomto vydání zakázána."
-  },
-  "sharing_password_separate_tooltip_line2": {
-    "message": "Doručení hesla v samostatném e-mailu bude k dispozici v budoucí verzi Pro."
-  },
-  "sharing_password_separate_tooltip_line3": {
-    "message": "Heslo je prozatím obsaženo v hlavním sdíleném bloku."
   },
   "options_sharing_attachments_always_tooltip_title": {
     "message": "📎 Vždy přes NC konektor"
@@ -836,19 +830,40 @@
   "sharing_password_mail_notify_manual_required_select_sender": {
     "message": "Automaticke odeslani hesla selhalo. Pokud je to potreba, vyberte v otevrenem konceptu odesilatele a odeslete e-mail s heslem rucne."
   },
-  "options_about_homepage_label": {
-    "message": "Domovska stranka:"
-  },
   "options_about_homepage_link": {
     "message": "https://nc-connector.de"
   },
   "options_about_overview_text": {
-    "message": "Proc vic nez jen doplnek pro odkazy na soubory?\nNC Connector nepokryva jen odkazy na soubory, ale cely tymovy workflow v postovnim klientu.\n\nTechnicky zaklad\n- Doplnky pro Thunderbird a Outlook lze pouzivat primo, i bez backendu Nextcloud\n- Volitelny backend Nextcloud pro centralni pridelovani seatu a zasad\n- Model seatu v backendu: Community s 1 bezplatnym seatem, Pro od 5 seatu (1 seat = 1 uzivatel Nextcloud)\n\n- Sdileni souboru s heslem, datem vyprseni a volitelnym samostatnym dorucenim hesla\n- Vytvareni a aktualizace Talk schuzek primo z kalendarovych udalosti\n- Automatizace priloh s jasnymi pravidly misto rucnich jednotlivych kroku\n- Centralni pridelovani seatu v backendu Nextcloud (1 seat = 1 uzivatel Nextcloud)"
+    "message": "Více než jen odkazy na soubory\n\nNC Connector propojuje bezpečné sdílení souborů, schůzky v Talku a automatizaci příloh přímo s Thunderbirdem a Outlookem. Důležité týmové pracovní postupy tak zůstávají tam, kam patří: v poštovním a kalendářovém klientovi.\n\nCo NC Connector pokrývá\n- Sdílení souborů s heslem, datem vypršení platnosti a volitelným samostatným doručením hesla\n- Vytváření a aktualizace schůzek v Talku přímo z kalendářních událostí\n- Automatizaci příloh s jasnými pravidly místo ručních jednotlivých kroků\n- Jednotné bloky pro sdílení a pozvánky přímo v běžném pracovním postupu\n\nVolitelně s Nextcloud backendem\n- Centrální přidělování Seatů a správa zásad\n- Vlastní šablony a designy pro sdílení a pozvánky do Talku\n- Samostatné doručování hesel a centrální řízení pro organizace\n- 1 Seat = 1 uživatel Nextcloud\n\nBez backendu zůstávají add-ony přímo použitelné. S backendem přibývá centrální řízení pro týmy a organizace."
   },
   "options_about_more_info_label": {
     "message": "Vice informaci -->"
   },
   "options_about_more_info_link": {
     "message": "Prejit na domovskou stranku"
+  },
+  "policy_warning_title": {
+    "message": "Backendová politika je momentálně nedostupná."
+  },
+  "policy_warning_license_invalid": {
+    "message": "Licence nebo přiřazení seatu NC Connectoru není momentálně platné. Použijí se místní nastavení. Obraťte se prosím na správce Nextcloudu."
+  },
+  "policy_warning_admin_link_label": {
+    "message": "Otevřít návod pro správce"
+  },
+  "policy_admin_controlled_tooltip": {
+    "message": "Řízeno správcem"
+  },
+  "options_lang_custom": {
+    "message": "Vlastni (backendova sablona)"
+  },
+  "sharing_password_separate_backend_required_tooltip": {
+    "message": "Tato funkce vyžaduje Nextcloud backend."
+  },
+  "sharing_password_separate_no_seat_tooltip": {
+    "message": "Váš správce vám musí pro tuto funkci přiřadit seat NC Connector."
+  },
+  "sharing_password_separate_paused_tooltip": {
+    "message": "Váš seat NC Connector je momentálně pozastaven. Obraťte se prosím na správce Nextcloud."
   }
 }

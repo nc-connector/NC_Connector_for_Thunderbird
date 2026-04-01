@@ -9,14 +9,15 @@ const DEFAULT_SHARING_EXPIRE_DAYS = 7;
 const DEFAULT_SHARING_ATTACHMENT_THRESHOLD_MB = NCSharingStorage.DEFAULT_ATTACHMENT_THRESHOLD_MB;
 const DEFAULT_SHARING_SHARE_NAME = i18n("sharing_share_default") || "Share name";
 const DEFAULT_TALK_TITLE = i18n("ui_default_title") || "Meeting";
-const NC_CONNECTOR_HOMEPAGE_URL = "https://nc-connector.de";
 const FALLBACK_POPUP_WIDTH = 520;
 const FALLBACK_POPUP_HEIGHT = 320;
 const SHARING_KEYS = NCSharingStorage.SHARING_KEYS;
 const normalizeAttachmentThresholdMb = NCSharingStorage.normalizeAttachmentThresholdMb;
 const OPTIONS_LOG_PREFIX = "[NCOPT]";
-const SEPARATE_PASSWORD_FEATURE_ENABLED = false;
 const SYSTEM_ADDRESSBOOK_ADMIN_URL = "https://github.com/nc-connector/NC_Connector_for_Thunderbird/blob/main/docs/ADMIN.md#system-address-book-required-for-user-search-and-moderator-selection";
+const POLICY_ADMIN_URL = "https://github.com/nc-connector/NC_Connector_for_Thunderbird/blob/main/docs/ADMIN.md";
+const ATTACHMENT_AUTOMATION_ADMIN_URL = "https://github.com/nc-connector/NC_Connector_for_Thunderbird/blob/main/docs/ADMIN.md#47-attachment-automation-prerequisite-disable-competing-thunderbird-compose-features";
+const NC_CONNECTOR_HOMEPAGE_URL = "https://nc-connector.de";
 
 /**
  * Log internal options-page errors.
@@ -39,6 +40,13 @@ const statusEl = document.getElementById("status");
 const baseUrlInput = document.getElementById("baseUrl");
 const userInput = document.getElementById("user");
 const appPassInput = document.getElementById("appPass");
+const policyWarningRow = document.getElementById("policyWarningRow");
+const policyWarningText = document.getElementById("policyWarningText");
+const policyWarningAdminLink = document.getElementById("policyWarningAdminLink");
+const sharingBaseRow = document.getElementById("sharingBaseRow");
+const sharingDefaultShareNameRow = document.getElementById("sharingDefaultShareNameRow");
+const sharingDefaultPermissionsRow = document.getElementById("sharingDefaultPermissionsRow");
+const sharingDefaultPasswordRow = document.getElementById("sharingDefaultPasswordRow");
 const sharingBaseInput = document.getElementById("sharingBase");
 const sharingDefaultShareNameInput = document.getElementById("sharingDefaultShareName");
 const sharingDefaultPermCreateInput = document.getElementById("sharingDefaultPermCreate");
@@ -47,6 +55,7 @@ const sharingDefaultPermDeleteInput = document.getElementById("sharingDefaultPer
 const sharingDefaultPasswordInput = document.getElementById("sharingDefaultPassword");
 const sharingDefaultPasswordSeparateRow = document.getElementById("sharingDefaultPasswordSeparateRow");
 const sharingDefaultPasswordSeparateInput = document.getElementById("sharingDefaultPasswordSeparate");
+const sharingDefaultExpireDaysRow = document.getElementById("sharingDefaultExpireDaysRow");
 const sharingDefaultExpireDaysInput = document.getElementById("sharingDefaultExpireDays");
 const sharingAttachmentsAlwaysNcInput = document.getElementById("sharingAttachmentsAlwaysNc");
 const sharingAttachmentsAlwaysRow = document.getElementById("sharingAttachmentsAlwaysRow");
@@ -55,8 +64,12 @@ const sharingAttachmentsOfferAboveEnabledInput = document.getElementById("sharin
 const sharingAttachmentsOfferAboveMbInput = document.getElementById("sharingAttachmentsOfferAboveMb");
 const sharingAttachmentsLockBox = document.getElementById("sharingAttachmentsLock");
 const sharingAttachmentsLockText = document.getElementById("sharingAttachmentsLockText");
+const sharingAttachmentsAdminLink = document.getElementById("sharingAttachmentsAdminLink");
+const talkDefaultTitleRow = document.getElementById("talkDefaultTitleRow");
 const talkDefaultTitleInput = document.getElementById("talkDefaultTitle");
+const talkDefaultLobbyRow = document.getElementById("talkDefaultLobbyRow");
 const talkDefaultLobbyInput = document.getElementById("talkDefaultLobby");
+const talkDefaultListableRow = document.getElementById("talkDefaultListableRow");
 const talkDefaultListableInput = document.getElementById("talkDefaultListable");
 const talkDefaultAddUsersInput = document.getElementById("talkDefaultAddUsers");
 const talkDefaultAddUsersRow = document.getElementById("talkDefaultAddUsersRow");
@@ -68,24 +81,41 @@ const optionsAddGuestsTooltipList = document.getElementById("optionsAddGuestsToo
 const optionsAddGuestsAddressbookLockHint = document.getElementById("optionsAddGuestsAddressbookLockHint");
 const talkAddressbookWarningRow = document.getElementById("talkAddressbookWarningRow");
 const optionsTalkAddressbookAdminLink = document.getElementById("optionsTalkAddressbookAdminLink");
+const talkDefaultPasswordRow = document.getElementById("talkDefaultPasswordRow");
 const talkDefaultPasswordInput = document.getElementById("talkDefaultPassword");
+const talkDefaultRoomTypeRow = document.getElementById("talkDefaultRoomTypeRow");
 const talkDefaultRoomTypePicker = document.getElementById("talkDefaultRoomTypePicker");
 const talkDefaultRoomTypeButton = document.getElementById("talkDefaultRoomTypeButton");
 const talkDefaultRoomTypeButtonLabel = document.getElementById("talkDefaultRoomTypeButtonLabel");
 const talkDefaultRoomTypeDropdown = document.getElementById("talkDefaultRoomTypeDropdown");
 const talkDefaultRoomTypeValueInput = document.getElementById("talkDefaultRoomType");
 const talkDefaultRoomTypeOptions = Array.from(document.querySelectorAll(".options-roomtype-option"));
+const shareBlockLangRow = document.getElementById("shareBlockLangRow");
 const shareBlockLangSelect = document.getElementById("shareBlockLang");
+const eventDescriptionLangRow = document.getElementById("eventDescriptionLangRow");
 const eventDescriptionLangSelect = document.getElementById("eventDescriptionLang");
 const DEFAULT_SHARING_BASE = (typeof NCSharing !== "undefined" ? NCSharing.DEFAULT_BASE_PATH : "90 Shares - external");
 let statusTimer = null;
 let composeAttachmentSettingsLocked = false;
+let runtimePolicyStatus = null;
+let policyLockTalkAddUsers = false;
+let policyLockTalkAddGuests = false;
+let policyLockSharingAttachmentsAlways = false;
+let policyLockSharingAttachmentsThreshold = false;
+let talkAddressbookLockActive = false;
+let talkAddressbookLockDetail = "";
 const SUPPORTED_OVERRIDE_LOCALES = getSupportedOverrideLocales();
-const LANG_OPTIONS = new Set(["default", ...SUPPORTED_OVERRIDE_LOCALES]);
+const LANG_OPTIONS = new Set(["default", "custom", ...SUPPORTED_OVERRIDE_LOCALES]);
 initLanguageOverrideSelects();
 initTalkDefaultRoomTypePicker();
 if (optionsTalkAddressbookAdminLink){
   optionsTalkAddressbookAdminLink.href = SYSTEM_ADDRESSBOOK_ADMIN_URL;
+}
+if (policyWarningAdminLink){
+  policyWarningAdminLink.href = POLICY_ADMIN_URL;
+}
+if (sharingAttachmentsAdminLink){
+  sharingAttachmentsAdminLink.href = ATTACHMENT_AUTOMATION_ADMIN_URL;
 }
 
 /**
@@ -120,12 +150,7 @@ function getSupportedOverrideLocales(){
  * Initialize the language override selects in the advanced settings tab.
  */
 function initLanguageOverrideSelects(){
-  const uiLang = getUiLanguage();
-  const displayNames = makeDisplayNames(uiLang);
-  const collator = makeCollator(uiLang);
-  const orderedLocales = orderOverrideLocales(SUPPORTED_OVERRIDE_LOCALES, displayNames, collator);
-  populateLanguageSelect(shareBlockLangSelect, orderedLocales, displayNames);
-  populateLanguageSelect(eventDescriptionLangSelect, orderedLocales, displayNames);
+  refreshLanguageOverrideSelects();
 }
 
 /**
@@ -241,16 +266,26 @@ function orderOverrideLocales(locales, displayNames, collator){
  * @param {string[]} locales
  * @param {Intl.DisplayNames|null} displayNames
  */
-function populateLanguageSelect(selectEl, locales, displayNames){
+function populateLanguageSelect(selectEl, locales, displayNames, options = {}){
   if (!selectEl){
     return;
   }
   selectEl.textContent = "";
+  const showCustom = !!options.showCustom;
+  const enableCustom = !!options.enableCustom;
 
   const defaultOption = document.createElement("option");
   defaultOption.value = "default";
   defaultOption.textContent = i18n("options_lang_default") || "default";
   selectEl.appendChild(defaultOption);
+
+  if (showCustom){
+    const customOption = document.createElement("option");
+    customOption.value = "custom";
+    customOption.textContent = i18n("options_lang_custom") || "Custom (backend template)";
+    customOption.disabled = !enableCustom;
+    selectEl.appendChild(customOption);
+  }
 
   locales.forEach((locale) => {
     const option = document.createElement("option");
@@ -280,6 +315,496 @@ function showStatus(message, isError = false, sticky = false, isSuccess = false)
       statusTimer = null;
     }, 2000);
   }
+}
+
+/**
+ * Return true when backend policy mode is currently active.
+ * @returns {boolean}
+ */
+function isBackendPolicyActive(){
+  return !!runtimePolicyStatus?.policyActive;
+}
+
+/**
+ * Return true when the NC Connector backend endpoint is available.
+ * @returns {boolean}
+ */
+function isBackendEndpointAvailable(){
+  return !!runtimePolicyStatus?.endpointAvailable;
+}
+
+/**
+ * Return true when the current user has an active backend seat.
+ * @returns {boolean}
+ */
+function hasBackendSeatEntitlement(){
+  const status = runtimePolicyStatus?.status;
+  const seatState = String(status?.seatState || "").trim().toLowerCase();
+  return !!(
+    runtimePolicyStatus?.endpointAvailable
+    && status?.seatAssigned
+    && status?.isValid
+    && seatState === "active"
+  );
+}
+
+/**
+ * Return the language policy key for one domain.
+ * @param {"share"|"talk"} domain
+ * @returns {string}
+ */
+function getPolicyLanguageKey(domain){
+  return domain === "talk" ? "language_talk_description" : "language_share_html_block";
+}
+
+/**
+ * Return the backend template key for one domain.
+ * @param {"share"|"talk"} domain
+ * @returns {string}
+ */
+function getPolicyTemplateKey(domain){
+  return domain === "talk" ? "talk_invitation_template" : "share_html_block_template";
+}
+
+/**
+ * Return true when backend-driven custom template mode can be selected for one domain.
+ * This requires an active backend policy, language=`custom`, and a non-empty template.
+ * @param {"share"|"talk"} domain
+ * @returns {boolean}
+ */
+function isCustomLanguageModeAvailable(domain){
+  if (!isBackendEndpointAvailable() || !isBackendPolicyActive()){
+    return false;
+  }
+  const language = normalizeLangChoice(
+    coercePolicyString(readBackendPolicyValue(domain, getPolicyLanguageKey(domain)), ""),
+    { allowCustom: true }
+  );
+  const template = coercePolicyString(readBackendPolicyValue(domain, getPolicyTemplateKey(domain)), "");
+  return language === "custom" && !!template;
+}
+
+/**
+ * Return true when separate password delivery is available.
+ * @returns {boolean}
+ */
+function isSeparatePasswordMailFeatureAvailable(){
+  return hasBackendSeatEntitlement();
+}
+
+/**
+ * Return the lock hint for separate password delivery when unavailable.
+ * @returns {string}
+ */
+function getSeparatePasswordUnavailableHint(){
+  const status = runtimePolicyStatus?.status;
+  const seatState = String(status?.seatState || "").trim().toLowerCase();
+  if (!isBackendEndpointAvailable()){
+    return i18n("sharing_password_separate_backend_required_tooltip")
+      || "This feature requires the Nextcloud backend.";
+  }
+  if (!status?.seatAssigned){
+    return i18n("sharing_password_separate_no_seat_tooltip")
+      || "Your administrator must assign an NC Connector seat to your account for this feature.";
+  }
+  if (!status?.isValid || seatState !== "active"){
+    return i18n("sharing_password_separate_paused_tooltip")
+      || "Your NC Connector seat is currently paused. Please contact your Nextcloud administrator.";
+  }
+  return "";
+}
+
+/**
+ * Repopulate language selects and expose `custom` only when the backend exists.
+ * The option stays visible but disabled until the backend policy actually uses
+ * a custom template for the respective domain.
+ */
+function refreshLanguageOverrideSelects(){
+  const uiLang = getUiLanguage();
+  const displayNames = makeDisplayNames(uiLang);
+  const collator = makeCollator(uiLang);
+  const orderedLocales = orderOverrideLocales(SUPPORTED_OVERRIDE_LOCALES, displayNames, collator);
+  const showCustom = isBackendEndpointAvailable();
+  const allowShareCustom = isCustomLanguageModeAvailable("share");
+  const allowTalkCustom = isCustomLanguageModeAvailable("talk");
+  const currentShareLang = normalizeLangChoice(shareBlockLangSelect?.value, { allowCustom: allowShareCustom });
+  const currentTalkLang = normalizeLangChoice(eventDescriptionLangSelect?.value, { allowCustom: allowTalkCustom });
+  populateLanguageSelect(shareBlockLangSelect, orderedLocales, displayNames, {
+    showCustom,
+    enableCustom: allowShareCustom
+  });
+  populateLanguageSelect(eventDescriptionLangSelect, orderedLocales, displayNames, {
+    showCustom,
+    enableCustom: allowTalkCustom
+  });
+  if (shareBlockLangSelect){
+    shareBlockLangSelect.value = currentShareLang;
+  }
+  if (eventDescriptionLangSelect){
+    eventDescriptionLangSelect.value = currentTalkLang;
+  }
+}
+
+/**
+ * Read one backend policy value.
+ * @param {"share"|"talk"} domain
+ * @param {string} key
+ * @returns {any}
+ */
+function readBackendPolicyValue(domain, key){
+  const domainPolicy = runtimePolicyStatus?.policy?.[domain];
+  if (!domainPolicy || typeof domainPolicy !== "object"){
+    return null;
+  }
+  return Object.prototype.hasOwnProperty.call(domainPolicy, key)
+    ? domainPolicy[key]
+    : null;
+}
+
+/**
+ * Return true when a backend policy key exists, even if its value is `null`.
+ * @param {"share"|"talk"} domain
+ * @param {string} key
+ * @returns {boolean}
+ */
+function hasBackendPolicyKey(domain, key){
+  const domainPolicy = runtimePolicyStatus?.policy?.[domain];
+  return !!domainPolicy
+    && typeof domainPolicy === "object"
+    && Object.prototype.hasOwnProperty.call(domainPolicy, key);
+}
+
+/**
+ * Return true when the backend explicitly disables one setting via `null`.
+ * @param {"share"|"talk"} domain
+ * @param {string} key
+ * @returns {boolean}
+ */
+function isBackendPolicyExplicitNull(domain, key){
+  return hasBackendPolicyKey(domain, key) && readBackendPolicyValue(domain, key) == null;
+}
+
+/**
+ * Return true when a policy setting is admin-locked.
+ * @param {"share"|"talk"} domain
+ * @param {string} key
+ * @returns {boolean}
+ */
+function isPolicyLocked(domain, key){
+  if (!runtimePolicyStatus?.policyActive){
+    return false;
+  }
+  const editableDomain = runtimePolicyStatus?.policyEditable?.[domain];
+  if (!editableDomain || typeof editableDomain !== "object"){
+    return false;
+  }
+  return editableDomain[key] === false;
+}
+
+/**
+ * Return the localized admin-controlled tooltip text.
+ * @returns {string}
+ */
+function getAdminControlledHint(){
+  return i18n("policy_admin_controlled_tooltip") || "Admin controlled";
+}
+
+/**
+ * Convert a policy value to boolean while keeping a fallback.
+ * @param {any} value
+ * @param {boolean} fallback
+ * @returns {boolean}
+ */
+function coercePolicyBoolean(value, fallback){
+  if (value === true){
+    return true;
+  }
+  if (value === false){
+    return false;
+  }
+  return fallback;
+}
+
+/**
+ * Convert a policy value to integer while keeping a fallback.
+ * @param {any} value
+ * @param {number} fallback
+ * @returns {number}
+ */
+function coercePolicyInt(value, fallback){
+  const parsed = Number.parseInt(String(value ?? ""), 10);
+  if (!Number.isFinite(parsed)){
+    return fallback;
+  }
+  return parsed;
+}
+
+/**
+ * Convert a policy value to non-empty string while keeping a fallback.
+ * @param {any} value
+ * @param {string} fallback
+ * @returns {string}
+ */
+function coercePolicyString(value, fallback){
+  const text = String(value ?? "").trim();
+  return text || fallback;
+}
+
+/**
+ * Resolve one persisted value with policy lock override.
+ * @param {"share"|"talk"} domain
+ * @param {string} key
+ * @param {any} localValue
+ * @param {(value:any, fallback:any)=>any} coerce
+ * @returns {any}
+ */
+function resolvePersistedValue(domain, key, localValue, coerce){
+  if (!isPolicyLocked(domain, key)){
+    return localValue;
+  }
+  const policyValue = readBackendPolicyValue(domain, key);
+  return typeof coerce === "function" ? coerce(policyValue, localValue) : localValue;
+}
+
+/**
+ * Apply one lock title to row/input elements.
+ * @param {HTMLElement|null} row
+ * @param {HTMLElement|null} input
+ * @param {boolean} locked
+ */
+function applyLockTitle(row, input, locked){
+  const title = locked ? getAdminControlledHint() : "";
+  if (row){
+    row.title = title;
+    row.classList.toggle("is-disabled", !!locked);
+  }
+  if (input){
+    input.title = title;
+  }
+}
+
+/**
+ * Show/hide the policy warning in options.
+ */
+function applyPolicyWarningUi(){
+  if (!policyWarningRow){
+    return;
+  }
+  const warning = runtimePolicyStatus?.warning || {};
+  const visible = !!warning.visible;
+  policyWarningRow.hidden = !visible;
+  if (!visible){
+    return;
+  }
+  let message = i18n("policy_warning_license_invalid");
+  if (warning.code === "license_invalid"){
+    message = i18n("policy_warning_license_invalid");
+  }
+  if (policyWarningText){
+    policyWarningText.textContent = message || "";
+  }
+}
+
+/**
+ * Refresh backend policy runtime status.
+ * @returns {Promise<void>}
+ */
+async function refreshBackendPolicyStatus(){
+  try{
+    const response = await browser.runtime.sendMessage({
+      type: "policy:getStatus"
+    });
+    if (response?.ok && response.status){
+      runtimePolicyStatus = response.status;
+    }
+  }catch(error){
+    logOptionsError("policy status check failed", error);
+  }
+  refreshLanguageOverrideSelects();
+  applyPolicyWarningUi();
+  applyPolicySettingsOverlay();
+}
+
+/**
+ * Apply policy values and lock states to options controls.
+ * Locked controls always show the policy value.
+ */
+function applyPolicySettingsOverlay(){
+  const policyActive = isBackendPolicyActive();
+  const lockShareBase = policyActive && isPolicyLocked("share", "share_base_directory");
+  const lockShareName = policyActive && isPolicyLocked("share", "share_name_template");
+  const lockPermUpload = policyActive && isPolicyLocked("share", "share_permission_upload");
+  const lockPermEdit = policyActive && isPolicyLocked("share", "share_permission_edit");
+  const lockPermDelete = policyActive && isPolicyLocked("share", "share_permission_delete");
+  const lockSharePassword = policyActive && isPolicyLocked("share", "share_set_password");
+  const lockSharePasswordSeparate = policyActive && isPolicyLocked("share", "share_send_password_separately");
+  const lockShareExpire = policyActive && isPolicyLocked("share", "share_expire_days");
+  policyLockSharingAttachmentsAlways = policyActive && isPolicyLocked("share", "attachments_always_via_ncconnector");
+  policyLockSharingAttachmentsThreshold = policyActive && isPolicyLocked("share", "attachments_min_size_mb");
+  const lockShareLang = policyActive && isPolicyLocked("share", "language_share_html_block");
+  const lockTalkTitle = policyActive && isPolicyLocked("talk", "talk_title");
+  const lockTalkLobby = policyActive && isPolicyLocked("talk", "talk_lobby_active");
+  const lockTalkListable = policyActive && isPolicyLocked("talk", "talk_show_in_search");
+  policyLockTalkAddUsers = policyActive && isPolicyLocked("talk", "talk_add_users");
+  policyLockTalkAddGuests = policyActive && isPolicyLocked("talk", "talk_add_guests");
+  const lockTalkPassword = policyActive && isPolicyLocked("talk", "talk_set_password");
+  const lockTalkRoomType = policyActive && isPolicyLocked("talk", "talk_room_type");
+  const lockTalkLang = policyActive && isPolicyLocked("talk", "language_talk_description");
+
+  if (lockShareBase && sharingBaseInput){
+    sharingBaseInput.value = coercePolicyString(readBackendPolicyValue("share", "share_base_directory"), sharingBaseInput.value || DEFAULT_SHARING_BASE);
+  }
+  if (lockShareName && sharingDefaultShareNameInput){
+    sharingDefaultShareNameInput.value = coercePolicyString(readBackendPolicyValue("share", "share_name_template"), sharingDefaultShareNameInput.value || DEFAULT_SHARING_SHARE_NAME);
+  }
+  if (lockPermUpload && sharingDefaultPermCreateInput){
+    sharingDefaultPermCreateInput.checked = coercePolicyBoolean(readBackendPolicyValue("share", "share_permission_upload"), sharingDefaultPermCreateInput.checked);
+  }
+  if (lockPermEdit && sharingDefaultPermWriteInput){
+    sharingDefaultPermWriteInput.checked = coercePolicyBoolean(readBackendPolicyValue("share", "share_permission_edit"), sharingDefaultPermWriteInput.checked);
+  }
+  if (lockPermDelete && sharingDefaultPermDeleteInput){
+    sharingDefaultPermDeleteInput.checked = coercePolicyBoolean(readBackendPolicyValue("share", "share_permission_delete"), sharingDefaultPermDeleteInput.checked);
+  }
+  if (lockSharePassword && sharingDefaultPasswordInput){
+    sharingDefaultPasswordInput.checked = coercePolicyBoolean(readBackendPolicyValue("share", "share_set_password"), sharingDefaultPasswordInput.checked);
+  }
+  if (lockSharePasswordSeparate && sharingDefaultPasswordSeparateInput){
+    sharingDefaultPasswordSeparateInput.checked = coercePolicyBoolean(readBackendPolicyValue("share", "share_send_password_separately"), sharingDefaultPasswordSeparateInput.checked);
+  }
+  if (!isSeparatePasswordMailFeatureAvailable() && sharingDefaultPasswordSeparateInput){
+    sharingDefaultPasswordSeparateInput.checked = false;
+  }
+  if (lockShareExpire && sharingDefaultExpireDaysInput){
+    sharingDefaultExpireDaysInput.value = String(
+      NCTalkTextUtils.normalizeExpireDays(
+        coercePolicyInt(readBackendPolicyValue("share", "share_expire_days"), Number.parseInt(sharingDefaultExpireDaysInput.value || "", 10)),
+        DEFAULT_SHARING_EXPIRE_DAYS
+      )
+    );
+  }
+  if (policyLockSharingAttachmentsAlways && sharingAttachmentsAlwaysNcInput){
+    sharingAttachmentsAlwaysNcInput.checked = coercePolicyBoolean(
+      readBackendPolicyValue("share", "attachments_always_via_ncconnector"),
+      sharingAttachmentsAlwaysNcInput.checked
+    );
+  }
+  if (policyLockSharingAttachmentsThreshold && sharingAttachmentsOfferAboveMbInput){
+    const thresholdDisabled = isBackendPolicyExplicitNull("share", "attachments_min_size_mb");
+    if (!thresholdDisabled){
+      sharingAttachmentsOfferAboveMbInput.value = String(
+        normalizeAttachmentThresholdMb(
+          coercePolicyInt(
+            readBackendPolicyValue("share", "attachments_min_size_mb"),
+            Number.parseInt(sharingAttachmentsOfferAboveMbInput.value || "", 10)
+          )
+        )
+      );
+    }
+    if (sharingAttachmentsOfferAboveEnabledInput){
+      sharingAttachmentsOfferAboveEnabledInput.checked = !thresholdDisabled;
+    }
+  }
+  if (lockShareLang && shareBlockLangSelect){
+    shareBlockLangSelect.value = normalizeLangChoice(
+      coercePolicyString(readBackendPolicyValue("share", "language_share_html_block"), shareBlockLangSelect.value),
+      { allowCustom: isCustomLanguageModeAvailable("share") }
+    );
+  }
+  if (lockTalkTitle && talkDefaultTitleInput){
+    talkDefaultTitleInput.value = coercePolicyString(readBackendPolicyValue("talk", "talk_title"), talkDefaultTitleInput.value || DEFAULT_TALK_TITLE);
+  }
+  if (lockTalkLobby && talkDefaultLobbyInput){
+    talkDefaultLobbyInput.checked = coercePolicyBoolean(readBackendPolicyValue("talk", "talk_lobby_active"), talkDefaultLobbyInput.checked);
+  }
+  if (lockTalkListable && talkDefaultListableInput){
+    talkDefaultListableInput.checked = coercePolicyBoolean(readBackendPolicyValue("talk", "talk_show_in_search"), talkDefaultListableInput.checked);
+  }
+  if (policyLockTalkAddUsers && talkDefaultAddUsersInput){
+    talkDefaultAddUsersInput.checked = coercePolicyBoolean(readBackendPolicyValue("talk", "talk_add_users"), talkDefaultAddUsersInput.checked);
+  }
+  if (policyLockTalkAddGuests && talkDefaultAddGuestsInput){
+    talkDefaultAddGuestsInput.checked = coercePolicyBoolean(readBackendPolicyValue("talk", "talk_add_guests"), talkDefaultAddGuestsInput.checked);
+  }
+  if (lockTalkPassword && talkDefaultPasswordInput){
+    talkDefaultPasswordInput.checked = coercePolicyBoolean(readBackendPolicyValue("talk", "talk_set_password"), talkDefaultPasswordInput.checked);
+  }
+  if (lockTalkRoomType){
+    const raw = coercePolicyString(readBackendPolicyValue("talk", "talk_room_type"), getSelectedTalkDefaultRoomType());
+    setTalkDefaultRoomType(raw === "event" ? "event" : "normal");
+  }
+  if (lockTalkLang && eventDescriptionLangSelect){
+    eventDescriptionLangSelect.value = normalizeLangChoice(
+      coercePolicyString(readBackendPolicyValue("talk", "language_talk_description"), eventDescriptionLangSelect.value),
+      { allowCustom: isCustomLanguageModeAvailable("talk") }
+    );
+  }
+
+  if (sharingBaseInput){
+    sharingBaseInput.disabled = lockShareBase;
+    applyLockTitle(sharingBaseRow, sharingBaseInput, lockShareBase);
+  }
+  if (sharingDefaultShareNameInput){
+    sharingDefaultShareNameInput.disabled = lockShareName;
+    applyLockTitle(sharingDefaultShareNameRow, sharingDefaultShareNameInput, lockShareName);
+  }
+  if (sharingDefaultPermCreateInput){
+    sharingDefaultPermCreateInput.disabled = lockPermUpload;
+  }
+  if (sharingDefaultPermWriteInput){
+    sharingDefaultPermWriteInput.disabled = lockPermEdit;
+  }
+  if (sharingDefaultPermDeleteInput){
+    sharingDefaultPermDeleteInput.disabled = lockPermDelete;
+  }
+  applyLockTitle(
+    sharingDefaultPermissionsRow,
+    sharingDefaultPermCreateInput,
+    lockPermUpload || lockPermEdit || lockPermDelete
+  );
+  if (sharingDefaultPasswordInput){
+    sharingDefaultPasswordInput.disabled = lockSharePassword;
+    applyLockTitle(sharingDefaultPasswordRow, sharingDefaultPasswordInput, lockSharePassword);
+  }
+  if (sharingDefaultExpireDaysInput){
+    sharingDefaultExpireDaysInput.disabled = lockShareExpire;
+    applyLockTitle(sharingDefaultExpireDaysRow, sharingDefaultExpireDaysInput, lockShareExpire);
+  }
+  if (shareBlockLangSelect){
+    shareBlockLangSelect.disabled = lockShareLang;
+    applyLockTitle(shareBlockLangRow, shareBlockLangSelect, lockShareLang);
+  }
+  if (talkDefaultTitleInput){
+    talkDefaultTitleInput.disabled = lockTalkTitle;
+    applyLockTitle(talkDefaultTitleRow, talkDefaultTitleInput, lockTalkTitle);
+  }
+  if (talkDefaultLobbyInput){
+    talkDefaultLobbyInput.disabled = lockTalkLobby;
+    applyLockTitle(talkDefaultLobbyRow, talkDefaultLobbyInput, lockTalkLobby);
+  }
+  if (talkDefaultListableInput){
+    talkDefaultListableInput.disabled = lockTalkListable;
+    applyLockTitle(talkDefaultListableRow, talkDefaultListableInput, lockTalkListable);
+  }
+  if (talkDefaultPasswordInput){
+    talkDefaultPasswordInput.disabled = lockTalkPassword;
+    applyLockTitle(talkDefaultPasswordRow, talkDefaultPasswordInput, lockTalkPassword);
+  }
+  if (eventDescriptionLangSelect){
+    eventDescriptionLangSelect.disabled = lockTalkLang;
+    applyLockTitle(eventDescriptionLangRow, eventDescriptionLangSelect, lockTalkLang);
+  }
+  if (talkDefaultRoomTypeButton){
+    talkDefaultRoomTypeButton.disabled = lockTalkRoomType;
+    applyLockTitle(talkDefaultRoomTypeRow, talkDefaultRoomTypeButton, lockTalkRoomType);
+  }
+  if (lockTalkRoomType){
+    closeTalkDefaultRoomTypeDropdown();
+  }
+
+  updateSharingPasswordState();
+  updateAttachmentThresholdState();
+  applyTalkSystemAddressbookLockState(talkAddressbookLockActive, talkAddressbookLockDetail);
 }
 
 /**
@@ -350,7 +875,7 @@ async function load(){
       : true;
   }
   if (sharingDefaultPasswordSeparateInput){
-    sharingDefaultPasswordSeparateInput.checked = false;
+    sharingDefaultPasswordSeparateInput.checked = !!stored[SHARING_KEYS.defaultPasswordSeparate];
   }
   updateSharingPasswordState();
   if (sharingDefaultExpireDaysInput){
@@ -403,14 +928,18 @@ async function load(){
       ? !!stored.talkPasswordDefaultEnabled
       : true;
   }
+  const storedShareBlockLang = stored.shareBlockLang;
+  const storedEventDescriptionLang = stored.eventDescriptionLang;
+  setTalkDefaultRoomType(stored.talkDefaultRoomType);
+  await refreshBackendPolicyStatus();
   if (shareBlockLangSelect){
-    shareBlockLangSelect.value = normalizeLangChoice(stored.shareBlockLang);
+    shareBlockLangSelect.value = normalizeLangChoice(storedShareBlockLang);
   }
   if (eventDescriptionLangSelect){
-    eventDescriptionLangSelect.value = normalizeLangChoice(stored.eventDescriptionLang);
+    eventDescriptionLangSelect.value = normalizeLangChoice(storedEventDescriptionLang);
   }
+  applyPolicySettingsOverlay();
   await refreshTalkSystemAddressbookState({ forceRefresh: true });
-  setTalkDefaultRoomType(stored.talkDefaultRoomType);
   setAuthMode(stored.authMode || "manual");
   updateAuthModeUI();
 }
@@ -421,31 +950,42 @@ async function load(){
  * @param {string} detail
  */
 function applyTalkSystemAddressbookLockState(locked, detail = ""){
-  const lockActive = !!locked;
+  talkAddressbookLockActive = !!locked;
+  talkAddressbookLockDetail = talkAddressbookLockActive ? (detail || i18n("talk_system_addressbook_required_message")) : "";
+  const usersLockActive = talkAddressbookLockActive || policyLockTalkAddUsers;
+  const guestsLockActive = talkAddressbookLockActive || policyLockTalkAddGuests;
+  const usersDetail = talkAddressbookLockActive
+    ? talkAddressbookLockDetail
+    : (policyLockTalkAddUsers ? getAdminControlledHint() : "");
+  const guestsDetail = talkAddressbookLockActive
+    ? talkAddressbookLockDetail
+    : (policyLockTalkAddGuests ? getAdminControlledHint() : "");
   if (talkDefaultAddUsersInput){
-    talkDefaultAddUsersInput.disabled = lockActive;
+    talkDefaultAddUsersInput.disabled = usersLockActive;
+    talkDefaultAddUsersInput.title = usersDetail;
   }
   if (talkDefaultAddGuestsInput){
-    talkDefaultAddGuestsInput.disabled = lockActive;
+    talkDefaultAddGuestsInput.disabled = guestsLockActive;
+    talkDefaultAddGuestsInput.title = guestsDetail;
   }
   if (talkDefaultAddUsersRow){
-    talkDefaultAddUsersRow.classList.toggle("is-disabled", lockActive);
-    talkDefaultAddUsersRow.title = lockActive ? detail : "";
+    talkDefaultAddUsersRow.classList.toggle("is-disabled", usersLockActive);
+    talkDefaultAddUsersRow.title = usersDetail;
   }
   if (talkDefaultAddGuestsRow){
-    talkDefaultAddGuestsRow.classList.toggle("is-disabled", lockActive);
-    talkDefaultAddGuestsRow.title = lockActive ? detail : "";
+    talkDefaultAddGuestsRow.classList.toggle("is-disabled", guestsLockActive);
+    talkDefaultAddGuestsRow.title = guestsDetail;
   }
   if (optionsAddUsersAddressbookLockHint){
-    optionsAddUsersAddressbookLockHint.textContent = detail || i18n("talk_system_addressbook_required_message");
+    optionsAddUsersAddressbookLockHint.textContent = talkAddressbookLockDetail || i18n("talk_system_addressbook_required_message");
   }
   if (optionsAddGuestsAddressbookLockHint){
-    optionsAddGuestsAddressbookLockHint.textContent = detail || i18n("talk_system_addressbook_required_message");
+    optionsAddGuestsAddressbookLockHint.textContent = talkAddressbookLockDetail || i18n("talk_system_addressbook_required_message");
   }
-  applySharedAddressbookTooltipState(optionsAddUsersTooltipList, lockActive);
-  applySharedAddressbookTooltipState(optionsAddGuestsTooltipList, lockActive);
+  applySharedAddressbookTooltipState(optionsAddUsersTooltipList, talkAddressbookLockActive);
+  applySharedAddressbookTooltipState(optionsAddGuestsTooltipList, talkAddressbookLockActive);
   if (talkAddressbookWarningRow){
-    talkAddressbookWarningRow.hidden = !lockActive;
+    talkAddressbookWarningRow.hidden = !talkAddressbookLockActive;
   }
 }
 
@@ -474,6 +1014,7 @@ async function refreshTalkSystemAddressbookState(options = {}){
     logOptionsError("system addressbook status check failed", error);
     applyTalkSystemAddressbookLockState(true, i18n("talk_system_addressbook_required_message"));
   }
+  applyPolicySettingsOverlay();
 }
 
 /**
@@ -583,32 +1124,73 @@ async function save(){
   const appPass = appPassInput.value;
   const debugEnabled = document.getElementById("debugEnabled").checked;
   const authMode = getSelectedAuthMode();
-  const sharingBasePath = (sharingBaseInput?.value?.trim()) || DEFAULT_SHARING_BASE;
-  const sharingDefaultShareName = (sharingDefaultShareNameInput?.value || "").trim() || DEFAULT_SHARING_SHARE_NAME;
-  const sharingDefaultPermCreate = !!sharingDefaultPermCreateInput?.checked;
-  const sharingDefaultPermWrite = !!sharingDefaultPermWriteInput?.checked;
-  const sharingDefaultPermDelete = !!sharingDefaultPermDeleteInput?.checked;
-  const sharingDefaultPassword = sharingDefaultPasswordInput
+  let sharingBasePath = (sharingBaseInput?.value?.trim()) || DEFAULT_SHARING_BASE;
+  let sharingDefaultShareName = (sharingDefaultShareNameInput?.value || "").trim() || DEFAULT_SHARING_SHARE_NAME;
+  let sharingDefaultPermCreate = !!sharingDefaultPermCreateInput?.checked;
+  let sharingDefaultPermWrite = !!sharingDefaultPermWriteInput?.checked;
+  let sharingDefaultPermDelete = !!sharingDefaultPermDeleteInput?.checked;
+  let sharingDefaultPassword = sharingDefaultPasswordInput
     ? !!sharingDefaultPasswordInput.checked
     : true;
-  const sharingDefaultPasswordSeparate = false;
-  const sharingDefaultExpireDays = NCTalkTextUtils.normalizeExpireDays(sharingDefaultExpireDaysInput?.value, DEFAULT_SHARING_EXPIRE_DAYS);
-  const sharingAttachmentsAlwaysConnector = !!sharingAttachmentsAlwaysNcInput?.checked;
-  const sharingAttachmentsOfferAboveEnabled = !!sharingAttachmentsOfferAboveEnabledInput?.checked;
-  const sharingAttachmentsOfferAboveMb = normalizeAttachmentThresholdMb(sharingAttachmentsOfferAboveMbInput?.value);
-  const talkDefaultTitle = (talkDefaultTitleInput?.value || "").trim() || DEFAULT_TALK_TITLE;
-  const talkDefaultLobby = talkDefaultLobbyInput ? !!talkDefaultLobbyInput.checked : true;
-  const talkDefaultListable = talkDefaultListableInput ? !!talkDefaultListableInput.checked : true;
-  const talkAddUsersDefaultEnabled = talkDefaultAddUsersInput ? !!talkDefaultAddUsersInput.checked : false;
-  const talkAddGuestsDefaultEnabled = talkDefaultAddGuestsInput ? !!talkDefaultAddGuestsInput.checked : false;
-  const talkAddParticipantsDefaultEnabled = talkAddUsersDefaultEnabled || talkAddGuestsDefaultEnabled;
-  const talkPasswordDefaultEnabled = talkDefaultPasswordInput ? !!talkDefaultPasswordInput.checked : true;
-  const talkDefaultRoomType = getSelectedTalkDefaultRoomType();
-  const shareBlockLang = normalizeLangChoice(shareBlockLangSelect?.value);
-  const eventDescriptionLang = normalizeLangChoice(eventDescriptionLangSelect?.value);
+  let sharingDefaultPasswordSeparate = sharingDefaultPassword
+    ? !!sharingDefaultPasswordSeparateInput?.checked
+    : false;
+  let sharingDefaultExpireDays = NCTalkTextUtils.normalizeExpireDays(sharingDefaultExpireDaysInput?.value, DEFAULT_SHARING_EXPIRE_DAYS);
+  let sharingAttachmentsAlwaysConnector = !!sharingAttachmentsAlwaysNcInput?.checked;
+  let sharingAttachmentsOfferAboveEnabled = !!sharingAttachmentsOfferAboveEnabledInput?.checked;
+  let sharingAttachmentsOfferAboveMb = normalizeAttachmentThresholdMb(sharingAttachmentsOfferAboveMbInput?.value);
+  let talkDefaultTitle = (talkDefaultTitleInput?.value || "").trim() || DEFAULT_TALK_TITLE;
+  let talkDefaultLobby = talkDefaultLobbyInput ? !!talkDefaultLobbyInput.checked : true;
+  let talkDefaultListable = talkDefaultListableInput ? !!talkDefaultListableInput.checked : true;
+  let talkAddUsersDefaultEnabled = talkDefaultAddUsersInput ? !!talkDefaultAddUsersInput.checked : false;
+  let talkAddGuestsDefaultEnabled = talkDefaultAddGuestsInput ? !!talkDefaultAddGuestsInput.checked : false;
+  let talkAddParticipantsDefaultEnabled = talkAddUsersDefaultEnabled || talkAddGuestsDefaultEnabled;
+  let talkPasswordDefaultEnabled = talkDefaultPasswordInput ? !!talkDefaultPasswordInput.checked : true;
+  let talkDefaultRoomType = getSelectedTalkDefaultRoomType();
+  let shareBlockLang = normalizeLangChoice(shareBlockLangSelect?.value);
+  let eventDescriptionLang = normalizeLangChoice(eventDescriptionLangSelect?.value);
   const permissionOk = await ensureOriginPermissionInteractive();
   if (!permissionOk){
     return;
+  }
+  await refreshBackendPolicyStatus();
+  sharingBasePath = resolvePersistedValue("share", "share_base_directory", sharingBasePath, coercePolicyString);
+  sharingDefaultShareName = resolvePersistedValue("share", "share_name_template", sharingDefaultShareName, coercePolicyString);
+  sharingDefaultPermCreate = resolvePersistedValue("share", "share_permission_upload", sharingDefaultPermCreate, coercePolicyBoolean);
+  sharingDefaultPermWrite = resolvePersistedValue("share", "share_permission_edit", sharingDefaultPermWrite, coercePolicyBoolean);
+  sharingDefaultPermDelete = resolvePersistedValue("share", "share_permission_delete", sharingDefaultPermDelete, coercePolicyBoolean);
+  sharingDefaultPassword = resolvePersistedValue("share", "share_set_password", sharingDefaultPassword, coercePolicyBoolean);
+  sharingDefaultPasswordSeparate = resolvePersistedValue("share", "share_send_password_separately", sharingDefaultPasswordSeparate, coercePolicyBoolean);
+  sharingDefaultExpireDays = NCTalkTextUtils.normalizeExpireDays(
+    resolvePersistedValue("share", "share_expire_days", sharingDefaultExpireDays, coercePolicyInt),
+    DEFAULT_SHARING_EXPIRE_DAYS
+  );
+  sharingAttachmentsAlwaysConnector = resolvePersistedValue("share", "attachments_always_via_ncconnector", sharingAttachmentsAlwaysConnector, coercePolicyBoolean);
+  sharingAttachmentsOfferAboveMb = normalizeAttachmentThresholdMb(
+    resolvePersistedValue("share", "attachments_min_size_mb", sharingAttachmentsOfferAboveMb, coercePolicyInt)
+  );
+  if (isPolicyLocked("share", "attachments_min_size_mb")){
+    sharingAttachmentsOfferAboveEnabled = !isBackendPolicyExplicitNull("share", "attachments_min_size_mb");
+  }
+  shareBlockLang = normalizeLangChoice(
+    resolvePersistedValue("share", "language_share_html_block", shareBlockLang, coercePolicyString),
+    { allowCustom: isCustomLanguageModeAvailable("share") }
+  );
+  talkDefaultTitle = resolvePersistedValue("talk", "talk_title", talkDefaultTitle, coercePolicyString);
+  talkDefaultLobby = resolvePersistedValue("talk", "talk_lobby_active", talkDefaultLobby, coercePolicyBoolean);
+  talkDefaultListable = resolvePersistedValue("talk", "talk_show_in_search", talkDefaultListable, coercePolicyBoolean);
+  talkAddUsersDefaultEnabled = resolvePersistedValue("talk", "talk_add_users", talkAddUsersDefaultEnabled, coercePolicyBoolean);
+  talkAddGuestsDefaultEnabled = resolvePersistedValue("talk", "talk_add_guests", talkAddGuestsDefaultEnabled, coercePolicyBoolean);
+  talkAddParticipantsDefaultEnabled = talkAddUsersDefaultEnabled || talkAddGuestsDefaultEnabled;
+  talkPasswordDefaultEnabled = resolvePersistedValue("talk", "talk_set_password", talkPasswordDefaultEnabled, coercePolicyBoolean);
+  talkDefaultRoomType = resolvePersistedValue("talk", "talk_room_type", talkDefaultRoomType, coercePolicyString);
+  talkDefaultRoomType = talkDefaultRoomType === "event" ? "event" : "normal";
+  eventDescriptionLang = normalizeLangChoice(
+    resolvePersistedValue("talk", "language_talk_description", eventDescriptionLang, coercePolicyString),
+    { allowCustom: isCustomLanguageModeAvailable("talk") }
+  );
+  if (!isSeparatePasswordMailFeatureAvailable()){
+    sharingDefaultPasswordSeparate = false;
   }
   await browser.storage.local.set({
     baseUrl,
@@ -696,6 +1278,7 @@ window.addEventListener("focus", async () => {
   try{
     await refreshComposeAttachmentConflictState();
     updateAttachmentThresholdState();
+    await refreshBackendPolicyStatus();
     // Focus refresh keeps UI state current, but should prefer cache to avoid
     // repeated forced network probes while switching windows.
     await refreshTalkSystemAddressbookState({ forceRefresh: false });
@@ -992,10 +1575,22 @@ function setTalkDefaultRoomType(value, options = {}){
  * @param {string} value
  * @returns {string}
  */
-function normalizeLangChoice(value){
+function normalizeLangChoice(value, options = {}){
+  const allowCustom = options.allowCustom !== undefined
+    ? !!options.allowCustom
+    : isCustomLanguageModeAvailable();
   const raw = String(value || "default").trim();
+  const normalizeOverride = typeof NCI18nOverride !== "undefined" && typeof NCI18nOverride.normalizeLanguageOverride === "function"
+    ? NCI18nOverride.normalizeLanguageOverride
+    : null;
+  if (normalizeOverride){
+    return normalizeOverride(raw, { allowCustom });
+  }
   if (!raw || raw.toLowerCase() === "default"){
     return "default";
+  }
+  if (raw.toLowerCase() === "custom"){
+    return allowCustom ? "custom" : "default";
   }
   let normalized = raw;
   if (typeof NCI18nOverride !== "undefined" && typeof NCI18nOverride.normalizeLang === "function"){
@@ -1005,18 +1600,29 @@ function normalizeLangChoice(value){
 }
 
 /**
- * Keep the "password in separate mail" default disabled in this release.
+ * Enable/disable "password in separate mail" based on password default state.
  */
 function updateSharingPasswordState(){
-  if (!sharingDefaultPasswordSeparateInput){
+  if (!sharingDefaultPasswordInput || !sharingDefaultPasswordSeparateInput){
     return;
   }
-  const passwordEnabled = !!sharingDefaultPasswordInput?.checked;
-  const separatePasswordEnabled = SEPARATE_PASSWORD_FEATURE_ENABLED && passwordEnabled;
-  sharingDefaultPasswordSeparateInput.disabled = !separatePasswordEnabled;
-  sharingDefaultPasswordSeparateInput.checked = false;
+  const lockPassword = isPolicyLocked("share", "share_set_password");
+  const lockSeparate = isPolicyLocked("share", "share_send_password_separately");
+  const featureUnavailable = !isSeparatePasswordMailFeatureAvailable();
+  const passwordEnabled = !!sharingDefaultPasswordInput.checked;
+  sharingDefaultPasswordInput.disabled = lockPassword;
+  sharingDefaultPasswordSeparateInput.disabled = !passwordEnabled || lockSeparate || featureUnavailable;
+  sharingDefaultPasswordSeparateInput.title = featureUnavailable
+    ? getSeparatePasswordUnavailableHint()
+    : (lockSeparate ? getAdminControlledHint() : "");
   if (sharingDefaultPasswordSeparateRow){
-    sharingDefaultPasswordSeparateRow.classList.toggle("is-disabled", !separatePasswordEnabled);
+    sharingDefaultPasswordSeparateRow.classList.toggle("is-disabled", !passwordEnabled || lockSeparate || featureUnavailable);
+    sharingDefaultPasswordSeparateRow.title = featureUnavailable
+      ? getSeparatePasswordUnavailableHint()
+      : (lockSeparate ? getAdminControlledHint() : "");
+  }
+  if (!passwordEnabled || featureUnavailable){
+    sharingDefaultPasswordSeparateInput.checked = false;
   }
 }
 
@@ -1027,28 +1633,39 @@ function updateAttachmentThresholdState(){
   if (!sharingAttachmentsAlwaysNcInput || !sharingAttachmentsOfferAboveEnabledInput || !sharingAttachmentsOfferAboveMbInput){
     return;
   }
+  const adminHint = getAdminControlledHint();
+  const effectiveAlwaysLock = composeAttachmentSettingsLocked || policyLockSharingAttachmentsAlways;
+  const effectiveThresholdLock = composeAttachmentSettingsLocked || policyLockSharingAttachmentsThreshold;
   if (sharingAttachmentsAlwaysRow){
-    sharingAttachmentsAlwaysRow.classList.toggle("is-disabled", composeAttachmentSettingsLocked);
+    sharingAttachmentsAlwaysRow.classList.toggle("is-disabled", effectiveAlwaysLock);
+    sharingAttachmentsAlwaysRow.title = policyLockSharingAttachmentsAlways ? adminHint : "";
   }
   if (sharingAttachmentsOfferRow){
-    sharingAttachmentsOfferRow.classList.toggle("is-disabled", composeAttachmentSettingsLocked);
+    sharingAttachmentsOfferRow.classList.toggle("is-disabled", effectiveThresholdLock);
+    sharingAttachmentsOfferRow.title = policyLockSharingAttachmentsThreshold ? adminHint : "";
   }
   if (sharingAttachmentsLockBox){
     sharingAttachmentsLockBox.hidden = !composeAttachmentSettingsLocked;
   }
-  sharingAttachmentsAlwaysNcInput.disabled = composeAttachmentSettingsLocked;
+  sharingAttachmentsAlwaysNcInput.disabled = effectiveAlwaysLock;
+  sharingAttachmentsAlwaysNcInput.title = policyLockSharingAttachmentsAlways ? adminHint : "";
   if (composeAttachmentSettingsLocked){
     sharingAttachmentsOfferAboveEnabledInput.disabled = true;
     sharingAttachmentsOfferAboveMbInput.disabled = true;
     return;
   }
+  if (policyLockSharingAttachmentsThreshold){
+    sharingAttachmentsOfferAboveEnabledInput.checked = !isBackendPolicyExplicitNull("share", "attachments_min_size_mb");
+  }
   const alwaysViaConnector = !!sharingAttachmentsAlwaysNcInput?.checked;
   if (sharingAttachmentsOfferRow){
-    sharingAttachmentsOfferRow.classList.toggle("is-disabled", alwaysViaConnector);
+    sharingAttachmentsOfferRow.classList.toggle("is-disabled", alwaysViaConnector || effectiveThresholdLock);
   }
-  sharingAttachmentsOfferAboveEnabledInput.disabled = alwaysViaConnector;
+  sharingAttachmentsOfferAboveEnabledInput.disabled = alwaysViaConnector || effectiveThresholdLock;
+  sharingAttachmentsOfferAboveEnabledInput.title = policyLockSharingAttachmentsThreshold ? adminHint : "";
   const thresholdEnabled = !alwaysViaConnector && !!sharingAttachmentsOfferAboveEnabledInput.checked;
-  sharingAttachmentsOfferAboveMbInput.disabled = !thresholdEnabled;
+  sharingAttachmentsOfferAboveMbInput.disabled = !thresholdEnabled || effectiveThresholdLock;
+  sharingAttachmentsOfferAboveMbInput.title = policyLockSharingAttachmentsThreshold ? adminHint : "";
 }
 
   if (loginFlowButton){

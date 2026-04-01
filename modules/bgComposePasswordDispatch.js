@@ -161,10 +161,6 @@ async function registerSeparatePasswordMailDispatch(tabId, payload = {}){
       tabId,
       error: error?.message || String(error)
     });
-    L("sharing separate password dispatch compose details unavailable", {
-      tabId,
-      error: error?.message || String(error)
-    });
   }
   const queue = PASSWORD_MAIL_DISPATCH_BY_TAB.get(tabId);
   if (Array.isArray(queue)){
@@ -271,10 +267,6 @@ async function enrichSeparatePasswordDispatchSourceIdentity(tabId, queue){
       tabId,
       error: errorMessage
     });
-    L("sharing separate password source identity enrich failed", {
-      tabId,
-      error: errorMessage
-    });
   }
 }
 
@@ -348,10 +340,6 @@ async function showPasswordMailSuccessNotification(recipientCount){
       recipients: count,
       error: error?.message || String(error)
     });
-    L("sharing separate password notification failed", {
-      recipients: count,
-      error: error?.message || String(error)
-    });
   }
 }
 
@@ -393,10 +381,7 @@ async function showPasswordMailManualRequiredNotification(recipientCount, option
   }catch(error){
     console.error("[NCBG] sharing separate password manual-required notification failed", {
       recipients: count,
-      error: error?.message || String(error)
-    });
-    L("sharing separate password manual-required notification failed", {
-      recipients: count,
+      requireSenderSelection,
       error: error?.message || String(error)
     });
   }
@@ -433,10 +418,6 @@ async function showPasswordMailFailureNotification(recipientCount){
     });
   }catch(error){
     console.error("[NCBG] sharing separate password failure notification failed", {
-      recipients: count,
-      error: error?.message || String(error)
-    });
-    L("sharing separate password failure notification failed", {
       recipients: count,
       error: error?.message || String(error)
     });
@@ -573,14 +554,6 @@ async function deleteShareAfterPasswordDispatchFailure(sourceTabId, dispatch, re
       shareLabel: String(dispatch?.shareLabel || "").trim(),
       error: error?.message || String(error)
     });
-    L("sharing separate password failure cleanup delete failed", {
-      sourceTabId,
-      reason: reason || "",
-      relativeFolder: folderInfo.relativeFolder,
-      shareId: String(dispatch?.shareId || "").trim(),
-      shareLabel: String(dispatch?.shareLabel || "").trim(),
-      error: error?.message || String(error)
-    });
   }
 }
 
@@ -642,11 +615,6 @@ async function sendSeparatePasswordMail(tabId, queue){
         composeTabId,
         error: sendError?.message || String(sendError)
       });
-      L("sharing separate password mail auto-send failed", {
-        sourceTabId: tabId,
-        composeTabId,
-        error: sendError?.message || String(sendError)
-      });
       if (Number.isInteger(composeTabId) && composeTabId > 0){
         try{
           await browser.tabs.remove(composeTabId);
@@ -656,11 +624,6 @@ async function sendSeparatePasswordMail(tabId, queue){
           });
         }catch(removeError){
           console.error("[NCBG] sharing separate password mail failed auto tab remove failed", {
-            sourceTabId: tabId,
-            composeTabId,
-            error: removeError?.message || String(removeError)
-          });
-          L("sharing separate password mail failed auto tab remove failed", {
             sourceTabId: tabId,
             composeTabId,
             error: removeError?.message || String(removeError)
@@ -677,11 +640,6 @@ async function sendSeparatePasswordMail(tabId, queue){
       }catch(fallbackError){
         manualFallbackFailedCount++;
         console.error("[NCBG] sharing separate password mail manual fallback failed", {
-          sourceTabId: tabId,
-          failedComposeTabId: composeTabId,
-          error: fallbackError?.message || String(fallbackError)
-        });
-        L("sharing separate password mail manual fallback failed", {
           sourceTabId: tabId,
           failedComposeTabId: composeTabId,
           error: fallbackError?.message || String(fallbackError)
@@ -736,7 +694,6 @@ function resolvePolicyUrl(value, baseUrl){
       baseUrl: String(baseUrl || ""),
       error: error?.message || String(error)
     });
-    L("normalize URL failed", { raw: String(raw || ""), baseUrl: String(baseUrl || ""), error: error?.message || String(error) });
     return null;
   }
 }
@@ -773,14 +730,12 @@ async function fetchPasswordPolicy(){
     const { baseUrl, user, appPass } = await NCCore.getOpts();
     if (!baseUrl || !user || !appPass){
       console.error("[NCBG] password policy missing credentials");
-      L("password policy fallback", { reason: "credentials_missing" });
       return { ...FALLBACK_PASSWORD_POLICY };
     }
     if (typeof NCHostPermissions !== "undefined" && NCHostPermissions?.hasOriginPermission){
       const ok = await NCHostPermissions.hasOriginPermission(baseUrl);
       if (!ok){
         console.error("[NCBG] password policy host permission missing", baseUrl);
-        L("password policy fallback", { reason: "permission_missing" });
         return { ...FALLBACK_PASSWORD_POLICY };
       }
     }
@@ -793,7 +748,6 @@ async function fetchPasswordPolicy(){
     const response = await NCOcs.ocsRequest({ url, method: "GET", headers, acceptJson: true });
     if (!response.ok){
       console.error("[NCBG] password policy fetch failed", response.errorMessage || response.status);
-      L("password policy fallback", { reason: "http_error", status: response.status });
       return { ...FALLBACK_PASSWORD_POLICY };
     }
     const capabilities = response.data?.ocs?.data?.capabilities || {};
@@ -811,7 +765,6 @@ async function fetchPasswordPolicy(){
     return normalized;
   }catch(err){
     console.error("[NCBG] password policy fetch error", err);
-    L("password policy fallback", { reason: "exception" });
     return { ...FALLBACK_PASSWORD_POLICY };
   }
 }

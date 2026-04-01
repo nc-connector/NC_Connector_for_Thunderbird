@@ -43,12 +43,16 @@ Datenfluss:
 - Erstellt Shares über /ocs/v2.php/apps/files_sharing/api/v1/shares
 - Setzt Defaults für Share-Name, Rechte, Passwort und Ablaufdatum
 - Berücksichtigt Nextcloud Passwort-Policy (Mindestlänge + Generator-API mit sicherem Fallback)
-- Aktualisiert Share-Metadaten (Notiz, Label) nach dem Upload
+- Sendet das Share-Label bereits beim OCS-Create und aktualisiert veränderliche Metadaten wie die Notiz danach über den dokumentierten OCS-Update-Endpunkt
 - Armierung eines Compose-Cleanup im Background; bei geschlossenem Compose ohne erfolgreichen Versand wird der Remote-Share-Ordner entfernt
 - Behandelt doppelte Namen und Remote-Konflikte; Fehlerpfade aus DAV/OCS
-- Controls für separaten Passwortversand sind aktuell sichtbar, aber gesperrt:
-  - Default + Wizard-Toggle bleiben als "Coming soon (Pro feature)" sichtbar
-  - im normalen UI-Flow bleibt der Passwort-Only-Follow-up-Versand in dieser Version inaktiv
+- Optionaler separater Passwortversand für Freigaben:
+  - Default + Wizard-Toggle: "Passwort separat senden"
+  - nur aktiv, wenn Passwortschutz aktiv ist
+  - Hauptmail blendet das Inline-Passwort aus und zeigt einen Hinweis auf die separate Passwortmail
+  - Passwort-Only-Follow-up wird nach Versand der Hauptmail gesendet (Auto-Send mit Timeout-Guard; bei Sendefehler mit manuellem Fallback-Entwurf)
+  - bei erfolgreichem Passwortversand wird eine Desktop-Erfolgsmeldung angezeigt
+  - wird der manuelle Fallback ohne Versand geschlossen, entfernt der Cleanup den zugehörigen Remote-Share-Ordner
 - Optionale Compose-Anhang-Automatisierung:
   - Anhänge immer über NC Connector teilen, oder
   - nur bei Überschreiten eines konfigurierten Gesamtgrößen-Grenzwerts

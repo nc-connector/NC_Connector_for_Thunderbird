@@ -201,6 +201,24 @@ textarea{
   color:var(--brand-blue);
   text-decoration:underline;
 }
+.policy-warning{
+  border:1px solid #b00020;
+  border-radius:var(--tb-radius);
+  background:rgba(176,0,32,0.08);
+  color:#b00020;
+  padding:8px 10px;
+  font-size:12px;
+  line-height:1.4;
+}
+.policy-warning-title{
+  font-weight:700;
+}
+.policy-warning a{
+  display:inline-block;
+  margin-top:6px;
+  color:var(--brand-blue);
+  text-decoration:underline;
+}
 .delegate-selected{
   display:flex;
   align-items:center;
@@ -637,6 +655,11 @@ textarea{
     </div>
     <div class="dialog-content">
 <div class="message" id="messageBar"></div>
+      <div class="policy-warning" id="policyWarningRow" hidden>
+        <div class="policy-warning-title"><span aria-hidden="true">⚠️ </span><span data-i18n="policy_warning_title">Backend policy is currently unavailable.</span></div>
+        <div id="policyWarningText" data-i18n="policy_warning_license_invalid">Your NC Connector license or seat is currently not valid. Local settings are used. Please contact your Nextcloud administrator.</div>
+        <a id="policyWarningAdminLink" data-i18n="policy_warning_admin_link_label" target="_blank" rel="noopener noreferrer" href="https://github.com/nc-connector/NC_Connector_for_Thunderbird/blob/main/docs/ADMIN.md">Open admin setup guide</a>
+      </div>
       <div class="section">
         <label for="titleInput" data-i18n="ui_create_title_label">Title</label>
         <input id="titleInput" type="text">

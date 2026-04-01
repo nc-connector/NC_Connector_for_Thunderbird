@@ -312,7 +312,7 @@
     "message": "NC Connector for Thunderbird – 設定"
   },
   "options_base_url_label": {
-    "message": "Nextcloud URL"
+    "message": "Nextcloud のURL"
   },
   "options_base_url_placeholder": {
     "message": "https://cloud.example.com"
@@ -406,6 +406,9 @@
   },
   "options_about_copyright_label": {
     "message": "著作権:"
+  },
+  "options_about_homepage_label": {
+    "message": "ホームページ:"
   },
   "options_about_license_label": {
     "message": "ライセンス:"
@@ -731,6 +734,9 @@
   "options_sharing_attachments_lock_step3": {
     "message": "このアドオン設定を再度開いてください。"
   },
+  "options_sharing_attachments_lock_admin_link_label": {
+    "message": "システム全体展開向けの管理者向け案内"
+  },
   "sharing_attachment_automation_locked_error": {
     "message": "Thunderbird の「次より大きいファイルをアップロード」が有効です（$1 MB）。これは NC Connector の添付ファイル自動化と競合します。以下の添付ファイル設定はロックされています。"
   },
@@ -763,18 +769,6 @@
   },
   "options_sharing_permissions_tooltip_line3": {
     "message": "添付ファイル モードでは、受信者のアクセス許可は常に読み取り専用です。"
-  },
-  "sharing_password_separate_tooltip_title": {
-    "message": "近日公開予定 (Pro 機能)"
-  },
-  "sharing_password_separate_tooltip_line1": {
-    "message": "このオプションはこのリリースでは無効になっています。"
-  },
-  "sharing_password_separate_tooltip_line2": {
-    "message": "将来の Pro リリースでは、別の電子メールでのパスワード配信が利用可能になる予定です。"
-  },
-  "sharing_password_separate_tooltip_line3": {
-    "message": "現時点では、パスワードはメインの共有ブロックに含まれています。"
   },
   "options_sharing_attachments_always_tooltip_title": {
     "message": "📎 常にNCコネクタ経由"
@@ -836,19 +830,40 @@
   "sharing_password_mail_notify_manual_required_select_sender": {
     "message": "パスワードメールの自動送信に失敗しました。必要に応じて開いた下書きで送信者を選択し、手動でパスワードメールを送信してください。"
   },
-  "options_about_homepage_label": {
-    "message": "ホームページ:"
-  },
   "options_about_homepage_link": {
     "message": "https://nc-connector.de"
   },
   "options_about_overview_text": {
-    "message": "なぜ単なるファイルリンクアドオン以上なのか？\nNC Connector は、ファイルリンクだけでなく、メールクライアント内のチームワークフロー全体をカバーします。\n\n技術基盤\n- Thunderbird と Outlook のアドオンを、Nextcloud バックエンドがなくても直接利用可能\n- シート割り当てとポリシーを一元管理するための任意の Nextcloud バックエンド\n- バックエンドのシートモデル: Community は無料 1 シート、Pro は 5 シートから（1 シート = 1 Nextcloud ユーザー）\n\n- パスワード・有効期限・任意の別メールでのパスワード送信に対応したファイル共有\n- カレンダー予定から Talk ミーティングを直接作成・更新\n- 手動の個別作業ではなく、明確なルールによる添付ファイル自動化\n- Nextcloud バックエンドでのシート一元割り当て（1 シート = 1 Nextcloud ユーザー）"
+    "message": "ファイルリンク以上の機能\n\nNC Connector は、安全なファイル共有、Talk ミーティング、添付ファイル自動化を Thunderbird と Outlook に直接統合します。これにより、重要なチームのワークフローを本来あるべき場所、つまりメールとカレンダーのクライアント内に保てます。\n\nNC Connector がカバーする内容\n- パスワード、期限日、必要に応じた別送パスワード付きのファイル共有\n- カレンダーの予定から直接 Talk ミーティングを作成・更新\n- 手作業の個別対応ではなく、明確なルールによる添付ファイル自動化\n- 共有ブロックと招待ブロックを普段の作業フローにそのまま挿入\n\nNextcloud backend を利用する場合\n- Seat の集中割り当てとポリシー管理\n- 共有と Talk 招待用の独自テンプレートとデザイン\n- パスワード別送と組織向けの集中制御\n- 1 Seat = 1 Nextcloud ユーザー\n\nbackend がなくても add-on はそのまま利用できます。backend を使うと、チームや組織向けの集中管理が追加されます。"
   },
   "options_about_more_info_label": {
     "message": "詳細情報 -->"
   },
   "options_about_more_info_link": {
     "message": "ホームページを開く"
+  },
+  "policy_warning_title": {
+    "message": "バックエンドポリシーは現在利用できません。"
+  },
+  "policy_warning_license_invalid": {
+    "message": "NC Connector のライセンスまたはシート割り当ては現在有効ではありません。ローカル設定が使用されます。Nextcloud 管理者に連絡してください。"
+  },
+  "policy_warning_admin_link_label": {
+    "message": "管理者向けセットアップガイドを開く"
+  },
+  "policy_admin_controlled_tooltip": {
+    "message": "管理者により制御"
+  },
+  "options_lang_custom": {
+    "message": "カスタム（バックエンドテンプレート）"
+  },
+  "sharing_password_separate_backend_required_tooltip": {
+    "message": "この機能には Nextcloud バックエンドが必要です。"
+  },
+  "sharing_password_separate_no_seat_tooltip": {
+    "message": "この機能を使うには、管理者があなたのアカウントに NC Connector の seat を割り当てる必要があります。"
+  },
+  "sharing_password_separate_paused_tooltip": {
+    "message": "あなたの NC Connector seat は現在一時停止されています。Nextcloud 管理者に連絡してください。"
   }
 }

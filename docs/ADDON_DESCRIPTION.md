@@ -43,12 +43,16 @@ Data flow:
 - Creates a share via /ocs/v2.php/apps/files_sharing/api/v1/shares
 - Applies defaults for share name, permissions, password, and expiry date
 - Honors Nextcloud password policies (min length + generator API with secure fallback)
-- Updates share metadata (note, label) after upload
+- Sends the share label during OCS create and updates mutable metadata like note afterwards via the documented OCS update endpoint
 - Arms compose-share cleanup in background and removes the remote share folder if compose is closed without successful send
 - Handles duplicate names and remote path conflicts; surfaces errors from DAV/OCS
-- Separate password delivery controls are currently visible but locked:
-  - default + wizard toggle remains visible as "Coming soon (Pro feature)"
-  - normal UI flow keeps password-only follow-up dispatch inactive in this release
+- Optional separate password delivery for shares:
+  - default + wizard toggle: "send password in separate email"
+  - active only when password protection is enabled
+  - main share block hides inline password and shows a separate-password notice
+  - password-only follow-up mail is sent after the main compose message is sent (auto-send with timeout guard + manual fallback draft on send failure)
+  - successful password-mail delivery triggers a desktop success notification
+  - if manual fallback is closed without send, remote share cleanup removes the related share folder
 - Optional compose attachment automation:
   - always route attachments via NC Connector, or
   - route only when total attachment size exceeds configured threshold

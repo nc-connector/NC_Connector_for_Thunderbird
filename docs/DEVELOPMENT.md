@@ -5,7 +5,7 @@ This document is the **single source of truth** for developers maintaining or ex
 It complements:
 - `docs/ADDON_DESCRIPTION.md` (architecture overview)
 - `docs/ATN_REVIEW_CHECKLIST_INTERNAL.md` (internal review constraints you must not violate)
-- `docs/ATN_REVIEW_NOTES_2.2.9.md` (reviewer-facing release-specific notes)
+- `docs/ATN_REVIEW_NOTES_3.0.0.md` (reviewer-facing release-specific notes)
 
 ---
 
@@ -89,6 +89,7 @@ Nextcloud:
   - OCS endpoints enabled
   - Nextcloud Talk installed
   - Files sharing (DAV + OCS) enabled
+  - optional `nc_connector` backend app for centralized seat/policy runtime
 
 ---
 
@@ -111,14 +112,15 @@ Key files you’ll touch most:
 - `modules/bgComposeShareCleanup.js` — compose-tab and wizard-window remote cleanup lifecycle
 - `modules/bgComposePasswordDispatch.js` — separate-password-mail dispatch and password policy fetch/generate
 - `modules/bgCompose.js` — compose/window/tab listener wiring
-- `modules/bgCalendarLifecycle.js` — calendar wizard-context and room-cleanup lifecycle helpers
-- `modules/bgCalendar.js` — `ncCalToolbar` integration and persisted calendar monitoring sync
+- `modules/bgCalendarLifecycle.js` — calendar wizard context and editor-close cleanup lifecycle helpers
+- `modules/bgCalendar.js` — `ncCalToolbar` integration, room metadata mapping, and persisted calendar monitoring sync
 - `modules/bgRouter.js` — `runtime.onMessage` dispatcher for Talk/Sharing/Options/UI bridge contracts
+- `modules/policyRuntime.js` — centralized backend seat/policy status fetch + normalization (`/apps/ncc_backend_4mc/api/v1/status`)
 - `modules/background.js` — thin bootstrap entrypoint
 - `modules/hostPermissions.js` — single host-permission gate used by core/talk/sharing runtime modules
 - `modules/nccore.js` — Nextcloud auth/login-flow helpers
-- `modules/talkAddressbook.js` — system addressbook fetch/cache/search/status helpers
-- `modules/talkcore.js` — Nextcloud Talk API helpers (OCS)
+- `modules/talkAddressbook.js` — system-addressbook CardDAV fetch/cache/search/status helpers
+- `modules/talkcore.js` — Nextcloud Talk API helpers (OCS, room lifecycle, capabilities)
 - `modules/ncSharing.js` — Nextcloud sharing/DAV helpers used by the sharing wizard
 - `modules/icalContract.js` — shared iCal/vCard parser contract (powered by vendored `vendor/ical.js`)
 - `experiments/ncComposePrefs/parent.js` — read-only compose preference bridge (`mail.compose.big_attachments.*`)
@@ -167,6 +169,7 @@ Implementation:
 - UI pages can:
   - log locally to their own console, and/or
   - forward structured logs via `browser.runtime.sendMessage({ type: "debug:log", ... })` (see message contracts below).
+- Actual error paths must still use `console.error(...)` directly; they are not allowed to disappear just because `debugEnabled` is off.
 - Attachment automation adds debug traces for:
   - threshold evaluation and prompt decisions in `[NCBG]`
   - attachment-mode wizard/prompt flow in `[NCUI][Sharing]`
@@ -218,6 +221,7 @@ Implementation pieces:
 Design intent:
 - The add-on UI follows the Thunderbird UI language (normal WebExtension i18n).
 - Generated blocks inserted into mails/events can be forced to a specific language (useful in multi-language environments).
+- Backend policy may additionally return `event_description_type = html | plain_text`; when `html` is active, Thunderbird writes the Talk block into the rich event-description editor as HTML and relies on the editor snapshot/iCal serialization to persist the matching plain-text representation.
 
 ---
 
@@ -299,7 +303,7 @@ Current implementation:
   - editor-targeted snapshot/write-back (`getCurrent` / `updateCurrent`)
   - tracked close lifecycle (`onTrackedEditorClosed`)
 - `experiments/calendar/**` remains untouched and is used only for persisted item monitoring.
-- Business logic remains in background runtime modules (`modules/bgState.js`, `modules/bgComposeAttachments.js`, `modules/bgComposeShareCleanup.js`, `modules/bgComposePasswordDispatch.js`, `modules/bgCompose.js`, `modules/bgCalendarLifecycle.js`, `modules/bgCalendar.js`, `modules/talkAddressbook.js`, `modules/talkcore.js`, `modules/bgRouter.js`).
+- Business logic remains in background runtime modules (`modules/bgState.js`, `modules/bgComposeAttachments.js`, `modules/bgComposeShareCleanup.js`, `modules/bgComposePasswordDispatch.js`, `modules/bgCompose.js`, `modules/bgCalendarLifecycle.js`, `modules/bgCalendar.js`, `modules/bgRouter.js`, `modules/talkAddressbook.js`, `modules/talkcore.js`).
 
 ### 7.2 Editor variants: dialog vs tab
 
@@ -326,7 +330,7 @@ Current implementation in `ncCalToolbar`:
   - In 2.2.7 tab mode, `windowId` identified the 3-pane host window only; follow-up
     editor operations could resolve via selected `currentTabInfo`, which can drift
     after tab switches or with multiple open editor tabs.
-  - In 2.2.8 this was upgraded to an opaque `editorId` bridge so targeting is deterministic and API-contract oriented.
+  - In 3.0.0 this is based on an opaque `editorId` bridge so targeting is deterministic and API-contract oriented.
 
 Upstream direction:
 - We track this as a temporary bridge until upstream APIs expose the same deterministic contract.
@@ -412,6 +416,8 @@ User clicks “Talk-Raum erstellen”:
 Background:
 - uses `modules/talkcore.js` + `modules/ocs.js` + `modules/nccore.js`
 - creates the room, applies lobby/listable/password, etc.
+- If the user selected an event conversation, runtime performs exactly one event-bound create request.
+- Runtime does not fall back from event conversation to standard room and does not fabricate pseudo Talk URLs.
 
 ### 8.3 Write-back to the currently edited event
 
@@ -528,6 +534,7 @@ Entry point:
 
 Responsibilities:
 - The sharing wizard UI performs most DAV/OCS actions using shared modules.
+- Public-link share creation follows the documented OCS contract: `label` is sent during create, and mutable metadata such as `note` is updated later via form-encoded OCS update arguments.
 - The background is used for **compose insertion**, because the compose APIs are executed from the background.
 - In attachment mode, background removes selected attachments from compose and
   passes them as a one-time launch context to the wizard.
@@ -544,6 +551,7 @@ Key files:
 
 Attachment mode specifics:
 - Wizard starts in step 3 (files queue), without note step.
+- Share label is fixed at create time; note metadata is pushed at finalize time via the documented OCS update endpoint.
 - Share name base is fixed to `email_attachment` with deterministic `_1`, `_2`, ... suffix handling.
 - Compose HTML block for this mode uses ZIP download URL (`/s/<token>/download`) and hides permission row.
 - Recipient permissions are enforced as read-only in this mode (`read=true`, `create/write/delete=false`), independent of sharing defaults.
@@ -562,9 +570,15 @@ Attachment mode specifics:
   - wizard-side cleanup is armed by window id in background; if the sharing wizard closes before finalize, background deletes the remote folder on `windows.onRemoved`
   - finalize explicitly clears the wizard cleanup entry before closing the popup
 - Password separation:
-  - UI controls remain visible in options/wizard but are intentionally locked in 2.2.9.
-  - Lock text/tooltip: "Coming soon (Pro feature)".
-  - Runtime keeps password-only follow-up dispatch inactive in the normal UI flow for this release.
+  - Option + wizard toggle can send password in a dedicated follow-up mail.
+  - This toggle is only active when password protection is enabled.
+  - Main compose block omits the inline password and shows a dedicated hint when enabled.
+  - Background captures final recipients on `compose.onBeforeSend` and dispatches password-only mail on `compose.onAfterSend`.
+  - Dispatch path: first try `compose.sendMessage(..., { mode: "sendNow" })` with a timeout guard for stuck send attempts.
+  - If immediate send fails (or times out), background opens a prefilled compose draft as explicit manual fallback.
+  - If a manual fallback draft was opened, a dedicated desktop notification tells the user to send the password mail manually.
+  - If manual fallback draft closes without successful send, compose-share cleanup removes the remote share folder.
+  - If manual fallback draft cannot be opened at all, background performs immediate best-effort remote share cleanup.
 - If Thunderbird's own big-attachment upload setting is enabled, add-on attachment automation settings are locked and a guidance block is shown in options.
 - The same lock is enforced live in background before evaluate/start/prompt-action and again at attachment-mode wizard finish.
 - On cancel, attachments are not restored to compose (explicit product decision).
@@ -586,6 +600,15 @@ The language for the generated sharing block can be overridden via:
 
 Implementation uses:
 - `modules/i18nOverride.js` to translate in a forced locale.
+
+Runtime rules:
+- `custom` is only offered in the settings UI when the backend endpoint exists.
+- `custom` stays disabled unless the effective backend policy for the respective domain is actually `custom` and provides a template.
+- Backend templates are only used when the effective language override is `custom`.
+- If `custom` is selected but the backend template is empty or unavailable, runtime falls back to the local UI-default text block.
+- Separate password follow-up dispatch is seat-gated and only available with backend endpoint + active assigned seat.
+- Backend attachment-threshold policy uses `attachments_min_size_mb` as both value and enable-state: a positive integer enables threshold mode, `null` disables it.
+- Locked backend attachment-automation policy is enforced in compose runtime, not only in the settings surface.
 
 ---
 
@@ -750,6 +773,3 @@ Key rules:
 - Keep experiments minimal, deterministic, and auditable.
 - No trial-and-error code paths.
 - No broad window/tab monitoring; target only required windows via window listeners.
-
-
-

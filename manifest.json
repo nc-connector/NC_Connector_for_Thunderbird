@@ -2,7 +2,7 @@
     "manifest_version":  2,
     "default_locale":  "de",
     "name":  "__MSG_extName__",
-    "version":  "2.2.9",
+    "version":  "3.0.0",
     "description":  "__MSG_extDescription__",
     "developer":  {
                      "name":  "Bastian Kleinschmidt"
@@ -34,19 +34,20 @@
                                        "modules/textUtils.js",
                                        "vendor/ical.js",
                                        "modules/icalContract.js",
-                                       "modules/bgState.js",
-                                       "modules/nccore.js",
-                                       "modules/talkAddressbook.js",
-                                       "modules/talkcore.js",
-                                       "modules/ncSharing.js",
-                                       "modules/bgComposeAttachments.js",
-                                       "modules/bgComposeShareCleanup.js",
-                                       "modules/bgComposePasswordDispatch.js",
-                                       "modules/bgCompose.js",
-                                       "modules/bgCalendarLifecycle.js",
-                                       "modules/bgCalendar.js",
-                                       "modules/bgRouter.js",
-                                       "modules/background.js"
+                                        "modules/bgState.js",
+                                        "modules/nccore.js",
+                                        "modules/policyRuntime.js",
+                                        "modules/talkAddressbook.js",
+                                        "modules/talkcore.js",
+                                        "modules/ncSharing.js",
+                                        "modules/bgComposeAttachments.js",
+                                        "modules/bgComposeShareCleanup.js",
+                                        "modules/bgComposePasswordDispatch.js",
+                                        "modules/bgCompose.js",
+                                        "modules/bgCalendarLifecycle.js",
+                                        "modules/bgCalendar.js",
+                                        "modules/bgRouter.js",
+                                        "modules/background.js"
                                    ]
                    },
     "compose_action":  {
@@ -201,5 +202,3 @@
                   "96":  "icons/app-96.png"
               }
 }
-
-

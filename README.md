@@ -14,12 +14,12 @@ This is a community project and is not an official Nextcloud GmbH product.
   Open an event, choose Nextcloud Talk, configure the room, and define a moderator. Optionally add invitees to the room (separately for internal Nextcloud users and external e-mail guests). The wizard writes title/location/description (including help link) into the event.
 - **Sharing deluxe**
   The "Add Nextcloud Share" button starts the sharing assistant with upload queue, password generator, expiration date, and note field. The finished share is inserted as formatted HTML into the email.
-- **Separate password delivery ("Coming soon (Pro feature)")**
-  Controls are visible, but locked in this release.
 - **Attachment automation**
   Optional compose rules can route attachments directly through NC Connector (always or above a configurable total-size threshold). If threshold is exceeded, users can either share via NC Connector or remove the last selected attachment batch.
 - **Enterprise security**
   Lobby until start time, moderator delegation, automatic cleanup of unsaved events, required passwords, and expiration policies protect sensitive meetings and files.
+- **Central backend policies (optional)**
+  If the optional NC Connector backend is installed, Talk and Sharing defaults can be managed centrally. The add-on checks backend status whenever the Talk or Sharing wizard opens, when Settings open, and again when Settings are saved, applies valid-seat policies, and locks admin-controlled settings while still showing their effective values.
 - **Seamless Nextcloud integration**
   Login Flow V2, automatic room tracking, and debug logs in [NCBG], [NCUI][Talk], [NCUI][Sharing], and [ncCalToolbar] help with troubleshooting.
 - **ESR-ready**
@@ -47,10 +47,13 @@ See [`CHANGELOG.md`](https://github.com/nc-connector/NC_Connector_for_Thunderbir
 - Upload queue with duplicate checks, progress display, and optional share without upload.
 - Automatic HTML blocks with link, password, expiration date, and optional note.
 - If a share was inserted but the compose tab is closed without successful send, the share folder is cleaned up automatically on the server.
-- Separate password delivery is currently visible but disabled in this release:
-  - default + wizard toggle stay visible as locked controls
-  - tooltip: "Coming soon (Pro feature)"
-  - runtime path for password-only follow-up dispatch remains inactive in normal UI flow
+- Optional separate password delivery:
+  - default + wizard toggle: "Send password in separate email"
+  - requires the optional NC Connector backend plus an active seat assigned to the current user
+  - only active when password protection is enabled
+  - main mail hides inline password and shows a separate-password notice
+  - password-only follow-up mail is sent automatically after the main compose send
+  - successful password-mail delivery triggers a desktop success notification
 - Optional attachment automation:
   - "Always handle attachments via NC Connector"
   - "Offer upload above X MB" based on total attachment size
@@ -61,6 +64,14 @@ See [`CHANGELOG.md`](https://github.com/nc-connector/NC_Connector_for_Thunderbir
 
 ### Administration & compliance
 - Login Flow V2 (app password is created automatically) and central options (base URL, debug mode, sharing paths, default values for Sharing/Talk).
+- Optional NC Connector backend status/policy mode:
+  - checked on Talk wizard open, Sharing wizard open, Settings open, and Settings save
+  - active valid seat enables backend policy values and admin locks
+  - missing backend / no seat / invalid seat falls back to local add-on settings
+  - invalid seat states are surfaced in the UI so users can contact their administrator
+- backend share/Talk templates are only activated when the language override is set to `Custom`
+- `Custom` is only shown when the NC Connector backend endpoint exists and stays disabled unless the effective backend policy for that domain is actually `custom` and provides a template
+- if `Custom` is selected but the backend template is empty or unavailable, Thunderbird falls back to the local UI-default text block
 - Full internationalization (see [`Translations.md`](https://github.com/nc-connector/NC_Connector_for_Thunderbird/blob/main/Translations.md)) and structured debug logs for support cases, including attachment automation traces in `[NCBG]` and `[NCUI][Sharing]`.
 
 ## System requirements
@@ -70,12 +81,12 @@ See [`CHANGELOG.md`](https://github.com/nc-connector/NC_Connector_for_Thunderbir
 - App password or Login Flow V2
 
 ## Installation
-1. Install the current XPI release (for example `nc4tb-2.2.9.xpi`) in Thunderbird (Add-ons > Gear > Install Add-on From File).
+1. Install the current XPI release (for example `nc4tb-3.0.0.xpi`) in Thunderbird (Add-ons > Gear > Install Add-on From File).
 2. Restart Thunderbird.
 3. In the add-on options, enter base URL, user, and app password or start the login flow.
 
 ## Support & feedback
-- **Troubleshooting:** Enable debug mode in the options; relevant logs appear as [NCBG], [NCUI][Talk], [NCUI][Sharing], and [ncCalToolbar] in Thunderbird’s developer console.
+- **Troubleshooting:** Enable debug mode in the options for verbose traces; relevant logs appear as [NCBG], [NCUI][Talk], [NCUI][Sharing], and [ncCalToolbar] in Thunderbird’s developer console. Runtime errors still use `console.error(...)` even when debug mode is off.
 - **System address book mismatch (enabled in admin UI, but still unavailable):** see Admin Guide section
   ["System address book required for user search and moderator selection"](https://github.com/nc-connector/NC_Connector_for_Thunderbird/blob/main/docs/ADMIN.md#system-address-book-required-for-user-search-and-moderator-selection)
   for the `occ` repair sequence and DAV export verification URL.
@@ -111,8 +122,6 @@ Good luck with secure, professional work using NC Connector for Thunderbird!
 | --- | --- |
 
 </details>
-
-
 
 
 

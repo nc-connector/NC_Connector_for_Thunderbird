@@ -42,19 +42,48 @@
     zh_cn: "zh_CN",
     zh_tw: "zh_TW"
   });
+  const DEFAULT_LANGUAGE_ALIASES = Object.freeze(new Set([
+    "",
+    "default",
+    "default ui",
+    "ui default",
+    "standard",
+    "standard ui",
+    "ui"
+  ]));
 
   /**
-   * Map a language tag to a supported locale folder name.
-   *
-   * Supported locale folders:
-   * - {@link SUPPORTED_LOCALES}
+   * Normalize one language override label for alias comparisons.
+   * Backend policy payloads may use labels like `standard ui` instead of `default`.
    * @param {string} input
    * @returns {string}
    */
-  function normalizeLang(input){
+  function normalizeLanguageAlias(input){
+    return String(input || "")
+      .trim()
+      .toLowerCase()
+      .replace(/[_-]+/g, " ")
+      .replace(/\s+/g, " ");
+  }
+
+  /**
+   * Return true when a value means "use the current UI language".
+   * @param {string} input
+   * @returns {boolean}
+   */
+  function isDefaultLanguageAlias(input){
+    return DEFAULT_LANGUAGE_ALIASES.has(normalizeLanguageAlias(input));
+  }
+
+  /**
+   * Map a language code to one supported locale or return `null`.
+   * @param {string} input
+   * @returns {string|null}
+   */
+  function mapToSupportedLocale(input){
     const raw = String(input || "").trim();
     if (!raw){
-      return "en";
+      return null;
     }
     const normalized = raw.toLowerCase().replace(/-/g, "_");
     if (SUPPORTED_BY_LOWER[normalized]){
@@ -68,7 +97,7 @@
       if (region === "br"){
         return "pt_BR";
       }
-      if (region === "pt"){
+      if (region === "pt" || !region){
         return "pt_PT";
       }
       return "pt_PT";
@@ -78,7 +107,7 @@
       if (region === "tw" || region === "hk" || region === "mo" || region === "hant"){
         return "zh_TW";
       }
-      if (region === "cn" || region === "sg" || region === "hans"){
+      if (region === "cn" || region === "sg" || region === "hans" || !region){
         return "zh_CN";
       }
       return "zh_CN";
@@ -88,7 +117,38 @@
       return SUPPORTED_BY_LOWER[base];
     }
 
-    return "en";
+    return null;
+  }
+
+  /**
+   * Map a language tag to a supported locale folder name.
+   *
+   * Supported locale folders:
+   * - {@link SUPPORTED_LOCALES}
+   * @param {string} input
+   * @returns {string}
+   */
+  function normalizeLang(input){
+    return mapToSupportedLocale(input) || "en";
+  }
+
+  /**
+   * Normalize one language override value from storage or backend policy.
+   * `default` aliases stay `default`; `custom` is preserved when allowed.
+   * @param {string} input
+   * @param {{allowCustom?:boolean}} options
+   * @returns {string}
+   */
+  function normalizeLanguageOverride(input, options = {}){
+    const allowCustom = !!options.allowCustom;
+    const raw = String(input || "").trim();
+    if (isDefaultLanguageAlias(raw)){
+      return "default";
+    }
+    if (String(raw).trim().toLowerCase() === "custom"){
+      return allowCustom ? "custom" : "default";
+    }
+    return mapToSupportedLocale(raw) || "default";
   }
 
   /**
@@ -97,7 +157,7 @@
    * @returns {string}
    */
   function getEffectiveLang(requested){
-    if (!requested || requested === "default"){
+    if (isDefaultLanguageAlias(requested)){
       const ui = global?.browser?.i18n?.getUILanguage
         ? global.browser.i18n.getUILanguage()
         : "en";
@@ -187,7 +247,9 @@
 
   const api = {
     supportedLocales: SUPPORTED_LOCALES,
+    isDefaultLanguageAlias,
     normalizeLang,
+    normalizeLanguageOverride,
     loadLocale,
     getEffectiveLang,
     tInLang

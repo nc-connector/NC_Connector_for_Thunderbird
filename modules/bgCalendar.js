@@ -293,10 +293,6 @@ async function applyCalendarLobbyUpdate(payload = {}){
       token: shortToken(token),
       startTimestamp: payload?.startTimestamp
     });
-    L("calendar lobby update blocked: X-NCTALK-START missing/invalid", {
-      token: shortToken(token),
-      startTimestamp: payload?.startTimestamp
-    });
     return { ok:false, skipped:true, reason:"missingOrInvalidXTalkStart" };
   }
   const startTs = incomingStart;
@@ -888,11 +884,6 @@ async function handleCalendarItemUpsert(item){
             from: meta.startTimestamp,
             to: startFromEvent
           });
-          L("calendar contract start sync failed", {
-            token: shortToken(meta.token),
-            from: meta.startTimestamp,
-            to: startFromEvent
-          });
           return;
         }
         L("calendar contract start synced", {
@@ -907,9 +898,6 @@ async function handleCalendarItemUpsert(item){
       meta.startTimestamp = startFromEvent;
     }else{
       console.error("[NCBG] calendar contract start parse failed", {
-        token: shortToken(meta.token)
-      });
-      L("calendar contract start parse failed", {
         token: shortToken(meta.token)
       });
       // Keep the authoritative X-NCTALK-START value from metadata when DTSTART
@@ -932,10 +920,6 @@ async function handleCalendarItemUpsert(item){
         });
       }else{
         console.error("[NCBG] calendar lobby update skipped: X-NCTALK-START missing/invalid", {
-          token: shortToken(meta.token),
-          startTimestamp: meta.startTimestamp
-        });
-        L("calendar lobby update skipped: X-NCTALK-START missing/invalid", {
           token: shortToken(meta.token),
           startTimestamp: meta.startTimestamp
         });

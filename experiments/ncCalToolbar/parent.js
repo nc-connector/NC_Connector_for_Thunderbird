@@ -11,6 +11,7 @@ var {
 var {
   ExtensionUtils: { ExtensionError },
 } = ChromeUtils.importESModule("resource://gre/modules/ExtensionUtils.sys.mjs");
+var { cal } = ChromeUtils.importESModule("resource:///modules/calendar/calUtils.sys.mjs");
 
 const EVENT_DIALOG_URL = "chrome://calendar/content/calendar-event-dialog.xhtml";
 const EVENT_TAB_IFRAME_URL = "chrome://calendar/content/calendar-item-iframe.xhtml";
@@ -199,10 +200,7 @@ this.ncCalToolbar = class extends ExtensionAPI {
     if (this._listenerId) {
       this._listenerId = null;
     }
-    if (this._startupRetryTimer) {
-      clearTimeout(this._startupRetryTimer);
-      this._startupRetryTimer = null;
-    }
+    this._clearStartupRetryTimer();
     this._startupRetryPending = false;
     this._startupRetryCount = 0;
     const openWindows = extensionSupport?.openWindows || [];
@@ -278,10 +276,7 @@ this.ncCalToolbar = class extends ExtensionAPI {
     if (this._listenerRegistered || !this._listenerId) {
       return;
     }
-    if (this._startupRetryTimer) {
-      clearTimeout(this._startupRetryTimer);
-      this._startupRetryTimer = null;
-    }
+    this._clearStartupRetryTimer();
     const extensionSupport = this._getExtensionSupport();
     if (!extensionSupport) {
       this._startupRetryCount = Number(this._startupRetryCount || 0) + 1;
@@ -306,11 +301,7 @@ this.ncCalToolbar = class extends ExtensionAPI {
         return;
       }
       this._startupRetryPending = true;
-      this._startupRetryTimer = setTimeout(() => {
-        this._startupRetryTimer = null;
-        this._startupRetryPending = false;
-        this._registerWindowListenerWhenReady();
-      }, delayMs);
+      this._scheduleStartupRetry(delayMs);
       return;
     }
     extensionSupport.registerWindowListener(this._listenerId, {
@@ -516,11 +507,11 @@ this.ncCalToolbar = class extends ExtensionAPI {
    *   editor identity for tab editors on ESR 140.
    * - A manual window/context mapping already existed in add-on 2.2.7
    *   (`windowId`/`dialogOuterId` based).
-   * - Reason for hardening in 2.3.0: in tab-editor flows, `windowId` could only
+   * - Reason for hardening in 3.0.0: in tab-editor flows, `windowId` could only
    *   identify the 3-pane host window, while editor operations resolved through
    *   selected `currentTabInfo`. After tab switches or with multiple open editor
    *   tabs, this could target the wrong editor context.
-   * - In 2.3.0 this was tightened to opaque `editorId` mapping to achieve a
+   * - In 3.0.0 this was tightened to opaque `editorId` mapping to achieve a
    *   deterministic API contract aligned with upstream PR #65.
    * - Remove this correlation once upstream calendar APIs provide the same
    *   deterministic editor-targeting contract.
@@ -1122,7 +1113,7 @@ this.ncCalToolbar = class extends ExtensionAPI {
    * Resolve writable element for an editor field.
    * @param {Window} window
    * @param {"title"|"location"|"description"} key
-   * @returns {{kind:"value"|"html-body",element:any}}
+   * @returns {{kind:"value"|"html-body",element:any,host?:any}}
    */
   _resolveWritableField(window, key) {
     const idMap = {
@@ -1146,7 +1137,7 @@ this.ncCalToolbar = class extends ExtensionAPI {
         }
         const body = host.contentDocument?.body || null;
         if (body) {
-          return { kind: "html-body", element: body };
+          return { kind: "html-body", element: body, host };
         }
       } else if ("value" in host) {
         return { kind: "value", element: host };
@@ -1168,7 +1159,7 @@ this.ncCalToolbar = class extends ExtensionAPI {
     if (target.kind == "value") {
       return String(target.element.value ?? "");
     }
-    return String(target.element.textContent ?? "");
+    return String(target.element.innerHTML ?? "");
   }
 
   /**
@@ -1187,17 +1178,114 @@ this.ncCalToolbar = class extends ExtensionAPI {
   }
 
   /**
+   * Cancel a pending startup retry timer.
+   */
+  _clearStartupRetryTimer() {
+    if (!this._startupRetryTimer) {
+      return;
+    }
+    try {
+      this._startupRetryTimer.cancel();
+    } catch (error) {
+      this._logError("startup: retry timer cancel failed", error);
+    }
+    this._startupRetryTimer = null;
+  }
+
+  /**
+   * Schedule the next startup retry with an XPCOM timer because the
+   * experiment parent context does not provide a global setTimeout reliably.
+   * @param {number} delayMs
+   */
+  _scheduleStartupRetry(delayMs) {
+    try {
+      const timer = Cc["@mozilla.org/timer;1"].createInstance(Ci.nsITimer);
+      timer.initWithCallback(() => {
+        this._startupRetryTimer = null;
+        this._startupRetryPending = false;
+        this._registerWindowListenerWhenReady();
+      }, delayMs, Ci.nsITimer.TYPE_ONE_SHOT);
+      this._startupRetryTimer = timer;
+    } catch (error) {
+      this._startupRetryPending = false;
+      this._startupRetryTimer = null;
+      this._logError("startup: retry timer schedule failed", error, {
+        delayMs,
+      });
+    }
+  }
+
+  /**
+   * Build a document fragment from HTML for the rich event editor.
+   * @param {Document} doc
+   * @param {string} html
+   * @returns {DocumentFragment}
+   */
+  _createHtmlFragment(doc, html) {
+    const container = doc.createElement("div");
+    container.innerHTML = String(html ?? "");
+    const fragment = doc.createDocumentFragment();
+    while (container.firstChild) {
+      fragment.appendChild(container.firstChild);
+    }
+    return fragment;
+  }
+
+  /**
+   * Synchronize Thunderbird's item description state for HTML-backed editors.
+   * Thunderbird persists rich descriptions as HTML plus a plain DESCRIPTION
+   * companion, so both have to stay in sync with the editor content.
+   * @param {object} item
+   * @param {{text:string,html:string}} description
+   */
+  _applyDescriptionState(item, description) {
+    if (!item || !description) {
+      return;
+    }
+    const text = String(description.text ?? "");
+    const html = String(description.html ?? "");
+    if (cal?.item?.setItemProperty) {
+      cal.item.setItemProperty(item, "DESCRIPTION", text);
+    } else if (typeof item.setProperty == "function") {
+      item.setProperty("DESCRIPTION", text);
+    }
+    item.descriptionHTML = html;
+  }
+
+  /**
    * Write a value into one resolved editor field.
    * @param {{kind:string,element:any}} target
    * @param {string} value
+   * @param {{html?:boolean}} options
    */
-  _writeField(target, value) {
+  _writeField(target, value, options = {}) {
     if (!target?.element) {
       throw new ExtensionError("Resolved editor field is not writable");
     }
     if (target.kind == "value") {
       target.element.focus?.();
       target.element.value = value;
+      this._dispatchInputEvent(target.element);
+      return;
+    }
+    if (options?.html) {
+      const host = target.host || null;
+      const doc = host?.contentDocument || target.element.ownerDocument || null;
+      const editor = host?.getHTMLEditor?.(host.contentWindow) || null;
+      if (!doc || !editor?.rootElement) {
+        throw new ExtensionError("Could not write HTML description field");
+      }
+      target.element.focus?.();
+      editor.flags =
+        editor.eEditorMailMask | editor.eEditorNoCSSMask | editor.eEditorAllowInteraction;
+      editor.enableUndo(false);
+      editor.forceCompositionEnd();
+      editor.rootElement.replaceChildren(this._createHtmlFragment(doc, value));
+      // Thunderbird reinitializes the rich editor after a DOM replacement with
+      // one no-op editor command. This also marks the document as modified so
+      // saveDialog() persists descriptionHTML.
+      editor.insertText("");
+      editor.enableUndo(true);
       this._dispatchInputEvent(target.element);
       return;
     }
@@ -1409,7 +1497,10 @@ this.ncCalToolbar = class extends ExtensionAPI {
           this._assertWindowOpen(window, "updateCurrent");
           const targets = {};
           for (const key of ["title", "location", "description"]) {
-            if (typeof fields[key] == "string") {
+            if (
+              typeof fields[key] == "string"
+              || (key == "description" && typeof fields.descriptionHtml == "string")
+            ) {
               targets[key] = this._resolveWritableField(window, key);
             }
           }
@@ -1418,12 +1509,30 @@ this.ncCalToolbar = class extends ExtensionAPI {
             location: this._readField(targets.location),
             description: this._readField(targets.description),
           };
+          const beforeDescriptionState =
+            typeof fields.descriptionHtml == "string"
+              ? {
+                  text: String(item.descriptionText ?? ""),
+                  html: String(item.descriptionHTML ?? ""),
+                }
+              : null;
           const appliedFields = { title: false, location: false, description: false };
 
           try {
             for (const key of ["title", "location", "description"]) {
-              if (typeof fields[key] == "string") {
-                this._writeField(targets[key], fields[key]);
+              if (typeof fields[key] == "string" || (key == "description" && typeof fields.descriptionHtml == "string")) {
+                const writeHtml =
+                  key == "description"
+                  && targets[key]?.kind == "html-body"
+                  && typeof fields.descriptionHtml == "string";
+                const value = writeHtml ? fields.descriptionHtml : fields[key];
+                this._writeField(targets[key], value, { html: writeHtml });
+                if (writeHtml) {
+                  this._applyDescriptionState(item, {
+                    text: typeof fields.description == "string" ? fields.description : "",
+                    html: typeof fields.descriptionHtml == "string" ? fields.descriptionHtml : "",
+                  });
+                }
                 appliedFields[key] = true;
               }
             }
@@ -1436,7 +1545,12 @@ this.ncCalToolbar = class extends ExtensionAPI {
                 continue;
               }
               try {
-                this._writeField(targets[key], beforeFields[key] ?? "");
+                this._writeField(targets[key], beforeFields[key] ?? "", {
+                  html: key == "description" && targets[key]?.kind == "html-body",
+                });
+                if (key == "description" && beforeDescriptionState) {
+                  this._applyDescriptionState(item, beforeDescriptionState);
+                }
               } catch (rollbackError) {
                 this._logError("updateCurrent field rollback failed", rollbackError, {
                   editorId,
@@ -1465,7 +1579,12 @@ this.ncCalToolbar = class extends ExtensionAPI {
             try {
               for (const key of ["description", "location", "title"]) {
                 if (appliedFields[key]) {
-                  this._writeField(targets[key], beforeFields[key] ?? "");
+                  this._writeField(targets[key], beforeFields[key] ?? "", {
+                    html: key == "description" && targets[key]?.kind == "html-body",
+                  });
+                  if (key == "description" && beforeDescriptionState) {
+                    this._applyDescriptionState(item, beforeDescriptionState);
+                  }
                 }
               }
             } catch (rollbackFieldError) {

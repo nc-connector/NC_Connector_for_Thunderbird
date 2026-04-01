@@ -119,12 +119,6 @@ async function deleteSharingWizardRemoteCleanupNow(windowId, reason = ""){
       relativeFolder: entry.folderInfo?.relativeFolder || "",
       error: error?.message || String(error)
     });
-    L("sharing wizard cleanup delete failed", {
-      windowId,
-      reason: reason || "",
-      relativeFolder: entry.folderInfo?.relativeFolder || "",
-      error: error?.message || String(error)
-    });
   }finally{
     clearSharingWizardRemoteCleanup(windowId, reason || "cleanup_done");
   }
@@ -250,12 +244,6 @@ async function deleteComposeShareCleanupNow(tabId, reason = ""){
     });
   }catch(error){
     console.error("[NCBG] compose share cleanup delete failed", {
-      tabId,
-      relativeFolder: entry.folderInfo?.relativeFolder || "",
-      reason: reason || "",
-      error: error?.message || String(error)
-    });
-    L("compose share cleanup delete failed", {
       tabId,
       relativeFolder: entry.folderInfo?.relativeFolder || "",
       reason: reason || "",

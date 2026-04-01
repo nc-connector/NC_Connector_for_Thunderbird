@@ -21,8 +21,12 @@
 
   const LOG_PREFIX = "[NCUI][Talk]";
   const SYSTEM_ADDRESSBOOK_ADMIN_URL = "https://github.com/nc-connector/NC_Connector_for_Thunderbird/blob/main/docs/ADMIN.md#system-address-book-required-for-user-search-and-moderator-selection";
+  const POLICY_ADMIN_URL = "https://github.com/nc-connector/NC_Connector_for_Thunderbird/blob/main/docs/ADMIN.md";
   const params = new URLSearchParams(window.location.search);
   const contextId = (params.get("contextId") || "").trim();
+  const policyWarningRow = document.getElementById("policyWarningRow");
+  const policyWarningText = document.getElementById("policyWarningText");
+  const policyWarningAdminLink = document.getElementById("policyWarningAdminLink");
   const titleInput = document.getElementById("titleInput");
   const passwordInput = document.getElementById("passwordInput");
   const passwordToggle = document.getElementById("passwordToggle");
@@ -63,6 +67,11 @@
   const messageBar = document.getElementById("messageBar");
   const okBtn = document.getElementById("okBtn");
   const cancelBtn = document.getElementById("cancelBtn");
+  const titleSection = titleInput?.closest(".section");
+  const roomTypeSection = roomTypePicker?.closest(".section");
+  const lobbyToggleRow = lobbyToggle?.closest(".checkbox-row");
+  const listableToggleRow = listableToggle?.closest(".checkbox-row");
+  const passwordToggleRow = passwordToggle?.closest(".checkbox-row");
   let i18nLookupErrorLogged = false;
 
   /**
@@ -132,6 +141,18 @@
       checked: false,
       available: true,
       error: ""
+    },
+    policy: {
+      status: null,
+      active: false,
+      talk: null,
+      editable: null,
+      warningVisible: false,
+      warningCode: "",
+      generatePassword: true,
+      descriptionLanguage: "",
+      descriptionType: "plain_text",
+      invitationTemplate: ""
     }
   };
 
@@ -140,6 +161,9 @@
       link.href = SYSTEM_ADDRESSBOOK_ADMIN_URL;
     }
   });
+  if (policyWarningAdminLink){
+    policyWarningAdminLink.href = POLICY_ADMIN_URL;
+  }
 
   /**
    * Toggle one tooltip list between normal and lock-hint entries via shared UI helper.
@@ -152,6 +176,177 @@
       return;
     }
     applyTooltipState(tooltipList, lockActive);
+  }
+
+  /**
+   * Return the localized admin-control hint.
+   * @returns {string}
+   */
+  function getAdminControlledHint(){
+    return t("policy_admin_controlled_tooltip", "Admin controlled");
+  }
+
+  /**
+   * Read a Talk policy value.
+   * @param {string} key
+   * @returns {any}
+   */
+  function readPolicyTalkValue(key){
+    const talkPolicy = state.policy?.talk;
+    if (!talkPolicy || typeof talkPolicy !== "object"){
+      return null;
+    }
+    return Object.prototype.hasOwnProperty.call(talkPolicy, key)
+      ? talkPolicy[key]
+      : null;
+  }
+
+  /**
+   * Return true when a Talk setting is admin-locked.
+   * @param {string} key
+   * @returns {boolean}
+   */
+  function isPolicyLock(key){
+    if (!state.policy?.active){
+      return false;
+    }
+    const editable = state.policy?.editable;
+    if (!editable || typeof editable !== "object"){
+      return false;
+    }
+    return editable[key] === false;
+  }
+
+  /**
+   * Convert policy-like values to booleans with fallback.
+   * @param {any} value
+   * @param {boolean} fallback
+   * @returns {boolean}
+   */
+  function coercePolicyBoolean(value, fallback){
+    if (value === true){
+      return true;
+    }
+    if (value === false){
+      return false;
+    }
+    return fallback;
+  }
+
+  /**
+   * Convert policy-like values to strings with fallback.
+   * @param {any} value
+   * @param {string} fallback
+   * @returns {string}
+   */
+  function coercePolicyString(value, fallback){
+    const text = String(value ?? "").trim();
+    return text || fallback;
+  }
+
+  /**
+   * Normalize one language override value from backend policy or local state.
+   * @param {any} value
+   * @returns {string}
+   */
+  function normalizeDescriptionLanguage(value){
+    if (typeof NCI18nOverride !== "undefined" && typeof NCI18nOverride.normalizeLanguageOverride === "function"){
+      return NCI18nOverride.normalizeLanguageOverride(value, { allowCustom: true });
+    }
+    const text = String(value ?? "").trim().toLowerCase();
+    if (!text || text === "default"){
+      return "default";
+    }
+    if (text === "custom"){
+      return "custom";
+    }
+    return text;
+  }
+
+  /**
+   * Normalize one backend event-description type.
+   * @param {any} value
+   * @returns {"html"|"plain_text"}
+   */
+  function normalizeEventDescriptionType(value){
+    return String(value ?? "").trim().toLowerCase() === "html"
+      ? "html"
+      : "plain_text";
+  }
+
+  /**
+   * Render policy warning visibility in the wizard.
+   */
+  function applyPolicyWarningUi(){
+    if (!policyWarningRow){
+      return;
+    }
+    const visible = !!state.policy.warningVisible;
+    policyWarningRow.hidden = !visible;
+    if (!visible){
+      return;
+    }
+    let message = t(
+      "policy_warning_license_invalid",
+      "Your NC Connector license or seat is currently not valid. Local settings are used. Please contact your Nextcloud administrator."
+    );
+    if (state.policy.warningCode === "license_invalid"){
+      message = t(
+        "policy_warning_license_invalid",
+        "Your NC Connector license or seat is currently not valid. Local settings are used. Please contact your Nextcloud administrator."
+      );
+    }
+    if (policyWarningText){
+      policyWarningText.textContent = message;
+    }
+  }
+
+  /**
+   * Load current backend policy status for the wizard.
+   * @returns {Promise<void>}
+   */
+  async function refreshPolicyStatus(){
+    try{
+      const response = await browser.runtime.sendMessage({
+        type: "policy:getStatus"
+      });
+      const status = response?.ok ? (response.status || null) : null;
+      const talkPolicy = status?.policy?.talk;
+      const editable = status?.policyEditable?.talk;
+      const active = !!(
+        status?.policyActive
+        && talkPolicy
+        && typeof talkPolicy === "object"
+        && editable
+        && typeof editable === "object"
+      );
+      state.policy.status = status;
+      state.policy.active = active;
+      state.policy.talk = active ? talkPolicy : null;
+      state.policy.editable = active ? editable : null;
+      state.policy.warningVisible = !!status?.warning?.visible;
+      state.policy.warningCode = String(status?.warning?.code || "");
+      state.policy.generatePassword = active
+        ? coercePolicyBoolean(readPolicyTalkValue("talk_generate_password"), true)
+        : true;
+      state.policy.descriptionLanguage = active
+        ? normalizeDescriptionLanguage(coercePolicyString(readPolicyTalkValue("language_talk_description"), ""))
+        : "";
+      state.policy.descriptionType = active
+        ? normalizeEventDescriptionType(readPolicyTalkValue("event_description_type"))
+        : "plain_text";
+      state.policy.invitationTemplate = active
+        ? coercePolicyString(readPolicyTalkValue("talk_invitation_template"), "")
+        : "";
+      logDebug("policy status", {
+        active: state.policy.active,
+        warning: state.policy.warningCode || "",
+        mode: status?.mode || ""
+      });
+    }catch(error){
+      logUiError("policy status fetch failed", error);
+    }
+    applyPolicyWarningUi();
   }
   (async () => {
     try{
@@ -331,6 +526,7 @@
       if (!check?.ok){
         throw new Error(check?.error || t("talk_error_init_failed"));
       }
+      await refreshPolicyStatus();
       await loadPasswordPolicy();
       await loadSnapshot();
       await refreshSystemAddressbookAvailability({ forceRefresh: true });
@@ -398,6 +594,16 @@
       }else if (stored.talkDefaultRoomType === "event"){
         defaults.roomType = "event";
       }
+      if (state.policy.active){
+        defaults.title = coercePolicyString(readPolicyTalkValue("talk_title"), defaults.title);
+        defaults.lobby = coercePolicyBoolean(readPolicyTalkValue("talk_lobby_active"), defaults.lobby);
+        defaults.listable = coercePolicyBoolean(readPolicyTalkValue("talk_show_in_search"), defaults.listable);
+        defaults.addUsersEnabled = coercePolicyBoolean(readPolicyTalkValue("talk_add_users"), defaults.addUsersEnabled);
+        defaults.addGuestsEnabled = coercePolicyBoolean(readPolicyTalkValue("talk_add_guests"), defaults.addGuestsEnabled);
+        defaults.passwordEnabled = coercePolicyBoolean(readPolicyTalkValue("talk_set_password"), defaults.passwordEnabled);
+        const policyRoomType = coercePolicyString(readPolicyTalkValue("talk_room_type"), defaults.roomType);
+        defaults.roomType = policyRoomType === "event" ? "event" : "normal";
+      }
     }catch(error){
       console.error(LOG_PREFIX, "load defaults failed", error);
     }
@@ -430,6 +636,15 @@
    * @param {boolean} enabled
    */
   function applyPasswordToggleState(enabled){
+    const lockPassword = isPolicyLock("talk_set_password");
+    if (passwordToggle){
+      passwordToggle.disabled = lockPassword;
+      passwordToggle.title = lockPassword ? getAdminControlledHint() : "";
+    }
+    if (passwordToggleRow){
+      passwordToggleRow.classList.toggle("is-disabled", lockPassword);
+      passwordToggleRow.title = lockPassword ? getAdminControlledHint() : "";
+    }
     if (passwordFields){
       passwordFields.classList.toggle("hidden", !enabled);
     }
@@ -440,7 +655,7 @@
       }
     }
     if (passwordGenerateBtn){
-      passwordGenerateBtn.disabled = !enabled;
+      passwordGenerateBtn.disabled = !enabled || !state.policy.generatePassword;
     }
   }
 
@@ -558,9 +773,65 @@
         }
       }
       hydrateDelegateFromMetadata(meta);
+      applyPolicyControlLocks();
       if (state.systemAddressbook.checked){
         applySystemAddressbookAvailability(state.systemAddressbook.available, state.systemAddressbook.error);
       }
+  }
+
+  /**
+   * Apply static lock-state UI for policy-controlled controls.
+   */
+  function applyPolicyControlLocks(){
+    const adminHint = getAdminControlledHint();
+    const lockTitle = isPolicyLock("talk_title");
+    const lockRoomType = isPolicyLock("talk_room_type");
+    const lockLobby = isPolicyLock("talk_lobby_active");
+    const lockListable = isPolicyLock("talk_show_in_search");
+    const lockPassword = isPolicyLock("talk_set_password");
+    if (titleInput){
+      titleInput.disabled = lockTitle;
+      titleInput.title = lockTitle ? adminHint : "";
+    }
+    if (titleSection){
+      titleSection.classList.toggle("is-disabled", lockTitle);
+      titleSection.title = lockTitle ? adminHint : "";
+    }
+    if (roomTypeButton){
+      roomTypeButton.disabled = lockRoomType;
+      roomTypeButton.title = lockRoomType ? adminHint : "";
+      if (lockRoomType){
+        closeRoomTypeDropdown();
+      }
+    }
+    if (roomTypeSection){
+      roomTypeSection.classList.toggle("is-disabled", lockRoomType);
+      roomTypeSection.title = lockRoomType ? adminHint : "";
+    }
+    if (lobbyToggle){
+      lobbyToggle.disabled = lockLobby;
+      lobbyToggle.title = lockLobby ? adminHint : "";
+    }
+    if (lobbyToggleRow){
+      lobbyToggleRow.classList.toggle("is-disabled", lockLobby);
+      lobbyToggleRow.title = lockLobby ? adminHint : "";
+    }
+    if (listableToggle){
+      listableToggle.disabled = lockListable;
+      listableToggle.title = lockListable ? adminHint : "";
+    }
+    if (listableToggleRow){
+      listableToggleRow.classList.toggle("is-disabled", lockListable);
+      listableToggleRow.title = lockListable ? adminHint : "";
+    }
+    if (passwordToggle){
+      passwordToggle.disabled = lockPassword;
+      passwordToggle.title = lockPassword ? adminHint : "";
+    }
+    if (passwordToggleRow){
+      passwordToggleRow.classList.toggle("is-disabled", lockPassword);
+      passwordToggleRow.title = lockPassword ? adminHint : "";
+    }
   }
 
   /**
@@ -710,7 +981,8 @@
     logDebug("send talk:applyEventFields", {
       contextId: state.contextId,
       title: payload.title,
-      hasDescription: !!description
+      hasDescription: !!description?.text,
+      hasDescriptionHtml: !!description?.html
     });
     const applyFieldsResponse = await browser.runtime.sendMessage({
       type: "talk:applyEventFields",
@@ -718,7 +990,8 @@
       fields: {
         title: payload.title,
         location: result.url,
-        description
+        description: description?.text || "",
+        ...(description?.html ? { descriptionHtml: description.html } : {})
       }
     });
     if (!applyFieldsResponse?.ok){
@@ -746,8 +1019,7 @@
       token: result.token,
       info: {
         objectId: metadata.objectId || null,
-        eventConversation: metadata.eventConversation,
-        fallback: !!result.fallback
+        eventConversation: metadata.eventConversation
       }
     });
     if (!cleanupResponse?.ok){
@@ -907,25 +1179,155 @@
    * @param {string} baseText
    * @param {string} url
    * @param {string} password
-   * @returns {Promise<string>}
+   * @returns {Promise<{text:string, html:string}>}
    */
   async function composeDescription(baseText, url, password){
-    const parts = [];
-    const clean = (baseText || "").trim();
-    if (clean){
-      parts.push(clean);
+    const clean = String(baseText || "").trim();
+    let talkBlockText = "";
+    let talkBlockHtml = "";
+    let useHtml = false;
+    try{
+      const talkBlock = await buildPolicyAwareTalkDescription(url, password);
+      talkBlockText = String(talkBlock?.text || "").trim();
+      talkBlockHtml = String(talkBlock?.html || "").trim();
+      useHtml = !!talkBlockHtml;
+    }catch(error){
+      logUiError("composeDescription buildPolicyAwareTalkDescription failed", error);
     }
+    if (useHtml && !talkBlockText && talkBlockHtml){
+      // Thunderbird persists rich calendar descriptions as HTML plus a plain-text
+      // DESCRIPTION fallback. Keep the backend HTML untouched, but derive the
+      // required text companion for storage and later re-opening.
+      talkBlockText = htmlToPlainText(talkBlockHtml);
+    }
+
+    const textParts = [];
+    if (clean){
+      textParts.push(clean);
+    }
+    if (talkBlockText){
+      textParts.push(talkBlockText);
+    }
+
+    const result = {
+      text: textParts.join("\n\n").trim(),
+      html: ""
+    };
+    if (!useHtml){
+      return result;
+    }
+
+    const htmlParts = [];
+    if (clean){
+      htmlParts.push(plainTextToHtml(clean));
+    }
+    if (talkBlockHtml){
+      htmlParts.push(talkBlockHtml);
+    }
+    result.html = htmlParts.join("\n").trim();
+    return result;
+  }
+
+  /**
+   * Build the Talk description block honoring backend policy values/templates.
+   * @param {string} url
+   * @param {string} password
+   * @returns {Promise<{text:string,html:string}>}
+   */
+  async function buildPolicyAwareTalkDescription(url, password){
     const buildStandard = window.NCTalkCore && typeof window.NCTalkCore.buildStandardTalkDescription === "function"
       ? window.NCTalkCore.buildStandardTalkDescription
       : null;
-    if (buildStandard){
-      try{
-        parts.push(await buildStandard(url, password));
-      }catch(error){
-        logUiError("composeDescription buildStandard failed", error);
+    const policyLang = String(state.policy.descriptionLanguage || "").trim().toLowerCase();
+    const descriptionType = normalizeEventDescriptionType(state.policy.descriptionType);
+    const policyTemplate = String(state.policy.invitationTemplate || "");
+    if (state.policy.active && policyLang === "custom" && policyTemplate){
+      return renderTalkInvitationTemplate(policyTemplate, url, password, descriptionType);
+    }
+    if (!buildStandard){
+      return { text:"", html:"" };
+    }
+    if (state.policy.active && policyLang && policyLang !== "default" && policyLang !== "custom"){
+      const text = await buildStandard(url, password, policyLang);
+      return { text, html:"" };
+    }
+    const text = await buildStandard(url, password);
+    return { text, html:"" };
+  }
+
+  /**
+   * Render a custom invitation template with placeholder replacement.
+   * @param {string} template
+   * @param {string} meetingUrl
+   * @param {string} password
+   * @returns {{text:string,html:string}}
+   */
+  function renderTalkInvitationTemplate(template, meetingUrl, password, descriptionType = "plain_text"){
+    const normalizedType = normalizeEventDescriptionType(descriptionType);
+    if (normalizedType === "html"){
+      const safeUrl = NCTalkTextUtils.escapeHtml(meetingUrl || "");
+      const safePassword = NCTalkTextUtils.escapeHtml(password || "");
+      const html = String(template || "")
+        .split("{MEETING_URL}").join(safeUrl)
+        .split("{PASSWORD}").join(safePassword);
+      return {
+        text: "",
+        html: html.trim()
+      };
+    }
+    return {
+      text: String(template || "")
+        .split("{MEETING_URL}").join(meetingUrl || "")
+        .split("{PASSWORD}").join(password || "")
+        .trim(),
+      html: ""
+    };
+  }
+
+  /**
+   * Convert plain text paragraphs into lightweight HTML for the rich event editor.
+   * @param {string} value
+   * @returns {string}
+   */
+  function plainTextToHtml(value){
+    const normalized = String(value || "").replace(/\r\n/g, "\n").replace(/\r/g, "\n").trim();
+    if (!normalized){
+      return "";
+    }
+    const paragraphs = normalized.split(/\n{2,}/).map((part) => part.trim()).filter(Boolean);
+    return paragraphs.map((part) => {
+      const escaped = NCTalkTextUtils.escapeHtml(part).replace(/\n/g, "<br>");
+      return `<p>${escaped}</p>`;
+    }).join("\n");
+  }
+
+  /**
+   * Convert lightweight HTML into a plain-text fallback for Thunderbird's
+   * DESCRIPTION storage.
+   * @param {string} value
+   * @returns {string}
+   */
+  function htmlToPlainText(value){
+    const html = String(value || "").trim();
+    if (!html){
+      return "";
+    }
+    const doc = document.implementation.createHTMLDocument("");
+    doc.body.innerHTML = html;
+    for (const br of doc.body.querySelectorAll("br")){
+      br.replaceWith("\n");
+    }
+    for (const block of doc.body.querySelectorAll("p,div,section,article,li,tr,h1,h2,h3,h4,h5,h6")){
+      if (block.lastChild?.nodeValue !== "\n"){
+        block.append("\n");
       }
     }
-    return parts.join("\n\n").trim();
+    return String(doc.body.textContent || "")
+      .replace(/\u00A0/g, " ")
+      .replace(/\r\n/g, "\n")
+      .replace(/\r/g, "\n")
+      .replace(/\n{3,}/g, "\n\n")
+      .trim();
   }
 
   /**
@@ -1140,6 +1542,11 @@
    */
   function applySystemAddressbookAvailability(available, detail = ""){
     const lockActive = !available;
+    const usersPolicyLock = isPolicyLock("talk_add_users");
+    const guestsPolicyLock = isPolicyLock("talk_add_guests");
+    const usersLockActive = lockActive || usersPolicyLock;
+    const guestsLockActive = lockActive || guestsPolicyLock;
+    const adminHint = getAdminControlledHint();
     state.systemAddressbook.checked = true;
     state.systemAddressbook.available = !!available;
     state.systemAddressbook.error = lockActive
@@ -1150,13 +1557,19 @@
       if (lockActive){
         addUsersToggle.checked = false;
       }
-      addUsersToggle.disabled = lockActive;
+      addUsersToggle.disabled = usersLockActive;
+      addUsersToggle.title = lockActive
+        ? state.systemAddressbook.error
+        : (usersPolicyLock ? adminHint : "");
     }
     if (addGuestsToggle){
       if (lockActive){
         addGuestsToggle.checked = false;
       }
-      addGuestsToggle.disabled = lockActive;
+      addGuestsToggle.disabled = guestsLockActive;
+      addGuestsToggle.title = lockActive
+        ? state.systemAddressbook.error
+        : (guestsPolicyLock ? adminHint : "");
     }
     if (delegateInput){
       delegateInput.disabled = lockActive;
@@ -1180,12 +1593,16 @@
       delegateAddressbookHelp.hidden = !lockActive;
     }
     if (addUsersToggleRow){
-      addUsersToggleRow.classList.toggle("is-disabled", lockActive);
-      addUsersToggleRow.title = lockActive ? state.systemAddressbook.error : "";
+      addUsersToggleRow.classList.toggle("is-disabled", usersLockActive);
+      addUsersToggleRow.title = lockActive
+        ? state.systemAddressbook.error
+        : (usersPolicyLock ? adminHint : "");
     }
     if (addGuestsToggleRow){
-      addGuestsToggleRow.classList.toggle("is-disabled", lockActive);
-      addGuestsToggleRow.title = lockActive ? state.systemAddressbook.error : "";
+      addGuestsToggleRow.classList.toggle("is-disabled", guestsLockActive);
+      addGuestsToggleRow.title = lockActive
+        ? state.systemAddressbook.error
+        : (guestsPolicyLock ? adminHint : "");
     }
     if (delegateInputLabel){
       delegateInputLabel.classList.toggle("is-disabled", lockActive);

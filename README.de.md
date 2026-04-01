@@ -14,12 +14,14 @@ Dies ist ein Community-Projekt und kein offizielles Produkt der Nextcloud GmbH.
 Termin öffnen, Nextcloud Talk wählen, Raum konfigurieren, Moderator definieren. Optional können eingeladene Teilnehmer direkt in den Raum übernommen werden (getrennt nach internen Nextcloud-Benutzern und externen E-Mail-Gästen). Der Wizard schreibt Titel/Ort/Beschreibung inklusive Hilfe-Link automatisch in den Termin.
 - **Sharing deluxe** 
 Compose-Button Nextcloud Freigabe hinzufügen startet den Freigabe-Assistenten mit Upload-Queue, Passwortgenerator, Ablaufdatum und Notizfeld. Die fertige Freigabe landet als formatiertes HTML direkt in der E-Mail.
-- **Passwort separat ("Coming soon (Pro feature)")**
-  Die Controls für den separaten Passwortversand sind sichtbar, aber in dieser Version gesperrt.
+- **Passwort separat versenden**
+  Optional kann das Freigabe-Passwort in einer separaten Follow-up-Mail versendet werden; im Hauptblock bleibt das Inline-Passwort dann verborgen.
 - **Anhang-Automatisierung**
 Optional lassen sich Anhänge direkt über NC Connector leiten (immer oder ab einer konfigurierbaren Gesamtgröße). Bei Grenzwertüberschreitung kann der Nutzer zwischen Teilen über NC Connector und Entfernen der zuletzt ausgewählten Anhangsgruppe wählen.
 - **Enterprise-Sicherheit** 
 Lobby bis Startzeit, Moderator-Delegation, automatisches Aufräumen nicht gespeicherter Termine, Pflicht-Passwörter und Ablauffristen schützen sensible Meetings und Dateien.
+- **Zentrale Backend-Policies (optional)**
+Ist das optionale NC-Connector-Backend installiert, koennen Talk- und Sharing-Defaults zentral gesteuert werden. Beim Oeffnen von Wizard und Add-on-Settings sowie erneut beim Speichern der Add-on-Settings prueft das Add-on den Backend-Status, uebernimmt bei gueltigem Seat die Policy-Werte und sperrt admin-kontrollierte Optionen sichtbar im UI.
 - **Nahtlose Nextcloud-Integration** 
 Login-Flow V2, automatische Raumverfolgung sowie Debug-Logs in [NCBG], [NCUI][Talk], [NCUI][Sharing] und [ncCalToolbar] helfen beim Troubleshooting.
 - **ESR-ready** 
@@ -47,10 +49,13 @@ Siehe [`CHANGELOG.md`](https://github.com/nc-connector/NC_Connector_for_Thunderb
 - Upload-Queue mit Duplikatprüfung, Fortschrittsanzeige und optionaler Freigabe.
 - Automatische HTML-Bausteine mit Link, Passwort, Ablaufdatum und optionaler Notiz.
 - Wenn eine Freigabe eingefügt wurde, die Mail aber ohne erfolgreichen Versand geschlossen wird, wird der Freigabe-Ordner serverseitig automatisch aufgeräumt.
-- Separater Passwortversand ist in dieser Version sichtbar, aber deaktiviert:
-  - Default + Wizard-Toggle bleiben als gesperrte Controls sichtbar
-  - Tooltip: "Coming soon (Pro feature)"
-  - der Runtime-Pfad für den Passwort-Only-Follow-up-Versand ist im normalen UI-Flow inaktiv
+- Optionaler separater Passwortversand:
+  - Default + Wizard-Toggle: "Passwort separat senden"
+  - nur verfuegbar mit optionalem NC-Connector-Backend und aktivem, dem aktuellen Benutzer zugewiesenem Seat
+  - nur aktiv, wenn Passwortschutz aktiv ist
+  - Hauptmail blendet Inline-Passwort aus und zeigt einen Hinweis auf die separate Passwortmail
+  - Passwortmail wird nach dem Versand der Hauptmail automatisch versendet (bei Fehler mit manuellem Fallback)
+  - bei erfolgreichem Passwortversand wird eine Desktop-Erfolgsmeldung angezeigt
 - Optionale Anhang-Automatisierung:
   - "Anhänge immer über NC Connector"
   - "Hochladen für Dateien größer als X MB anbieten" auf Basis der Gesamtgröße
@@ -61,6 +66,14 @@ Siehe [`CHANGELOG.md`](https://github.com/nc-connector/NC_Connector_for_Thunderb
 
 ### Administration & Compliance
 - Login Flow V2 (App-Passwort wird automatisch angelegt) und zentrale Optionen (Basis-URL, Debug-Modus, Freigabe-Pfade, Defaultwerte für Freigabe/Talk).
+- Optionaler NC-Connector-Backend-Status/Policy-Modus:
+  - Pruefung beim Oeffnen von Talk-Wizard, Sharing-Wizard, Add-on-Settings und erneut beim Speichern der Add-on-Settings
+  - gueltiger aktiver Seat aktiviert Backend-Policy-Werte und Admin-Locks
+  - fehlendes Backend / kein Seat / ungueltiger Seat faellt auf lokale Add-on-Settings zurueck
+  - ungueltige Seat-Zustaende werden sichtbar im UI angezeigt, damit sich Benutzer an den Administrator wenden koennen
+- Backend-Templates fuer Freigabe- und Talk-Texte werden nur aktiv, wenn in den Sprach-Overrides `Benutzerdefiniert` gewaehlt ist
+- `Benutzerdefiniert` wird nur angezeigt, wenn der NC-Connector-Backend-Endpunkt existiert, und bleibt deaktiviert, solange die effektive Backend-Policy fuer diesen Bereich nicht wirklich `custom` ist oder keine Vorlage liefert
+- ist `Benutzerdefiniert` aktiv, aber die Backend-Vorlage leer oder nicht verfuegbar, faellt Thunderbird auf den lokalen UI-Default-Text zurueck
 - Vollständige Internationalisierung (siehe [`Translations.md`](https://github.com/nc-connector/NC_Connector_for_Thunderbird/blob/main/Translations.md)) und strukturierte Debug-Logs für Support-Fälle, inklusive Attachment-Flow in `[NCBG]` und `[NCUI][Sharing]`.
 
 ## Systemvoraussetzungen
@@ -71,12 +84,12 @@ Siehe [`CHANGELOG.md`](https://github.com/nc-connector/NC_Connector_for_Thunderb
 
 ## Installation
 1. Aktuelle XPI 
-`nc4tb-2.2.9.xpi` (oder aktuelles Release-Artefakt) in Thunderbird installieren (`Add-ons -> Zahnrad -> Add-on aus Datei installieren`).
+`nc4tb-3.0.0.xpi` (oder aktuelles Release-Artefakt) in Thunderbird installieren (`Add-ons -> Zahnrad -> Add-on aus Datei installieren`).
 2. Thunderbird neu starten.
 3. In den Add-on-Optionen Basis-URL, Benutzer und App-Passwort hinterlegen oder den Login Flow starten.
 
 ## Support & Feedback
-- **Fehleranalyse:** Debug-Modus in den Optionen aktivieren; relevante Logs erscheinen als [NCBG], [NCUI][Talk], [NCUI][Sharing] und [ncCalToolbar] in der Entwickler-Konsole von Thunderbird.
+- **Fehleranalyse:** Debug-Modus in den Optionen für ausführliche Traces aktivieren; relevante Logs erscheinen als [NCBG], [NCUI][Talk], [NCUI][Sharing] und [ncCalToolbar] in der Entwickler-Konsole von Thunderbird. Laufzeitfehler nutzen weiterhin `console.error(...)`, auch wenn der Debug-Modus aus ist.
 - **Systemadressbuch-Mismatch (im Admin-UI aktiv, faktisch aber nicht erreichbar):** siehe Admin-Guide Abschnitt
   ["System address book required for user search and moderator selection"](https://github.com/nc-connector/NC_Connector_for_Thunderbird/blob/main/docs/ADMIN.md#system-address-book-required-for-user-search-and-moderator-selection)
   für die `occ`-Reparatursequenz und die DAV-Export-Prüf-URL.
@@ -112,8 +125,6 @@ Viel Erfolg beim sicheren, professionellen Arbeiten mit NC Connector for Thunder
 | --- | --- |
 
 </details>
-
-
 
 
 

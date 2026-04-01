@@ -171,7 +171,7 @@
     "message": "Partecipa alla riunione ora:"
   },
   "ui_description_password_line": {
-    "message": "Password: $1"
+    "message": "Codice di accesso: $1"
   },
   "ui_description_help_label": {
     "message": "Serve aiuto?"
@@ -321,7 +321,7 @@
     "message": "Nome utente"
   },
   "options_app_pass_label": {
-    "message": "Password app"
+    "message": "Password dell'app"
   },
   "options_debug_label": {
     "message": "Log di debug"
@@ -407,6 +407,9 @@
   "options_about_copyright_label": {
     "message": "Copyright:"
   },
+  "options_about_homepage_label": {
+    "message": "Sito web:"
+  },
   "options_about_license_label": {
     "message": "Licenza:"
   },
@@ -438,7 +441,7 @@
     "message": "Browser aperto. Conferma l'accesso in Nextcloud..."
   },
   "options_loginflow_success": {
-    "message": "Accesso riuscito. Password app copiata."
+    "message": "Accesso riuscito. Password dell'app copiata."
   },
   "options_loginflow_failed": {
     "message": "Accesso con Nextcloud non riuscito."
@@ -582,7 +585,7 @@
     "message": "Impossibile inserire la condivisione nel messaggio."
   },
   "sharing_html_password_label": {
-    "message": "Password"
+    "message": "Codice di accesso"
   },
   "sharing_html_expire_label": {
     "message": "Data di scadenza"
@@ -731,6 +734,9 @@
   "options_sharing_attachments_lock_step3": {
     "message": "Riapri queste impostazioni del componente aggiuntivo."
   },
+  "options_sharing_attachments_lock_admin_link_label": {
+    "message": "Indicazione per il rollout a livello di sistema"
+  },
   "sharing_attachment_automation_locked_error": {
     "message": "L'opzione di Thunderbird «Carica per file più grandi di» è attiva ($1 MB). Questo è in conflitto con l'automazione allegati di NC Connector. Le opzioni allegati qui sotto sono bloccate."
   },
@@ -763,18 +769,6 @@
   },
   "options_sharing_permissions_tooltip_line3": {
     "message": "In modalità allegato, l'autorizzazione del destinatario è sempre di sola lettura."
-  },
-  "sharing_password_separate_tooltip_title": {
-    "message": "Prossimamente (funzione Pro)"
-  },
-  "sharing_password_separate_tooltip_line1": {
-    "message": "Questa opzione è disabilitata in questa versione."
-  },
-  "sharing_password_separate_tooltip_line2": {
-    "message": "L'invio della password in un'e-mail separata sarà disponibile in una futura versione Pro."
-  },
-  "sharing_password_separate_tooltip_line3": {
-    "message": "Per ora, la password è inclusa nel blocco di condivisione principale."
   },
   "options_sharing_attachments_always_tooltip_title": {
     "message": "📎 Sempre tramite connettore NC"
@@ -836,19 +830,40 @@
   "sharing_password_mail_notify_manual_required_select_sender": {
     "message": "Invio automatico della password non riuscito. Se necessario, seleziona un mittente nella bozza aperta e invia manualmente lemail con la password."
   },
-  "options_about_homepage_label": {
-    "message": "Sito web:"
-  },
   "options_about_homepage_link": {
     "message": "https://nc-connector.de"
   },
   "options_about_overview_text": {
-    "message": "Perche piu di un semplice componente aggiuntivo per link ai file?\nNC Connector non copre solo i link ai file, ma l'intero workflow del team nel client di posta.\n\nBase tecnica\n- Componenti aggiuntivi Thunderbird e Outlook utilizzabili direttamente, anche senza backend Nextcloud\n- Backend Nextcloud opzionale per assegnazione centralizzata dei seat e delle policy\n- Modello seat nel backend: Community con 1 seat gratuito, Pro da 5 seat (1 seat = 1 utente Nextcloud)\n\n- Condivisione file con password, data di scadenza e invio separato della password opzionale\n- Creazione e aggiornamento delle riunioni Talk direttamente dagli appuntamenti del calendario\n- Automazione degli allegati con regole chiare invece di passaggi manuali\n- Assegnazione centralizzata dei seat nel backend Nextcloud (1 seat = 1 utente Nextcloud)"
+    "message": "Più di semplici link ai file\n\nNC Connector unisce la condivisione sicura dei file, le riunioni Talk e l'automazione degli allegati direttamente in Thunderbird e Outlook. In questo modo i flussi di lavoro importanti del team restano dove devono essere: nel client di posta e calendario.\n\nCosa copre NC Connector\n- Condivisione file con password, data di scadenza e invio separato opzionale della password\n- Creazione e aggiornamento di riunioni Talk direttamente dagli eventi del calendario\n- Automazione degli allegati con regole chiare invece di passaggi manuali isolati\n- Blocchi uniformi di condivisione e invito direttamente nel flusso di lavoro abituale\n\nFacoltativamente con backend Nextcloud\n- Assegnazione centrale dei Seat e gestione delle policy\n- Modelli e design personalizzati per condivisioni e inviti Talk\n- Invio separato della password e controllo centralizzato per le organizzazioni\n- 1 Seat = 1 utente Nextcloud\n\nSenza backend, i componenti aggiuntivi restano utilizzabili direttamente. Con il backend si aggiunge un controllo centralizzato per team e organizzazioni."
   },
   "options_about_more_info_label": {
     "message": "Maggiori informazioni -->"
   },
   "options_about_more_info_link": {
     "message": "Vai al sito web"
+  },
+  "policy_warning_title": {
+    "message": "La policy backend non è attualmente disponibile."
+  },
+  "policy_warning_license_invalid": {
+    "message": "La licenza o l'assegnazione del seat di NC Connector non è attualmente valida. Verranno usate le impostazioni locali. Contatti l'amministratore Nextcloud."
+  },
+  "policy_warning_admin_link_label": {
+    "message": "Apri la guida di configurazione per l'amministratore"
+  },
+  "policy_admin_controlled_tooltip": {
+    "message": "Controllato dall'amministratore"
+  },
+  "options_lang_custom": {
+    "message": "Personalizzato (modello backend)"
+  },
+  "sharing_password_separate_backend_required_tooltip": {
+    "message": "Questa funzione richiede il backend Nextcloud."
+  },
+  "sharing_password_separate_no_seat_tooltip": {
+    "message": "Per questa funzione il tuo amministratore deve assegnarti un seat NC Connector."
+  },
+  "sharing_password_separate_paused_tooltip": {
+    "message": "Il tuo seat NC Connector è attualmente in pausa. Contatta il tuo amministratore Nextcloud."
   }
 }
