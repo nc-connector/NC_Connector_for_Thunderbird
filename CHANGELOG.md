@@ -50,27 +50,7 @@ Functional delta documented here corresponds to **2.3.0 -> 3.0.0**.
   - share creation now follows the documented Nextcloud OCS contract more closely: `label` is sent during create, while mutable metadata like `note` is updated later via form-encoded OCS update arguments
   - stale Talk create fallback contract fields were removed from runtime/UI cleanup payloads
   - duplicate background error logs were reduced in active compose/Talk paths
-  - core runtime errors now use always-on error logging independent of the debug flag
-
-## 2.3.0
-
-Release package version is **2.3.0**.  
-Functional delta documented here corresponds to **2.2.9 -> 2.3.0**.
-
-### Changed
-- Runtime/documentation baseline is kept aligned with the 2.2.9 line:
-  - official `calendar_item_action` Talk button wiring
-  - deterministic popup focus hardening (Talk + Sharing)
-  - live system-addressbook gating for Talk user/guest/moderator controls
-  - strict lobby timer contract based on `X-NCTALK-START` (no `DTSTART/TZID` fallback path)
-  - About tab parity with homepage + technical overview block
-- **Separate password mail is enabled in 2.3.0**:
-  - options + sharing wizard toggle are active when password protection is enabled
-  - automatic password-only follow-up dispatch path is active after successful main send
-  - success/failure notifications + manual fallback behavior are active in normal UI flow
-
-### Clarified
-- Unlike 2.2.9, there is no “Coming soon (Pro feature)” lock for separate-password controls in 2.3.0.
+  - core runtime errors now use always-on error logging independent of the debug fla
 
 ## 2.2.9
 
