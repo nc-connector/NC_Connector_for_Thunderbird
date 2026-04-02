@@ -156,7 +156,10 @@ browser.runtime.onMessage.addListener((msg, sender) => {
         fieldsPayload.description = fields.description;
       }
       if (typeof fields.descriptionHtml === "string"){
-        fieldsPayload.descriptionHtml = fields.descriptionHtml;
+        fieldsPayload.descriptionHtml = typeof NCHtmlSanitizer !== "undefined"
+          && typeof NCHtmlSanitizer.sanitizeTalkTemplateHtml === "function"
+          ? NCHtmlSanitizer.sanitizeTalkTemplateHtml(fields.descriptionHtml)
+          : fields.descriptionHtml;
       }
       const applyResponse = await browser.ncCalToolbar.updateCurrent({
         editorId,

@@ -1222,12 +1222,46 @@ this.ncCalToolbar = class extends ExtensionAPI {
    * @returns {DocumentFragment}
    */
   _createHtmlFragment(doc, html) {
-    const container = doc.createElement("div");
-    container.innerHTML = String(html ?? "");
     const fragment = doc.createDocumentFragment();
-    while (container.firstChild) {
-      fragment.appendChild(container.firstChild);
+    const ParserCtor = doc?.defaultView?.DOMParser || DOMParser;
+    if (!ParserCtor) {
+      return fragment;
     }
+    const parser = new ParserCtor();
+    const parsed = parser.parseFromString(String(html ?? ""), "text/html");
+    const body = parsed?.body || null;
+    if (!body) {
+      return fragment;
+    }
+    for (const node of Array.from(body.childNodes)) {
+      fragment.appendChild(doc.importNode(node, true));
+    }
+    return fragment;
+  }
+
+  /**
+   * Build a plain-text document fragment for the rich description editor
+   * without relying on deprecated execCommand/controller plumbing.
+   * @param {Document} doc
+   * @param {string} value
+   * @returns {DocumentFragment}
+   */
+  _createPlainTextFragment(doc, value) {
+    const fragment = doc.createDocumentFragment();
+    const normalized = String(value ?? "").replace(/\r\n/g, "\n").replace(/\r/g, "\n");
+    const paragraphs = normalized.split(/\n{2,}/);
+    const items = paragraphs.length ? paragraphs : [""];
+    items.forEach((part) => {
+      const paragraph = doc.createElement("p");
+      const lines = String(part ?? "").split("\n");
+      lines.forEach((line, index) => {
+        paragraph.appendChild(doc.createTextNode(line));
+        if (index < lines.length - 1) {
+          paragraph.appendChild(doc.createElement("br"));
+        }
+      });
+      fragment.appendChild(paragraph);
+    });
     return fragment;
   }
 
@@ -1290,15 +1324,19 @@ this.ncCalToolbar = class extends ExtensionAPI {
       return;
     }
     const doc = target.element.ownerDocument || null;
-    if (!doc || typeof doc.execCommand != "function") {
+    const host = target.host || null;
+    const editor = host?.getHTMLEditor?.(host.contentWindow) || null;
+    if (!doc || !editor?.rootElement) {
       throw new ExtensionError("Could not write description field");
     }
     target.element.focus?.();
-    doc.execCommand("selectAll", false, null);
-    const insertOk = doc.execCommand("insertText", false, value);
-    if (!insertOk && String(target.element.textContent ?? "") != String(value ?? "")) {
-      throw new ExtensionError("Could not write description field");
-    }
+    editor.flags =
+      editor.eEditorMailMask | editor.eEditorNoCSSMask | editor.eEditorAllowInteraction;
+    editor.enableUndo(false);
+    editor.forceCompositionEnd();
+    editor.rootElement.replaceChildren(this._createPlainTextFragment(doc, value));
+    editor.insertText("");
+    editor.enableUndo(true);
     this._dispatchInputEvent(target.element);
   }
 
@@ -1510,7 +1548,7 @@ this.ncCalToolbar = class extends ExtensionAPI {
             description: this._readField(targets.description),
           };
           const beforeDescriptionState =
-            typeof fields.descriptionHtml == "string"
+            targets.description?.kind == "html-body"
               ? {
                   text: String(item.descriptionText ?? ""),
                   html: String(item.descriptionHTML ?? ""),
@@ -1527,10 +1565,12 @@ this.ncCalToolbar = class extends ExtensionAPI {
                   && typeof fields.descriptionHtml == "string";
                 const value = writeHtml ? fields.descriptionHtml : fields[key];
                 this._writeField(targets[key], value, { html: writeHtml });
-                if (writeHtml) {
+                if (key == "description" && targets[key]?.kind == "html-body") {
                   this._applyDescriptionState(item, {
                     text: typeof fields.description == "string" ? fields.description : "",
-                    html: typeof fields.descriptionHtml == "string" ? fields.descriptionHtml : "",
+                    html: writeHtml
+                      ? (typeof fields.descriptionHtml == "string" ? fields.descriptionHtml : "")
+                      : String(targets[key]?.element?.innerHTML ?? ""),
                   });
                 }
                 appliedFields[key] = true;

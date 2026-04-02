@@ -4,13 +4,36 @@ All notable changes to **NC Connector for Thunderbird** will be documented in th
 
 This project targets **Thunderbird ESR 140.\***.
 
+## 3.0.1
+
+Release package version is **3.0.1**.  
+Functional delta documented here corresponds to **3.0.0 -> 3.0.1**.
+
+### Changed
+- Release/version references were aligned to `3.0.1` across manifest, review notes, readmes, and docs.
+- Plain-text Talk invitation templates now persist correctly in Thunderbird rich event-description editors; the editor bridge synchronizes Thunderbird's HTML/text description state for both HTML and plain-text writes.
+- Backend-provided Talk/Share HTML is sanitized client-side with bundled `DOMPurify 3.3.1` before use.
+- `ncCalToolbar` no longer parses inbound description HTML via `innerHTML` in privileged experiment code.
+- Active add-on/runtime hardening was extended:
+  - legacy `execCommand(...)` usage was removed from the active editor/plain-text and clipboard fallback paths
+  - sharing wizard upload-status rendering no longer writes HTML via `innerHTML`; DOM nodes are created explicitly instead
+  - attachment-mode DAV folder creation now skips known-existing base prefixes, avoiding benign repeated `MKCOL 405` responses in the common upload flow
+  - shared UI debug forwarding now tracks page teardown centrally so expected `context unloaded` / `Conduits` runtime disconnects do not surface as false-positive errors during popup close
+- Separate-password follow-up delivery was hardened after the 3.0.0 release:
+  - the final main-mail envelope is captured on `compose.onBeforeSend`
+  - live sender changes are tracked on `compose.onIdentityChanged`
+  - the Thunderbird sender identity is resolved via `accountsRead` / identity lookup
+  - the password follow-up targets only the primary mail `To` recipients
+  - the auto-send path now warms the freshly opened password compose tab before sending and uses a longer timeout guard for slower Thunderbird/SMTP handshakes
+  - a manual password-mail draft is opened whenever sender identity resolution is ambiguous/unavailable or auto-send fails
+  - committed shares are never deleted after the primary mail was sent
+
 ## 3.0.0
 
 Release package version is **3.0.0**.  
 Functional delta documented here corresponds to **2.3.0 -> 3.0.0**.
 
 ### Changed
-- Release/version references were aligned to `3.0.0` across manifest, readmes, and docs.
 - Functional runtime baseline remains equivalent to the hardened 2.3.0 line, now including optional NC Connector backend policy mode:
   - backend status endpoint is queried on Talk wizard open, Sharing wizard open, Settings open, and Settings save
   - active valid seats enable backend policy values plus `policy_editable` locks
@@ -51,7 +74,8 @@ Functional delta documented here corresponds to **2.2.9 -> 2.3.0**.
 
 ## 2.2.9
 
-Functional delta in this section: **2.2.8 -> 2.2.9**
+Release package version is **2.2.9**.
+Functional delta documented here corresponds to **2.2.8 -> 2.2.9** only.
 
 ### Changed
 - Calendar editor Talk button wiring was switched to the official `calendar_item_action` path:
@@ -98,8 +122,6 @@ Functional delta in this section: **2.2.8 -> 2.2.9**
 
 ## 2.2.8
 
-Functional delta in this section: **2.2.7 -> 2.2.8**
-
 ### Changed
 - `ncCalToolbar` was hardened for deterministic editor targeting in dialog and tab event editors.
 - Event write-back and cleanup paths were stabilized for open editors (including unsaved item flows).
@@ -114,10 +136,12 @@ Functional delta in this section: **2.2.7 -> 2.2.8**
   - threshold-based prompt with deterministic user actions
   - direct attachment-mode wizard start in step 3
 - Conflict lock for Thunderbird’s native “Upload for files larger than ...” setting with explicit user guidance.
-- Sharing workflow enhancements for ZIP download links and reduced HTML output in attachment mode.
+- Centralized i18n/runtime parity checks and parser contract checks in local tooling.
 
-### Notes
-- In the 2.2.8 line, “Send password in separate email” may be intentionally release-gated depending on package variant.
+### Disabled In This Release
+- **Send password in separate email** is intentionally disabled in options and sharing wizard.
+- The control stays visible but is grayed out with a “Coming soon (Pro feature)” tooltip.
+- Runtime guard keeps separate-password dispatch inactive even if legacy settings exist.
 
 ## 2.2.7
 

@@ -5,7 +5,7 @@ This document is the **single source of truth** for developers maintaining or ex
 It complements:
 - `docs/ADDON_DESCRIPTION.md` (architecture overview)
 - `docs/ATN_REVIEW_CHECKLIST_INTERNAL.md` (internal review constraints you must not violate)
-- `docs/ATN_REVIEW_NOTES_3.0.0.md` (reviewer-facing release-specific notes)
+- `docs/ATN_REVIEW_NOTES_3.0.1.md` (reviewer-facing release-specific notes)
 
 ---
 
@@ -573,12 +573,13 @@ Attachment mode specifics:
   - Option + wizard toggle can send password in a dedicated follow-up mail.
   - This toggle is only active when password protection is enabled.
   - Main compose block omits the inline password and shows a dedicated hint when enabled.
-  - Background captures final recipients on `compose.onBeforeSend` and dispatches password-only mail on `compose.onAfterSend`.
-  - Dispatch path: first try `compose.sendMessage(..., { mode: "sendNow" })` with a timeout guard for stuck send attempts.
-  - If immediate send fails (or times out), background opens a prefilled compose draft as explicit manual fallback.
+  - Background tracks live sender switches on `compose.onIdentityChanged`, captures the final main-mail envelope on `compose.onBeforeSend`, and dispatches password-only mail on `compose.onAfterSend`.
+  - The authoritative primary-mail sender is resolved via Thunderbird compose details plus `accountsRead` identity lookup; the password follow-up must use the same Thunderbird identity as the main mail.
+  - The password follow-up itself targets only the primary mail `To` recipients; `Cc`/`Bcc` are still captured as part of the authoritative main-mail envelope.
+  - Dispatch path: first warm the freshly created password compose tab until Thunderbird exposes the expected sender/recipient envelope, then try `compose.sendMessage(..., { mode: "sendNow" })` with a timeout guard for stuck send attempts.
+  - If sender identity cannot be resolved cleanly, or if immediate send fails (or times out), background opens a prefilled compose draft as explicit manual fallback.
   - If a manual fallback draft was opened, a dedicated desktop notification tells the user to send the password mail manually.
-  - If manual fallback draft closes without successful send, compose-share cleanup removes the remote share folder.
-  - If manual fallback draft cannot be opened at all, background performs immediate best-effort remote share cleanup.
+  - Once the primary mail was sent, password-follow-up problems must never delete the committed remote share.
 - If Thunderbird's own big-attachment upload setting is enabled, add-on attachment automation settings are locked and a guidance block is shown in options.
 - The same lock is enforced live in background before evaluate/start/prompt-action and again at attachment-mode wizard finish.
 - On cancel, attachments are not restored to compose (explicit product decision).
@@ -606,6 +607,9 @@ Runtime rules:
 - `custom` stays disabled unless the effective backend policy for the respective domain is actually `custom` and provides a template.
 - Backend templates are only used when the effective language override is `custom`.
 - If `custom` is selected but the backend template is empty or unavailable, runtime falls back to the local UI-default text block.
+- Backend-provided rich HTML templates are sanitized client-side with bundled `DOMPurify` before use.
+- Privileged calendar-editor code does not parse backend HTML via `innerHTML`; sanitized markup is imported via `DOMParser` + DOM fragment replacement.
+- Active UI/runtime paths should avoid legacy `innerHTML` and `execCommand(...)` write APIs where ESR-140-compatible DOM/clipboard alternatives exist.
 - Separate password follow-up dispatch is seat-gated and only available with backend endpoint + active assigned seat.
 - Backend attachment-threshold policy uses `attachments_min_size_mb` as both value and enable-state: a positive integer enables threshold mode, `null` disables it.
 - Locked backend attachment-automation policy is enforced in compose runtime, not only in the settings surface.
@@ -773,3 +777,5 @@ Key rules:
 - Keep experiments minimal, deterministic, and auditable.
 - No trial-and-error code paths.
 - No broad window/tab monitoring; target only required windows via window listeners.
+
+

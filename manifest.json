@@ -1,204 +1,207 @@
 {
-    "manifest_version":  2,
-    "default_locale":  "de",
-    "name":  "__MSG_extName__",
-    "version":  "3.0.0",
-    "description":  "__MSG_extDescription__",
-    "developer":  {
-                     "name":  "Bastian Kleinschmidt"
-                 },
-    "homepage_url":  "https://github.com/nc-connector/NC_Connector_for_Thunderbird",
-    "browser_specific_settings":  {
-                         "gecko":  {
-                                       "id":  "{4a35421f-0906-439c-bff2-8eef39e2baee}",
-                                       "strict_min_version":  "140.0",
-                                       "strict_max_version":  "140.*"
-                                   }
-                     },
-    "permissions":  [
-                        "storage",
-                        "compose",
-                        "compose.send",
-                        "notifications"
-                    ],
-    "optional_permissions":  [
-                                 "https://*/*"
-                    ],
-    "background":  {
-                       "scripts":  [
-                                       "modules/hostPermissions.js",
-                                       "modules/ocs.js",
-                                       "modules/i18n.js",
-                                       "modules/i18nOverride.js",
-                                       "modules/sharingStorage.js",
-                                       "modules/textUtils.js",
-                                       "vendor/ical.js",
-                                       "modules/icalContract.js",
-                                        "modules/bgState.js",
-                                        "modules/nccore.js",
-                                        "modules/policyRuntime.js",
-                                        "modules/talkAddressbook.js",
-                                        "modules/talkcore.js",
-                                        "modules/ncSharing.js",
-                                        "modules/bgComposeAttachments.js",
-                                        "modules/bgComposeShareCleanup.js",
-                                        "modules/bgComposePasswordDispatch.js",
-                                        "modules/bgCompose.js",
-                                        "modules/bgCalendarLifecycle.js",
-                                        "modules/bgCalendar.js",
-                                        "modules/bgRouter.js",
-                                        "modules/background.js"
-                                   ]
-                   },
-    "compose_action":  {
-                           "default_title":  "__MSG_compose_sharing_title__",
-                           "default_icon":  {
-                                                "16":  "icons/app-16.png",
-                                                "32":  "icons/app-32.png"
-                                            }
-                       },
-    "calendar_item_action":  {
-                                 "default_icon":  {
-                                                      "16":  "icons/app-16.png",
-                                                      "32":  "icons/app-32.png"
-                                                  },
-                                 "default_title":  "__MSG_ui_insert_button_label__",
-                                 "type":  "button"
-                             },
-    "options_ui":  {
-                       "page":  "options.html",
-                       "browser_style":  true,
-                       "open_in_tab":  true
-                   },
-    "experiment_apis":  {
-                            "calendar_calendars":  {
-                                                       "schema":  "experiments/calendar/schema/calendar-calendars.json",
-                                                       "parent":  {
-                                                                      "scopes":  [
-                                                                                     "addon_parent"
-                                                                                 ],
-                                                                      "script":  "experiments/calendar/parent/ext-calendar-calendars.js",
-                                                                      "paths":  [
-                                                                                    [
-                                                                                        "calendar",
-                                                                                        "calendars"
-                                                                                    ]
-                                                                                ]
-                                                                  }
-                                                   },
-                            "calendar_items":  {
-                                                  "schema":  "experiments/calendar/schema/calendar-items.json",
-                                                  "parent":  {
-                                                                 "scopes":  [
-                                                                                "addon_parent"
-                                                                            ],
-                                                                 "script":  "experiments/calendar/parent/ext-calendar-items.js",
-                                                                 "paths":  [
-                                                                               [
-                                                                                   "calendar",
-                                                                                   "items"
-                                                                               ]
-                                                                           ]
-                                                             }
-                                              },
-                            "calendar_provider":  {
-                                                     "schema":  "experiments/calendar/schema/calendar-provider.json",
-                                                     "parent":  {
-                                                                    "scopes":  [
-                                                                                   "addon_parent"
-                                                                               ],
-                                                                    "script":  "experiments/calendar/parent/ext-calendar-provider.js",
-                                                                    "events":  [
-                                                                                   "startup"
-                                                                               ],
-                                                                    "paths":  [
-                                                                                  [
-                                                                                      "calendar",
-                                                                                      "provider"
-                                                                                  ]
-                                                                              ]
-                                                                }
-                                                 },
-                            "calendar_timezones":  {
-                                                      "schema":  "experiments/calendar/schema/calendar-timezones.json",
-                                                      "parent":  {
-                                                                     "scopes":  [
-                                                                                    "addon_parent"
-                                                                                ],
-                                                                     "script":  "experiments/calendar/parent/ext-calendar-timezones.js",
-                                                                     "paths":  [
-                                                                                   [
-                                                                                       "calendar",
-                                                                                       "timezones"
-                                                                                   ]
-                                                                               ]
-                                                                 },
-                                                      "child":  {
-                                                                    "scopes":  [
-                                                                                   "addon_child"
-                                                                               ],
-                                                                    "script":  "experiments/calendar/child/ext-calendar-timezones.js",
-                                                                    "paths":  [
-                                                                                  [
-                                                                                      "calendar",
-                                                                                      "timezones"
-                                                                                  ]
-                                                                              ]
-                                                                }
-                                                  },
-                            "calendarItemAction":  {
-                                                       "schema":  "experiments/calendar/schema/calendarItemAction.json",
-                                                       "parent":  {
-                                                                      "scopes":  [
-                                                                                     "addon_parent"
-                                                                                 ],
-                                                                      "script":  "experiments/calendar/parent/ext-calendarItemAction.js",
-                                                                      "events":  [
-                                                                                     "startup"
-                                                                                 ],
-                                                                      "paths":  [
-                                                                                    [
-                                                                                        "calendarItemAction"
-                                                                                    ]
-                                                                                ]
-                                                                  }
-                                                   },
-                            "ncCalToolbar":  {
-                                                 "schema":  "experiments/ncCalToolbar/schema.json",
-                                                 "parent":  {
-                                                                "scopes":  [
-                                                                               "addon_parent"
-                                                                           ],
-                                                                "script":  "experiments/ncCalToolbar/parent.js",
-                                                                "events":  [
-                                                                               "startup"
-                                                                           ],
-                                                                "paths":  [
-                                                                              [
-                                                                                  "ncCalToolbar"
-                                                                              ]
-                                                                          ]
-                                                            }
-                                             },
-                            "ncComposePrefs":  {
-                                                   "schema":  "experiments/ncComposePrefs/schema.json",
-                                                   "parent":  {
-                                                                  "scopes":  [
-                                                                                 "addon_parent"
-                                                                             ],
-                                                                  "script":  "experiments/ncComposePrefs/parent.js",
-                                                                  "paths":  [
-                                                                                [
-                                                                                    "ncComposePrefs"
-                                                                                ]
-                                                                            ]
-                                                              }
-                                               }
-                        },
-    "icons":  {
-                  "16":  "icons/app-16.png",
-                  "32":  "icons/app-32.png",
-                  "48":  "icons/app-48.png",
-                  "96":  "icons/app-96.png"
-              }
+  "manifest_version": 2,
+  "default_locale": "de",
+  "name": "__MSG_extName__",
+  "version": "3.0.1",
+  "description": "__MSG_extDescription__",
+  "developer": {
+    "name": "Bastian Kleinschmidt"
+  },
+  "homepage_url": "https://github.com/nc-connector/NC_Connector_for_Thunderbird",
+  "browser_specific_settings": {
+    "gecko": {
+      "id": "{4a35421f-0906-439c-bff2-8eef39e2baee}",
+      "strict_min_version": "140.0",
+      "strict_max_version": "140.*"
+    }
+  },
+  "permissions": [
+    "storage",
+    "accountsRead",
+    "compose",
+    "compose.send",
+    "notifications"
+  ],
+  "optional_permissions": [
+    "https://*/*"
+  ],
+  "background": {
+    "scripts": [
+      "modules/hostPermissions.js",
+      "modules/ocs.js",
+      "modules/i18n.js",
+      "modules/i18nOverride.js",
+      "modules/sharingStorage.js",
+      "modules/textUtils.js",
+      "vendor/ical.js",
+      "vendor/purify.js",
+      "modules/htmlSanitizer.js",
+      "modules/icalContract.js",
+      "modules/bgState.js",
+      "modules/nccore.js",
+      "modules/policyRuntime.js",
+      "modules/talkAddressbook.js",
+      "modules/talkcore.js",
+      "modules/ncSharing.js",
+      "modules/bgComposeAttachments.js",
+      "modules/bgComposeShareCleanup.js",
+      "modules/bgComposePasswordDispatch.js",
+      "modules/bgCompose.js",
+      "modules/bgCalendarLifecycle.js",
+      "modules/bgCalendar.js",
+      "modules/bgRouter.js",
+      "modules/background.js"
+    ]
+  },
+  "compose_action": {
+    "default_title": "__MSG_compose_sharing_title__",
+    "default_icon": {
+      "16": "icons/app-16.png",
+      "32": "icons/app-32.png"
+    }
+  },
+  "calendar_item_action": {
+    "default_icon": {
+      "16": "icons/app-16.png",
+      "32": "icons/app-32.png"
+    },
+    "default_title": "__MSG_ui_insert_button_label__",
+    "type": "button"
+  },
+  "options_ui": {
+    "page": "options.html",
+    "browser_style": true,
+    "open_in_tab": true
+  },
+  "experiment_apis": {
+    "calendar_calendars": {
+      "schema": "experiments/calendar/schema/calendar-calendars.json",
+      "parent": {
+        "scopes": [
+          "addon_parent"
+        ],
+        "script": "experiments/calendar/parent/ext-calendar-calendars.js",
+        "paths": [
+          [
+            "calendar",
+            "calendars"
+          ]
+        ]
+      }
+    },
+    "calendar_items": {
+      "schema": "experiments/calendar/schema/calendar-items.json",
+      "parent": {
+        "scopes": [
+          "addon_parent"
+        ],
+        "script": "experiments/calendar/parent/ext-calendar-items.js",
+        "paths": [
+          [
+            "calendar",
+            "items"
+          ]
+        ]
+      }
+    },
+    "calendar_provider": {
+      "schema": "experiments/calendar/schema/calendar-provider.json",
+      "parent": {
+        "scopes": [
+          "addon_parent"
+        ],
+        "script": "experiments/calendar/parent/ext-calendar-provider.js",
+        "events": [
+          "startup"
+        ],
+        "paths": [
+          [
+            "calendar",
+            "provider"
+          ]
+        ]
+      }
+    },
+    "calendar_timezones": {
+      "schema": "experiments/calendar/schema/calendar-timezones.json",
+      "parent": {
+        "scopes": [
+          "addon_parent"
+        ],
+        "script": "experiments/calendar/parent/ext-calendar-timezones.js",
+        "paths": [
+          [
+            "calendar",
+            "timezones"
+          ]
+        ]
+      },
+      "child": {
+        "scopes": [
+          "addon_child"
+        ],
+        "script": "experiments/calendar/child/ext-calendar-timezones.js",
+        "paths": [
+          [
+            "calendar",
+            "timezones"
+          ]
+        ]
+      }
+    },
+    "calendarItemAction": {
+      "schema": "experiments/calendar/schema/calendarItemAction.json",
+      "parent": {
+        "scopes": [
+          "addon_parent"
+        ],
+        "script": "experiments/calendar/parent/ext-calendarItemAction.js",
+        "events": [
+          "startup"
+        ],
+        "paths": [
+          [
+            "calendarItemAction"
+          ]
+        ]
+      }
+    },
+    "ncCalToolbar": {
+      "schema": "experiments/ncCalToolbar/schema.json",
+      "parent": {
+        "scopes": [
+          "addon_parent"
+        ],
+        "script": "experiments/ncCalToolbar/parent.js",
+        "events": [
+          "startup"
+        ],
+        "paths": [
+          [
+            "ncCalToolbar"
+          ]
+        ]
+      }
+    },
+    "ncComposePrefs": {
+      "schema": "experiments/ncComposePrefs/schema.json",
+      "parent": {
+        "scopes": [
+          "addon_parent"
+        ],
+        "script": "experiments/ncComposePrefs/parent.js",
+        "paths": [
+          [
+            "ncComposePrefs"
+          ]
+        ]
+      }
+    }
+  },
+  "icons": {
+    "16": "icons/app-16.png",
+    "32": "icons/app-32.png",
+    "48": "icons/app-48.png",
+    "96": "icons/app-96.png"
+  }
 }

@@ -69,14 +69,9 @@
         urlInput.focus();
         urlInput.select();
       }
-      const ok = document.execCommand("copy");
-      if (ok){
-        setStatus("open_url_copied");
-      }else{
-        setStatus("open_url_copy_failed", true);
-      }
+      setStatus("open_url_copy_failed", true);
     }catch(error){
-      console.error("[NCUI][OpenUrlFallback] execCommand copy failed", error);
+      console.error("[NCUI][OpenUrlFallback] manual copy selection failed", error);
       setStatus("open_url_copy_failed", true);
     }
   }

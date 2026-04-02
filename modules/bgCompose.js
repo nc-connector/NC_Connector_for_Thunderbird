@@ -31,6 +31,20 @@ browser.compose.onAttachmentAdded.addListener((tab, attachment) => {
 });
 
 /**
+ * Track live sender identity changes for queued password-follow-up dispatch.
+ * onBeforeSend remains the authoritative final envelope capture.
+ */
+browser.compose.onIdentityChanged.addListener((tab, identityId) => {
+  const tabId = Number(tab?.id);
+  if (!Number.isInteger(tabId) || tabId <= 0 || !PASSWORD_MAIL_DISPATCH_BY_TAB.has(tabId)){
+    return;
+  }
+  captureSeparatePasswordDispatchIdentityChange(tabId, identityId).catch((error) => {
+    console.error("[NCBG] compose.onIdentityChanged capture failed", error);
+  });
+});
+
+/**
  * Capture final recipients before send for queued password follow-up dispatch.
  */
 browser.compose.onBeforeSend.addListener(async (tab, details) => {
@@ -45,10 +59,12 @@ browser.compose.onBeforeSend.addListener(async (tab, details) => {
   }
   try{
     if (hasPasswordDispatch){
-      captureSeparatePasswordDispatchRecipients(tabId, details || {});
+      await captureSeparatePasswordDispatchRecipients(tabId, details || {});
       const queue = PASSWORD_MAIL_DISPATCH_BY_TAB.get(tabId);
       const needsIdentityEnrichment = Array.isArray(queue) && queue.some((dispatch) => {
-        return !String(dispatch?.identityId || "").trim() || !String(dispatch?.from || "").trim();
+        return !String(dispatch?.identityId || "").trim()
+          || !String(dispatch?.from || "").trim()
+          || !String(dispatch?.fromEmail || "").trim();
       });
       if (needsIdentityEnrichment){
         await enrichSeparatePasswordDispatchSourceIdentity(tabId, queue);
@@ -115,7 +131,9 @@ browser.compose.onAfterSend.addListener((tab, details) => {
     }
     try{
       const needsIdentityEnrichment = dispatchQueue.some((dispatch) => {
-        return !String(dispatch?.identityId || "").trim() || !String(dispatch?.from || "").trim();
+        return !String(dispatch?.identityId || "").trim()
+          || !String(dispatch?.from || "").trim()
+          || !String(dispatch?.fromEmail || "").trim();
       });
       if (needsIdentityEnrichment){
         await enrichSeparatePasswordDispatchSourceIdentity(tabId, dispatchQueue);

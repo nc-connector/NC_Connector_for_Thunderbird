@@ -269,11 +269,25 @@
    * @param {string} davRoot
    * @param {string} relativePath
    * @param {string} authHeader
+   * @param {{knownExistingPrefix?:string}} options
    * @returns {Promise<void>}
    */
-  async function ensureFolderExists(davRoot, relativePath, authHeader){
-    const segments = normalizeRelativePath(relativePath).split("/").filter(Boolean);
+  async function ensureFolderExists(davRoot, relativePath, authHeader, options = {}){
+    const cleanPath = normalizeRelativePath(relativePath);
+    if (!cleanPath){
+      return;
+    }
+    const knownExistingPrefix = normalizeRelativePath(options?.knownExistingPrefix || "");
     let current = "";
+    let remainingPath = cleanPath;
+    if (knownExistingPrefix && (cleanPath === knownExistingPrefix || cleanPath.startsWith(knownExistingPrefix + "/"))){
+      current = knownExistingPrefix;
+      remainingPath = cleanPath.slice(knownExistingPrefix.length).replace(/^\/+/, "");
+      if (!remainingPath){
+        return;
+      }
+    }
+    const segments = remainingPath.split("/").filter(Boolean);
     for (const segment of segments){
       current = current ? current + "/" + segment : segment;
       const url = davRoot + "/" + encodePath(current);
@@ -674,6 +688,19 @@
   }
 
   /**
+   * Sanitize backend-provided share HTML after all placeholders were resolved.
+   * @param {string} html
+   * @returns {string}
+   */
+  function sanitizeCustomTemplateHtml(html){
+    if (typeof NCHtmlSanitizer !== "undefined"
+      && typeof NCHtmlSanitizer.sanitizeShareTemplateHtml === "function"){
+      return NCHtmlSanitizer.sanitizeShareTemplateHtml(html);
+    }
+    return String(html || "");
+  }
+
+  /**
    * Remove one placeholder row from backend-provided HTML templates.
    * This is used to reduce the custom share block for attachment mode.
    * @param {string} template
@@ -746,13 +773,13 @@
       const effectiveTemplate = request?.hidePermissions
         ? stripTemplateRow(customTemplate, "RIGHTS")
         : customTemplate;
-      return applyTemplateReplacements(effectiveTemplate, {
+      return sanitizeCustomTemplateHtml(applyTemplateReplacements(effectiveTemplate, {
         URL: escapeHtml(downloadUrl || ""),
         PASSWORD: passwordText,
         EXPIRATIONDATE: escapeHtml(result.expireDate || ""),
         RIGHTS: permissionsHtml,
         NOTE: noteText
-      });
+      }));
     }
 
     const paragraphs = [];
@@ -923,7 +950,17 @@
     const authHeader = NCOcs.buildAuthHeader(opts.user, opts.appPass);
     const davRoot = `${opts.baseUrl.replace(/\/+$/, "")}/remote.php/dav/files/${encodeURIComponent(opts.user)}`;
     logDebug(opts, "folders:ensure", { relativeBase, relativeFolder });
-    await ensureFolderExists(davRoot, relativeFolder, authHeader);
+    const baseExists = relativeBase
+      ? await pathExists({
+        davRoot,
+        relativePath: relativeBase,
+        authHeader
+      })
+      : false;
+    await ensureFolderExists(davRoot, relativeFolder, authHeader, {
+      knownExistingPrefix: baseExists ? relativeBase : ""
+    });
+    const ensuredUploadFolders = new Set([relativeFolder]);
     const noteEnabled = !!request?.noteEnabled;
     const noteValue = noteEnabled ? String(request?.note || "").trim() : "";
     request.note = noteValue;
@@ -940,8 +977,11 @@
         const sanitizedFileName = sanitizeFileName(item.renamedName || item.file?.name || "File");
         const relativeDir = sanitizeRelativeDir(item.relativeDir || "");
         const targetFolder = relativeDir ? joinRelativePath(relativeFolder, relativeDir) : relativeFolder;
-        if (relativeDir){
-          await ensureFolderExists(davRoot, targetFolder, authHeader);
+        if (relativeDir && !ensuredUploadFolders.has(targetFolder)){
+          await ensureFolderExists(davRoot, targetFolder, authHeader, {
+            knownExistingPrefix: relativeFolder
+          });
+          ensuredUploadFolders.add(targetFolder);
         }
         logDebug(opts, "upload:start", { file: sanitizedFileName, folder: targetFolder });
         await uploadFile({

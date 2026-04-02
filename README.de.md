@@ -54,7 +54,10 @@ Siehe [`CHANGELOG.md`](https://github.com/nc-connector/NC_Connector_for_Thunderb
   - nur verfuegbar mit optionalem NC-Connector-Backend und aktivem, dem aktuellen Benutzer zugewiesenem Seat
   - nur aktiv, wenn Passwortschutz aktiv ist
   - Hauptmail blendet Inline-Passwort aus und zeigt einen Hinweis auf die separate Passwortmail
-  - Passwortmail wird nach dem Versand der Hauptmail automatisch versendet (bei Fehler mit manuellem Fallback)
+  - Passwortmail geht nur an die `To`-Empfänger der Hauptmail
+  - der automatische Versand nutzt dieselbe Thunderbird-Absender-Identity wie die Hauptmail
+  - wenn die Absender-Identity nicht eindeutig auflösbar ist oder der automatische Versand fehlschlägt, öffnet Thunderbird einen vorausgefüllten manuellen Fallback-Entwurf
+  - Probleme im Passwort-Follow-up löschen die bereits versendete Freigabe nicht mehr
   - bei erfolgreichem Passwortversand wird eine Desktop-Erfolgsmeldung angezeigt
 - Optionale Anhang-Automatisierung:
   - "Anhänge immer über NC Connector"
@@ -84,7 +87,7 @@ Siehe [`CHANGELOG.md`](https://github.com/nc-connector/NC_Connector_for_Thunderb
 
 ## Installation
 1. Aktuelle XPI 
-`nc4tb-3.0.0.xpi` (oder aktuelles Release-Artefakt) in Thunderbird installieren (`Add-ons -> Zahnrad -> Add-on aus Datei installieren`).
+`nc4tb-3.0.1.xpi` (oder aktuelles Release-Artefakt) in Thunderbird installieren (`Add-ons -> Zahnrad -> Add-on aus Datei installieren`).
 2. Thunderbird neu starten.
 3. In den Add-on-Optionen Basis-URL, Benutzer und App-Passwort hinterlegen oder den Login Flow starten.
 
@@ -125,6 +128,9 @@ Viel Erfolg beim sicheren, professionellen Arbeiten mit NC Connector for Thunder
 | --- | --- |
 
 </details>
+
+
+
 
 
 

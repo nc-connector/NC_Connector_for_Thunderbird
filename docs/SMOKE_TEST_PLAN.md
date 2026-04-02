@@ -2,7 +2,7 @@
 
 Version scope:
 - `2.2.9`
-- `3.0.0`
+- `3.0.1`
 
 ## 1. Scope
 
@@ -16,16 +16,16 @@ This plan covers end-to-end smoke checks for:
 
 Known version delta:
 - `2.2.9`: separate password mail is feature-gated (disabled).
-- `3.0.0`: separate password mail is enabled.
+- `3.0.1`: separate password mail is implemented, but only available when the backend endpoint exists, the current user has an active assigned seat, and password protection is enabled.
 
 ## 2. Test Matrix
 
 | Matrix ID | Version | Separate Password Mail |
 |---|---|---|
 | M1 | 2.2.9 | Disabled (gated) |
-| M2 | 3.0.0 | Enabled |
+| M2 | 3.0.1 | Available only with backend + active seat + password protection |
 
-Run all cases at least once on M1 and M2, except cases marked `3.0.0 only`.
+Run all cases at least once on M1 and M2, except cases marked `3.0.1 only`.
 
 ## 3. Preconditions
 
@@ -34,6 +34,7 @@ Run all cases at least once on M1 and M2, except cases marked `3.0.0 only`.
 - [ ] Debug mode enabled in add-on settings
 - [ ] Nextcloud account configured and reachable
 - [ ] Talk + Sharing (DAV) available on server
+- [ ] For `3.0.1` separate-password cases: backend endpoint available and active seat assigned to the current user
 - [ ] Test mailbox and test calendar writable
 - [ ] Test files prepared (small, large, duplicate names, folder tree)
 - [ ] System address book scenario A prepared (available)
@@ -129,14 +130,14 @@ Run all cases at least once on M1 and M2, except cases marked `3.0.0 only`.
 
 - [ ] `P-01` `2.2.9`: feature is disabled/gated in settings and sharing wizard.
   - Pass: control is non-functional and clearly marked as gated.
-- [ ] `P-02` `3.0.0 only`: auto-send success path.
+- [ ] `P-02` `3.0.1 only`: auto-send success path with backend endpoint + active seat.
   - Pass: password mail sent, success notification shown.
-- [ ] `P-03` `3.0.0 only`: auto-send failure path.
+- [ ] `P-03` `3.0.1 only`: auto-send failure path with backend endpoint + active seat.
   - Pass: failure notification shown; manual action guidance shown.
-- [ ] `P-04` `3.0.0 only`: fallback compose opens sendable draft.
+- [ ] `P-04` `3.0.1 only`: fallback compose opens sendable draft when identity resolution is ambiguous/unavailable or auto-send fails.
   - Pass: user can manually send password mail.
-- [ ] `P-05` `3.0.0 only`: fallback opened but not sent, then tab closed.
-  - Pass: share cleanup is executed.
+- [ ] `P-05` `3.0.1 only`: fallback opened but not sent, then tab closed after the primary mail was already sent.
+  - Pass: committed share is retained; password follow-up problems do not trigger share cleanup after successful primary send.
 
 ### H. Focus Behavior
 
@@ -162,7 +163,7 @@ Run all cases at least once on M1 and M2, except cases marked `3.0.0 only`.
 2. Run `B + C` with address book available.
 3. Run `B + C` with address book unavailable.
 4. Run `E + F`.
-5. Run `G` (respect version-specific gating/enablement).
+5. Run `G` (respect version-specific gating/availability conditions).
 6. Run `H + I` as final regression pass.
 
 ## 6. Result Sheet
@@ -185,3 +186,4 @@ Fill after each matrix run:
   - Actual result:
   - Expected result:
   - Log excerpt:
+

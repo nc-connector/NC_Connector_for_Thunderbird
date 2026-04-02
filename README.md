@@ -52,7 +52,10 @@ See [`CHANGELOG.md`](https://github.com/nc-connector/NC_Connector_for_Thunderbir
   - requires the optional NC Connector backend plus an active seat assigned to the current user
   - only active when password protection is enabled
   - main mail hides inline password and shows a separate-password notice
-  - password-only follow-up mail is sent automatically after the main compose send
+  - password-only follow-up mail targets the main mail `To` recipients only
+  - automatic follow-up send reuses the same Thunderbird sender identity as the main mail
+  - if sender identity resolution is ambiguous/unavailable, or if automatic send fails, Thunderbird opens a prefilled manual fallback draft
+  - password-follow-up problems never delete the committed share after the main mail was sent
   - successful password-mail delivery triggers a desktop success notification
 - Optional attachment automation:
   - "Always handle attachments via NC Connector"
@@ -81,7 +84,7 @@ See [`CHANGELOG.md`](https://github.com/nc-connector/NC_Connector_for_Thunderbir
 - App password or Login Flow V2
 
 ## Installation
-1. Install the current XPI release (for example `nc4tb-3.0.0.xpi`) in Thunderbird (Add-ons > Gear > Install Add-on From File).
+1. Install the current XPI release (for example `nc4tb-3.0.1.xpi`) in Thunderbird (Add-ons > Gear > Install Add-on From File).
 2. Restart Thunderbird.
 3. In the add-on options, enter base URL, user, and app password or start the login flow.
 
@@ -122,6 +125,7 @@ Good luck with secure, professional work using NC Connector for Thunderbird!
 | --- | --- |
 
 </details>
+
 
 
 

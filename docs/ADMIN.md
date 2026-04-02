@@ -141,6 +141,10 @@ Runtime behavior:
 - if the backend is reachable but the license/seat state is no longer usable, Thunderbird also falls back to the locally saved add-on settings
 - invalid seat states remain visible in the UI so users can contact their administrator
 - separate password delivery is only available when the backend endpoint exists and the current user has an active assigned seat
+- separate password follow-up mails target only the primary mail `To` recipients
+- automatic password follow-up send reuses the same Thunderbird sender identity as the primary mail
+- if Thunderbird cannot resolve the sender identity cleanly, or if automatic send fails, the add-on opens a prefilled manual fallback draft instead of attempting an unsafe partial send
+- once the primary mail was sent, password-follow-up problems never delete the committed share
 - backend custom templates stay inactive until the corresponding language override is set to `custom`
 - the `custom` option is only shown when the backend endpoint exists and stays disabled unless the effective backend policy for that domain is actually `custom` and provides a template
 - if `custom` is selected but the backend template is empty or unavailable, Thunderbird falls back to the local UI-default text block
@@ -311,7 +315,7 @@ Important:
 - The asset name must be **the same in every release** (constant file name).
 - Practical approach: upload an additional release asset named:
   - `nc4tb-latest.xpi`
-  alongside the versioned asset (e.g. `nc4tb-3.0.0.xpi`), ideally automated via GitHub Actions.
+  alongside the versioned asset (e.g. `nc4tb-3.0.1.xpi`), ideally automated via GitHub Actions.
 
 Note about signing:
 - In production environments, prefer ATN (signed). A self-hosted XPI may require signing depending on your Thunderbird build and deployment constraints.
@@ -554,3 +558,5 @@ If you need “preseeded” settings for many users, typical approaches are:
 - use a central onboarding guide and require users to complete Login Flow v2
 
 (A future enhancement could use `browser.storage.managed` to read admin-provided settings, but this is not implemented currently.)
+
+

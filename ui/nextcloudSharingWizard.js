@@ -1191,7 +1191,7 @@
    * Render the current file list table.
    */
   function renderFileTable(){
-    dom.fileTableBody.innerHTML = '';
+    dom.fileTableBody.replaceChildren();
     if (!state.files.length){
       dom.fileEmptyPlaceholder.style.display = 'block';
       ensureUploadListVisible({ targetId: '__top__', force: true });
@@ -1220,7 +1220,7 @@
       typeCell.textContent = i18n('sharing_file_type_file');
       const statusCell = document.createElement('td');
       statusCell.className = 'status-cell';
-      statusCell.innerHTML = buildStatusMarkup(entry);
+      statusCell.appendChild(buildStatusNode(entry));
       row.append(pathCell, typeCell, statusCell);
       row.addEventListener('click', () => {
         state.selectedFileId = entry.id;
@@ -1276,22 +1276,40 @@
   }
 
   /**
-   * Build the status cell markup for a file entry.
+   * Build the status cell DOM for a file entry.
    * @param {object} entry
-   * @returns {string}
+   * @returns {Node}
    */
-  function buildStatusMarkup(entry){
+  function buildStatusNode(entry){
     if (entry.status === 'uploading'){
       const percent = entry.progress || 0;
-      return `<div class="status-progress"><span class="percent">${percent}%</span><div class="bar"><span style="width:${percent}%;"></span></div></div>`;
+      const wrapper = document.createElement('div');
+      wrapper.className = 'status-progress';
+      const percentLabel = document.createElement('span');
+      percentLabel.className = 'percent';
+      percentLabel.textContent = `${percent}%`;
+      const bar = document.createElement('div');
+      bar.className = 'bar';
+      const fill = document.createElement('span');
+      fill.style.width = `${percent}%`;
+      bar.appendChild(fill);
+      wrapper.append(percentLabel, bar);
+      return wrapper;
     }
+    const text = document.createElement('span');
     if (entry.status === 'done'){
-      return `<span class="status-done">${i18n('sharing_status_done_row')}</span>`;
+      text.className = 'status-done';
+      text.textContent = i18n('sharing_status_done_row');
+      return text;
     }
     if (entry.status === 'error'){
-      return `<span class="status-error" title="${NCTalkTextUtils.escapeHtml(entry.error || '')}">${i18n('sharing_status_error_row')}</span>`;
+      text.className = 'status-error';
+      text.title = String(entry.error || '');
+      text.textContent = i18n('sharing_status_error_row');
+      return text;
     }
-    return `<span>${i18n('sharing_status_waiting')}</span>`;
+    text.textContent = i18n('sharing_status_waiting');
+    return text;
   }
 
   /**

@@ -6,6 +6,7 @@
 "use strict";
 (function(global){
   let runtimeDisconnectGuardInstalled = false;
+  let runtimeContextUnloading = false;
 
   /**
    * Check whether a runtime messaging error is expected while the page unloads.
@@ -33,6 +34,12 @@
       return;
     }
     runtimeDisconnectGuardInstalled = true;
+    const markRuntimeContextUnloading = () => {
+      runtimeContextUnloading = true;
+    };
+    global.addEventListener("pagehide", markRuntimeContextUnloading, true);
+    global.addEventListener("beforeunload", markRuntimeContextUnloading, true);
+    global.addEventListener("unload", markRuntimeContextUnloading, true);
     global.addEventListener("unhandledrejection", (event) => {
       try{
         const reason = event?.reason;
@@ -91,7 +98,7 @@
    */
   function forwardDebugLog(config){
     const enabled = !!config?.enabled;
-    const isPageUnloading = !!config?.isPageUnloading;
+    const isPageUnloading = !!config?.isPageUnloading || runtimeContextUnloading;
     if (!enabled || isPageUnloading){
       return;
     }
@@ -135,7 +142,7 @@
         return;
       }
       void sendPromise.then(() => {}, (error) => {
-        if (isPageUnloading){
+        if (runtimeContextUnloading || isPageUnloading){
           return;
         }
         const message = error?.message || String(error || "");
@@ -146,7 +153,7 @@
         reportError("debug log forward failed", error);
       });
     }catch(error){
-      if (isPageUnloading){
+      if (runtimeContextUnloading || isPageUnloading){
         return;
       }
       reportError("debug log send setup failed", error);

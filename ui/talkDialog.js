@@ -1267,11 +1267,14 @@
     if (normalizedType === "html"){
       const safeUrl = NCTalkTextUtils.escapeHtml(meetingUrl || "");
       const safePassword = NCTalkTextUtils.escapeHtml(password || "");
-      const html = String(template || "")
+      const rawHtml = String(template || "")
         .split("{MEETING_URL}").join(safeUrl)
         .split("{PASSWORD}").join(safePassword);
+      const html = typeof window.NCHtmlSanitizer?.sanitizeTalkTemplateHtml === "function"
+        ? window.NCHtmlSanitizer.sanitizeTalkTemplateHtml(rawHtml)
+        : rawHtml;
       return {
-        text: "",
+        text: htmlToPlainText(html),
         html: html.trim()
       };
     }
@@ -1290,6 +1293,9 @@
    * @returns {string}
    */
   function plainTextToHtml(value){
+    if (typeof window.NCHtmlSanitizer?.plainTextToHtml === "function"){
+      return window.NCHtmlSanitizer.plainTextToHtml(value);
+    }
     const normalized = String(value || "").replace(/\r\n/g, "\n").replace(/\r/g, "\n").trim();
     if (!normalized){
       return "";
@@ -1308,12 +1314,26 @@
    * @returns {string}
    */
   function htmlToPlainText(value){
+    if (typeof window.NCHtmlSanitizer?.htmlToPlainText === "function"){
+      return window.NCHtmlSanitizer.htmlToPlainText(value);
+    }
     const html = String(value || "").trim();
     if (!html){
       return "";
     }
-    const doc = document.implementation.createHTMLDocument("");
-    doc.body.innerHTML = html;
+    const parser = typeof DOMParser === "function" ? new DOMParser() : null;
+    if (!parser){
+      return html
+        .replace(/<br\s*\/?>/gi, "\n")
+        .replace(/<[^>]+>/g, " ")
+        .replace(/\u00A0/g, " ")
+        .replace(/\r\n/g, "\n")
+        .replace(/\r/g, "\n")
+        .replace(/[ \t]+\n/g, "\n")
+        .replace(/\n{3,}/g, "\n\n")
+        .trim();
+    }
+    const doc = parser.parseFromString(html, "text/html");
     for (const br of doc.body.querySelectorAll("br")){
       br.replaceWith("\n");
     }
