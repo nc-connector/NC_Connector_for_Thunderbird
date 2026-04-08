@@ -156,10 +156,12 @@ browser.runtime.onMessage.addListener((msg, sender) => {
         fieldsPayload.description = fields.description;
       }
       if (typeof fields.descriptionHtml === "string"){
-        fieldsPayload.descriptionHtml = typeof NCHtmlSanitizer !== "undefined"
-          && typeof NCHtmlSanitizer.sanitizeTalkTemplateHtml === "function"
-          ? NCHtmlSanitizer.sanitizeTalkTemplateHtml(fields.descriptionHtml)
-          : fields.descriptionHtml;
+        if (typeof NCHtmlSanitizer === "undefined"
+          || typeof NCHtmlSanitizer.sanitizeTalkTemplateHtml !== "function"){
+          console.error("[NCBG] talk:applyEventFields sanitizer unavailable");
+          throw localizedError("talk_error_apply_failed");
+        }
+        fieldsPayload.descriptionHtml = NCHtmlSanitizer.sanitizeTalkTemplateHtml(fields.descriptionHtml);
       }
       const applyResponse = await browser.ncCalToolbar.updateCurrent({
         editorId,

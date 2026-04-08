@@ -1270,9 +1270,11 @@
       const rawHtml = String(template || "")
         .split("{MEETING_URL}").join(safeUrl)
         .split("{PASSWORD}").join(safePassword);
-      const html = typeof window.NCHtmlSanitizer?.sanitizeTalkTemplateHtml === "function"
-        ? window.NCHtmlSanitizer.sanitizeTalkTemplateHtml(rawHtml)
-        : rawHtml;
+      if (typeof window.NCHtmlSanitizer?.sanitizeTalkTemplateHtml !== "function"){
+        console.error("[NCUI][Talk] talk template sanitizer unavailable");
+        throw new Error("talk_template_sanitizer_unavailable");
+      }
+      const html = window.NCHtmlSanitizer.sanitizeTalkTemplateHtml(rawHtml);
       return {
         text: htmlToPlainText(html),
         html: html.trim()

@@ -84,7 +84,7 @@ See [`CHANGELOG.md`](https://github.com/nc-connector/NC_Connector_for_Thunderbir
 - App password or Login Flow V2
 
 ## Installation
-1. Install the current XPI release (for example `nc4tb-3.0.1.xpi`) in Thunderbird (Add-ons > Gear > Install Add-on From File).
+1. Install the current XPI release (for example `nc4tb-3.0.2.xpi`) in Thunderbird (Add-ons > Gear > Install Add-on From File).
 2. Restart Thunderbird.
 3. In the add-on options, enter base URL, user, and app password or start the login flow.
 

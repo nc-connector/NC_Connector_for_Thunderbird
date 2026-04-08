@@ -5,7 +5,7 @@ This document is the **single source of truth** for developers maintaining or ex
 It complements:
 - `docs/ADDON_DESCRIPTION.md` (architecture overview)
 - `docs/ATN_REVIEW_CHECKLIST_INTERNAL.md` (internal review constraints you must not violate)
-- `docs/ATN_REVIEW_NOTES_3.0.1.md` (reviewer-facing release-specific notes)
+- `docs/ATN_REVIEW_NOTES_3.0.2.md` (reviewer-facing release-specific notes)
 
 ---
 

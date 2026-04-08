@@ -4,6 +4,18 @@ All notable changes to **NC Connector for Thunderbird** will be documented in th
 
 This project targets **Thunderbird ESR 140.\***.
 
+## 3.0.2
+
+Release package version is **3.0.2**.  
+Functional delta documented here corresponds to **3.0.1 -> 3.0.2**.
+
+### Changed
+- Release/version references were aligned to `3.0.2` across manifest, reviewer notes, smoke plan, and readmes.
+- Sanitizer-dependent backend HTML paths now fail closed instead of falling back to raw HTML:
+  - share template rendering throws if the expected share HTML sanitizer is unavailable
+  - Talk HTML template rendering throws if the expected Talk HTML sanitizer is unavailable
+  - the privileged `descriptionHtml` bridge rejects the update if the expected sanitizer is unavailable
+
 ## 3.0.1
 
 Release package version is **3.0.1**.  
