@@ -697,7 +697,8 @@
       && typeof NCHtmlSanitizer.sanitizeShareTemplateHtml === "function"){
       return NCHtmlSanitizer.sanitizeShareTemplateHtml(html);
     }
-    return String(html || "");
+    console.error("[NCSHARE] custom share template sanitizer unavailable");
+    throw new Error("share_template_sanitizer_unavailable");
   }
 
   /**

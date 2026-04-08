@@ -87,7 +87,7 @@ Siehe [`CHANGELOG.md`](https://github.com/nc-connector/NC_Connector_for_Thunderb
 
 ## Installation
 1. Aktuelle XPI 
-`nc4tb-3.0.1.xpi` (oder aktuelles Release-Artefakt) in Thunderbird installieren (`Add-ons -> Zahnrad -> Add-on aus Datei installieren`).
+`nc4tb-3.0.2.xpi` (oder aktuelles Release-Artefakt) in Thunderbird installieren (`Add-ons -> Zahnrad -> Add-on aus Datei installieren`).
 2. Thunderbird neu starten.
 3. In den Add-on-Optionen Basis-URL, Benutzer und App-Passwort hinterlegen oder den Login Flow starten.
 

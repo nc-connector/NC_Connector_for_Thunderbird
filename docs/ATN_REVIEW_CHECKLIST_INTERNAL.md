@@ -131,7 +131,20 @@ It is intended to guide ongoing and future maintenance.
 
 ---
 
-## 11. General Reviewer Expectations
+## 11. Security Guards Must Fail Closed
+
+- If a code path depends on a security mechanism, the absence of that mechanism
+  must never cause a fallback to raw or untrusted input.
+- For backend/remote HTML specifically:
+  - sanitize before use
+  - if the sanitizer is unavailable, return an empty value or throw
+  - never keep a potential code path that forwards raw HTML into UI or privileged contexts
+- Review lesson from the 3.0.1 rejection (John Bieling):
+  - a fallback from “sanitizer unavailable” to raw HTML injection is itself a review blocker
+
+---
+
+## 12. General Reviewer Expectations
 
 - Code must be:
   - readable
@@ -140,6 +153,6 @@ It is intended to guide ongoing and future maintenance.
 - Experiments should look **planned**, not experimental.
 - Avoid legacy or obsolete references (e.g. XUL in Thunderbird ≥ 128).
 
-_Last updated for 3.0.1 worktree._
+_Last updated for 3.0.2 worktree._
 
 
