@@ -456,7 +456,7 @@
     "message": "Alapkönyvtár"
   },
   "options_sharing_base_hint": {
-    "message": "A fájlok e könyvtár alatt tárolódnak (pl. „90 Freigaben - extern”)."
+    "message": "A fájlok e könyvtár alatt tárolódnak (pl. „NC Connector”)."
   },
   "options_sharing_defaults_heading": {
     "message": "Alapértelmezett beállítások"
@@ -867,3 +867,4 @@
     "message": "Az Ön NC Connector seatje jelenleg szünetel. Kérjük, forduljon a Nextcloud rendszergazdájához."
   }
 }
+

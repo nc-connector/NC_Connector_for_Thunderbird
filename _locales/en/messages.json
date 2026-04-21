@@ -456,7 +456,7 @@
     "message": "Base directory"
   },
   "options_sharing_base_hint": {
-    "message": "Files are stored beneath this directory (e.g. \"90 Shares - external\")."
+    "message": "Files are stored beneath this directory (e.g. \"NC Connector\")."
   },
   "options_sharing_defaults_heading": {
     "message": "Default settings"
@@ -867,3 +867,4 @@
     "message": "Your NC Connector seat is currently paused. Please contact your Nextcloud administrator."
   }
 }
+

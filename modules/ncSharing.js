@@ -5,7 +5,7 @@
  */
 'use strict';
 (function(__context){
-  const DEFAULT_BASE_PATH = "90 Shares - external";
+  const DEFAULT_BASE_PATH = "NC Connector";
   const NEXTCLOUD_DEVICE_NAME = "NC Connector for Thunderbird";
   const PERMISSION_FLAGS = {
     read: 1,
@@ -1130,3 +1130,4 @@
     __context.NCSharing = api;
   }
 })(typeof window !== "undefined" ? window : (typeof globalThis !== "undefined" ? globalThis : this));
+

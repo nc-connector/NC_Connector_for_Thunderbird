@@ -88,7 +88,7 @@ These defaults are used by the **Sharing Wizard** (compose window).
 
 | UI label | Storage key | Purpose |
 |---|---|---|
-| Base directory | `sharingBasePath` | Remote folder base path under which new share folders are created (e.g. `90 Shares - external`) |
+| Base directory | `sharingBasePath` | Remote folder base path under which new share folders are created (e.g. `NC Connector`) |
 | Default share name | `sharingDefaultShareName` | Pre-fills the share name input |
 | Default permissions: Upload/Create | `sharingDefaultPermCreate` | Enables “upload/create” for the share |
 | Default permissions: Edit | `sharingDefaultPermWrite` | Enables editing for the share |
@@ -549,5 +549,6 @@ If you need “preseeded” settings for many users, typical approaches are:
 - use a central onboarding guide and require users to complete Login Flow v2
 
 (A future enhancement could use `browser.storage.managed` to read admin-provided settings, but this is not implemented currently.)
+
 
 

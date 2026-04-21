@@ -456,7 +456,7 @@
     "message": "Diretório base"
   },
   "options_sharing_base_hint": {
-    "message": "Os ficheiros são armazenados sob este diretório (ex.: \"90 Freigaben - extern\")."
+    "message": "Os ficheiros são armazenados sob este diretório (ex.: \"NC Connector\")."
   },
   "options_sharing_defaults_heading": {
     "message": "Definições padrão"
@@ -867,3 +867,4 @@
     "message": "O seu seat do NC Connector está atualmente em pausa. Contacte o administrador do Nextcloud."
   }
 }
+

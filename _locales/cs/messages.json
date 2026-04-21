@@ -456,7 +456,7 @@
     "message": "Základní adresář"
   },
   "options_sharing_base_hint": {
-    "message": "Soubory jsou ukládány pod tento adresář (např. \"90 Freigaben - extern\")."
+    "message": "Soubory jsou ukládány pod tento adresář (např. \"NC Connector\")."
   },
   "options_sharing_defaults_heading": {
     "message": "Výchozí nastavení"
@@ -867,3 +867,4 @@
     "message": "Váš seat NC Connector je momentálně pozastaven. Obraťte se prosím na správce Nextcloud."
   }
 }
+

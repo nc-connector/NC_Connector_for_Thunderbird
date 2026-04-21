@@ -456,7 +456,7 @@
     "message": "基礎目錄"
   },
   "options_sharing_base_hint": {
-    "message": "檔案會儲存在此目錄下（例如 \"90 Freigaben - extern\"）。"
+    "message": "檔案會儲存在此目錄下（例如 \"NC Connector\"）。"
   },
   "options_sharing_defaults_heading": {
     "message": "預設設定"
@@ -867,3 +867,4 @@
     "message": "您的 NC Connector 席位目前已暫停。請聯絡您的 Nextcloud 管理員。"
   }
 }
+

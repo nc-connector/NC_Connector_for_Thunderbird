@@ -456,7 +456,7 @@
     "message": "Basismap"
   },
   "options_sharing_base_hint": {
-    "message": "Bestanden worden onder deze map opgeslagen (bijv. \"90 Freigaben - extern\")."
+    "message": "Bestanden worden onder deze map opgeslagen (bijv. \"NC Connector\")."
   },
   "options_sharing_defaults_heading": {
     "message": "Standaardinstellingen"
@@ -867,3 +867,4 @@
     "message": "Uw NC Connector-seat is momenteel gepauzeerd. Neem contact op met uw Nextcloud-beheerder."
   }
 }
+

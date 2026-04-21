@@ -456,7 +456,7 @@
     "message": "Базовый каталог"
   },
   "options_sharing_base_hint": {
-    "message": "Файлы будут храниться в этом каталоге (например, \"90 Freigaben - extern\")."
+    "message": "Файлы будут храниться в этом каталоге (например, \"NC Connector\")."
   },
   "options_sharing_defaults_heading": {
     "message": "Настройки по умолчанию"
@@ -867,3 +867,4 @@
     "message": "Ваш seat NC Connector сейчас приостановлен. Пожалуйста, обратитесь к администратору Nextcloud."
   }
 }
+

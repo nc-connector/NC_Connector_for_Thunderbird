@@ -456,7 +456,7 @@
     "message": "Basisverzeichnis"
   },
   "options_sharing_base_hint": {
-    "message": "Dateien werden unterhalb dieses Verzeichnisses abgelegt (z. B. \\\"90 Freigaben - extern\\\")."
+    "message": "Dateien werden unterhalb dieses Verzeichnisses abgelegt (z. B. \\\"NC Connector\\\")."
   },
   "options_sharing_defaults_heading": {
     "message": "Default-Einstellungen"
@@ -867,3 +867,4 @@
     "message": "Ihr NC Connector Seat ist derzeit pausiert. Bitte wenden Sie sich an Ihren Nextcloud-Administrator."
   }
 }
+

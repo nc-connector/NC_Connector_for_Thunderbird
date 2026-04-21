@@ -456,7 +456,7 @@
     "message": "Directorio base"
   },
   "options_sharing_base_hint": {
-    "message": "Los archivos se guardan dentro de este directorio (p. ej. \"90 Freigaben - extern\")."
+    "message": "Los archivos se guardan dentro de este directorio (p. ej. \"NC Connector\")."
   },
   "options_sharing_defaults_heading": {
     "message": "Ajustes predeterminados"
@@ -867,3 +867,4 @@
     "message": "Su seat de NC Connector está actualmente en pausa. Póngase en contacto con su administrador de Nextcloud."
   }
 }
+

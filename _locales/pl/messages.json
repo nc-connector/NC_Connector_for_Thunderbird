@@ -456,7 +456,7 @@
     "message": "Katalog bazowy"
   },
   "options_sharing_base_hint": {
-    "message": "Pliki są przechowywane w tym katalogu (np. \"90 Freigaben - extern\")."
+    "message": "Pliki są przechowywane w tym katalogu (np. \"NC Connector\")."
   },
   "options_sharing_defaults_heading": {
     "message": "Ustawienia domyślne"
@@ -867,3 +867,4 @@
     "message": "Twój seat NC Connector jest obecnie wstrzymany. Skontaktuj się z administratorem Nextcloud."
   }
 }
+

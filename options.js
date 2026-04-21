@@ -94,7 +94,7 @@ const shareBlockLangRow = document.getElementById("shareBlockLangRow");
 const shareBlockLangSelect = document.getElementById("shareBlockLang");
 const eventDescriptionLangRow = document.getElementById("eventDescriptionLangRow");
 const eventDescriptionLangSelect = document.getElementById("eventDescriptionLang");
-const DEFAULT_SHARING_BASE = (typeof NCSharing !== "undefined" ? NCSharing.DEFAULT_BASE_PATH : "90 Shares - external");
+const DEFAULT_SHARING_BASE = (typeof NCSharing !== "undefined" ? NCSharing.DEFAULT_BASE_PATH : "NC Connector");
 let statusTimer = null;
 let composeAttachmentSettingsLocked = false;
 let runtimePolicyStatus = null;
@@ -1757,6 +1757,7 @@ async function runConnectionTest({ showMissing = true } = {}){
     return { ok:false, error: err?.message || String(err) };
   }
 }
+
 
 
 
