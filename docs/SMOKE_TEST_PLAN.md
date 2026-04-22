@@ -106,6 +106,10 @@ Run all cases at least once on M1 and M2, except cases marked `3.0.2 only`.
   - Pass: user can resolve collision and continue.
 - [ ] `S-06` Finalize inserts HTML block into compose body.
   - Pass: compose body contains formatted share block.
+- [ ] `S-06a` Plain-text compose mode (`Options -> Delivery Format -> Plain Text`) inserts converted plain-text share block.
+  - Pass: inserted block is plain text, framed with fixed 60 `#` at top/bottom, and permissions are compacted to one line.
+- [ ] `S-06b` HTML compose mode keeps rich share block insertion.
+  - Pass: rich formatting remains visible; backend custom-template path still enforces sanitizer fail-closed.
 - [ ] `S-07` Wizard cancel before finalize.
   - Pass: remote cleanup removes created share folder/share.
 - [ ] `S-08` Wizard close via window close button (`X`).
@@ -138,6 +142,10 @@ Run all cases at least once on M1 and M2, except cases marked `3.0.2 only`.
   - Pass: user can manually send password mail.
 - [ ] `P-05` `3.0.2 only`: fallback opened but not sent, then tab closed after the primary mail was already sent.
   - Pass: committed share is retained; password follow-up problems do not trigger share cleanup after successful primary send.
+- [ ] `P-06` `3.0.2 only`: primary compose in plain-text mode triggers plain-text password follow-up body.
+  - Pass: follow-up draft/auto-send payload uses plain text (not HTML) and is framed with fixed 50 `#` at top/bottom.
+- [ ] `P-07` `3.0.2 only`: sanitizer fail-closed behavior for backend follow-up template.
+  - Pass: when backend custom password template is active, registration/send aborts deterministically with explicit debug/error log if sanitization cannot be completed.
 
 ### H. Focus Behavior
 

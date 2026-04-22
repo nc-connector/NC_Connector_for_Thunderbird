@@ -15,5 +15,6 @@
  * - modules/bgComposePasswordDispatch.js
  * - modules/bgCompose.js (listener wiring)
  * - modules/bgCalendar.js
+ * - modules/bgComposeShareInsert.js
  * - modules/bgRouter.js
  */

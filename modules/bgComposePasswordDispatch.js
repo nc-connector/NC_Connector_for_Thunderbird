@@ -274,6 +274,89 @@ function buildSeparatePasswordMailSubject(dispatch){
 }
 
 /**
+ * Render top/bottom hash separators for password follow-up plain text.
+ * Border width is fixed to 50 hash characters.
+ * @param {string} plainText
+ * @returns {string}
+ */
+function framePasswordDispatchPlainTextBlock(plainText){
+  const lines = String(plainText || "")
+    .replace(/\r\n?/g, "\n")
+    .split("\n");
+  const border = "#".repeat(50);
+  return [border, ...lines, border].join("\n");
+}
+
+/**
+ * Build plain text from a password-dispatch HTML block.
+ * @param {string} sourceHtml
+ * @returns {string}
+ */
+function buildPasswordDispatchPlainText(sourceHtml){
+  if (typeof NCHtmlSanitizer?.htmlToPlainText !== "function"){
+    throw new Error("sharing_template_plaintext_converter_unavailable");
+  }
+  const plainText = String(NCHtmlSanitizer.htmlToPlainText(String(sourceHtml || "")) || "").trim();
+  if (!plainText){
+    throw new Error("sharing_password_dispatch_plaintext_empty");
+  }
+  return framePasswordDispatchPlainTextBlock(plainText);
+}
+
+/**
+ * Resolve whether follow-up password mail should use plain text or HTML.
+ * @param {object} details
+ * @returns {{isPlainText:boolean,reason:string,deliveryFormat:string}}
+ */
+function resolvePasswordDispatchComposeMode(details = {}){
+  const editorIsPlainText = details?.isPlainText === true;
+  const deliveryFormat = typeof details?.deliveryFormat === "string"
+    ? details.deliveryFormat.trim().toLowerCase()
+    : "";
+  if (editorIsPlainText){
+    return {
+      isPlainText: true,
+      reason: "compose_plaintext_mode",
+      deliveryFormat
+    };
+  }
+  if (deliveryFormat === "plaintext"){
+    return {
+      isPlainText: true,
+      reason: "delivery_format_plaintext",
+      deliveryFormat
+    };
+  }
+  return {
+    isPlainText: false,
+    reason: "compose_html_mode",
+    deliveryFormat
+  };
+}
+
+/**
+ * Build compose body fields for separate password dispatch.
+ * Mirrors the source compose mode when possible.
+ * @param {object} dispatch
+ * @returns {{isPlainText:boolean,body?:string,plainTextBody?:string}}
+ */
+function buildSeparatePasswordMailBodyFields(dispatch){
+  if (dispatch?.isPlainText === true){
+    const plainTextBody = String(dispatch?.plainText || "").trim();
+    if (plainTextBody){
+      return {
+        isPlainText: true,
+        plainTextBody
+      };
+    }
+  }
+  return {
+    isPlainText: false,
+    body: String(dispatch?.html || "")
+  };
+}
+
+/**
  * Register a pending password-only follow-up mail for one compose tab.
  * Recipients are captured from compose.onBeforeSend for the final send action.
  * Initial compose details are captured immediately to preserve identity context.
@@ -285,10 +368,12 @@ async function registerSeparatePasswordMailDispatch(tabId, payload = {}){
     throw new Error("invalid_tab_id");
   }
   const password = String(payload.password || "").trim();
-  const html = String(payload.html || "").trim();
-  if (!password || !html){
+  const rawHtml = String(payload.html || "").trim();
+  if (!password || !rawHtml){
     throw new Error("password_or_html_missing");
   }
+  const html = rawHtml;
+  const plainText = buildPasswordDispatchPlainText(html);
   const dispatch = {
     tabId,
     shareLabel: String(payload.shareLabel || "").trim(),
@@ -297,6 +382,10 @@ async function registerSeparatePasswordMailDispatch(tabId, payload = {}){
     folderInfo: normalizeComposeShareCleanupFolderInfo(payload.folderInfo) || null,
     password,
     html,
+    plainText,
+    isPlainText: false,
+    composeModeReason: "compose_html_mode",
+    deliveryFormat: "",
     to: [],
     cc: [],
     bcc: [],
@@ -307,6 +396,10 @@ async function registerSeparatePasswordMailDispatch(tabId, payload = {}){
   };
   try{
     const composeDetails = await browser.compose.getComposeDetails(tabId);
+    const composeMode = resolvePasswordDispatchComposeMode(composeDetails);
+    dispatch.isPlainText = composeMode.isPlainText;
+    dispatch.composeModeReason = composeMode.reason;
+    dispatch.deliveryFormat = composeMode.deliveryFormat;
     const identityId = String(composeDetails?.identityId || "").trim();
     if (identityId){
       dispatch.identityId = identityId;
@@ -343,6 +436,10 @@ async function registerSeparatePasswordMailDispatch(tabId, payload = {}){
     hasIdentityId: !!dispatch.identityId,
     hasFrom: !!dispatch.from,
     hasFromEmail: !!dispatch.fromEmail,
+    composeMode: dispatch.isPlainText ? "plain" : "html",
+    composeModeReason: dispatch.composeModeReason || "",
+    deliveryFormat: dispatch.deliveryFormat || "",
+    composeModeSource: "registration_snapshot",
     to: dispatch.to.length,
     cc: dispatch.cc.length,
     bcc: dispatch.bcc.length
@@ -362,6 +459,28 @@ async function captureSeparatePasswordDispatchRecipients(tabId, details = {}){
   if (!Array.isArray(queue) || !queue.length){
     return;
   }
+  let composeModeSource = "registration_snapshot";
+  let composeMode = null;
+  if (typeof details?.isPlainText === "boolean" || typeof details?.deliveryFormat === "string"){
+    composeMode = resolvePasswordDispatchComposeMode(details);
+    composeModeSource = "on_before_send_details";
+  }else{
+    try{
+      const composeDetails = await browser.compose.getComposeDetails(tabId);
+      if (typeof composeDetails?.isPlainText === "boolean" || typeof composeDetails?.deliveryFormat === "string"){
+        composeMode = resolvePasswordDispatchComposeMode(composeDetails);
+        composeModeSource = "compose_details_fallback";
+      }else{
+        composeModeSource = "compose_mode_missing";
+      }
+    }catch(error){
+      composeModeSource = "compose_mode_fallback_failed";
+      L("sharing separate password compose mode fallback unavailable", {
+        tabId,
+        error: error?.message || String(error)
+      });
+    }
+  }
   const to = normalizeComposeRecipientList(details?.to);
   const cc = normalizeComposeRecipientList(details?.cc);
   const bcc = normalizeComposeRecipientList(details?.bcc);
@@ -376,6 +495,11 @@ async function captureSeparatePasswordDispatchRecipients(tabId, details = {}){
     }
     if (from){
       dispatch.from = from;
+    }
+    if (composeMode){
+      dispatch.isPlainText = composeMode.isPlainText;
+      dispatch.composeModeReason = composeMode.reason;
+      dispatch.deliveryFormat = composeMode.deliveryFormat;
     }
   }
   const identityResolution = await ensureSeparatePasswordDispatchIdentity(queue[0]);
@@ -396,6 +520,10 @@ async function captureSeparatePasswordDispatchRecipients(tabId, details = {}){
     hasIdentityId: queue.some((dispatch) => !!String(dispatch?.identityId || "").trim()),
     hasFrom: !!from,
     hasFromEmail: queue.some((dispatch) => !!String(dispatch?.fromEmail || "").trim()),
+    composeMode: queue.some((dispatch) => dispatch?.isPlainText === true) ? "plain" : "html",
+    composeModeReason: String(queue[0]?.composeModeReason || ""),
+    deliveryFormat: String(queue[0]?.deliveryFormat || ""),
+    composeModeSource,
     firstToType: typeof to[0] === "string" ? "string" : (to[0]?.type || "")
   });
 }
@@ -651,11 +779,11 @@ async function showPasswordMailFailureNotification(recipientCount){
  * @returns {Promise<number>}
  */
 async function openManualPasswordComposeFallback(sourceTabId, dispatch, failedComposeTabId, reason){
+  const bodyFields = buildSeparatePasswordMailBodyFields(dispatch);
   const manualComposeDetails = {
     to: dispatch.to,
     subject: buildSeparatePasswordMailSubject(dispatch),
-    isPlainText: false,
-    body: dispatch.html
+    ...bodyFields
   };
   if (dispatch.identityId){
     manualComposeDetails.identityId = dispatch.identityId;
@@ -666,6 +794,9 @@ async function openManualPasswordComposeFallback(sourceTabId, dispatch, failedCo
     sourceTabId,
     failedComposeTabId: Number.isInteger(failedComposeTabId) ? failedComposeTabId : 0,
     manualComposeTabId,
+    composeMode: bodyFields.isPlainText ? "plain" : "html",
+    composeModeReason: String(dispatch?.composeModeReason || ""),
+    deliveryFormat: String(dispatch?.deliveryFormat || ""),
     reason: String(reason || "")
   });
   return manualComposeTabId;
@@ -842,11 +973,11 @@ async function sendSeparatePasswordMail(tabId, queue){
   let manualFallbackNeedsSenderCount = 0;
   for (const dispatch of queue){
     const identityResolution = await ensureSeparatePasswordDispatchIdentity(dispatch);
+    const bodyFields = buildSeparatePasswordMailBodyFields(dispatch);
     const autoComposeDetails = {
       to: dispatch.to,
       subject: buildSeparatePasswordMailSubject(dispatch),
-      isPlainText: false,
-      body: dispatch.html
+      ...bodyFields
     };
     if (identityResolution.identityId){
       autoComposeDetails.identityId = identityResolution.identityId;
@@ -856,7 +987,10 @@ async function sendSeparatePasswordMail(tabId, queue){
       to: dispatch.to.length,
       hasIdentityId: !!identityResolution.identityId,
       hasFrom: !!dispatch.from,
-      hasFromEmail: !!identityResolution.fromEmail
+      hasFromEmail: !!identityResolution.fromEmail,
+      composeMode: bodyFields.isPlainText ? "plain" : "html",
+      composeModeReason: String(dispatch?.composeModeReason || ""),
+      deliveryFormat: String(dispatch?.deliveryFormat || "")
     });
     if (!identityResolution.identityId){
       autoSendSkippedIdentityCount++;

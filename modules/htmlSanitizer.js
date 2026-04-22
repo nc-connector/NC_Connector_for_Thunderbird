@@ -143,6 +143,20 @@
     if (!body){
       return "";
     }
+    for (const anchor of body.querySelectorAll("a[href]")){
+      const href = String(anchor.getAttribute("href") || "").trim();
+      const text = String(anchor.textContent || "")
+        .replace(/\u00A0/g, " ")
+        .replace(/\s+/g, " ")
+        .trim();
+      if (!href){
+        continue;
+      }
+      const replacement = !text
+        ? href
+        : (text === href ? text : `${text} (${href})`);
+      anchor.replaceWith(replacement);
+    }
     for (const br of body.querySelectorAll("br")){
       br.replaceWith("\n");
     }
