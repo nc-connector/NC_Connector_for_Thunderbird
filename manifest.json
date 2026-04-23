@@ -49,6 +49,7 @@
       "modules/bgCompose.js",
       "modules/bgCalendarLifecycle.js",
       "modules/bgCalendar.js",
+      "modules/bgComposeShareInsert.js",
       "modules/bgRouter.js",
       "modules/background.js"
     ]

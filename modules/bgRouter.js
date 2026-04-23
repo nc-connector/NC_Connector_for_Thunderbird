@@ -543,24 +543,7 @@ browser.runtime.onMessage.addListener((msg, sender) => {
   }
   if (msg.type === "sharing:insertHtml"){
     try{
-      const tabId = msg.payload?.tabId;
-      const html = msg.payload?.html || "";
-      if (!tabId || !html){
-        return { ok:false, error: "tab/html missing" };
-      }
-      const details = await browser.compose.getComposeDetails(tabId);
-      const currentBody = details.body || "";
-      const blockSegment = `<br>${html}<br><br>`;
-      const bodyMatch = currentBody.match(/<body[^>]*>/i);
-      let newBody = "";
-      if (bodyMatch){
-        const insertIndex = bodyMatch.index + bodyMatch[0].length;
-        newBody = currentBody.slice(0, insertIndex) + blockSegment + currentBody.slice(insertIndex);
-      }else{
-        newBody = blockSegment + currentBody;
-      }
-      await browser.compose.setComposeDetails(tabId, { body: newBody, isPlainText: false });
-      return { ok:true };
+      return await handleSharingInsertHtmlMessage(msg.payload || {});
     }catch(e){
       return messageError("sharing:insertHtml", e);
     }

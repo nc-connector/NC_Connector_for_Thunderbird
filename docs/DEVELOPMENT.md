@@ -110,6 +110,7 @@ Key files you’ll touch most:
 - `modules/bgState.js` — shared runtime state, startup initialization, and `[NCBG]` log helper
 - `modules/bgComposeAttachments.js` — compose attachment automation, threshold prompts, and sharing-launch context handling
 - `modules/bgComposeShareCleanup.js` — compose-tab and wizard-window remote cleanup lifecycle
+- `modules/bgComposeShareInsert.js` — mode-aware share-block insertion (HTML vs plain-text compose)
 - `modules/bgComposePasswordDispatch.js` — separate-password-mail dispatch and password policy fetch/generate
 - `modules/bgCompose.js` — compose/window/tab listener wiring
 - `modules/bgCalendarLifecycle.js` — calendar wizard context and editor-close cleanup lifecycle helpers
@@ -303,7 +304,7 @@ Current implementation:
   - editor-targeted snapshot/write-back (`getCurrent` / `updateCurrent`)
   - tracked close lifecycle (`onTrackedEditorClosed`)
 - `experiments/calendar/**` remains untouched and is used only for persisted item monitoring.
-- Business logic remains in background runtime modules (`modules/bgState.js`, `modules/bgComposeAttachments.js`, `modules/bgComposeShareCleanup.js`, `modules/bgComposePasswordDispatch.js`, `modules/bgCompose.js`, `modules/bgCalendarLifecycle.js`, `modules/bgCalendar.js`, `modules/bgRouter.js`, `modules/talkAddressbook.js`, `modules/talkcore.js`).
+- Business logic remains in background runtime modules (`modules/bgState.js`, `modules/bgComposeAttachments.js`, `modules/bgComposeShareCleanup.js`, `modules/bgComposeShareInsert.js`, `modules/bgComposePasswordDispatch.js`, `modules/bgCompose.js`, `modules/bgCalendarLifecycle.js`, `modules/bgCalendar.js`, `modules/bgRouter.js`, `modules/talkAddressbook.js`, `modules/talkcore.js`).
 
 ### 7.2 Editor variants: dialog vs tab
 
@@ -576,6 +577,9 @@ Attachment mode specifics:
   - Background tracks live sender switches on `compose.onIdentityChanged`, captures the final main-mail envelope on `compose.onBeforeSend`, and dispatches password-only mail on `compose.onAfterSend`.
   - The authoritative primary-mail sender is resolved via Thunderbird compose details plus `accountsRead` identity lookup; the password follow-up must use the same Thunderbird identity as the main mail.
   - The password follow-up itself targets only the primary mail `To` recipients; `Cc`/`Bcc` are still captured as part of the authoritative main-mail envelope.
+  - Backend custom password templates (`language_share_html_block=custom` + `share_password_template`) are sanitized in `NCSharing.buildHtmlBlock(...)` before follow-up registration; missing sanitizer or empty sanitized output aborts finalize (fail-closed).
+  - Follow-up mail delivery mode mirrors the source compose mode (`isPlainText` / `deliveryFormat`) captured from compose details and refreshed on `compose.onBeforeSend`.
+  - When follow-up is plain text, body is generated via `htmlToPlainText(...)` and framed with a fixed 50-character `#` border.
   - Dispatch path: first warm the freshly created password compose tab until Thunderbird exposes the expected sender/recipient envelope, then try `compose.sendMessage(..., { mode: "sendNow" })` with a timeout guard for stuck send attempts.
   - If sender identity cannot be resolved cleanly, or if immediate send fails (or times out), background opens a prefilled compose draft as explicit manual fallback.
   - If a manual fallback draft was opened, a dedicated desktop notification tells the user to send the password mail manually.
@@ -584,7 +588,7 @@ Attachment mode specifics:
 - The same lock is enforced live in background before evaluate/start/prompt-action and again at attachment-mode wizard finish.
 - On cancel, attachments are not restored to compose (explicit product decision).
 
-### 10.2 Inserting the HTML block into the compose window
+### 10.2 Inserting share blocks into compose (mode-aware)
 
 The sharing wizard sends:
 - `browser.runtime.sendMessage({ type: "sharing:armComposeShareCleanup", payload: { tabId, folderInfo, ... } })`
@@ -592,7 +596,12 @@ The sharing wizard sends:
 
 Background:
 - arms compose-share cleanup before insertion (for unsent-tab cleanup handling)
-- reads current compose body and inserts the block near the `<body>` tag.
+- routes `sharing:insertHtml` through `modules/bgComposeShareInsert.js`.
+- receives pre-rendered share HTML from `NCSharing.buildHtmlBlock(...)`; backend custom templates are sanitized there before insert.
+- resolves compose mode from `isPlainText` + `deliveryFormat`:
+  - HTML compose mode: inserts source HTML near `<body>`.
+  - Plain-text compose mode: converts source HTML to plain text, normalizes permission markers (`[x]` / `[ ]`), compacts permission rows, and frames the block with a fixed 60-character `#` border.
+  - For HTML editors with plain-text delivery format, inserts an escaped plain-text rendering to preserve deterministic plain-text output.
 
 ### 10.3 Share block language override
 
