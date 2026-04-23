@@ -177,7 +177,7 @@
     "message": "Potrzebujesz pomocy?"
   },
   "ui_description_help_url": {
-    "message": "https://docs.nextcloud.com/server/latest/user_manual/en/talk/join_a_call_or_chat_as_guest.html"
+    "message": "https://docs.nextcloud.com/server/latest/user_manual/en/talk/guest.html"
   },
   "talk_dialog_title": {
     "message": "NextRozmowa w chmurze"

@@ -422,7 +422,7 @@ async function buildStandardTalkDescription(url, password, languageOverride = ""
     : "";
   const helpLabel = await descriptionI18n(lang, "ui_description_help_label");
   const helpUrl = (await descriptionI18n(lang, "ui_description_help_url"))
-    || "https://docs.nextcloud.com/server/latest/user_manual/en/talk/join_a_call_or_chat_as_guest.html";
+    || "https://docs.nextcloud.com/server/latest/user_manual/en/talk/guest.html";
   const lines = [
     heading,
     "",
