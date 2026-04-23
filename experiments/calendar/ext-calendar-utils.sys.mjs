@@ -239,6 +239,29 @@ export function convertAlarm(item, alarm) {
   };
 }
 
+/**
+ * Thunderbird >=148 no longer exposes cal.createAdapter(). Build explicit
+ * calIObserver objects so the calendar experiment keeps working on newer
+ * release channels as well as ESR.
+ *
+ * @param {object} methods
+ * @returns {calIObserver}
+ */
+export function createCalendarObserver(methods = {}) {
+  return Object.assign({
+    QueryInterface: ChromeUtils.generateQI(["calIObserver"]),
+    onStartBatch() {},
+    onEndBatch() {},
+    onLoad() {},
+    onAddItem() {},
+    onModifyItem() {},
+    onDeleteItem() {},
+    onError() {},
+    onPropertyChanged() {},
+    onPropertyDeleting() {},
+  }, methods);
+}
+
 export async function setupE10sBrowser(extension, browser, parent, initOptions={}) {
   browser.setAttribute("type", "content");
   browser.setAttribute("disableglobalhistory", "true");

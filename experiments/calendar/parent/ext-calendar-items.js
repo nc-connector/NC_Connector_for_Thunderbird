@@ -13,6 +13,7 @@ this.calendar_items = class extends ExtensionAPI {
     const root = `experiments-calendar-${uuid}`;
     const query = context.extension.manifest.version;
     const {
+      createCalendarObserver,
       getResolvedCalendarById,
       getCachedCalendar,
       isCachedCalendar,
@@ -164,7 +165,7 @@ this.calendar_items = class extends ExtensionAPI {
             context,
             name: "calendar.items.onCreated",
             register: (fire, options) => {
-              const observer = cal.createAdapter(Ci.calIObserver, {
+              const observer = createCalendarObserver({
                 onAddItem: item => {
                   fire.sync(convertItem(item, options, context.extension));
                 },
@@ -181,7 +182,7 @@ this.calendar_items = class extends ExtensionAPI {
             context,
             name: "calendar.items.onUpdated",
             register: (fire, options) => {
-              const observer = cal.createAdapter(Ci.calIObserver, {
+              const observer = createCalendarObserver({
                 onModifyItem: (newItem, _oldItem) => {
                   // TODO calculate changeInfo
                   const changeInfo = {};
@@ -200,7 +201,7 @@ this.calendar_items = class extends ExtensionAPI {
             context,
             name: "calendar.items.onRemoved",
             register: fire => {
-              const observer = cal.createAdapter(Ci.calIObserver, {
+              const observer = createCalendarObserver({
                 onDeleteItem: item => {
                   fire.sync(item.calendar.id, item.id);
                 },

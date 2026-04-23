@@ -13,6 +13,7 @@ this.calendar_calendars = class extends ExtensionAPI {
     const root = `experiments-calendar-${uuid}`;
     const query = context.extension.manifest.version;
     const {
+      createCalendarObserver,
       unwrapCalendar,
       getResolvedCalendarById,
       isOwnCalendar,
@@ -275,7 +276,7 @@ this.calendar_calendars = class extends ExtensionAPI {
             context,
             name: "calendar.calendars.onUpdated",
             register: fire => {
-              const observer = cal.createAdapter(Ci.calIObserver, {
+              const observer = createCalendarObserver({
                 onPropertyChanged(calendar, name, value, _oldValue) {
                   const converted = convertCalendar(context.extension, calendar);
                   switch (name) {
