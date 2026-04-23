@@ -165,10 +165,10 @@
     "message": "Meeting"
   },
   "ui_description_heading": {
-    "message": "Nextcloud Talk"
+    "message": "This meeting takes place in Nextcloud Talk"
   },
   "ui_description_join_label": {
-    "message": "Join the meeting now:"
+    "message": "Meeting link:"
   },
   "ui_description_password_line": {
     "message": "Password: $1"
@@ -696,7 +696,7 @@
     "message": "Password must contain at least 10 characters, including upper- & lowercase letters and a special character."
   },
   "sharing_html_intro_line": {
-    "message": "I would like to share files securely and protect your privacy. Click the link below to download your files."
+    "message": "The files have been provided securely and in a privacy-compliant manner via Nextcloud. You can download them using the link below."
   },
   "sharing_attachment_prompt_title": {
     "message": "Attachment limit exceeded"

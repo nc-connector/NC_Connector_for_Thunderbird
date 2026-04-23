@@ -165,10 +165,10 @@
     "message": "會議"
   },
   "ui_description_heading": {
-    "message": "Nextcloud Talk"
+    "message": "此會議在 Nextcloud Talk 中進行"
   },
   "ui_description_join_label": {
-    "message": "立即加入會議："
+    "message": "會議連結："
   },
   "ui_description_password_line": {
     "message": "密碼：$1"
@@ -696,7 +696,7 @@
     "message": "密碼至少需要 10 個字元，並包含大寫、小寫字母與特殊字元。"
   },
   "sharing_html_intro_line": {
-    "message": "我想安全地分享檔案並保護您的隱私。請點擊下方連結下載您的檔案。"
+    "message": "這些檔案已透過 Nextcloud 以安全且符合隱私保護要求的方式提供。可透過下方連結下載。"
   },
   "sharing_attachment_prompt_title": {
     "message": "附件大小超出限制"

@@ -165,10 +165,10 @@
     "message": "会议"
   },
   "ui_description_heading": {
-    "message": "Nextcloud Talk"
+    "message": "本次会议在 Nextcloud Talk 中进行"
   },
   "ui_description_join_label": {
-    "message": "立即加入会议："
+    "message": "会议链接："
   },
   "ui_description_password_line": {
     "message": "密码：$1"
@@ -696,7 +696,7 @@
     "message": "密码至少需要 10 个字符，并包含大写字母、小写字母和特殊字符。"
   },
   "sharing_html_intro_line": {
-    "message": "我希望安全地共享文件并保护您的隐私。点击下面的链接下载您的文件。"
+    "message": "这些文件已通过 Nextcloud 以安全且符合隐私保护要求的方式提供。可通过下方链接下载。"
   },
   "sharing_attachment_prompt_title": {
     "message": "附件大小超出限制"

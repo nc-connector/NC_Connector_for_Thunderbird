@@ -165,10 +165,10 @@
     "message": "ミーティング"
   },
   "ui_description_heading": {
-    "message": "Nextcloud Talk"
+    "message": "このミーティングは Nextcloud Talk で行われます"
   },
   "ui_description_join_label": {
-    "message": "今すぐミーティングに参加:"
+    "message": "ミーティングリンク:"
   },
   "ui_description_password_line": {
     "message": "パスワード: $1"
@@ -696,7 +696,7 @@
     "message": "パスワードは大文字と小文字、特殊文字を含む 10 文字以上である必要があります。"
   },
   "sharing_html_intro_line": {
-    "message": "ファイルを安全に共有し、あなたのプライバシーを保護したいと思います。以下のリンクをクリックしてファイルをダウンロードしてください。"
+    "message": "ファイルは Nextcloud を通じて安全かつプライバシーに配慮した形で提供されています。ダウンロードは以下のリンクから可能です。"
   },
   "sharing_attachment_prompt_title": {
     "message": "添付ファイルの上限を超えました"

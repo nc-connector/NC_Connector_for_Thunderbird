@@ -165,10 +165,10 @@
     "message": "Megbeszélés"
   },
   "ui_description_heading": {
-    "message": "Nextcloud Talk"
+    "message": "Ez a megbeszélés a Nextcloud Talkban zajlik"
   },
   "ui_description_join_label": {
-    "message": "Csatlakozzon a megbeszéléshez most:"
+    "message": "Megbeszélés hivatkozása:"
   },
   "ui_description_password_line": {
     "message": "Jelszó: $1"
@@ -696,7 +696,7 @@
     "message": "A jelszónak legalább 10 karakterből kell állnia, nagy- és kisbetűkkel, valamint egy speciális karakterrel."
   },
   "sharing_html_intro_line": {
-    "message": "Szeretnék fájlokat biztonságosan megosztani, és megóvni az Ön magánszféráját. Kattintson az alábbi hivatkozásra a fájlok letöltéséhez."
+    "message": "A fájlok biztonságosan és az adatvédelemnek megfelelően, Nextcloudon keresztül kerültek megosztásra. A letöltés az alábbi hivatkozáson érhető el."
   },
   "sharing_attachment_prompt_title": {
     "message": "Mellékletkorlát túllépve"

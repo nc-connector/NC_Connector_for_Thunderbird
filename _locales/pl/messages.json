@@ -165,10 +165,10 @@
     "message": "Spotkanie"
   },
   "ui_description_heading": {
-    "message": "Nextcloud Talk"
+    "message": "To spotkanie odbywa się w Nextcloud Talk"
   },
   "ui_description_join_label": {
-    "message": "Dołącz do spotkania teraz:"
+    "message": "Link do spotkania:"
   },
   "ui_description_password_line": {
     "message": "Hasło: $1"
@@ -696,7 +696,7 @@
     "message": "Hasło musi zawierać co najmniej 10 znaków, w tym małe i wielkie litery oraz znak specjalny."
   },
   "sharing_html_intro_line": {
-    "message": "Chcę udostępnić pliki w bezpieczny sposób i chronić Twoją prywatność. Kliknij poniższy link, aby pobrać pliki."
+    "message": "Pliki zostały udostępnione przez Nextcloud w sposób bezpieczny i zgodny z zasadami ochrony prywatności. Pobieranie jest możliwe za pomocą poniższego linku."
   },
   "sharing_attachment_prompt_title": {
     "message": "Przekroczono limit załączników"

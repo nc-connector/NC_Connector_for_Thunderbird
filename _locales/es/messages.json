@@ -165,10 +165,10 @@
     "message": "Reunión"
   },
   "ui_description_heading": {
-    "message": "Nextcloud Talk"
+    "message": "Esta reunión se realiza en Nextcloud Talk"
   },
   "ui_description_join_label": {
-    "message": "Únete a la reunión ahora:"
+    "message": "Enlace de la reunión:"
   },
   "ui_description_password_line": {
     "message": "Contraseña: $1"
@@ -696,7 +696,7 @@
     "message": "La contraseña debe contener al menos 10 caracteres, incluidas letras mayúsculas y minúsculas y un carácter especial."
   },
   "sharing_html_intro_line": {
-    "message": "Me gustaría compartir archivos de forma segura y proteger tu privacidad. Haz clic en el enlace de abajo para descargar tus archivos."
+    "message": "Los archivos se han proporcionado de forma segura y conforme a la protección de datos a través de Nextcloud. La descarga es posible mediante el enlace que aparece a continuación."
   },
   "sharing_attachment_prompt_title": {
     "message": "Límite de adjuntos superado"

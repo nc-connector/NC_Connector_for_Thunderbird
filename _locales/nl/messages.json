@@ -165,10 +165,10 @@
     "message": "Vergadering"
   },
   "ui_description_heading": {
-    "message": "Nextcloud Talk"
+    "message": "Deze vergadering vindt plaats in Nextcloud Talk"
   },
   "ui_description_join_label": {
-    "message": "Neem nu deel aan de vergadering:"
+    "message": "Vergaderlink:"
   },
   "ui_description_password_line": {
     "message": "Wachtwoord: $1"
@@ -696,7 +696,7 @@
     "message": "Het wachtwoord moet minstens 10 tekens bevatten, inclusief hoofd- en kleine letters en een speciaal teken."
   },
   "sharing_html_intro_line": {
-    "message": "Ik wil graag bestanden veilig delen en je privacy beschermen. Klik op de link hieronder om je bestanden te downloaden."
+    "message": "De bestanden zijn veilig en privacyconform via Nextcloud beschikbaar gesteld. Downloaden is mogelijk via de onderstaande link."
   },
   "sharing_attachment_prompt_title": {
     "message": "Bijlagelimiet overschreden"

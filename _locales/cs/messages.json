@@ -165,10 +165,10 @@
     "message": "Schůzka"
   },
   "ui_description_heading": {
-    "message": "Nextcloud Talk"
+    "message": "Tato schůzka probíhá v Nextcloud Talk"
   },
   "ui_description_join_label": {
-    "message": "Připojte se ke schůzce nyní:"
+    "message": "Odkaz na schůzku:"
   },
   "ui_description_password_line": {
     "message": "Heslo: $1"
@@ -696,7 +696,7 @@
     "message": "Heslo musí obsahovat alespoň 10 znaků, včetně velkých a malých písmen a speciálního znaku."
   },
   "sharing_html_intro_line": {
-    "message": "Chci sdílet soubory bezpečně a chránit vaše soukromí. Klikněte na odkaz níže pro stažení souborů."
+    "message": "Soubory byly prostřednictvím Nextcloudu poskytnuty bezpečně a v souladu s ochranou osobních údajů. Stahování je možné přes níže uvedený odkaz."
   },
   "sharing_attachment_prompt_title": {
     "message": "Překročen limit příloh"

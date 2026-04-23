@@ -165,10 +165,10 @@
     "message": "Réunion"
   },
   "ui_description_heading": {
-    "message": "Nextcloud Talk"
+    "message": "Cette réunion se déroule dans Nextcloud Talk"
   },
   "ui_description_join_label": {
-    "message": "Rejoindre la réunion :"
+    "message": "Lien de réunion :"
   },
   "ui_description_password_line": {
     "message": "Mot de passe : $1"
@@ -696,7 +696,7 @@
     "message": "Le mot de passe doit comporter au moins 10 caractères avec majuscules, minuscules et un caractère spécial."
   },
   "sharing_html_intro_line": {
-    "message": "Je souhaite partager des fichiers de manière sûre et confidentielle. Cliquez sur le lien ci-dessous pour télécharger vos fichiers."
+    "message": "Les fichiers ont été fournis de manière sécurisée et conforme à la protection des données via Nextcloud. Le téléchargement est possible via le lien ci-dessous."
   },
   "sharing_attachment_prompt_title": {
     "message": "Limite des pièces jointes dépassée"
