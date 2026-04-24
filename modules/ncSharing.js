@@ -13,6 +13,8 @@
     create: 4,
     delete: 8
   };
+  const RIGHTS_SEGMENT_START = NCShareTemplateContract.RIGHTS_SEGMENT_START;
+  const RIGHTS_SEGMENT_END = NCShareTemplateContract.RIGHTS_SEGMENT_END;
   const INVALID_PATH_CHARS = /[\\/:*?"<>|]/g;
   let cachedHeaderBase64 = null;
 
@@ -643,12 +645,23 @@
   }
 
   /**
-   * Build a plain permissions text for non-HTML placeholders.
+   * Build the permissions badge table for custom HTML template placeholders.
    * @param {object} perms
    * @param {object} labels
    * @returns {string}
    */
-  function buildPermissionsText(perms, labels = {}){
+  function buildPermissionsTemplateHtml(perms, labels = {}){
+    return buildPermissionsBadges(perms, labels);
+  }
+
+  /**
+   * Build a compact plain-text permissions display with explicit check markers.
+   * Used for plain-text compose output.
+   * @param {object} perms
+   * @param {object} labels
+   * @returns {string}
+   */
+  function buildPermissionsPlainTextDisplay(perms, labels = {}){
     const safePerms = perms || {};
     const entries = [
       { label: labels.read || i18n("sharing_permission_read"), enabled: !!safePerms.read },
@@ -657,19 +670,145 @@
       { label: labels.delete || i18n("sharing_permission_delete"), enabled: !!safePerms.delete }
     ];
     return entries
-      .filter((entry) => entry.enabled)
-      .map((entry) => entry.label)
-      .join(", ");
+      .map((entry) => `${entry.enabled ? "[x]" : "[ ]"} ${entry.label}`)
+      .join(" | ");
   }
 
   /**
-   * Build the permissions badge table for custom HTML template placeholders.
-   * @param {object} perms
-   * @param {object} labels
+   * Wrap one generated rights block so final plain-text normalization stays
+   * scoped to the inserted permissions content.
+   * @param {string} value
    * @returns {string}
    */
-  function buildPermissionsTemplateHtml(perms, labels = {}){
-    return buildPermissionsBadges(perms, labels);
+  function wrapPermissionsPlainTextSegment(value){
+    const plain = String(value || "").trim();
+    if (!plain){
+      return "";
+    }
+    return `${RIGHTS_SEGMENT_START}${plain}${RIGHTS_SEGMENT_END}`;
+  }
+
+  /**
+   * Normalize line endings and vertical whitespace for plain-text rendering.
+   * @param {string} value
+   * @returns {string}
+   */
+  function normalizePlainTextBlock(value){
+    return String(value || "")
+      .replace(/\u00A0/g, " ")
+      .replace(/\r\n?/g, "\n")
+      .replace(/[ \t]+\n/g, "\n")
+      .replace(/\n{3,}/g, "\n\n")
+      .trim();
+  }
+
+  /**
+   * Encode a plain-text replacement for temporary insertion into HTML templates.
+   * @param {string} value
+   * @returns {string}
+   */
+  function plainTextToTemplateHtml(value){
+    return escapeHtml(String(value || "")).replace(/\r?\n/g, "<br />");
+  }
+
+  /**
+   * Convert trusted or sanitized HTML to plain text.
+   * @param {string} html
+   * @returns {string}
+   */
+  function htmlToPlainTextOrThrow(html){
+    if (typeof NCHtmlSanitizer?.htmlToPlainText !== "function"){
+      console.error("[NCSHARE] html->plaintext converter unavailable");
+      throw new Error("sharing_template_plaintext_converter_unavailable");
+    }
+    return normalizePlainTextBlock(NCHtmlSanitizer.htmlToPlainText(String(html || "")));
+  }
+
+  /**
+   * Build one plain-text key/value line.
+   * @param {string} label
+   * @param {string} value
+   * @returns {string}
+   */
+  function buildPlainTextField(label, value){
+    const normalizedValue = String(value || "").trim();
+    if (!normalizedValue){
+      return "";
+    }
+    const normalizedLabel = String(label || "").trim();
+    return normalizedLabel
+      ? `${normalizedLabel}: ${normalizedValue}`
+      : normalizedValue;
+  }
+
+  /**
+   * Create an inert parser for backend template pruning.
+   * @returns {DOMParser|null}
+   */
+  function createTemplateParser(){
+    if (typeof DOMParser !== "function"){
+      console.error("[NCSHARE] DOMParser unavailable for template pruning");
+      throw new Error("share_template_parser_unavailable");
+    }
+    try{
+      return new DOMParser();
+    }catch(error){
+      logInternalError("DOMParser init failed for template pruning", error);
+      throw new Error("share_template_parser_unavailable");
+    }
+  }
+
+  /**
+   * Remove one placeholder container from a backend HTML template.
+   * Uses block-like wrappers when possible and falls back to token removal.
+   * @param {string} template
+   * @param {string} placeholder
+   * @returns {string}
+   */
+  function pruneTemplatePlaceholder(template, placeholder){
+    const token = `{${String(placeholder || "").trim()}}`;
+    if (!token || token === "{}"){
+      return String(template || "");
+    }
+    const source = String(template || "");
+    if (!source.includes(token)){
+      return source;
+    }
+    const parser = createTemplateParser();
+    const parsed = parser.parseFromString(source, "text/html");
+    const body = parsed?.body;
+    if (!body){
+      throw new Error("share_template_parser_unavailable");
+    }
+    const candidates = Array.from(body.querySelectorAll("tr,li,p,div,section,article,aside,header,footer")).reverse();
+    let removed = false;
+    for (const candidate of candidates){
+      if (!candidate?.isConnected){
+        continue;
+      }
+      if (!String(candidate.innerHTML || "").includes(token)){
+        continue;
+      }
+      candidate.remove();
+      removed = true;
+    }
+    const output = String(body.innerHTML || "");
+    if (removed){
+      return output.includes(token) ? output.split(token).join("") : output;
+    }
+    return output.split(token).join("");
+  }
+
+  /**
+   * Remove all placeholders whose values would render empty.
+   * @param {string} template
+   * @param {string[]} placeholders
+   * @returns {string}
+   */
+  function pruneEmptyTemplatePlaceholders(template, placeholders = []){
+    return placeholders.reduce((output, placeholder) => {
+      return pruneTemplatePlaceholder(output, placeholder);
+    }, String(template || ""));
   }
 
   /**
@@ -702,32 +841,6 @@
   }
 
   /**
-   * Remove one placeholder row from backend-provided HTML templates.
-   * This is used to reduce the custom share block for attachment mode.
-   * @param {string} template
-   * @param {string} placeholder
-   * @returns {string}
-   */
-  function stripTemplateRow(template, placeholder){
-    const token = `{${String(placeholder || "").trim()}}`;
-    if (!token || token === "{}"){
-      return String(template || "");
-    }
-    let output = String(template || "");
-    const tokenIndex = output.indexOf(token);
-    if (tokenIndex < 0){
-      return output;
-    }
-    const lower = output.toLowerCase();
-    const rowStart = lower.lastIndexOf("<tr", tokenIndex);
-    const rowEnd = lower.indexOf("</tr>", tokenIndex);
-    if (rowStart >= 0 && rowEnd >= 0 && rowEnd >= rowStart){
-      output = output.slice(0, rowStart) + output.slice(rowEnd + 5);
-    }
-    return output.split(token).join("");
-  }
-
-  /**
    * Build the HTML block inserted into the compose body.
    * @param {object} result
    * @param {object} request
@@ -753,9 +866,6 @@
       write: await tShare(effectiveLang, "sharing_permission_write"),
       delete: await tShare(effectiveLang, "sharing_permission_delete")
     };
-    const permissionsText = request?.hidePermissions
-      ? ""
-      : buildPermissionsText(result.permissions, permissionLabels);
     const permissionsHtml = request?.hidePermissions
       ? ""
       : buildPermissionsTemplateHtml(result.permissions, permissionLabels);
@@ -771,9 +881,23 @@
       passwordText = escapeHtml(result.password || "");
     }
     if (customTemplate){
-      const effectiveTemplate = request?.hidePermissions
-        ? stripTemplateRow(customTemplate, "RIGHTS")
-        : customTemplate;
+      const emptyPlaceholders = [];
+      if (!downloadUrl){
+        emptyPlaceholders.push("URL");
+      }
+      if (!passwordText){
+        emptyPlaceholders.push("PASSWORD");
+      }
+      if (!result.expireDate){
+        emptyPlaceholders.push("EXPIRATIONDATE");
+      }
+      if (!permissionsHtml){
+        emptyPlaceholders.push("RIGHTS");
+      }
+      if (!noteText){
+        emptyPlaceholders.push("NOTE");
+      }
+      const effectiveTemplate = pruneEmptyTemplatePlaceholders(customTemplate, emptyPlaceholders);
       return sanitizeCustomTemplateHtml(applyTemplateReplacements(effectiveTemplate, {
         URL: escapeHtml(downloadUrl || ""),
         PASSWORD: passwordText,
@@ -848,6 +972,131 @@
     </tr>
   </table>
 </div>`;
+  }
+
+  /**
+   * Build the plain-text block inserted into the compose body.
+   * Local templates are rendered directly as text.
+   * Backend templates are sanitized first and then flattened to plain text.
+   * @param {object} result
+   * @param {object} request
+   * @returns {Promise<string>}
+   */
+  async function buildPlainTextBlock(result, request){
+    const shareLang = await resolveShareBlockLanguage(request);
+    const passwordOnly = !!request?.passwordOnly;
+    const hidePassword = !!request?.hidePassword;
+    const showPasswordSeparateHint = !!request?.showPasswordSeparateHint;
+    const customTemplate = getPolicyTemplate(request, passwordOnly, shareLang);
+    const effectiveLang = String(shareLang || "").toLowerCase() === "custom" && !customTemplate
+      ? "default"
+      : shareLang;
+    const shareUrl = String(result?.shareUrl || "");
+    const downloadUrl = request?.zipDownload
+      ? buildZipDownloadUrl(shareUrl)
+      : shareUrl;
+    const permissionLabels = {
+      read: await tShare(effectiveLang, "sharing_permission_read"),
+      create: await tShare(effectiveLang, "sharing_permission_create"),
+      write: await tShare(effectiveLang, "sharing_permission_write"),
+      delete: await tShare(effectiveLang, "sharing_permission_delete")
+    };
+    const permissionsPlain = request?.hidePermissions
+      ? ""
+      : wrapPermissionsPlainTextSegment(buildPermissionsPlainTextDisplay(result.permissions, permissionLabels));
+    const noteText = (!passwordOnly && request?.noteEnabled && request?.note)
+      ? normalizePlainTextBlock(String(request.note || ""))
+      : "";
+    let passwordText = "";
+    if (passwordOnly){
+      passwordText = String(result.password || "").trim();
+    }else if (hidePassword && showPasswordSeparateHint && result.password){
+      passwordText = String(await tShare(effectiveLang, "sharing_html_password_separate_hint") || "").trim();
+    }else if (!hidePassword){
+      passwordText = String(result.password || "").trim();
+    }
+
+    if (customTemplate){
+      const emptyPlaceholders = [];
+      if (!downloadUrl){
+        emptyPlaceholders.push("URL");
+      }
+      if (!passwordText){
+        emptyPlaceholders.push("PASSWORD");
+      }
+      if (!result.expireDate){
+        emptyPlaceholders.push("EXPIRATIONDATE");
+      }
+      if (!permissionsPlain){
+        emptyPlaceholders.push("RIGHTS");
+      }
+      if (!noteText){
+        emptyPlaceholders.push("NOTE");
+      }
+      const effectiveTemplate = pruneEmptyTemplatePlaceholders(customTemplate, emptyPlaceholders);
+      const renderedTemplate = applyTemplateReplacements(effectiveTemplate, {
+        URL: plainTextToTemplateHtml(downloadUrl || ""),
+        PASSWORD: plainTextToTemplateHtml(passwordText),
+        EXPIRATIONDATE: plainTextToTemplateHtml(String(result.expireDate || "")),
+        RIGHTS: plainTextToTemplateHtml(permissionsPlain),
+        NOTE: plainTextToTemplateHtml(noteText)
+      });
+      const plainText = htmlToPlainTextOrThrow(sanitizeCustomTemplateHtml(renderedTemplate));
+      if (!plainText){
+        throw new Error("sharing_template_plaintext_empty");
+      }
+      return plainText;
+    }
+
+    const sections = [];
+    if (noteText){
+      sections.push(noteText);
+    }
+    const introLine = passwordOnly
+      ? await tShare(effectiveLang, "sharing_html_password_mail_intro")
+      : await tShare(effectiveLang, "sharing_html_intro_line");
+    if (introLine){
+      sections.push(normalizePlainTextBlock(introLine));
+    }
+
+    const fields = [];
+    if (passwordOnly){
+      fields.push(buildPlainTextField(await tShare(effectiveLang, "sharing_html_password_label"), passwordText));
+    }else{
+      fields.push(buildPlainTextField(await tShare(effectiveLang, "sharing_html_download_label"), downloadUrl));
+      if (result.password && !hidePassword){
+        fields.push(buildPlainTextField(await tShare(effectiveLang, "sharing_html_password_label"), String(result.password || "")));
+      }
+      if (showPasswordSeparateHint && result.password){
+        fields.push(buildPlainTextField(
+          await tShare(effectiveLang, "sharing_html_password_label"),
+          await tShare(effectiveLang, "sharing_html_password_separate_hint")
+        ));
+      }
+      if (result.expireDate){
+        fields.push(buildPlainTextField(await tShare(effectiveLang, "sharing_html_expire_label"), String(result.expireDate || "")));
+      }
+      if (!request?.hidePermissions){
+        fields.push(buildPlainTextField(await tShare(effectiveLang, "sharing_html_permissions_label"), permissionsPlain));
+      }
+    }
+    const fieldsText = fields.filter(Boolean).join("\n");
+    if (fieldsText){
+      sections.push(fieldsText);
+    }
+
+    const footer = passwordOnly
+      ? ""
+      : ((await tShare(effectiveLang, "sharing_html_footer", ["Nextcloud"])) || "");
+    if (footer){
+      sections.push(normalizePlainTextBlock(footer));
+    }
+
+    const plainText = normalizePlainTextBlock(sections.filter(Boolean).join("\n\n"));
+    if (!plainText){
+      throw new Error("sharing_template_plaintext_empty");
+    }
+    return plainText;
   }
 
   /**
@@ -1116,6 +1365,7 @@
     DEFAULT_BASE_PATH,
     createFileLink,
     buildHtmlBlock,
+    buildPlainTextBlock,
     getFileLinkBasePath,
     buildShareFolderInfo,
     checkShareFolderAvailability,

@@ -7,6 +7,7 @@
 /**
  * Bootstrap entrypoint.
  * Runtime listeners and feature handlers are registered in:
+ * - modules/shareTemplateContract.js
  * - modules/bgState.js
  * - modules/talkAddressbook.js
  * - modules/bgCalendarLifecycle.js

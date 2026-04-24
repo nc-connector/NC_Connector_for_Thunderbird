@@ -1503,7 +1503,7 @@
         state.uploadResult.shareInfo.noteEnabled = noteEnabled;
       }
       setMessage(i18n('sharing_status_inserting'), 'info');
-      const html = await NCSharing.buildHtmlBlock(state.uploadResult.shareInfo, {
+      const renderOptions = {
         policyShare: state.policy.active ? state.policy.share : null,
         noteEnabled,
         note,
@@ -1511,7 +1511,9 @@
         zipDownload: attachmentMode,
         hidePassword: separatePasswordMail,
         showPasswordSeparateHint: separatePasswordMail
-      });
+      };
+      const html = await NCSharing.buildHtmlBlock(state.uploadResult.shareInfo, renderOptions);
+      const plainText = await NCSharing.buildPlainTextBlock(state.uploadResult.shareInfo, renderOptions);
       await armComposeShareCleanup({
         tabId: Number(state.tabId),
         shareId: state.uploadResult.shareInfo?.shareId || "",
@@ -1519,12 +1521,14 @@
         shareUrl: state.uploadResult.shareInfo?.shareUrl || "",
         folderInfo: state.uploadResult.shareInfo?.folderInfo || null
       });
-      await insertIntoCompose(html);
+      await insertIntoCompose(html, plainText);
       if (separatePasswordMail){
-        const passwordMailHtml = await NCSharing.buildHtmlBlock(state.uploadResult.shareInfo, {
+        const passwordRenderOptions = {
           policyShare: state.policy.active ? state.policy.share : null,
           passwordOnly: true
-        });
+        };
+        const passwordMailHtml = await NCSharing.buildHtmlBlock(state.uploadResult.shareInfo, passwordRenderOptions);
+        const passwordMailPlainText = await NCSharing.buildPlainTextBlock(state.uploadResult.shareInfo, passwordRenderOptions);
         await registerSeparatePasswordDispatch({
           tabId: Number(state.tabId),
           shareLabel: state.uploadResult.shareInfo?.label || getSanitizedShareName(),
@@ -1532,7 +1536,8 @@
           shareId: state.uploadResult.shareInfo?.shareId || "",
           folderInfo: state.uploadResult.shareInfo?.folderInfo || null,
           password: state.uploadResult.shareInfo?.password || "",
-          html: passwordMailHtml
+          html: passwordMailHtml,
+          plainText: passwordMailPlainText
         });
       }
       await clearWizardRemoteCleanup();
@@ -1681,7 +1686,7 @@
   /**
    * Register a password-only follow-up mail dispatch in the background.
    * The background captures final recipients when the main message is sent.
-   * @param {{tabId:number,shareLabel:string,shareUrl:string,shareId?:string,folderInfo?:object,password:string,html:string}} payload
+   * @param {{tabId:number,shareLabel:string,shareUrl:string,shareId?:string,folderInfo?:object,password:string,html:string,plainText?:string}} payload
    * @returns {Promise<void>}
    */
   async function registerSeparatePasswordDispatch(payload = {}){
@@ -1691,7 +1696,8 @@
     }
     const password = String(payload.password || "");
     const html = String(payload.html || "");
-    if (!password || !html){
+    const plainText = String(payload.plainText || "");
+    if (!password || !html || !plainText){
       throw new Error("password_dispatch_payload_invalid");
     }
     const response = await browser.runtime.sendMessage({
@@ -1709,7 +1715,8 @@
           }
           : null,
         password,
-        html
+        html,
+        plainText
       }
     });
     if (!response?.ok){
@@ -1841,18 +1848,26 @@
   }
 
   /**
-   * Insert the generated HTML block into the compose window.
+   * Insert the generated share block into the compose window.
    * @param {string} html
+   * @param {string} plainText
    * @returns {Promise<void>}
    */
-  async function insertIntoCompose(html){
+  async function insertIntoCompose(html, plainText){
     const tabId = state.tabId;
     if (!tabId){
       throw new Error('tabId missing');
     }
+    if (!html || !plainText){
+      throw new Error('share_render_payload_invalid');
+    }
     const response = await browser.runtime.sendMessage({
       type: 'sharing:insertHtml',
-      payload: { tabId, html }
+      payload: {
+        tabId,
+        html,
+        plainText
+      }
     });
     if (!response?.ok){
       throw new Error(response?.error || i18n('sharing_error_insert_failed'));

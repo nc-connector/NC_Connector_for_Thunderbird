@@ -78,7 +78,8 @@
     }
     try{
       return new ParserCtor();
-    }catch(_error){
+    }catch(error){
+      console.error("[NCSAN] DOMParser init failed", error);
       return null;
     }
   }
@@ -210,7 +211,7 @@
     }
     const purify = resolvePurify();
     if (!purify){
-      return plainTextToHtml(htmlToPlainText(dirty));
+      throw new Error("html_sanitizer_unavailable");
     }
     const clean = purify.sanitize(dirty, {
       USE_PROFILES: { html: true },

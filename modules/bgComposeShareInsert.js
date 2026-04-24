@@ -8,6 +8,8 @@
  * Compose share insertion runtime module.
  * Owns mode-aware insertion and plain-text normalization for sharing blocks.
  */
+const RIGHTS_SEGMENT_START = NCShareTemplateContract.RIGHTS_SEGMENT_START;
+const RIGHTS_SEGMENT_END = NCShareTemplateContract.RIGHTS_SEGMENT_END;
 
 /**
  * Normalize permission markers for plain-text rendering.
@@ -267,6 +269,36 @@ function compactSharingPermissionRows(value){
 }
 
 /**
+ * Normalize explicitly marked rights segments without touching unrelated text.
+ * @param {string} value
+ * @returns {string|null}
+ */
+function finalizeSharingRightsSegments(value){
+  let output = String(value || "");
+  let changed = false;
+  while (true){
+    const startIndex = output.indexOf(RIGHTS_SEGMENT_START);
+    if (startIndex < 0){
+      break;
+    }
+    const endIndex = output.indexOf(RIGHTS_SEGMENT_END, startIndex + RIGHTS_SEGMENT_START.length);
+    if (endIndex < 0){
+      break;
+    }
+    const rawSegment = output.slice(startIndex + RIGHTS_SEGMENT_START.length, endIndex);
+    const normalizedSegment = compactSharingPermissionRows(normalizeSharingPermissionMarkers(rawSegment)).trim();
+    output = output.slice(0, startIndex) + normalizedSegment + output.slice(endIndex + RIGHTS_SEGMENT_END.length);
+    changed = true;
+  }
+  if (!changed){
+    return null;
+  }
+  return output
+    .split(RIGHTS_SEGMENT_START).join("")
+    .split(RIGHTS_SEGMENT_END).join("");
+}
+
+/**
  * Render top/bottom hash separators around the plain-text sharing block.
  * Border width is fixed to 60 hash characters.
  * @param {string} plainText
@@ -283,20 +315,19 @@ function frameSharingPlainTextBlock(plainText){
 /**
  * Convert a sharing block to plain text for plain-text compose.
  * Fail closed: converter missing or empty output aborts insertion.
- * @param {string} sourceHtml
+ * @param {string} plainText
  * @returns {string}
  */
-function buildSharingInsertPlainText(sourceHtml){
-  if (typeof NCHtmlSanitizer?.htmlToPlainText !== "function"){
-    throw new Error("sharing_template_plaintext_converter_unavailable");
-  }
-  const plainTextRaw = String(NCHtmlSanitizer.htmlToPlainText(String(sourceHtml || "")) || "").trim();
-  const normalizedMarkers = normalizeSharingPermissionMarkers(plainTextRaw);
-  const plainText = compactSharingPermissionRows(normalizedMarkers).trim();
-  if (!plainText){
+function finalizeSharingInsertPlainText(plainText){
+  const rawPlainText = String(plainText || "").trim();
+  const scopedPlainText = finalizeSharingRightsSegments(rawPlainText);
+  const compactPlainText = scopedPlainText !== null
+    ? scopedPlainText.trim()
+    : compactSharingPermissionRows(normalizeSharingPermissionMarkers(rawPlainText)).trim();
+  if (!compactPlainText){
     throw new Error("sharing_template_plaintext_empty");
   }
-  return frameSharingPlainTextBlock(plainText);
+  return frameSharingPlainTextBlock(compactPlainText);
 }
 
 /**
@@ -368,22 +399,22 @@ function insertSharingBlockSegment(currentBody, blockHtml){
 
 /**
  * Runtime message handler for `sharing:insertHtml`.
- * @param {{tabId?:number|string,html?:string}} payload
+ * @param {{tabId?:number|string,html?:string,plainText?:string}} payload
  * @returns {Promise<{ok:boolean,error?:string}>}
  */
 async function handleSharingInsertHtmlMessage(payload = {}){
   const tabId = Number(payload?.tabId);
   const html = String(payload?.html || "").trim();
-  if (!Number.isInteger(tabId) || tabId <= 0 || !html){
-    return { ok:false, error: "tab/html missing" };
+  const plainText = String(payload?.plainText || "").trim();
+  if (!Number.isInteger(tabId) || tabId <= 0 || !html || !plainText){
+    return { ok:false, error: "tab/html/plainText missing" };
   }
 
-  const sourceHtml = html;
   const details = await browser.compose.getComposeDetails(tabId);
   const insertionMode = resolveSharingInsertMode(details);
 
   if (insertionMode.usePlainText){
-    const plainBlock = buildSharingInsertPlainText(sourceHtml);
+    const plainBlock = finalizeSharingInsertPlainText(plainText);
     if (insertionMode.editorIsPlainText){
       const currentPlainText = String(details?.plainTextBody || "");
       const newPlainText = `${plainBlock}\n\n${currentPlainText}`;
@@ -402,20 +433,18 @@ async function handleSharingInsertHtmlMessage(payload = {}){
       editorMode: insertionMode.editorIsPlainText ? "plain" : "html",
       deliveryFormat: insertionMode.deliveryFormat || "",
       inputHtmlLength: html.length,
-      sourceHtmlLength: sourceHtml.length,
       plainTextLength: plainBlock.length
     });
     return { ok:true };
   }
 
-  const newBody = insertSharingBlockSegment(String(details?.body || ""), sourceHtml);
+  const newBody = insertSharingBlockSegment(String(details?.body || ""), html);
   L("sharing:insertHtml kept html", {
     tabId,
     reason: insertionMode.reason,
     editorMode: "html",
     deliveryFormat: insertionMode.deliveryFormat || "",
-    inputHtmlLength: html.length,
-    sourceHtmlLength: sourceHtml.length
+    inputHtmlLength: html.length
   });
   await browser.compose.setComposeDetails(tabId, { body: newBody, isPlainText: false });
   return { ok:true };

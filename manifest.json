@@ -33,6 +33,7 @@
       "modules/i18nOverride.js",
       "modules/sharingStorage.js",
       "modules/textUtils.js",
+      "modules/shareTemplateContract.js",
       "vendor/ical.js",
       "vendor/purify.js",
       "modules/htmlSanitizer.js",

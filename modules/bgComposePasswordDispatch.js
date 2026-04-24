@@ -288,19 +288,16 @@ function framePasswordDispatchPlainTextBlock(plainText){
 }
 
 /**
- * Build plain text from a password-dispatch HTML block.
- * @param {string} sourceHtml
+ * Finalize one password-dispatch plain-text block.
+ * @param {string} plainText
  * @returns {string}
  */
-function buildPasswordDispatchPlainText(sourceHtml){
-  if (typeof NCHtmlSanitizer?.htmlToPlainText !== "function"){
-    throw new Error("sharing_template_plaintext_converter_unavailable");
-  }
-  const plainText = String(NCHtmlSanitizer.htmlToPlainText(String(sourceHtml || "")) || "").trim();
-  if (!plainText){
+function finalizePasswordDispatchPlainText(plainText){
+  const normalized = String(plainText || "").trim();
+  if (!normalized){
     throw new Error("sharing_password_dispatch_plaintext_empty");
   }
-  return framePasswordDispatchPlainTextBlock(plainText);
+  return framePasswordDispatchPlainTextBlock(normalized);
 }
 
 /**
@@ -361,7 +358,7 @@ function buildSeparatePasswordMailBodyFields(dispatch){
  * Recipients are captured from compose.onBeforeSend for the final send action.
  * Initial compose details are captured immediately to preserve identity context.
  * @param {number} tabId
- * @param {{shareLabel?:string,shareUrl?:string,shareId?:string,folderInfo?:object,password?:string,html?:string}} payload
+ * @param {{shareLabel?:string,shareUrl?:string,shareId?:string,folderInfo?:object,password?:string,html?:string,plainText?:string}} payload
  */
 async function registerSeparatePasswordMailDispatch(tabId, payload = {}){
   if (!Number.isInteger(tabId) || tabId <= 0){
@@ -369,11 +366,12 @@ async function registerSeparatePasswordMailDispatch(tabId, payload = {}){
   }
   const password = String(payload.password || "").trim();
   const rawHtml = String(payload.html || "").trim();
-  if (!password || !rawHtml){
-    throw new Error("password_or_html_missing");
+  const rawPlainText = String(payload.plainText || "").trim();
+  if (!password || !rawHtml || !rawPlainText){
+    throw new Error("password_or_html_or_plaintext_missing");
   }
   const html = rawHtml;
-  const plainText = buildPasswordDispatchPlainText(html);
+  const plainText = finalizePasswordDispatchPlainText(rawPlainText);
   const dispatch = {
     tabId,
     shareLabel: String(payload.shareLabel || "").trim(),

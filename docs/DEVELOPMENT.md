@@ -5,7 +5,7 @@ This document is the **single source of truth** for developers maintaining or ex
 It complements:
 - `docs/ADDON_DESCRIPTION.md` (architecture overview)
 - `docs/ATN_REVIEW_CHECKLIST_INTERNAL.md` (internal review constraints you must not violate)
-- `docs/ATN_REVIEW_NOTES_3.0.2.md` (reviewer-facing release-specific notes)
+- `docs/ATN_REVIEW_NOTES.md` (reviewer-facing release-specific notes)
 
 ---
 
@@ -119,6 +119,7 @@ Key files you’ll touch most:
 - `modules/policyRuntime.js` — centralized backend seat/policy status fetch + normalization (`/apps/ncc_backend_4mc/api/v1/status`)
 - `modules/background.js` — thin bootstrap entrypoint
 - `modules/hostPermissions.js` — single host-permission gate used by core/talk/sharing runtime modules
+- `modules/shareTemplateContract.js` — shared share-template marker contract used by render + insert modules
 - `modules/nccore.js` — Nextcloud auth/login-flow helpers
 - `modules/talkAddressbook.js` — system-addressbook CardDAV fetch/cache/search/status helpers
 - `modules/talkcore.js` — Nextcloud Talk API helpers (OCS, room lifecycle, capabilities)
@@ -577,9 +578,9 @@ Attachment mode specifics:
   - Background tracks live sender switches on `compose.onIdentityChanged`, captures the final main-mail envelope on `compose.onBeforeSend`, and dispatches password-only mail on `compose.onAfterSend`.
   - The authoritative primary-mail sender is resolved via Thunderbird compose details plus `accountsRead` identity lookup; the password follow-up must use the same Thunderbird identity as the main mail.
   - The password follow-up itself targets only the primary mail `To` recipients; `Cc`/`Bcc` are still captured as part of the authoritative main-mail envelope.
-  - Backend custom password templates (`language_share_html_block=custom` + `share_password_template`) are sanitized in `NCSharing.buildHtmlBlock(...)` before follow-up registration; missing sanitizer or empty sanitized output aborts finalize (fail-closed).
+  - Backend custom password templates (`language_share_html_block=custom` + `share_password_template`) are sanitized in the render path before follow-up registration; rich HTML uses `NCSharing.buildHtmlBlock(...)`, plain text uses `NCSharing.buildPlainTextBlock(...)`, and missing sanitizer or empty sanitized output aborts finalize (fail-closed).
   - Follow-up mail delivery mode mirrors the source compose mode (`isPlainText` / `deliveryFormat`) captured from compose details and refreshed on `compose.onBeforeSend`.
-  - When follow-up is plain text, body is generated via `htmlToPlainText(...)` and framed with a fixed 50-character `#` border.
+  - Follow-up registration now requires both pre-rendered HTML and pre-rendered plain text; when follow-up is plain text, background uses the provided plain-text block and frames it with a fixed 50-character `#` border.
   - Dispatch path: first warm the freshly created password compose tab until Thunderbird exposes the expected sender/recipient envelope, then try `compose.sendMessage(..., { mode: "sendNow" })` with a timeout guard for stuck send attempts.
   - If sender identity cannot be resolved cleanly, or if immediate send fails (or times out), background opens a prefilled compose draft as explicit manual fallback.
   - If a manual fallback draft was opened, a dedicated desktop notification tells the user to send the password mail manually.
@@ -592,15 +593,19 @@ Attachment mode specifics:
 
 The sharing wizard sends:
 - `browser.runtime.sendMessage({ type: "sharing:armComposeShareCleanup", payload: { tabId, folderInfo, ... } })`
-- `browser.runtime.sendMessage({ type: "sharing:insertHtml", payload: { tabId, html } })`
+- `browser.runtime.sendMessage({ type: "sharing:insertHtml", payload: { tabId, html, plainText } })`
 
 Background:
 - arms compose-share cleanup before insertion (for unsent-tab cleanup handling)
 - routes `sharing:insertHtml` through `modules/bgComposeShareInsert.js`.
-- receives pre-rendered share HTML from `NCSharing.buildHtmlBlock(...)`; backend custom templates are sanitized there before insert.
+- receives pre-rendered share HTML from `NCSharing.buildHtmlBlock(...)`.
+- receives pre-rendered share plain text from `NCSharing.buildPlainTextBlock(...)`.
+- requires both render variants as part of the runtime message contract.
+- backend custom templates are sanitized in both rendering paths before use; local built-in templates stay on the trusted local render path and are not passed through the backend HTML sanitizer.
+- backend custom templates prune empty optional placeholders (`{RIGHTS}`, `{PASSWORD}`, `{EXPIRATIONDATE}`, `{NOTE}`) before replacement to reduce orphaned labels/wrappers in arbitrary layouts.
 - resolves compose mode from `isPlainText` + `deliveryFormat`:
   - HTML compose mode: inserts source HTML near `<body>`.
-  - Plain-text compose mode: converts source HTML to plain text, normalizes permission markers (`[x]` / `[ ]`), compacts permission rows, and frames the block with a fixed 60-character `#` border.
+  - Plain-text compose mode: prefers the pre-rendered `plainText` block, normalizes permission markers (`[x]` / `[ ]`), compacts permission rows inside explicit add-on-generated rights segments, and frames the block with a fixed 60-character `#` border.
   - For HTML editors with plain-text delivery format, inserts an escaped plain-text rendering to preserve deterministic plain-text output.
 
 ### 10.3 Share block language override
@@ -617,6 +622,7 @@ Runtime rules:
 - Backend templates are only used when the effective language override is `custom`.
 - If `custom` is selected but the backend template is empty or unavailable, runtime falls back to the local UI-default text block.
 - Backend-provided rich HTML templates are sanitized client-side with bundled `DOMPurify` before use.
+- Backend custom templates use the sanitizer in both rich-HTML rendering and plain-text rendering; local built-in share blocks remain trusted local render output.
 - Privileged calendar-editor code does not parse backend HTML via `innerHTML`; sanitized markup is imported via `DOMParser` + DOM fragment replacement.
 - Active UI/runtime paths should avoid legacy `innerHTML` and `execCommand(...)` write APIs where ESR-140-compatible DOM/clipboard alternatives exist.
 - Separate password follow-up dispatch is seat-gated and only available with backend endpoint + active assigned seat.
@@ -741,7 +747,7 @@ All endpoint interaction lives in the shared modules (`modules/ocs.js`, `modules
 
 Before you ship:
 1. Bump `manifest.json` version.
-2. Update `docs/ATN_REVIEW_NOTES_<version>.md` and README “What’s new”.
+2. Update `docs/ATN_REVIEW_NOTES.md` and README “What’s new”.
 3. Run the manual tests (Talk dialog + tab editor, sharing wizard, event move/delete, delegation, invitee sync).
 4. Run parser contract checks:
    - `node tools/ical-contract-check.js`

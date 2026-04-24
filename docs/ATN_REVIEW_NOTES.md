@@ -1,8 +1,8 @@
-# Reviewer Notes - 3.0.1
+# Reviewer Notes - 3.0.2
 NC Connector for Thunderbird (`{4a35421f-0906-439c-bff2-8eef39e2baee}`)
 
 This document summarizes the currently implemented reviewer-relevant contract
-for add-on version 3.0.1.
+for add-on version 3.0.2.
 
 ---
 
@@ -29,7 +29,7 @@ is intentionally minimal:
 - tracked lifecycle via `ncCalToolbar.onTrackedEditorClosed`
 
 All business logic stays in the background runtime modules (`modules/bgState.js`,
-`modules/bgComposeAttachments.js`, `modules/bgComposeShareCleanup.js`, `modules/bgComposePasswordDispatch.js`,
+`modules/bgComposeAttachments.js`, `modules/bgComposeShareCleanup.js`, `modules/bgComposeShareInsert.js`, `modules/bgComposePasswordDispatch.js`,
 `modules/bgCompose.js`, `modules/bgCalendarLifecycle.js`, `modules/bgCalendar.js`, `modules/talkAddressbook.js`,
 `modules/talkcore.js`, `modules/bgRouter.js`) and uses calendar APIs only
 for persisted monitoring (`browser.calendar.items.onCreated/onUpdated/onRemoved`).
@@ -48,7 +48,7 @@ for persisted monitoring (`browser.calendar.items.onCreated/onUpdated/onRemoved`
 
 ---
 
-## Reviewer Alignment Notes (3.0.1)
+## Reviewer Alignment Notes (3.0.2)
 
 - Core contracts are explicit; fallback behavior is bounded and logged instead of relying on silent heuristics.
 - Active runtime paths touched in this release log failures explicitly; silent failure is not an intended contract.
@@ -74,7 +74,7 @@ for persisted monitoring (`browser.calendar.items.onCreated/onUpdated/onRemoved`
 - Talk user search, moderator selection, and participant toggles (users/guests)
   are runtime-gated by system-addressbook availability checks and are disabled
   with explicit user guidance when the addressbook endpoint is unavailable.
-- Separate-password follow-up dispatch is implemented in 3.0.1, but remains runtime-gated behind the backend endpoint, an active assigned seat, and enabled password protection.
+- Separate-password follow-up dispatch is implemented in 3.0.2, but remains runtime-gated behind the backend endpoint, an active assigned seat, and enabled password protection.
   - the options/UI toggle surface is only functional when those runtime conditions are met
   - `accountsRead` is requested only to resolve the actual Thunderbird sender identity of the already-open primary compose window, so the password follow-up can reuse the same sender identity instead of guessing from a visible `From` header string.
   - live sender switches are tracked on `compose.onIdentityChanged`, and the final primary-mail envelope is captured on `compose.onBeforeSend`
@@ -85,6 +85,19 @@ for persisted monitoring (`browser.calendar.items.onCreated/onUpdated/onRemoved`
   - Talk HTML policy template (`talk_invitation_template`)
   - Share HTML policy templates (`share_html_block_template`, `share_password_template`)
   - bundled sanitizer: `DOMPurify 3.3.1` documented in `VENDOR.md`
+- Share compose insertion is mode-aware:
+  - HTML compose receives pre-rendered share HTML from `NCSharing.buildHtmlBlock(...)`
+  - plain-text compose receives a dedicated pre-rendered share text block from `NCSharing.buildPlainTextBlock(...)`
+  - the runtime contract requires both variants; background does not rebuild missing plain text from HTML
+  - backend custom share templates are sanitized before rich or plain-text rendering
+  - empty optional placeholders in backend custom share templates are pruned before replacement so hidden rights/password/expiry/note sections do not rely on fixed table rows
+  - local built-in share templates stay on the trusted local render path and are not passed through the backend HTML sanitizer
+- Password follow-up compose is mode-aware as well:
+  - HTML follow-up keeps the pre-rendered HTML block
+  - plain-text follow-up uses the dedicated pre-rendered plain-text block
+- Sanitizer-dependent backend HTML paths now fail closed:
+  - if the expected Talk/share HTML sanitizer is unavailable, the add-on throws instead of falling back to raw HTML
+  - the privileged `descriptionHtml` bridge rejects unsanitized HTML instead of forwarding it
 - `experiments/ncCalToolbar/parent.js` no longer uses `innerHTML` to parse
   inbound description HTML; sanitized markup is converted via `DOMParser` and
   imported into the rich editor DOM as a fragment.
@@ -110,4 +123,3 @@ Known temporary deviation:
   `ncCalToolbar` for deterministic tab-editor targeting on current ESR builds.
   This is tracked as a temporary bridge until upstream calendar APIs provide an
   equivalent deterministic editor-targeting contract.
-
