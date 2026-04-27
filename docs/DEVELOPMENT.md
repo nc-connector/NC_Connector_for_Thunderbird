@@ -751,6 +751,7 @@ Before you ship:
 3. Run the manual tests (Talk dialog + tab editor, sharing wizard, event move/delete, delegation, invitee sync).
 4. Run parser contract checks:
    - `node tools/ical-contract-check.js`
+   - `node tools/share-plaintext-contract-check.js`
    - `node tools/i18n-locale-parity-check.js`
 5. Package the XPI with correct root structure.
 6. Sanity check:

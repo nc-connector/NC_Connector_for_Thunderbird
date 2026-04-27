@@ -88,6 +88,7 @@ for persisted monitoring (`browser.calendar.items.onCreated/onUpdated/onRemoved`
 - Share compose insertion is mode-aware:
   - HTML compose receives pre-rendered share HTML from `NCSharing.buildHtmlBlock(...)`
   - plain-text compose receives a dedicated pre-rendered share text block from `NCSharing.buildPlainTextBlock(...)`
+  - local validation covers this render contract via `node tools/share-plaintext-contract-check.js`
   - the runtime contract requires both variants; background does not rebuild missing plain text from HTML
   - backend custom share templates are sanitized before rich or plain-text rendering
   - empty optional placeholders in backend custom share templates are pruned before replacement so hidden rights/password/expiry/note sections do not rely on fixed table rows
