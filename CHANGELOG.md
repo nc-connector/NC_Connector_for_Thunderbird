@@ -4,6 +4,32 @@ All notable changes to **NC Connector for Thunderbird** will be documented in th
 
 This project targets **Thunderbird ESR 140.\***.
 
+## 3.0.3
+
+Release package version is **3.0.3**.  
+Functional delta documented here corresponds to **3.0.2 -> 3.0.3**.
+
+### Added
+- Mode-aware plain-text insertion for share mails and separate password follow-up mails:
+  - share/password follow-up rendering now provides explicit pre-rendered HTML + plain-text variants
+  - compose insertion supports dedicated plain-text output instead of relying on HTML-only rendering
+  - share plain-text contract coverage was added and documented
+
+### Changed
+- Release/version references were aligned to `3.0.3` across manifest, reviewer notes, smoke plan, internal checklist, readmes, and the renamed worktree.
+- Share/plain-text rendering was hardened further:
+  - legacy share pre-rendering was removed from the upload/create path
+- Sanitizer observability and debug behavior were improved:
+  - backend Talk/share template sanitization now emits compact structural summaries on the existing add-on debug channels
+  - Talk/Sharing teardown-time debug forwarding races were reduced during popup close
+  - add-on logging channels were unified and legacy debug-path drift was removed from active runtime/UI paths
+- Supporting maintenance updates included:
+  - vendor calendar experiment refresh
+  - Talk/Sharing wording updates with full locale coverage
+### Fixed
+- Talk guest help URL now points to the current documentation page.
+- Local share-base default is now set to `NC Connector`.
+
 ## 3.0.2
 
 Release package version is **3.0.2**.  

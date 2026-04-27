@@ -1,8 +1,8 @@
-# Reviewer Notes - 3.0.2
+# Reviewer Notes - 3.0.3
 NC Connector for Thunderbird (`{4a35421f-0906-439c-bff2-8eef39e2baee}`)
 
 This document summarizes the currently implemented reviewer-relevant contract
-for add-on version 3.0.2.
+for add-on version 3.0.3.
 
 ---
 
@@ -48,7 +48,7 @@ for persisted monitoring (`browser.calendar.items.onCreated/onUpdated/onRemoved`
 
 ---
 
-## Reviewer Alignment Notes (3.0.2)
+## Reviewer Alignment Notes (3.0.3)
 
 - Core contracts are explicit; fallback behavior is bounded and logged instead of relying on silent heuristics.
 - Active runtime paths touched in this release log failures explicitly; silent failure is not an intended contract.
@@ -74,7 +74,7 @@ for persisted monitoring (`browser.calendar.items.onCreated/onUpdated/onRemoved`
 - Talk user search, moderator selection, and participant toggles (users/guests)
   are runtime-gated by system-addressbook availability checks and are disabled
   with explicit user guidance when the addressbook endpoint is unavailable.
-- Separate-password follow-up dispatch is implemented in 3.0.2, but remains runtime-gated behind the backend endpoint, an active assigned seat, and enabled password protection.
+- Separate-password follow-up dispatch is implemented in 3.0.3, but remains runtime-gated behind the backend endpoint, an active assigned seat, and enabled password protection.
   - the options/UI toggle surface is only functional when those runtime conditions are met
   - `accountsRead` is requested only to resolve the actual Thunderbird sender identity of the already-open primary compose window, so the password follow-up can reuse the same sender identity instead of guessing from a visible `From` header string.
   - live sender switches are tracked on `compose.onIdentityChanged`, and the final primary-mail envelope is captured on `compose.onBeforeSend`
