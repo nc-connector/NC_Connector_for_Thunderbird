@@ -13,6 +13,8 @@
 (function(global){
   "use strict";
 
+  let DEBUG_ENABLED = false;
+
   const FORBID_TAGS = [
     "script",
     "style",
@@ -68,6 +70,114 @@
   }
 
   /**
+   * Mirror the shared debug toggle into this module.
+   * Sanitizer summaries are only logged when debug output is enabled.
+   */
+  (function initDebugFlagMirror(){
+    if (!global.browser?.storage?.local?.get){
+      return;
+    }
+    try{
+      const load = global.browser.storage.local.get(["debugEnabled"]);
+      if (load && typeof load.then === "function"){
+        void load.then((stored) => {
+          DEBUG_ENABLED = !!stored?.debugEnabled;
+        }, (error) => {
+          console.error("[NCSAN] debug flag init failed", error);
+        });
+      }
+    }catch(error){
+      console.error("[NCSAN] debug flag init failed", error);
+    }
+    if (!global.browser?.storage?.onChanged?.addListener){
+      return;
+    }
+    try{
+      global.browser.storage.onChanged.addListener((changes, area) => {
+        if (area !== "local"){
+          return;
+        }
+        if (Object.prototype.hasOwnProperty.call(changes, "debugEnabled")){
+          DEBUG_ENABLED = !!changes.debugEnabled?.newValue;
+        }
+      });
+    }catch(error){
+      console.error("[NCSAN] debug flag listener install failed", error);
+    }
+  })();
+
+  /**
+   * Resolve the existing debug-log label for the current runtime path.
+   * @param {string} templateType
+   * @returns {{channel:string,label:string,source:string}}
+   */
+  function resolveSanitizerDebugTarget(templateType){
+    const normalizedType = String(templateType || "").trim().toLowerCase();
+    if (normalizedType === "talk"){
+      return {
+        channel: "NCUI",
+        label: "Talk",
+        source: "htmlSanitizer"
+      };
+    }
+    if (normalizedType === "share"){
+      return {
+        channel: "NCUI",
+        label: "Sharing",
+        source: "htmlSanitizer"
+      };
+    }
+    return {
+      channel: "NCUI",
+      label: "Sanitizer",
+      source: "htmlSanitizer"
+    };
+  }
+
+  /**
+   * Forward one sanitizer debug entry through the existing add-on debug paths.
+   * Background uses `L(...)`, while UI pages use the structured `debug:log` flow.
+   * @param {string} templateType
+   * @param {string} text
+   * @param {object} details
+   */
+  function emitSanitizerDebugLog(templateType, text, details){
+    if (!DEBUG_ENABLED){
+      return;
+    }
+    if (typeof global.L === "function"){
+      try{
+        global.L(text, details || {});
+        return;
+      }catch(error){
+        console.error("[NCSAN] background debug log failed", error);
+      }
+    }
+    const target = resolveSanitizerDebugTarget(templateType);
+    if (global.NCDebugForwarder?.forwardDebugLog){
+      try{
+        global.NCDebugForwarder.forwardDebugLog({
+          enabled: DEBUG_ENABLED,
+          isPageUnloading: false,
+          source: target.source,
+          channel: target.channel,
+          label: target.label,
+          text,
+          details: details || {}
+        });
+        return;
+      }catch(error){
+        console.error("[NCSAN] ui debug log forward failed", error);
+      }
+    }
+    try{
+      console.log(`[${target.channel}][${target.label}]`, text, details || {});
+    }catch(error){
+      console.error("[NCSAN] fallback debug log failed", error);
+    }
+  }
+
+  /**
    * Resolve a DOMParser constructor from the current environment.
    * @returns {DOMParser|null}
    */
@@ -82,6 +192,154 @@
       console.error("[NCSAN] DOMParser init failed", error);
       return null;
     }
+  }
+
+  /**
+   * Create one empty HTML-structure stats object.
+   * @returns {{available:boolean,elementCount:number,attributeCount:number,tagCounts:Object<string,number>,attributeCounts:Object<string,number>}}
+   */
+  function createStructureStats(){
+    return {
+      available: false,
+      elementCount: 0,
+      attributeCount: 0,
+      tagCounts: Object.create(null),
+      attributeCounts: Object.create(null)
+    };
+  }
+
+  /**
+   * Increment one string counter in a plain object map.
+   * @param {Object<string,number>} counts
+   * @param {string} key
+   */
+  function incrementCount(counts, key){
+    const normalizedKey = String(key || "").trim().toLowerCase();
+    if (!normalizedKey){
+      return;
+    }
+    counts[normalizedKey] = (counts[normalizedKey] || 0) + 1;
+  }
+
+  /**
+   * Analyze element/attribute counts for sanitizer debug summaries.
+   * @param {string} html
+   * @returns {{available:boolean,elementCount:number,attributeCount:number,tagCounts:Object<string,number>,attributeCounts:Object<string,number>}}
+   */
+  function analyzeHtmlStructure(html){
+    const stats = createStructureStats();
+    const source = String(html || "").trim();
+    if (!source){
+      stats.available = true;
+      return stats;
+    }
+    const parser = createParser();
+    if (!parser){
+      return stats;
+    }
+    try{
+      const parsed = parser.parseFromString(source, "text/html");
+      const body = parsed?.body;
+      if (!body){
+        return stats;
+      }
+      stats.available = true;
+      for (const element of body.querySelectorAll("*")){
+        stats.elementCount += 1;
+        incrementCount(stats.tagCounts, element.tagName);
+        for (const attribute of Array.from(element.attributes || [])){
+          stats.attributeCount += 1;
+          incrementCount(stats.attributeCounts, attribute?.name || "");
+        }
+      }
+    }catch(error){
+      console.error("[NCSAN] html structure analysis failed", error);
+    }
+    return stats;
+  }
+
+  /**
+   * Format removed tags/attributes for sanitizer debug output.
+   * @param {Object<string,number>} inputCounts
+   * @param {Object<string,number>} outputCounts
+   * @param {number} maxEntries
+   * @returns {string}
+   */
+  function formatRemovedEntries(inputCounts, outputCounts, maxEntries){
+    const inputKeys = Object.keys(inputCounts || {});
+    if (!inputKeys.length){
+      return "none";
+    }
+    const removed = [];
+    for (const key of inputKeys){
+      const delta = Number(inputCounts[key] || 0) - Number(outputCounts?.[key] || 0);
+      if (delta > 0){
+        removed.push({ key, delta });
+      }
+    }
+    if (!removed.length){
+      return "none";
+    }
+    return removed
+      .sort((left, right) => {
+        if (right.delta !== left.delta){
+          return right.delta - left.delta;
+        }
+        return left.key.localeCompare(right.key);
+      })
+      .slice(0, Math.max(1, Number(maxEntries) || 8))
+      .map((entry) => `${entry.key}:-${entry.delta}`)
+      .join(";");
+  }
+
+  /**
+   * Log one compact sanitizer summary similar to the Outlook add-in.
+   * @param {string} templateType
+   * @param {string} inputHtml
+   * @param {string} sanitizedHtml
+   * @param {string} normalizedHtml
+   * @param {object} inputStats
+   * @param {object} outputStats
+   * @param {{anchorRelAdjustments:number}} normalizationReport
+   * @param {boolean} emptied
+   */
+  function logSanitizationSummary(
+    templateType,
+    inputHtml,
+    sanitizedHtml,
+    normalizedHtml,
+    inputStats,
+    outputStats,
+    normalizationReport,
+    emptied
+  ){
+    const safeInputStats = inputStats || createStructureStats();
+    const safeOutputStats = outputStats || createStructureStats();
+    const removedTags = (safeInputStats.available && safeOutputStats.available)
+      ? formatRemovedEntries(safeInputStats.tagCounts, safeOutputStats.tagCounts, 8)
+      : "n/a";
+    const removedAttrs = (safeInputStats.available && safeOutputStats.available)
+      ? formatRemovedEntries(safeInputStats.attributeCounts, safeOutputStats.attributeCounts, 8)
+      : "n/a";
+    const changed = String(inputHtml || "") !== String(normalizedHtml || "");
+    emitSanitizerDebugLog(
+      templateType,
+      emptied ? "Template sanitization emptied" : "Template sanitization completed",
+      {
+        templateType: templateType || "generic",
+        inputLen: String(inputHtml || "").length,
+        sanitizedLen: String(sanitizedHtml || "").length,
+        normalizedLen: String(normalizedHtml || "").length,
+        inputElements: safeInputStats.elementCount,
+        outputElements: safeOutputStats.elementCount,
+        inputAttrs: safeInputStats.attributeCount,
+        outputAttrs: safeOutputStats.attributeCount,
+        removedTags,
+        removedAttrs,
+        anchorRelAdjustments: Number(normalizationReport?.anchorRelAdjustments || 0),
+        changed
+      }
+    );
   }
 
   /**
@@ -180,23 +438,43 @@
    * @param {string} html
    * @returns {string}
    */
-  function normalizeAnchorTargets(html){
+  function normalizeAnchorTargetsWithReport(html){
+    const report = {
+      html: String(html || ""),
+      anchorRelAdjustments: 0
+    };
     const parser = createParser();
     if (!parser){
-      return String(html || "");
+      return report;
     }
     const parsed = parser.parseFromString(String(html || ""), "text/html");
     const body = parsed?.body;
     if (!body){
-      return "";
+      report.html = "";
+      return report;
     }
     for (const anchor of body.querySelectorAll('a[target="_blank"]')){
       const relTokens = new Set(String(anchor.getAttribute("rel") || "").split(/\s+/).filter(Boolean));
+      const previousRel = Array.from(relTokens).sort().join(" ");
       relTokens.add("noopener");
       relTokens.add("noreferrer");
-      anchor.setAttribute("rel", Array.from(relTokens).join(" "));
+      const nextRel = Array.from(relTokens).join(" ");
+      if (nextRel !== previousRel){
+        report.anchorRelAdjustments += 1;
+      }
+      anchor.setAttribute("rel", nextRel);
     }
-    return body.innerHTML;
+    report.html = body.innerHTML;
+    return report;
+  }
+
+  /**
+   * Enforce noopener/noreferrer on target=_blank anchors after sanitization.
+   * @param {string} html
+   * @returns {string}
+   */
+  function normalizeAnchorTargets(html){
+    return normalizeAnchorTargetsWithReport(html).html;
   }
 
   /**
@@ -204,7 +482,7 @@
    * @param {string} value
    * @returns {string}
    */
-  function sanitizeHtml(value){
+  function sanitizeHtml(value, templateType = "generic"){
     const dirty = String(value || "").trim();
     if (!dirty){
       return "";
@@ -213,6 +491,7 @@
     if (!purify){
       throw new Error("html_sanitizer_unavailable");
     }
+    const inputStats = analyzeHtmlStructure(dirty);
     const clean = purify.sanitize(dirty, {
       USE_PROFILES: { html: true },
       ALLOW_DATA_ATTR: false,
@@ -220,7 +499,21 @@
       ADD_ATTR,
       ADD_TAGS
     });
-    return normalizeAnchorTargets(String(clean || ""));
+    const sanitized = String(clean || "");
+    const normalizationReport = normalizeAnchorTargetsWithReport(sanitized);
+    const normalized = String(normalizationReport.html || "");
+    const outputStats = analyzeHtmlStructure(normalized);
+    logSanitizationSummary(
+      templateType,
+      dirty,
+      sanitized,
+      normalized,
+      inputStats,
+      outputStats,
+      normalizationReport,
+      !normalized.trim()
+    );
+    return normalized;
   }
 
   /**
@@ -229,7 +522,7 @@
    * @returns {string}
    */
   function sanitizeTalkTemplateHtml(value){
-    return sanitizeHtml(value);
+    return sanitizeHtml(value, "talk");
   }
 
   /**
@@ -238,7 +531,7 @@
    * @returns {string}
    */
   function sanitizeShareTemplateHtml(value){
-    return sanitizeHtml(value);
+    return sanitizeHtml(value, "share");
   }
 
   global.NCHtmlSanitizer = {

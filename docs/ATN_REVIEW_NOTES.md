@@ -99,6 +99,7 @@ for persisted monitoring (`browser.calendar.items.onCreated/onUpdated/onRemoved`
 - Sanitizer-dependent backend HTML paths now fail closed:
   - if the expected Talk/share HTML sanitizer is unavailable, the add-on throws instead of falling back to raw HTML
   - the privileged `descriptionHtml` bridge rejects unsanitized HTML instead of forwarding it
+  - when `debugEnabled` is active, the bundled sanitizer logs compact structural summaries (removed tag/attribute deltas, element/attribute counts, anchor rel-normalization adjustments) without logging raw backend template HTML, using the existing `[NCUI][Talk]` / `[NCUI][Sharing]` / `[NCBG]` debug channels
 - `experiments/ncCalToolbar/parent.js` no longer uses `innerHTML` to parse
   inbound description HTML; sanitized markup is converted via `DOMParser` and
   imported into the rich editor DOM as a fragment.

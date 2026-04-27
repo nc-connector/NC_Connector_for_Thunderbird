@@ -175,6 +175,14 @@ Implementation:
 - Attachment automation adds debug traces for:
   - threshold evaluation and prompt decisions in `[NCBG]`
   - attachment-mode wizard/prompt flow in `[NCUI][Sharing]`
+- `modules/htmlSanitizer.js` adds compact debug summaries for backend Talk/share HTML sanitization when `debugEnabled` is on:
+  - input/sanitized/normalized lengths
+  - input/output element + attribute counts
+  - removed tag/attribute deltas
+  - anchor `rel` adjustments added during post-sanitize normalization
+  - summaries stay on the existing channels instead of introducing a separate log path:
+    - UI sanitization appears through `[NCUI][Talk]` / `[NCUI][Sharing]`
+    - background sanitization appears through `[NCBG]`
 
 Keep in mind:
 - Debug logs can contain URLs, tokens, and metadata. Treat logs as sensitive.
