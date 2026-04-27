@@ -183,6 +183,9 @@ Implementation:
   - summaries stay on the existing channels instead of introducing a separate log path:
     - UI sanitization appears through `[NCUI][Talk]` / `[NCUI][Sharing]`
     - background sanitization appears through `[NCBG]`
+- `ui/debugForwarder.js` now exposes explicit teardown hooks for both wizards:
+  - `markRuntimeContextUnloading()` stops new forwarded logs before close
+  - `flushPendingDebugLogs()` gives already-started `debug:log` sends a short chance to settle before `window.close()`
 
 Keep in mind:
 - Debug logs can contain URLs, tokens, and metadata. Treat logs as sensitive.

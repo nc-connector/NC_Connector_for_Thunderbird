@@ -1542,8 +1542,7 @@
       }
       await clearWizardRemoteCleanup();
       state.remoteFolderInfo = null;
-      cleanupPageResources();
-      window.close();
+      await closeWizardWindow();
     }catch(err){
       logUiError("finalize share failed", err);
       setMessage(err?.message || i18n('sharing_status_error'), 'error');
@@ -1883,8 +1882,7 @@
   async function handleCancel(event){
     event?.preventDefault?.();
     log('Wizard cancel requested');
-    cleanupPageResources();
-    window.close();
+    await closeWizardWindow();
   }
 
   /**
@@ -2265,6 +2263,7 @@
       return;
     }
     // Wizard remote cleanup is handled centrally in background by window removal.
+    NCDebugForwarder.markRuntimeContextUnloading?.();
     isPageUnloading = true;
     state.debugEnabled = false;
     if (popupSizer){
@@ -2277,6 +2276,21 @@
     window.removeEventListener('pagehide', cleanupPageResources, true);
     window.removeEventListener('beforeunload', cleanupPageResources, true);
     window.removeEventListener('unload', cleanupPageResources, true);
+  }
+
+  /**
+   * Flush pending debug forwards and close the popup window.
+   * @returns {Promise<void>}
+   */
+  async function closeWizardWindow(){
+    NCDebugForwarder.markRuntimeContextUnloading?.();
+    cleanupPageResources();
+    try{
+      await NCDebugForwarder.flushPendingDebugLogs?.(120);
+    }catch(error){
+      logUiError("debug log flush failed", error);
+    }
+    window.close();
   }
 
   /**

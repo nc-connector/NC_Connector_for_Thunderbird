@@ -390,7 +390,7 @@
     okBtn?.addEventListener("click", handleOk);
     cancelBtn?.addEventListener("click", () => {
       if (!state.busy){
-        window.close();
+        void closeDialogWindow();
       }
     });
     passwordGenerateBtn?.addEventListener("click", handlePasswordGenerate);
@@ -870,7 +870,7 @@
         contextId: state.contextId || ""
       });
       await applyCreateResult(payload, response.result || {});
-      window.close();
+      await closeDialogWindow();
     }catch(error){
       logUiError("handleOk failed", error);
       setMessage(error?.message || String(error), true);
@@ -2155,6 +2155,7 @@
     if (isPageUnloading){
       return;
     }
+    NCDebugForwarder.markRuntimeContextUnloading?.();
     isPageUnloading = true;
     state.debugEnabled = false;
     if (popupSizer){
@@ -2167,6 +2168,21 @@
     window.removeEventListener("pagehide", cleanupPageResources, true);
     window.removeEventListener("beforeunload", cleanupPageResources, true);
     window.removeEventListener("unload", cleanupPageResources, true);
+  }
+
+  /**
+   * Flush pending debug forwards and close the dialog window.
+   * @returns {Promise<void>}
+   */
+  async function closeDialogWindow(){
+    NCDebugForwarder.markRuntimeContextUnloading?.();
+    cleanupPageResources();
+    try{
+      await NCDebugForwarder.flushPendingDebugLogs?.(120);
+    }catch(error){
+      logUiError("debug log flush failed", error);
+    }
+    window.close();
   }
 
   /**

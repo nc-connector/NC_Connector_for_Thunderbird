@@ -7,6 +7,15 @@
 (function(global){
   let runtimeDisconnectGuardInstalled = false;
   let runtimeContextUnloading = false;
+  const pendingDebugSends = new Set();
+
+  /**
+   * Mark the UI runtime context as unloading.
+   * This stops new forwarded logs before the browser unload events arrive.
+   */
+  function markRuntimeContextUnloading(){
+    runtimeContextUnloading = true;
+  }
 
   /**
    * Check whether a runtime messaging error is expected while the page unloads.
@@ -34,9 +43,6 @@
       return;
     }
     runtimeDisconnectGuardInstalled = true;
-    const markRuntimeContextUnloading = () => {
-      runtimeContextUnloading = true;
-    };
     global.addEventListener("pagehide", markRuntimeContextUnloading, true);
     global.addEventListener("beforeunload", markRuntimeContextUnloading, true);
     global.addEventListener("unload", markRuntimeContextUnloading, true);
@@ -80,6 +86,37 @@
     }catch(error){
       reportError?.("formatLogArg String conversion failed", error);
       return Object.prototype.toString.call(value);
+    }
+  }
+
+  /**
+   * Wait briefly for already-started debug forwards to settle.
+   * @param {number} timeoutMs
+   * @returns {Promise<void>}
+   */
+  async function flushPendingDebugLogs(timeoutMs = 120){
+    if (!pendingDebugSends.size){
+      return;
+    }
+    const pending = Array.from(pendingDebugSends);
+    const waitMs = Math.max(0, Number(timeoutMs) || 0);
+    const settled = Promise.allSettled(pending).then(() => {});
+    if (!waitMs){
+      await settled;
+      return;
+    }
+    let timerId = null;
+    try{
+      await Promise.race([
+        settled,
+        new Promise((resolve) => {
+          timerId = global.setTimeout(resolve, waitMs);
+        })
+      ]);
+    }finally{
+      if (timerId !== null && typeof global.clearTimeout === "function"){
+        global.clearTimeout(timerId);
+      }
     }
   }
 
@@ -141,7 +178,7 @@
       if (!sendPromise || typeof sendPromise.then !== "function"){
         return;
       }
-      void sendPromise.then(() => {}, (error) => {
+      const trackedSend = Promise.resolve(sendPromise).then(() => {}, (error) => {
         if (runtimeContextUnloading || isPageUnloading){
           return;
         }
@@ -151,6 +188,10 @@
           return;
         }
         reportError("debug log forward failed", error);
+      });
+      pendingDebugSends.add(trackedSend);
+      void trackedSend.finally(() => {
+        pendingDebugSends.delete(trackedSend);
       });
     }catch(error){
       if (runtimeContextUnloading || isPageUnloading){
@@ -163,6 +204,8 @@
   global.NCDebugForwarder = {
     isKnownRuntimeDisconnectError,
     formatLogArg,
-    forwardDebugLog
+    forwardDebugLog,
+    markRuntimeContextUnloading,
+    flushPendingDebugLogs
   };
 })(typeof window !== "undefined" ? window : (typeof globalThis !== "undefined" ? globalThis : this));

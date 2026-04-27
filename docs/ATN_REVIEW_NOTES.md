@@ -119,6 +119,9 @@ for persisted monitoring (`browser.calendar.items.onCreated/onUpdated/onRemoved`
   avoiding benign repeated `MKCOL 405` responses for the configured base folder.
 - Shared UI debug forwarding tracks page teardown centrally and suppresses the
   expected runtime-disconnect race (`context unloaded` / `Conduits`) during popup close.
+- Talk + Sharing now mark the forwarder as unloading before close and briefly
+  flush already-started `debug:log` sends, reducing teardown-time DevTools noise
+  without changing functional runtime behavior.
 
 Known temporary deviation:
 - The editor context bridge still includes scoped tab/window correlation inside
