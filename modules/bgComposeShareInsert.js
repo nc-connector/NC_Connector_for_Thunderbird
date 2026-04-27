@@ -398,7 +398,7 @@ function insertSharingBlockSegment(currentBody, blockHtml){
 }
 
 /**
- * Runtime message handler for `sharing:insertHtml`.
+ * Runtime message handler for `sharing:insertRenderedBlock`.
  * @param {{tabId?:number|string,html?:string,plainText?:string}} payload
  * @returns {Promise<{ok:boolean,error?:string}>}
  */
@@ -427,7 +427,7 @@ async function handleSharingInsertHtmlMessage(payload = {}){
       const newBody = insertSharingBlockSegment(String(details?.body || ""), plainHtml);
       await browser.compose.setComposeDetails(tabId, { body: newBody, isPlainText: false });
     }
-    L("sharing:insertHtml converted to plaintext", {
+    L("sharing:insertRenderedBlock converted to plaintext", {
       tabId,
       reason: insertionMode.reason,
       editorMode: insertionMode.editorIsPlainText ? "plain" : "html",
@@ -439,7 +439,7 @@ async function handleSharingInsertHtmlMessage(payload = {}){
   }
 
   const newBody = insertSharingBlockSegment(String(details?.body || ""), html);
-  L("sharing:insertHtml kept html", {
+  L("sharing:insertRenderedBlock kept html", {
     tabId,
     reason: insertionMode.reason,
     editorMode: "html",

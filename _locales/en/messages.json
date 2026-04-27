@@ -678,7 +678,7 @@
     "message": "Note to recipient"
   },
   "sharing_status_inserting": {
-    "message": "Inserting HTML block..."
+    "message": "Inserting share content..."
   },
   "sharing_status_checking_folder": {
     "message": "Checking folder availability..."

@@ -541,11 +541,11 @@ browser.runtime.onMessage.addListener((msg, sender) => {
       return { ok:false, error: e?.message || String(e) };
     }
   }
-  if (msg.type === "sharing:insertHtml"){
+  if (msg.type === "sharing:insertRenderedBlock"){
     try{
       return await handleSharingInsertHtmlMessage(msg.payload || {});
     }catch(e){
-      return messageError("sharing:insertHtml", e);
+      return messageError("sharing:insertRenderedBlock", e);
     }
   }
   console.error("[NCBG] unknown runtime message type", {

@@ -1472,7 +1472,7 @@
   }
 
   /**
-   * Finalize the share and insert the HTML block.
+   * Finalize the share and insert the rendered share content.
    * @returns {Promise<void>}
    */
   async function finalizeShare(){
@@ -1862,7 +1862,7 @@
       throw new Error('share_render_payload_invalid');
     }
     const response = await browser.runtime.sendMessage({
-      type: 'sharing:insertHtml',
+      type: 'sharing:insertRenderedBlock',
       payload: {
         tabId,
         html,

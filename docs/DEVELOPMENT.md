@@ -46,7 +46,7 @@ It complements:
   - [9.3 Orphan-room prevention](#93-orphan-room-prevention)
 - [10. Sharing wizard (compose window)](#10-sharing-wizard-compose-window)
   - [10.1 Flow & responsibilities](#101-flow--responsibilities)
-  - [10.2 Inserting the HTML block into the compose window](#102-inserting-the-html-block-into-the-compose-window)
+  - [10.2 Inserting share blocks into compose (mode-aware)](#102-inserting-share-blocks-into-compose-mode-aware)
   - [10.3 Share block language override](#103-share-block-language-override)
 - [11. Data model](#11-data-model)
   - [11.1 `X-NCTALK-*` iCalendar properties](#111-x-nctalk--icalendar-properties)
@@ -601,11 +601,11 @@ Attachment mode specifics:
 
 The sharing wizard sends:
 - `browser.runtime.sendMessage({ type: "sharing:armComposeShareCleanup", payload: { tabId, folderInfo, ... } })`
-- `browser.runtime.sendMessage({ type: "sharing:insertHtml", payload: { tabId, html, plainText } })`
+- `browser.runtime.sendMessage({ type: "sharing:insertRenderedBlock", payload: { tabId, html, plainText } })`
 
 Background:
 - arms compose-share cleanup before insertion (for unsent-tab cleanup handling)
-- routes `sharing:insertHtml` through `modules/bgComposeShareInsert.js`.
+- routes `sharing:insertRenderedBlock` through `modules/bgComposeShareInsert.js`.
 - receives pre-rendered share HTML from `NCSharing.buildHtmlBlock(...)`.
 - receives pre-rendered share plain text from `NCSharing.buildPlainTextBlock(...)`.
 - requires both render variants as part of the runtime message contract.
@@ -709,7 +709,7 @@ Talk wizard:
 - `talk:registerCleanup`
 
 Sharing wizard:
-- `sharing:insertHtml`
+- `sharing:insertRenderedBlock`
 - `sharing:armComposeShareCleanup`
 - `sharing:armWizardRemoteCleanup`
 - `sharing:clearWizardRemoteCleanup`

@@ -1176,7 +1176,7 @@
   /**
    * Create a Nextcloud share, upload files, and return HTML output.
    * @param {object} request
-   * @returns {Promise<{html:string, shareUrl:string, shareInfo:object}>}
+   * @returns {Promise<{shareUrl:string, shareInfo:object}>}
    */
   async function createFileLink(request){
     const opts = await NCCore.getOpts();
@@ -1276,20 +1276,9 @@
       shareId: share.id || "",
       label: normalizedShareName
     };
-    let html = "";
-    try{
-      html = await buildHtmlBlock(resultPayload, request);
-    }catch(err){
-      logInternalError("buildHtmlBlock failed", err);
-      const safeUrl = escapeHtml(share.url || "");
-      html = safeUrl
-        ? `<p style="margin:0 0 12px 0;"><a href="${safeUrl}" style="color:#0082C9;text-decoration:none;">${safeUrl}</a></p>`
-        : "";
-    }
     logDebug(opts, "createFileLink:done", { shareUrl: share.url });
 
     return {
-      html,
       shareUrl: share.url,
       shareInfo: resultPayload
     };
