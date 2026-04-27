@@ -122,6 +122,15 @@ for persisted monitoring (`browser.calendar.items.onCreated/onUpdated/onRemoved`
 - Talk + Sharing now mark the forwarder as unloading before close and briefly
   flush already-started `debug:log` sends, reducing teardown-time DevTools noise
   without changing functional runtime behavior.
+- The attachment-mode prompt now uses the same `debugEnabled`-gated shared UI
+  debug forwarder/runtime-teardown path as Talk + Sharing, instead of a
+  separate always-on prompt-specific variant.
+- Forwarded UI debug lines no longer produce redundant `[NCBG] msg debug:log`
+  meta entries before the actual `[NCUI][...]` log payload.
+- Shared helper/runtime modules now resolve their visible log prefixes through a
+  common runtime-context mapper, so active extension pages stay inside the
+  `[NCUI][...]` family and background stays on `[NCBG]` instead of using legacy
+  standalone helper prefixes.
 
 Known temporary deviation:
 - The editor context bridge still includes scoped tab/window correlation inside

@@ -21,7 +21,7 @@ This is a community project and is not an official Nextcloud GmbH product.
 - **Central backend policies (optional)**
   If the optional NC Connector backend is installed, Talk and Sharing defaults can be managed centrally. The add-on checks backend status whenever the Talk or Sharing wizard opens, when Settings open, and again when Settings are saved, applies valid-seat policies, and locks admin-controlled settings while still showing their effective values.
 - **Seamless Nextcloud integration**
-  Login Flow V2, automatic room tracking, and debug logs in [NCBG], [NCUI][Talk], [NCUI][Sharing], and [ncCalToolbar] help with troubleshooting.
+  Login Flow V2, automatic room tracking, and debug logs in [NCBG], [NCUI][Talk], [NCUI][Sharing], [NCUI][Options], [NCUI][OpenUrlFallback], and [ncCalToolbar] help with troubleshooting.
 - **ESR-ready**
   Optimized and tested for Thunderbird ESR 140.X with a minimal experiment footprint.
 
@@ -89,7 +89,7 @@ See [`CHANGELOG.md`](https://github.com/nc-connector/NC_Connector_for_Thunderbir
 3. In the add-on options, enter base URL, user, and app password or start the login flow.
 
 ## Support & feedback
-- **Troubleshooting:** Enable debug mode in the options for verbose traces; relevant logs appear as [NCBG], [NCUI][Talk], [NCUI][Sharing], and [ncCalToolbar] in Thunderbird’s developer console. Runtime errors still use `console.error(...)` even when debug mode is off.
+- **Troubleshooting:** Enable debug mode in the options for verbose traces; relevant logs appear as [NCBG], [NCUI][Talk], [NCUI][Sharing], [NCUI][Options], [NCUI][OpenUrlFallback], and [ncCalToolbar] in Thunderbird’s developer console. Runtime errors still use `console.error(...)` even when debug mode is off.
 - **System address book mismatch (enabled in admin UI, but still unavailable):** see Admin Guide section
   ["System address book required for user search and moderator selection"](https://github.com/nc-connector/NC_Connector_for_Thunderbird/blob/main/docs/ADMIN.md#system-address-book-required-for-user-search-and-moderator-selection)
   for the `occ` repair sequence and DAV export verification URL.

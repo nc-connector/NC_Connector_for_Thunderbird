@@ -42,7 +42,6 @@ const NCPolicyRuntime = (() => {
     }catch(error){
       console.error("[NCBG]", scope, String(error));
     }
-    L(scope, details);
   }
 
   /**
@@ -204,7 +203,7 @@ const NCPolicyRuntime = (() => {
       if (typeof NCHostPermissions !== "undefined" && NCHostPermissions?.requireOriginPermission){
         await NCHostPermissions.requireOriginPermission(baseUrl, {
           message: bgI18n("error_host_permission_missing"),
-          scope: "[NCBG] policy status host permission missing",
+          scope: "policy status host permission missing",
           logMissing: true
         });
       }

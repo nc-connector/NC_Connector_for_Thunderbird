@@ -88,7 +88,7 @@ Datenfluss:
 
 ### Logging und Debug
 - Debug-Modus in den Optionen aktiviert detaillierte Logs
-- Log-Kanäle: [NCBG], [NCUI][Talk], [NCUI][Sharing], `[ncCalToolbar]`, plus bei Bedarf Kalender-Experiment-Logs aus `[calendar.items]`
+- Log-Kanäle: [NCBG], [NCUI][Talk], [NCUI][Sharing], [NCUI][Options], [NCUI][OpenUrlFallback] und `[ncCalToolbar]`
 - Background-Logs enthalten OCS/DAV-Status und Metadaten-Entscheidungen (nur wenn Debug aktiv ist)
 - Attachment-Flow liefert zusätzliche Debug-Spuren:
   - Grenzwert-Prüfung und Benutzerentscheidung in `[NCBG]`

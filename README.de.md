@@ -23,7 +23,7 @@ Lobby bis Startzeit, Moderator-Delegation, automatisches Aufräumen nicht gespei
 - **Zentrale Backend-Policies (optional)**
 Ist das optionale NC-Connector-Backend installiert, koennen Talk- und Sharing-Defaults zentral gesteuert werden. Beim Oeffnen von Wizard und Add-on-Settings sowie erneut beim Speichern der Add-on-Settings prueft das Add-on den Backend-Status, uebernimmt bei gueltigem Seat die Policy-Werte und sperrt admin-kontrollierte Optionen sichtbar im UI.
 - **Nahtlose Nextcloud-Integration** 
-Login-Flow V2, automatische Raumverfolgung sowie Debug-Logs in [NCBG], [NCUI][Talk], [NCUI][Sharing] und [ncCalToolbar] helfen beim Troubleshooting.
+Login-Flow V2, automatische Raumverfolgung sowie Debug-Logs in [NCBG], [NCUI][Talk], [NCUI][Sharing], [NCUI][Options], [NCUI][OpenUrlFallback] und [ncCalToolbar] helfen beim Troubleshooting.
 - **ESR-ready** 
 Optimiert und getestet für Thunderbird ESR 140.X mit minimalem Experiment-Anteil.
 
@@ -92,7 +92,7 @@ Siehe [`CHANGELOG.md`](https://github.com/nc-connector/NC_Connector_for_Thunderb
 3. In den Add-on-Optionen Basis-URL, Benutzer und App-Passwort hinterlegen oder den Login Flow starten.
 
 ## Support & Feedback
-- **Fehleranalyse:** Debug-Modus in den Optionen für ausführliche Traces aktivieren; relevante Logs erscheinen als [NCBG], [NCUI][Talk], [NCUI][Sharing] und [ncCalToolbar] in der Entwickler-Konsole von Thunderbird. Laufzeitfehler nutzen weiterhin `console.error(...)`, auch wenn der Debug-Modus aus ist.
+- **Fehleranalyse:** Debug-Modus in den Optionen für ausführliche Traces aktivieren; relevante Logs erscheinen als [NCBG], [NCUI][Talk], [NCUI][Sharing], [NCUI][Options], [NCUI][OpenUrlFallback] und [ncCalToolbar] in der Entwickler-Konsole von Thunderbird. Laufzeitfehler nutzen weiterhin `console.error(...)`, auch wenn der Debug-Modus aus ist.
 - **Systemadressbuch-Mismatch (im Admin-UI aktiv, faktisch aber nicht erreichbar):** siehe Admin-Guide Abschnitt
   ["System address book required for user search and moderator selection"](https://github.com/nc-connector/NC_Connector_for_Thunderbird/blob/main/docs/ADMIN.md#system-address-book-required-for-user-search-and-moderator-selection)
   für die `occ`-Reparatursequenz und die DAV-Export-Prüf-URL.

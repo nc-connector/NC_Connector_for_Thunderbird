@@ -11,6 +11,9 @@ async function getOpts(){
   return NCCore.getOpts();
 }
 const talkShortId = NCTalkTextUtils.shortId;
+const resolveTalkCoreLogPrefix = () =>
+  globalThis.NCLogContext?.resolveAddonLogPrefix?.("TalkCore")
+  || "[NCBG]";
 
 /**
  * Build a standard host-permission error.
@@ -34,7 +37,7 @@ function hostPermissionError(){
  * @param {object} details
  */
 function logTalkCoreError(scope, error, details = undefined){
-  console.error("[NCTalk]", scope, error, details || "");
+  console.error(resolveTalkCoreLogPrefix(), scope, error, details || "");
 }
 
 /**
@@ -48,7 +51,7 @@ async function ensureHostPermission(baseUrl){
   }
   return NCHostPermissions.requireOriginPermission(baseUrl, {
     errorFactory: hostPermissionError,
-    scope: "[NCTalk] host permission missing",
+    scope: "host permission missing",
     logMissing: false
   });
 }

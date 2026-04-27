@@ -11,6 +11,7 @@
   const CONTENT_MARGIN = 0;
   let layoutObserver = null;
   let isPageUnloading = false;
+  let disposeDebugFlagMirror = null;
   const dialogRoot = document.querySelector(".dialog");
   const popupSizer = window.NCTalkPopupSizing?.createPopupSizer({
     fixedWidth: POPUP_CONTENT_WIDTH,
@@ -155,6 +156,16 @@
       invitationTemplate: ""
     }
   };
+  const emitDebugLog = typeof NCDebugForwarder?.createUiDebugLogger === "function"
+    ? NCDebugForwarder.createUiDebugLogger({
+      source: "talkDialog",
+      channel: "NCUI",
+      label: "Talk",
+      getEnabled: () => state.debugEnabled,
+      getIsPageUnloading: () => isPageUnloading,
+      onError: logUiError
+    })
+    : () => {};
 
   [systemAddressbookAdminLinkDelegateInline].forEach((link) => {
     if (link){
@@ -348,17 +359,6 @@
     }
     applyPolicyWarningUi();
   }
-  (async () => {
-    try{
-      const stored = await browser.storage.local.get(["debugEnabled"]);
-      state.debugEnabled = !!stored.debugEnabled;
-      logDebug("popup init", {
-        contextId: state.contextId || ""
-      });
-    }catch(error){
-      logUiError("debug flag init failed", error);
-    }
-  })();
   window.addEventListener("pagehide", cleanupPageResources, true);
   window.addEventListener("beforeunload", cleanupPageResources, true);
   window.addEventListener("unload", cleanupPageResources, true);
@@ -367,12 +367,7 @@
     passwordInput.setAttribute("placeholder", t("ui_create_password_placeholder"));
   }
 
-  bindEvents();
-  if (!state.contextId){
-    setMessage(t("talk_error_context_id_missing"), true);
-  }else{
-    init();
-  }
+  void bootstrapDialog();
   if (popupSizer){
     popupSizer.scheduleSizeUpdate();
     window.addEventListener("load", popupSizer.scheduleSizeUpdate, { once:true });
@@ -534,6 +529,45 @@
       logUiError("init failed", error);
       setMessage(error?.message || String(error), true);
     }
+  }
+
+  /**
+   * Initialize debug logging first, then continue with the dialog bootstrap.
+   * @returns {Promise<void>}
+   */
+  async function bootstrapDialog(){
+    await initDebugLogging();
+    bindEvents();
+    if (!state.contextId){
+      setMessage(t("talk_error_context_id_missing"), true);
+      return;
+    }
+    await init();
+  }
+
+  /**
+   * Mirror the debug flag into the Talk dialog runtime.
+   * @returns {Promise<void>}
+   */
+  async function initDebugLogging(){
+    disposeDebugFlagMirror?.();
+    disposeDebugFlagMirror = null;
+    if (typeof NCDebugForwarder?.installDebugEnabledMirror !== "function"){
+      state.debugEnabled = false;
+      return;
+    }
+    const control = await NCDebugForwarder.installDebugEnabledMirror({
+      onChange: (enabled) => {
+        state.debugEnabled = !!enabled;
+      },
+      onError: logUiError
+    });
+    disposeDebugFlagMirror = typeof control?.dispose === "function"
+      ? () => control.dispose()
+      : null;
+    logDebug("popup init", {
+      contextId: state.contextId || ""
+    });
   }
 
   /**
@@ -2157,6 +2191,8 @@
     }
     NCDebugForwarder.markRuntimeContextUnloading?.();
     isPageUnloading = true;
+    disposeDebugFlagMirror?.();
+    disposeDebugFlagMirror = null;
     state.debugEnabled = false;
     if (popupSizer){
       window.removeEventListener("resize", popupSizer.scheduleSizeUpdate);
@@ -2186,29 +2222,11 @@
   }
 
   /**
-   * Send a debug log to the console and background.
+   * Send a debug log to the shared background-backed UI channel.
    * @param {string} label
    * @param {any} data
    */
   function logDebug(label, data){
-    if (!state.debugEnabled || isPageUnloading){
-      return;
-    }
-    const details = data || "";
-    try{
-      console.log(LOG_PREFIX, label, details);
-    }catch(error){
-      logUiError("debug console log failed", error);
-    }
-    NCDebugForwarder.forwardDebugLog({
-      enabled: state.debugEnabled,
-      isPageUnloading,
-      source: "talkDialog",
-      channel: "NCUI",
-      label: "Talk",
-      text: label,
-      details,
-      onError: logUiError
-    });
+    emitDebugLog(label, data || "");
   }
 })();

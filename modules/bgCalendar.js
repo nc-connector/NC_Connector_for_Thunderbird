@@ -258,15 +258,13 @@ async function applyCalendarLobbyUpdate(payload = {}){
   const incomingStart = typeof payload?.startTimestamp === "number" ? payload.startTimestamp : null;
   const metaStart = typeof meta.startTimestamp === "number" ? meta.startTimestamp : null;
 
-  if (DEBUG_ENABLED){
-    L("calendar lobby update payload", {
-      token: shortToken(token),
-      delegate: delegateTarget ? bgShortId(delegateTarget, 20) : "",
-      delegated,
-      startTimestamp: incomingStart,
-      metaStart
-    });
-  }
+  L("calendar lobby update payload", {
+    token: shortToken(token),
+    delegate: delegateTarget ? bgShortId(delegateTarget, 20) : "",
+    delegated,
+    startTimestamp: incomingStart,
+    metaStart
+  });
 
   if (payload?.lobbyEnabled === false || meta.lobbyEnabled === false){
     return { ok:false, skipped:true, reason:"lobbyDisabled" };

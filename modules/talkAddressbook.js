@@ -29,6 +29,9 @@ const SYSTEM_ADDRESSBOOK_CACHE = {
 };
 const SYSTEM_ADDRESSBOOK_TTL = 5 * 60 * 1000;
 const SYSTEM_ADDRESSBOOK_FORCE_MIN_INTERVAL_MS = 10 * 1000;
+const resolveTalkAddressbookLogPrefix = () =>
+  globalThis.NCLogContext?.resolveAddonLogPrefix?.("TalkAddressbook")
+  || "[NCBG]";
 
 /**
  * Resolve shared iCal/vCard parser contract API for Talk module.
@@ -41,7 +44,7 @@ function getTalkIcalContractApi(){
     typeof NCIcalContract.parseVcardComponents !== "function" ||
     typeof NCIcalContract.stringifyValue !== "function"
   ){
-    console.error("[NCTalk] NCIcalContract API missing");
+    console.error(resolveTalkAddressbookLogPrefix(), "NCIcalContract API missing");
     return null;
   }
   return NCIcalContract;

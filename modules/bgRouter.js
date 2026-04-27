@@ -37,41 +37,43 @@ function readMessageContextId(msg){
 browser.runtime.onMessage.addListener((msg, sender) => {
   if (!msg || !msg.type) return;
   return (async () => {
-    L("msg", msg.type, { hasPayload: !!msg.payload });
-  if (msg.type === "debug:log"){
-    const source = msg.payload?.source ? String(msg.payload.source) : "frontend";
-    const text = msg.payload?.text ? String(msg.payload.text) : "";
-    const extras = Array.isArray(msg.payload?.details)
-      ? msg.payload.details
-      : (msg.payload?.details != null ? [msg.payload.details] : []);
-    const channelRaw = msg.payload?.channel ? String(msg.payload.channel) : "NCDBG";
-    const channel = channelRaw.toUpperCase();
-    const label = msg.payload?.label ? String(msg.payload.label) : source;
-    const prefix = label ? `[${channel}][${label}]` : `[${channel}]`;
-    if (DEBUG_ENABLED){
+    if (msg.type !== "debug:log"){
+      L("msg", msg.type, { hasPayload: !!msg.payload });
+    }
+    if (msg.type === "debug:log"){
+      const source = msg.payload?.source ? String(msg.payload.source) : "frontend";
+      const text = msg.payload?.text ? String(msg.payload.text) : "";
+      const extras = Array.isArray(msg.payload?.details)
+        ? msg.payload.details
+        : (msg.payload?.details != null ? [msg.payload.details] : []);
+      const channelRaw = msg.payload?.channel ? String(msg.payload.channel) : "NCDBG";
+      const channel = channelRaw.toUpperCase();
+      const label = msg.payload?.label ? String(msg.payload.label) : source;
+      const prefix = label ? `[${channel}][${label}]` : `[${channel}]`;
+      if (typeof logBackgroundDebugLine === "function"){
+        try{
+          logBackgroundDebugLine(prefix, text, ...extras);
+        }catch(error){
+          console.error("[NCBG] forwarded debug log failed", error);
+        }
+      }
+      return { ok:true };
+    }
+    if (msg.type === "passwordPolicy:fetch"){
+      const policy = await fetchPasswordPolicy();
+      return { ok:true, policy };
+    }
+    if (msg.type === "passwordPolicy:generate"){
+      return await generatePasswordViaPolicy(msg?.payload?.policy || {});
+    }
+    if (msg.type === "policy:getStatus"){
       try{
-        console.log(prefix, text, ...extras);
-      }catch(error){
-        console.error("[NCBG] forwarded debug log failed", error);
+        const status = await NCPolicyRuntime.getPolicyStatus();
+        return { ok:true, status };
+      }catch(e){
+        return messageError("policy:getStatus", e);
       }
     }
-    return { ok:true };
-  }
-  if (msg.type === "passwordPolicy:fetch"){
-    const policy = await fetchPasswordPolicy();
-    return { ok:true, policy };
-  }
-  if (msg.type === "passwordPolicy:generate"){
-    return await generatePasswordViaPolicy(msg?.payload?.policy || {});
-  }
-  if (msg.type === "policy:getStatus"){
-    try{
-      const status = await NCPolicyRuntime.getPolicyStatus();
-      return { ok:true, status };
-    }catch(e){
-      return messageError("policy:getStatus", e);
-    }
-  }
   if (msg.type === "talk:searchUsers"){
     try{
       const users = await NCTalkCore.searchSystemAddressbook(msg.payload || {});

@@ -5,6 +5,9 @@
  */
 'use strict';
 (function(global){
+  const LOG_PREFIX =
+    global.NCLogContext?.resolveAddonLogPrefix?.("I18N")
+    || "[NCBG]";
   /**
    * Translate a message key using the WebExtension i18n catalog.
    * @param {string} key
@@ -20,7 +23,7 @@
         }
       }
     }catch(err){
-      console.error('[NC-I18N]', err);
+      console.error(LOG_PREFIX, "browser.i18n.getMessage failed", err);
     }
     if (Array.isArray(substitutions) && substitutions.length){
       return String(substitutions[0] ?? '');

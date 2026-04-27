@@ -8,6 +8,7 @@
   const LOG_SOURCE = "composeAttachmentPrompt";
   const LOG_CHANNEL = "NCUI";
   const LOG_LABEL = "Sharing";
+  const LOG_PREFIX = `[${LOG_CHANNEL}][${LOG_LABEL}]`;
   const i18n = NCI18n.translate;
   const toShortId = NCTalkTextUtils.shortId;
   const isKnownRuntimeDisconnectError =
@@ -29,12 +30,21 @@
 
   let resolved = false;
   let isPageUnloading = false;
-  debugLog("attachment prompt init", {
-    promptId: toShortId(promptId, 24),
-    totalBytes,
-    thresholdMb,
-    hasLastName: !!lastName
-  });
+  let debugEnabled = false;
+  let disposeDebugFlagMirror = null;
+  const emitDebugLog = typeof window.NCDebugForwarder?.createUiDebugLogger === "function"
+    ? window.NCDebugForwarder.createUiDebugLogger({
+      source: LOG_SOURCE,
+      channel: LOG_CHANNEL,
+      label: LOG_LABEL,
+      getEnabled: () => debugEnabled,
+      getIsPageUnloading: () => isPageUnloading,
+      onError: logUiError
+    })
+    : () => {};
+  shareBtn.disabled = true;
+  removeLastBtn.disabled = true;
+  void bootstrapPrompt();
 
   reasonText.textContent = i18n("sharing_attachment_prompt_reason", [
     NCTalkTextUtils.formatSizeMb(totalBytes),
@@ -43,14 +53,6 @@
     NCTalkTextUtils.formatSizeMb(lastSizeBytes)
   ]);
 
-  shareBtn?.addEventListener("click", () => {
-    debugLog("attachment prompt action", { decision: "share", promptId: toShortId(promptId, 24) });
-    resolvePrompt("share");
-  });
-  removeLastBtn?.addEventListener("click", () => {
-    debugLog("attachment prompt action", { decision: "remove_last", promptId: toShortId(promptId, 24) });
-    resolvePrompt("remove_last");
-  });
   window.addEventListener("pagehide", cleanupPromptResources, true);
   window.addEventListener("beforeunload", cleanupPromptResources, true);
   window.addEventListener("unload", cleanupPromptResources, true);
@@ -80,7 +82,7 @@
     }catch(error){
       const message = error?.message || String(error || "");
       if (!isPageUnloading && !isKnownRuntimeDisconnectError(message)){
-        console.error("[NCSHARE][Prompt] resolve failed", error);
+        logUiError("resolve failed", error);
         debugLog("attachment prompt resolve failed", {
           decision,
           promptId: toShortId(promptId, 24),
@@ -88,7 +90,53 @@
         });
       }
     }
-    window.close();
+    await closePromptWindow();
+  }
+
+  /**
+   * Initialize debug logging before enabling prompt actions.
+   * @returns {Promise<void>}
+   */
+  async function bootstrapPrompt(){
+    await initDebugLogging();
+    shareBtn.disabled = false;
+    removeLastBtn.disabled = false;
+    shareBtn?.addEventListener("click", () => {
+      debugLog("attachment prompt action", { decision: "share", promptId: toShortId(promptId, 24) });
+      resolvePrompt("share");
+    });
+    removeLastBtn?.addEventListener("click", () => {
+      debugLog("attachment prompt action", { decision: "remove_last", promptId: toShortId(promptId, 24) });
+      resolvePrompt("remove_last");
+    });
+  }
+
+  /**
+   * Load and live-mirror the debug flag for this prompt.
+   * @returns {Promise<void>}
+   */
+  async function initDebugLogging(){
+    disposeDebugFlagMirror?.();
+    disposeDebugFlagMirror = null;
+    if (typeof window.NCDebugForwarder?.installDebugEnabledMirror !== "function"){
+      debugEnabled = false;
+      return;
+    }
+    const control = await window.NCDebugForwarder.installDebugEnabledMirror({
+      onChange: (enabled) => {
+        debugEnabled = !!enabled;
+      },
+      onError: logUiError
+    });
+    disposeDebugFlagMirror = typeof control?.dispose === "function"
+      ? () => control.dispose()
+      : null;
+    debugLog("attachment prompt init", {
+      promptId: toShortId(promptId, 24),
+      totalBytes,
+      thresholdMb,
+      hasLastName: !!lastName
+    });
   }
 
   /**
@@ -98,40 +146,51 @@
     if (isPageUnloading){
       return;
     }
+    window.NCDebugForwarder?.markRuntimeContextUnloading?.();
     isPageUnloading = true;
+    disposeDebugFlagMirror?.();
+    disposeDebugFlagMirror = null;
+    debugEnabled = false;
     window.removeEventListener("pagehide", cleanupPromptResources, true);
     window.removeEventListener("beforeunload", cleanupPromptResources, true);
     window.removeEventListener("unload", cleanupPromptResources, true);
   }
 
   /**
-   * Forward a structured debug line to background logger.
+   * Flush pending debug forwards and close the prompt window.
+   * @returns {Promise<void>}
+   */
+  async function closePromptWindow(){
+    window.NCDebugForwarder?.markRuntimeContextUnloading?.();
+    cleanupPromptResources();
+    try{
+      await window.NCDebugForwarder?.flushPendingDebugLogs?.(120);
+    }catch(error){
+      logUiError("debug log flush failed", error);
+    }
+    window.close();
+  }
+
+  /**
+   * Log internal UI errors in a deterministic way.
+   * @param {string} scope
+   * @param {any} error
+   */
+  function logUiError(scope, error){
+    try{
+      console.error(LOG_PREFIX, scope, error);
+    }catch(logError){
+      console.error(LOG_PREFIX, scope, error?.message || String(error), logError?.message || String(logError));
+    }
+  }
+
+  /**
+   * Forward a structured debug line to the shared background-backed UI channel.
    * @param {string} text
    * @param {object|string|number|boolean|null} details
    */
   function debugLog(text, details = null){
-    if (isPageUnloading){
-      return;
-    }
-    const forwardDebugLog = window.NCDebugForwarder?.forwardDebugLog;
-    if (typeof forwardDebugLog !== "function"){
-      return;
-    }
-    forwardDebugLog({
-      enabled: true,
-      isPageUnloading,
-      source: LOG_SOURCE,
-      channel: LOG_CHANNEL,
-      label: LOG_LABEL,
-      text: String(text || ""),
-      details: details == null ? [] : [details],
-      onError: (scope, error) => {
-        if (isPageUnloading){
-          return;
-        }
-        console.error("[NCUI][AttachmentPrompt]", scope, error);
-      }
-    });
+    emitDebugLog(String(text || ""), ...(details == null ? [] : [details]));
   }
 
 })();

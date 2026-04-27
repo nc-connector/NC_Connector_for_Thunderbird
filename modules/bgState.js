@@ -67,7 +67,7 @@ const normalizeAttachmentThresholdMb = NCSharingStorage.normalizeAttachmentThres
     if (DEBUG_ENABLED){
       try{
         const manifest = browser.runtime.getManifest();
-        console.log("[NCBG] startup", {
+        logBackgroundDebugLine("[NCBG]", "startup", {
           version: manifest?.version || "",
           hasApiCalendarItems: !!browser?.calendar?.items,
           hasApiCalendarItemAction: !!browser?.calendarItemAction,
@@ -106,11 +106,29 @@ browser.storage.onChanged.addListener((changes, area) => {
  */
 function L(...a){
   if (!DEBUG_ENABLED) return;
+  logBackgroundDebugLine("[NCBG]", ...a);
+}
+
+/**
+ * Log one background debug line with an explicit prefix.
+ * @param {string} prefix
+ * @param {...any} args
+ */
+function logBackgroundDebugLine(prefix, ...args){
+  if (!DEBUG_ENABLED) return;
   try{
-    console.log("[NCBG]", ...a);
+    console.log(prefix, ...args);
   }catch(error){
     console.error("[NCBG] debug log failed", error);
   }
+}
+
+/**
+ * Expose the current background debug flag to shared helper modules.
+ * @returns {boolean}
+ */
+function isBackgroundDebugEnabled(){
+  return !!DEBUG_ENABLED;
 }
 
 /**

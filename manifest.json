@@ -27,6 +27,7 @@
   ],
   "background": {
     "scripts": [
+      "modules/logContext.js",
       "modules/hostPermissions.js",
       "modules/ocs.js",
       "modules/i18n.js",

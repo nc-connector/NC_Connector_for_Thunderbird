@@ -8,7 +8,9 @@
  */
 (function(global){
   "use strict";
-  const LOG_PREFIX = "[NCOcs]";
+  const LOG_PREFIX =
+    global.NCLogContext?.resolveAddonLogPrefix?.("OCS")
+    || "[NCBG]";
 
   /**
    * Log internal OCS helper errors.

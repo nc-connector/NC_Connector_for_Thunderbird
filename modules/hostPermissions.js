@@ -5,7 +5,9 @@
  */
 "use strict";
 (function(global){
-  const LOG_PREFIX = "[NCHostPermissions]";
+  const LOG_PREFIX =
+    global.NCLogContext?.resolveAddonLogPrefix?.("HostPermissions")
+    || "[NCBG]";
   const api = {
     normalizeOriginPattern,
     hasOriginPermission,

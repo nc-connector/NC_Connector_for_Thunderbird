@@ -12,6 +12,9 @@
 const NCCore = (() => {
   const DEVICE_NAME = "NC Connector for Thunderbird";
   const coreShortId = NCTalkTextUtils.shortId;
+  const resolveLogPrefix = () =>
+    globalThis.NCLogContext?.resolveAddonLogPrefix?.("Core")
+    || "[NCBG]";
 
   /**
  * Log NCCore internal errors.
@@ -21,7 +24,7 @@ const NCCore = (() => {
  * @param {object} details
  */
 function logNCCoreError(scope, error, details = undefined){
-  console.error("[NCCore]", scope, error, details || "");
+  console.error(resolveLogPrefix(), scope, error, details || "");
 }
 
   /**
@@ -74,7 +77,7 @@ function logNCCoreError(scope, error, details = undefined){
     }
     return NCHostPermissions.requireOriginPermission(baseUrl, {
       message: bgI18n("error_host_permission_missing"),
-      scope: "[NCCore] host permission missing"
+      scope: "host permission missing"
     });
   }
 
@@ -171,13 +174,13 @@ function logNCCoreError(scope, error, details = undefined){
           return { ok:false, code:"http", message: detail };
         }
       }catch(userErr){
-        console.error("[NCCore] user endpoint request failed", userErr);
+        console.error(resolveLogPrefix(), "user endpoint request failed", userErr);
         logNCCoreError("user endpoint request failed", userErr, { base: normalizedBase });
         return { ok:false, code:"network", message: userErr?.message || String(userErr) };
       }
       return { ok:true, version: versionStr, message };
     }catch(e){
-      console.error("[NCCore] capabilities request failed", e);
+      console.error(resolveLogPrefix(), "capabilities request failed", e);
       logNCCoreError("capabilities request failed", e, { base: normalizedBase });
       return { ok:false, code:"network", message: e?.message || String(e) };
     }
@@ -289,7 +292,7 @@ function logNCCoreError(scope, error, details = undefined){
         };
       }catch(err){
         if (err?.ncLoginFlowFatal){
-          console.error("[NCCore] login flow poll fatal error", err);
+          console.error(resolveLogPrefix(), "login flow poll fatal error", err);
           logNCCoreError("login flow poll fatal error", err);
           throw err;
         }
@@ -297,7 +300,7 @@ function logNCCoreError(scope, error, details = undefined){
           await delay(intervalMs);
           continue;
         }
-        console.error("[NCCore] login flow poll failed", err);
+        console.error(resolveLogPrefix(), "login flow poll failed", err);
         logNCCoreError("login flow poll failed", err);
         throw err;
       }

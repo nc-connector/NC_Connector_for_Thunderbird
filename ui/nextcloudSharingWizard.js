@@ -26,6 +26,7 @@
   const LOG_PREFIX = `[${LOG_CHANNEL}][${LOG_LABEL}]`;
   const SHARING_KEYS = NCSharingStorage.SHARING_KEYS;
   const POLICY_ADMIN_URL = "https://github.com/nc-connector/NC_Connector_for_Thunderbird/blob/main/docs/ADMIN.md";
+  let disposeDebugFlagMirror = null;
 
   /**
    * Log internal UI errors in a deterministic way.
@@ -271,6 +272,16 @@
   const dom = {};
   const i18n = NCI18n.translate;
   const DEFAULT_EXPIRE_DAYS = 7;
+  const emitDebugLog = typeof NCDebugForwarder?.createUiDebugLogger === 'function'
+    ? NCDebugForwarder.createUiDebugLogger({
+      source: LOG_SOURCE,
+      channel: LOG_CHANNEL,
+      label: LOG_LABEL,
+      getEnabled: () => state.debugEnabled,
+      getIsPageUnloading: () => isPageUnloading,
+      onError: logUiError
+    })
+    : () => {};
 
   // Register unload guards early so debug forwarding stops even if the window
   // closes while async init is still running.
@@ -295,6 +306,7 @@
       state.tabId = parseTabId();
       state.launchContextId = parseLaunchContextId();
       state.wizardWindowId = await resolveWizardWindowId();
+      await initDebugLogging();
       attachEvents();
       await refreshPolicyStatus();
       if (NCSharingStorage?.migrateLegacySharingKeys){
@@ -303,15 +315,15 @@
       try{
         await loadDefaultSettings();
       }catch(err){
-        console.error('[NCSHARE-UI] defaults', err);
+        logUiError('defaults', err);
       }
       setDefaultShareName();
       await loadPasswordPolicy();
       await applyDefaultSecuritySettings();
       try{
-        await Promise.all([loadBasePath(), loadDebugFlag()]);
+        await loadBasePath();
       }catch(err){
-        console.error('[NCSHARE-UI] init', err);
+        logUiError('init', err);
       }
       await loadLaunchContext();
       if (state.mode === "attachments"){
@@ -627,7 +639,7 @@
         dom.basePathLabel.textContent = state.basePath || '';
       }
     }catch(err){
-      console.error('[NCSHARE-UI] basePath', err);
+      logUiError('basePath', err);
       state.basePath = NCSharing?.DEFAULT_BASE_PATH || '';
       if (dom.basePathLabel){
         dom.basePathLabel.textContent = state.basePath || '';
@@ -637,21 +649,25 @@
   }
 
   /**
-   * Load the debug flag from storage.
+   * Mirror the debug flag into the wizard runtime.
    * @returns {Promise<boolean>}
    */
-  async function loadDebugFlag(){
-    try{
-      if (!browser?.storage?.local){
-        state.debugEnabled = false;
-        return state.debugEnabled;
-      }
-      const stored = await browser.storage.local.get(['debugEnabled']);
-      state.debugEnabled = !!stored.debugEnabled;
-    }catch(err){
-      console.error('[NCSHARE-UI] debug flag', err);
+  async function initDebugLogging(){
+    disposeDebugFlagMirror?.();
+    disposeDebugFlagMirror = null;
+    if (typeof NCDebugForwarder?.installDebugEnabledMirror !== 'function'){
       state.debugEnabled = false;
+      return state.debugEnabled;
     }
+    const control = await NCDebugForwarder.installDebugEnabledMirror({
+      onChange: (enabled) => {
+        state.debugEnabled = !!enabled;
+      },
+      onError: logUiError
+    });
+    disposeDebugFlagMirror = typeof control?.dispose === 'function'
+      ? () => control.dispose()
+      : null;
     return state.debugEnabled;
   }
 
@@ -685,7 +701,7 @@
         preloadAttachmentEntries(context.attachments);
       }
     }catch(err){
-      console.error('[NCSHARE-UI] launch context', err);
+      logUiError('launch context', err);
       log('Launch context error', err?.message || String(err));
     }
   }
@@ -1979,21 +1995,9 @@
    * Send a debug log message when enabled.
    */
   function log(){
-    if (!state.debugEnabled || isPageUnloading){
-      return;
-    }
     const args = Array.from(arguments);
     const list = Array.isArray(args) ? args : [];
-    NCDebugForwarder.forwardDebugLog({
-      enabled: state.debugEnabled,
-      isPageUnloading,
-      source: LOG_SOURCE,
-      channel: LOG_CHANNEL,
-      label: LOG_LABEL,
-      text: list[0],
-      details: list.slice(1),
-      onError: logUiError
-    });
+    emitDebugLog(list[0], ...list.slice(1));
   }
   /**
    * Create a fresh share context snapshot.
@@ -2265,6 +2269,8 @@
     // Wizard remote cleanup is handled centrally in background by window removal.
     NCDebugForwarder.markRuntimeContextUnloading?.();
     isPageUnloading = true;
+    disposeDebugFlagMirror?.();
+    disposeDebugFlagMirror = null;
     state.debugEnabled = false;
     if (popupSizer){
       window.removeEventListener('resize', popupSizer.scheduleSizeUpdate);

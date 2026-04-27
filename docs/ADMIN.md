@@ -214,8 +214,11 @@ When enabled, logs appear with prefixes such as:
 - `[NCBG]` (background)
 - `[NCUI][Talk]` (Talk wizard UI)
 - `[NCUI][Sharing]` (Sharing wizard UI)
+- `[NCUI][Options]` (settings/options page)
+- `[NCUI][OpenUrlFallback]` (browser-open fallback dialog)
 - `[ncCalToolbar]` (custom calendar editor toolbar/context bridge)
-- `[calendar.items]` (persisted calendar monitoring logs)
+
+The bundled `experiments/calendar/**` package remains upstream/as-is. Any console output coming from it is outside the add-on debug-channel contract above.
 
 ### 2.6 About & Support
 

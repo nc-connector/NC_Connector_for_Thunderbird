@@ -10,6 +10,9 @@
  */
 (function(global){
   "use strict";
+  const ICAL_LOG_PREFIX =
+    global.NCLogContext?.resolveAddonLogPrefix?.("Ical")
+    || "[NCBG]";
 
   /**
    * Resolve the global ical.js API and fail loudly if it is missing.
@@ -141,7 +144,7 @@
       }
       return out;
     }catch(error){
-      console.error("[NCIcal] parseEventData failed", error);
+      console.error(ICAL_LOG_PREFIX, "parseEventData failed", error);
       return out;
     }
   }
@@ -198,7 +201,7 @@
       }
       return Math.floor(unix);
     }catch(error){
-      console.error("[NCIcal] parseEventStartUnixSeconds failed", error);
+      console.error(ICAL_LOG_PREFIX, "parseEventStartUnixSeconds failed", error);
       return null;
     }
   }
@@ -221,7 +224,7 @@
         emailParam: stringifyValue(prop.getParameter("email") || "")
       }));
     }catch(error){
-      console.error("[NCIcal] extractEventAttendees failed", error);
+      console.error(ICAL_LOG_PREFIX, "extractEventAttendees failed", error);
       return [];
     }
   }
@@ -299,7 +302,7 @@
         changed: true
       };
     }catch(error){
-      console.error("[NCIcal] applyEventPropertyUpdates failed", {
+      console.error(ICAL_LOG_PREFIX, "applyEventPropertyUpdates failed", {
         keys: normalizedUpdates ? Object.keys(normalizedUpdates) : []
       }, error);
       return { ical, changed: false };
@@ -315,7 +318,7 @@
     try{
       return parseComponents(data).filter((component) => component?.name === "vcard");
     }catch(error){
-      console.error("[NCIcal] parseVcardComponents failed", error);
+      console.error(ICAL_LOG_PREFIX, "parseVcardComponents failed", error);
       return [];
     }
   }

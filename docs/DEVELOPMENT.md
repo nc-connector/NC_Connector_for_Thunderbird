@@ -128,7 +128,7 @@ Key files you’ll touch most:
 - `experiments/ncComposePrefs/parent.js` — read-only compose preference bridge (`mail.compose.big_attachments.*`)
 - `ui/talkDialog.html` + `ui/talkDialog.js` — Talk wizard UI
 - `ui/nextcloudSharingWizard.html` + `ui/nextcloudSharingWizard.js` — Sharing wizard UI
-- `ui/debugForwarder.js` — shared runtime debug forwarding helper for Talk + Sharing wizard UIs
+- `ui/debugForwarder.js` — shared runtime debug forwarding/helper layer for Talk, Sharing, and attachment prompt UIs
 - `ui/addressbookUi.js` — shared system-addressbook tooltip lock helper used by Talk wizard + options
 - `ui/passwordPolicyClient.js` — shared password-policy fetch/generate helper for both wizards
 - `options.html` + `options.js` — settings UI
@@ -151,15 +151,17 @@ Important for packaging:
 ### 4.2 Developer tools & consoles
 
 To debug, you’ll typically use:
-- The Thunderbird **Developer Console / Error Console** (for `[NCBG]`, `[NCUI][Talk]`, `[NCUI][Sharing]`, `[ncCalToolbar]`, and `[calendar.items]` logs).
+- The Thunderbird **Developer Console / Error Console** (for `[NCBG]`, `[NCUI][Talk]`, `[NCUI][Sharing]`, `[NCUI][Options]`, `[NCUI][OpenUrlFallback]`, and `[ncCalToolbar]` logs).
 - The add-on debug view (background + extension pages).
 
 What to look for:
 - `[NCBG]` — background logic (calendar monitoring, Talk operations, cleanup)
 - `[NCUI][Talk]` — Talk wizard UI flow
 - `[NCUI][Sharing]` — Sharing wizard UI flow
+- `[NCUI][Options]` — settings/options page flow
+- `[NCUI][OpenUrlFallback]` — browser-open fallback dialog
 - `[ncCalToolbar]` — custom editor integration logs (button/context/read-write lifecycle)
-- `[calendar.items]` — calendar monitoring logs (persisted item updates/removals)
+- The bundled `experiments/calendar/**` package remains upstream/as-is; any console output coming from it is outside the add-on debug-channel contract above.
 
 ### 4.3 Debug logging
 
@@ -168,9 +170,11 @@ Debug output is gated by the option:
 
 Implementation:
 - Background uses `L(...)` in `modules/bgState.js` and logs as `[NCBG] …` when enabled.
-- UI pages can:
-  - log locally to their own console, and/or
-  - forward structured logs via `browser.runtime.sendMessage({ type: "debug:log", ... })` (see message contracts below).
+- `ui/debugForwarder.js` mirrors `debugEnabled` live into the Talk dialog, Sharing wizard, and attachment prompt UIs.
+- Those UIs use the shared forwarder/logger helpers instead of maintaining separate local debug-console variants:
+  - `installDebugEnabledMirror()` keeps the page-local flag in sync with `browser.storage.local`
+  - `createUiDebugLogger()` forwards structured UI debug lines through `debug:log`
+- Shared helper modules resolve their visible error/debug prefixes through `modules/logContext.js`, so active extension pages stay inside the `[NCUI][…]` family and background stays on `[NCBG]`.
 - Actual error paths must still use `console.error(...)` directly; they are not allowed to disappear just because `debugEnabled` is off.
 - Attachment automation adds debug traces for:
   - threshold evaluation and prompt decisions in `[NCBG]`
@@ -183,7 +187,11 @@ Implementation:
   - summaries stay on the existing channels instead of introducing a separate log path:
     - UI sanitization appears through `[NCUI][Talk]` / `[NCUI][Sharing]`
     - background sanitization appears through `[NCBG]`
-- `ui/debugForwarder.js` now exposes explicit teardown hooks for both wizards:
+- `ui/debugForwarder.js` also centralizes debug-flag/runtime behavior for all add-on popup UIs:
+  - live `debugEnabled` updates while the popup stays open
+  - one shared forwarding path for Talk/Sharing/attachment prompt UI logs
+  - no extra `[NCBG] msg debug:log` meta noise for forwarded UI debug lines
+- `ui/debugForwarder.js` exposes explicit teardown hooks for the popup UIs:
   - `markRuntimeContextUnloading()` stops new forwarded logs before close
   - `flushPendingDebugLogs()` gives already-started `debug:log` sends a short chance to settle before `window.close()`
 

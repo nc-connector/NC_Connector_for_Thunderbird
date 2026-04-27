@@ -5,6 +5,9 @@
  */
 "use strict";
 (function(global){
+  const LOG_PREFIX =
+    global.NCLogContext?.resolveAddonLogPrefix?.("I18N")
+    || "[NCBG]";
   const cache = new Map();
   const pending = new Map();
 
@@ -186,7 +189,7 @@
     const promise = fetch(url)
       .then((res) => (res.ok ? res.json() : {}))
       .catch((error) => {
-        console.error("[NCI18nOverride] load locale failed", { lang: normalized, error });
+        console.error(LOG_PREFIX, "load locale failed", { lang: normalized, error });
         return {};
       })
       .then((data) => {
@@ -238,7 +241,7 @@
       try{
         message = global.browser.i18n.getMessage(key, substitutions);
       }catch(error){
-        console.error("[NCI18nOverride] browser.i18n.getMessage failed", { key, error });
+        console.error(LOG_PREFIX, "browser.i18n.getMessage failed", { key, error });
         message = "";
       }
     }

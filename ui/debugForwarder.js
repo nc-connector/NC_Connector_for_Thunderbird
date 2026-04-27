@@ -7,7 +7,32 @@
 (function(global){
   let runtimeDisconnectGuardInstalled = false;
   let runtimeContextUnloading = false;
+  let mirroredDebugEnabled = false;
   const pendingDebugSends = new Set();
+  const FORWARDER_LOG_PREFIX =
+    global.NCLogContext?.resolveAddonLogPrefix?.("DebugForwarder")
+    || "[NCUI][DebugForwarder]";
+
+  /**
+   * Report one internal helper failure without throwing.
+   * @param {(scope:string,error:any)=>void} onError
+   * @param {string} scope
+   * @param {any} error
+   */
+  function reportHelperError(onError, scope, error){
+    if (typeof onError !== "function"){
+      return;
+    }
+    try{
+      onError(scope, error);
+    }catch(callbackError){
+      try{
+        console.error(FORWARDER_LOG_PREFIX, "onError callback failed", callbackError);
+      }catch(logError){
+        // Ignore teardown-time logging errors.
+      }
+    }
+  }
 
   /**
    * Mark the UI runtime context as unloading.
@@ -121,6 +146,134 @@
   }
 
   /**
+   * Mirror the persisted debugEnabled flag into one UI page.
+   * Consumers receive live updates while the page stays open.
+   * @param {{
+   *   onChange?:(enabled:boolean)=>void,
+   *   onError?:(scope:string,error:any)=>void
+   * }} config
+   * @returns {Promise<{getValue:()=>boolean,refresh:()=>Promise<boolean>,dispose:()=>void}>}
+   */
+  async function installDebugEnabledMirror(config){
+    const onChange = typeof config?.onChange === "function" ? config.onChange : null;
+    const onError = typeof config?.onError === "function" ? config.onError : null;
+    let disposed = false;
+    let currentValue = false;
+    const storageChanged = global.browser?.storage?.onChanged;
+    const apply = (value) => {
+      if (disposed){
+        return currentValue;
+      }
+      currentValue = !!value;
+      mirroredDebugEnabled = currentValue;
+      if (!onChange){
+        return currentValue;
+      }
+      try{
+        onChange(currentValue);
+      }catch(error){
+        reportHelperError(onError, "debug flag onChange failed", error);
+      }
+      return currentValue;
+    };
+    const refresh = async () => {
+      if (disposed){
+        return currentValue;
+      }
+      if (!global.browser?.storage?.local?.get){
+        return apply(false);
+      }
+      try{
+        const stored = await global.browser.storage.local.get(["debugEnabled"]);
+        return apply(!!stored?.debugEnabled);
+      }catch(error){
+        reportHelperError(onError, "debug flag init failed", error);
+        return apply(false);
+      }
+    };
+    const handleStorageChange = (changes, areaName) => {
+      if (disposed || areaName !== "local"){
+        return;
+      }
+      if (!Object.prototype.hasOwnProperty.call(changes || {}, "debugEnabled")){
+        return;
+      }
+      apply(!!changes.debugEnabled?.newValue);
+    };
+    if (typeof storageChanged?.addListener === "function"){
+      storageChanged.addListener(handleStorageChange);
+    }
+    await refresh();
+    return {
+      getValue: () => currentValue,
+      refresh,
+      dispose: () => {
+        if (disposed){
+          return;
+        }
+        disposed = true;
+        if (typeof storageChanged?.removeListener === "function"){
+          try{
+            storageChanged.removeListener(handleStorageChange);
+          }catch(error){
+            reportHelperError(onError, "debug flag mirror cleanup failed", error);
+          }
+        }
+      }
+    };
+  }
+
+  /**
+   * Build one shared UI debug logger that forwards through the background channel.
+   * @param {{
+   *   source:string,
+   *   channel:string,
+   *   label:string,
+   *   getEnabled?:()=>boolean,
+   *   getIsPageUnloading?:()=>boolean,
+   *   onError?:(scope:string,error:any)=>void
+   * }} config
+   * @returns {(text:any,...details:any[])=>void}
+   */
+  function createUiDebugLogger(config){
+    const source = String(config?.source || "ui");
+    const channel = String(config?.channel || "NCUI");
+    const label = String(config?.label || "UI");
+    const getEnabled = typeof config?.getEnabled === "function"
+      ? config.getEnabled
+      : () => !!config?.enabled;
+    const getIsPageUnloading = typeof config?.getIsPageUnloading === "function"
+      ? config.getIsPageUnloading
+      : () => !!config?.isPageUnloading;
+    const onError = typeof config?.onError === "function" ? config.onError : null;
+    return function uiDebugLog(text, ...details){
+      const enabled = !!getEnabled();
+      const isPageUnloading = !!getIsPageUnloading();
+      if (!enabled || isPageUnloading || runtimeContextUnloading){
+        return;
+      }
+      forwardDebugLog({
+        enabled,
+        isPageUnloading,
+        source,
+        channel,
+        label,
+        text,
+        details,
+        onError
+      });
+    };
+  }
+
+  /**
+   * Return the latest mirrored debug flag for this UI page.
+   * @returns {boolean}
+   */
+  function getMirroredDebugEnabled(){
+    return !!mirroredDebugEnabled;
+  }
+
+  /**
    * Forward a debug log line to background runtime logging.
    * @param {{
    *   enabled:boolean,
@@ -144,20 +297,7 @@
     }
     installRuntimeDisconnectGuard();
     const onError = typeof config?.onError === "function" ? config.onError : null;
-    const reportError = (scope, error) => {
-      if (!onError){
-        return;
-      }
-      try{
-        onError(scope, error);
-      }catch(callbackError){
-        try{
-          console.error("[NCDebugForwarder] onError callback failed", callbackError);
-        }catch(logError){
-          // Ignore teardown-time logging errors.
-        }
-      }
-    };
+    const reportError = (scope, error) => reportHelperError(onError, scope, error);
     const detailsRaw = Array.isArray(config?.details)
       ? config.details
       : (config?.details == null ? [] : [config.details]);
@@ -205,6 +345,9 @@
     isKnownRuntimeDisconnectError,
     formatLogArg,
     forwardDebugLog,
+    installDebugEnabledMirror,
+    createUiDebugLogger,
+    getMirroredDebugEnabled,
     markRuntimeContextUnloading,
     flushPendingDebugLogs
   };

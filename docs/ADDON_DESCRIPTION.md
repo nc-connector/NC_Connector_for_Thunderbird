@@ -88,7 +88,7 @@ Data flow:
 
 ### Logging and Debug
 - Enable debug mode in options to log detailed traces
-- Logs appear with channels [NCBG], [NCUI][Talk], [NCUI][Sharing], `[ncCalToolbar]`, plus calendar experiment logs from `[calendar.items]` when relevant
+- Logs appear with channels [NCBG], [NCUI][Talk], [NCUI][Sharing], [NCUI][Options], [NCUI][OpenUrlFallback], and `[ncCalToolbar]`
 - Background logs include OCS/DAV status and metadata decisions (only when debug is enabled)
 - Attachment automation logs include:
   - threshold evaluation + decisions in `[NCBG]`

@@ -19,18 +19,57 @@
   let cachedHeaderBase64 = null;
 
   /**
+   * Return the standard debug/error prefix for the current runtime context.
+   * @returns {string}
+   */
+  function getSharingRuntimePrefix(){
+    return typeof L === "function" ? "[NCBG]" : "[NCUI][Sharing]";
+  }
+
+  /**
    * Debug logger scoped to the sharing module.
    * @param {object} opts
    * @param {...any} args
    */
   function logDebug(opts, ...args){
-    if (!opts?.debugEnabled){
+    if (typeof L === "function"){
+      try{
+        L(...args);
+        return;
+      }catch(error){
+        console.error("[NCBG] debug log failed", error);
+      }
+    }
+    const mirroredDebugEnabled =
+      typeof globalThis.NCDebugForwarder?.getMirroredDebugEnabled === "function"
+        ? globalThis.NCDebugForwarder.getMirroredDebugEnabled()
+        : null;
+    const debugEnabled = typeof mirroredDebugEnabled === "boolean"
+      ? mirroredDebugEnabled
+      : !!opts?.debugEnabled;
+    if (!debugEnabled){
       return;
     }
+    if (globalThis.NCDebugForwarder?.forwardDebugLog){
+      try{
+        globalThis.NCDebugForwarder.forwardDebugLog({
+          enabled: debugEnabled,
+          isPageUnloading: false,
+          source: "ncSharing",
+          channel: "NCUI",
+          label: "Sharing",
+          text: args[0],
+          details: args.slice(1)
+        });
+        return;
+      }catch(error){
+        logInternalError("ui debug log forward failed", error);
+      }
+    }
     try{
-      console.log("[NCSHARE]", ...args);
+      console.log(getSharingRuntimePrefix(), ...args);
     }catch(error){
-      console.error("[NCSHARE] debug log failed", error);
+      console.error(`${getSharingRuntimePrefix()} debug log failed`, error);
     }
   }
 
@@ -41,9 +80,14 @@
    */
   function logInternalError(scope, error){
     try{
-      console.error("[NCSHARE]", scope, error);
+      console.error(getSharingRuntimePrefix(), scope, error);
     }catch(logError){
-      console.error("[NCSHARE]", scope, error?.message || String(error), logError?.message || String(logError));
+      console.error(
+        getSharingRuntimePrefix(),
+        scope,
+        error?.message || String(error),
+        logError?.message || String(logError)
+      );
     }
   }
 
@@ -104,7 +148,7 @@
     }
     return NCHostPermissions.requireOriginPermission(baseUrl, {
       errorFactory: hostPermissionError,
-      scope: "[NCSHARE] host permission missing",
+      scope: "host permission missing",
       logMissing: false
     });
   }
@@ -553,7 +597,7 @@
       }
       return bufferToBase64(await response.arrayBuffer());
     }catch(err){
-      console.error("[NCSHARE] asset base64 failed", assetPath, err?.message || err);
+      console.error(getSharingRuntimePrefix(), "asset base64 failed", assetPath, err?.message || err);
       return "";
     }
   }
@@ -718,7 +762,7 @@
    */
   function htmlToPlainTextOrThrow(html){
     if (typeof NCHtmlSanitizer?.htmlToPlainText !== "function"){
-      console.error("[NCSHARE] html->plaintext converter unavailable");
+      console.error(getSharingRuntimePrefix(), "html->plaintext converter unavailable");
       throw new Error("sharing_template_plaintext_converter_unavailable");
     }
     return normalizePlainTextBlock(NCHtmlSanitizer.htmlToPlainText(String(html || "")));
@@ -747,7 +791,7 @@
    */
   function createTemplateParser(){
     if (typeof DOMParser !== "function"){
-      console.error("[NCSHARE] DOMParser unavailable for template pruning");
+      console.error(getSharingRuntimePrefix(), "DOMParser unavailable for template pruning");
       throw new Error("share_template_parser_unavailable");
     }
     try{
@@ -836,7 +880,7 @@
       && typeof NCHtmlSanitizer.sanitizeShareTemplateHtml === "function"){
       return NCHtmlSanitizer.sanitizeShareTemplateHtml(html);
     }
-    console.error("[NCSHARE] custom share template sanitizer unavailable");
+    console.error(getSharingRuntimePrefix(), "custom share template sanitizer unavailable");
     throw new Error("share_template_sanitizer_unavailable");
   }
 

@@ -13,8 +13,6 @@
 (function(global){
   "use strict";
 
-  let DEBUG_ENABLED = false;
-
   const FORBID_TAGS = [
     "script",
     "style",
@@ -56,6 +54,15 @@
   ];
 
   /**
+   * Resolve the standard internal error prefix for this runtime.
+   * @returns {string}
+   */
+  function resolveInternalLogPrefix(){
+    return global.NCLogContext?.resolveAddonLogPrefix?.("Sanitizer")
+      || "[NCBG]";
+  }
+
+  /**
    * Resolve the DOMPurify global.
    * @returns {any|null}
    */
@@ -70,41 +77,20 @@
   }
 
   /**
-   * Mirror the shared debug toggle into this module.
-   * Sanitizer summaries are only logged when debug output is enabled.
+   * Return whether debug logging is currently enabled in this runtime.
+   * UI pages use the shared debug forwarder mirror, while background reuses
+   * the centralized background debug flag helper from `bgState.js`.
+   * @returns {boolean}
    */
-  (function initDebugFlagMirror(){
-    if (!global.browser?.storage?.local?.get){
-      return;
+  function isDebugLoggingEnabled(){
+    if (typeof global.NCDebugForwarder?.getMirroredDebugEnabled === "function"){
+      return !!global.NCDebugForwarder.getMirroredDebugEnabled();
     }
-    try{
-      const load = global.browser.storage.local.get(["debugEnabled"]);
-      if (load && typeof load.then === "function"){
-        void load.then((stored) => {
-          DEBUG_ENABLED = !!stored?.debugEnabled;
-        }, (error) => {
-          console.error("[NCSAN] debug flag init failed", error);
-        });
-      }
-    }catch(error){
-      console.error("[NCSAN] debug flag init failed", error);
+    if (typeof global.isBackgroundDebugEnabled === "function"){
+      return !!global.isBackgroundDebugEnabled();
     }
-    if (!global.browser?.storage?.onChanged?.addListener){
-      return;
-    }
-    try{
-      global.browser.storage.onChanged.addListener((changes, area) => {
-        if (area !== "local"){
-          return;
-        }
-        if (Object.prototype.hasOwnProperty.call(changes, "debugEnabled")){
-          DEBUG_ENABLED = !!changes.debugEnabled?.newValue;
-        }
-      });
-    }catch(error){
-      console.error("[NCSAN] debug flag listener install failed", error);
-    }
-  })();
+    return false;
+  }
 
   /**
    * Resolve the existing debug-log label for the current runtime path.
@@ -142,7 +128,8 @@
    * @param {object} details
    */
   function emitSanitizerDebugLog(templateType, text, details){
-    if (!DEBUG_ENABLED){
+    const debugEnabled = isDebugLoggingEnabled();
+    if (!debugEnabled){
       return;
     }
     if (typeof global.L === "function"){
@@ -150,14 +137,14 @@
         global.L(text, details || {});
         return;
       }catch(error){
-        console.error("[NCSAN] background debug log failed", error);
+        console.error(resolveInternalLogPrefix(), "background debug log failed", error);
       }
     }
     const target = resolveSanitizerDebugTarget(templateType);
     if (global.NCDebugForwarder?.forwardDebugLog){
       try{
         global.NCDebugForwarder.forwardDebugLog({
-          enabled: DEBUG_ENABLED,
+          enabled: debugEnabled,
           isPageUnloading: false,
           source: target.source,
           channel: target.channel,
@@ -167,13 +154,13 @@
         });
         return;
       }catch(error){
-        console.error("[NCSAN] ui debug log forward failed", error);
+        console.error(resolveInternalLogPrefix(), "ui debug log forward failed", error);
       }
     }
     try{
       console.log(`[${target.channel}][${target.label}]`, text, details || {});
     }catch(error){
-      console.error("[NCSAN] fallback debug log failed", error);
+      console.error(resolveInternalLogPrefix(), "fallback debug log failed", error);
     }
   }
 
@@ -189,7 +176,7 @@
     try{
       return new ParserCtor();
     }catch(error){
-      console.error("[NCSAN] DOMParser init failed", error);
+      console.error(resolveInternalLogPrefix(), "DOMParser init failed", error);
       return null;
     }
   }
@@ -253,7 +240,7 @@
         }
       }
     }catch(error){
-      console.error("[NCSAN] html structure analysis failed", error);
+      console.error(resolveInternalLogPrefix(), "html structure analysis failed", error);
     }
     return stats;
   }
@@ -491,7 +478,8 @@
     if (!purify){
       throw new Error("html_sanitizer_unavailable");
     }
-    const inputStats = analyzeHtmlStructure(dirty);
+    const collectDebugStats = isDebugLoggingEnabled();
+    const inputStats = collectDebugStats ? analyzeHtmlStructure(dirty) : null;
     const clean = purify.sanitize(dirty, {
       USE_PROFILES: { html: true },
       ALLOW_DATA_ATTR: false,
@@ -502,17 +490,19 @@
     const sanitized = String(clean || "");
     const normalizationReport = normalizeAnchorTargetsWithReport(sanitized);
     const normalized = String(normalizationReport.html || "");
-    const outputStats = analyzeHtmlStructure(normalized);
-    logSanitizationSummary(
-      templateType,
-      dirty,
-      sanitized,
-      normalized,
-      inputStats,
-      outputStats,
-      normalizationReport,
-      !normalized.trim()
-    );
+    if (collectDebugStats){
+      const outputStats = analyzeHtmlStructure(normalized);
+      logSanitizationSummary(
+        templateType,
+        dirty,
+        sanitized,
+        normalized,
+        inputStats,
+        outputStats,
+        normalizationReport,
+        !normalized.trim()
+      );
+    }
     return normalized;
   }
 
