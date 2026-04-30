@@ -2,7 +2,7 @@
 
 Version scope:
 - `2.2.9`
-- `3.0.3`
+- `3.0.4`
 
 ## 1. Scope
 
@@ -16,16 +16,16 @@ This plan covers end-to-end smoke checks for:
 
 Known version delta:
 - `2.2.9`: separate password mail is feature-gated (disabled).
-- `3.0.3`: separate password mail is implemented, but only available when the backend endpoint exists, the current user has an active assigned seat, and password protection is enabled.
+- `3.0.4`: separate password mail is available only when the backend endpoint exists, the current user has an active assigned seat, and password protection is enabled. Saved-event Talk room deletion is opt-in only and requires NC Connector `X-NCTALK-*` metadata.
 
 ## 2. Test Matrix
 
 | Matrix ID | Version | Separate Password Mail |
 |---|---|---|
 | M1 | 2.2.9 | Disabled (gated) |
-| M2 | 3.0.3 | Available only with backend + active seat + password protection |
+| M2 | 3.0.4 | Available only with backend + active seat + password protection |
 
-Run all cases at least once on M1 and M2, except cases marked `3.0.3 only`.
+Run all cases at least once on M1 and M2, except cases marked `3.0.4 only`.
 
 ## 3. Preconditions
 
@@ -34,7 +34,7 @@ Run all cases at least once on M1 and M2, except cases marked `3.0.3 only`.
 - [ ] Debug mode enabled in add-on settings
 - [ ] Nextcloud account configured and reachable
 - [ ] Talk + Sharing (DAV) available on server
-- [ ] For `3.0.3` separate-password cases: backend endpoint available and active seat assigned to the current user
+- [ ] For `3.0.4` separate-password and backend-policy cases: backend endpoint available and active seat assigned to the current user
 - [ ] Test mailbox and test calendar writable
 - [ ] Test files prepared (small, large, duplicate names, folder tree)
 - [ ] System address book scenario A prepared (available)
@@ -71,6 +71,12 @@ Run all cases at least once on M1 and M2, except cases marked `3.0.3 only`.
   - Pass: No context cross-talk; correct event is targeted.
 - [ ] `T-08` Password generation path works.
   - Pass: Password field receives generated value.
+- [ ] `T-09` Saved NC Connector event deleted while "Delete Talk room when deleting a saved event" is disabled.
+  - Pass: linked Talk room is retained; cleanup mapping is cleared locally.
+- [ ] `T-10` Saved NC Connector event deleted while "Delete Talk room when deleting a saved event" is enabled.
+  - Pass: linked Talk room is deleted only when the event has trusted `X-NCTALK-*` metadata and the current user is still allowed to delete it.
+- [ ] `T-11` Normal event with a manually pasted Talk link in location/URL is deleted.
+  - Pass: no Talk room deletion is attempted.
 
 ### C. System Address Book Hardening
 
@@ -134,17 +140,17 @@ Run all cases at least once on M1 and M2, except cases marked `3.0.3 only`.
 
 - [ ] `P-01` `2.2.9`: feature is disabled/gated in settings and sharing wizard.
   - Pass: control is non-functional and clearly marked as gated.
-- [ ] `P-02` `3.0.3 only`: auto-send success path with backend endpoint + active seat.
+- [ ] `P-02` `3.0.4 only`: auto-send success path with backend endpoint + active seat.
   - Pass: password mail sent, success notification shown.
-- [ ] `P-03` `3.0.3 only`: auto-send failure path with backend endpoint + active seat.
+- [ ] `P-03` `3.0.4 only`: auto-send failure path with backend endpoint + active seat.
   - Pass: failure notification shown; manual action guidance shown.
-- [ ] `P-04` `3.0.3 only`: fallback compose opens sendable draft when identity resolution is ambiguous/unavailable or auto-send fails.
+- [ ] `P-04` `3.0.4 only`: fallback compose opens sendable draft when identity resolution is ambiguous/unavailable or auto-send fails.
   - Pass: user can manually send password mail.
-- [ ] `P-05` `3.0.3 only`: fallback opened but not sent, then tab closed after the primary mail was already sent.
+- [ ] `P-05` `3.0.4 only`: fallback opened but not sent, then tab closed after the primary mail was already sent.
   - Pass: committed share is retained; password follow-up problems do not trigger share cleanup after successful primary send.
-- [ ] `P-06` `3.0.3 only`: primary compose in plain-text mode triggers plain-text password follow-up body.
+- [ ] `P-06` `3.0.4 only`: primary compose in plain-text mode triggers plain-text password follow-up body.
   - Pass: follow-up draft/auto-send payload uses plain text (not HTML) and is framed with fixed 50 `#` at top/bottom.
-- [ ] `P-07` `3.0.3 only`: sanitizer fail-closed behavior for backend follow-up template.
+- [ ] `P-07` `3.0.4 only`: sanitizer fail-closed behavior for backend follow-up template.
   - Pass: when backend custom password template is active, registration/send aborts deterministically with explicit debug/error log if sanitization cannot be completed.
 
 ### H. Focus Behavior

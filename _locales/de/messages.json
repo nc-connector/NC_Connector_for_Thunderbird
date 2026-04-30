@@ -518,6 +518,21 @@
   "options_talk_default_password_label": {
     "message": "Passwort setzen"
   },
+  "options_talk_delete_room_on_event_delete_label": {
+    "message": "Talk-Raum beim Löschen eines gespeicherten Termins löschen"
+  },
+  "options_talk_delete_room_on_event_delete_title": {
+    "message": "Verknüpfte Talk-Räume löschen"
+  },
+  "options_talk_delete_room_on_event_delete_line1": {
+    "message": "Greift nur bei gespeicherten Kalendereinträgen mit NC Connector Talk-Metadaten."
+  },
+  "options_talk_delete_room_on_event_delete_line2": {
+    "message": "Normale Talk-Links in Orts- oder URL-Feldern werden ignoriert."
+  },
+  "options_talk_delete_room_on_event_delete_line3": {
+    "message": "Die Bereinigung nicht gespeicherter Termine bleibt unabhängig davon aktiv."
+  },
   "options_talk_default_roomtype_label": {
     "message": "Raumtyp"
   },
@@ -867,4 +882,3 @@
     "message": "Ihr NC Connector Seat ist derzeit pausiert. Bitte wenden Sie sich an Ihren Nextcloud-Administrator."
   }
 }
-

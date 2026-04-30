@@ -599,6 +599,22 @@ footer{
           <input id="talkDefaultPassword" type="checkbox">
         </div>
       </div>
+      <div class="row" id="talkDeleteRoomOnEventDeleteRow">
+        <label for="talkDeleteRoomOnEventDelete" class="option-tooltip-wrap">
+          <span data-i18n="options_talk_delete_room_on_event_delete_label">Delete Talk room when deleting a saved event</span>
+          <div class="option-tooltip" role="tooltip">
+            <div class="option-tooltip-title" data-i18n="options_talk_delete_room_on_event_delete_title">Delete linked Talk rooms</div>
+            <ul class="option-tooltip-list">
+              <li data-i18n="options_talk_delete_room_on_event_delete_line1">Only applies to saved calendar events with NC Connector Talk metadata.</li>
+              <li data-i18n="options_talk_delete_room_on_event_delete_line2">Generic Talk links in location or URL fields are ignored.</li>
+              <li data-i18n="options_talk_delete_room_on_event_delete_line3">Unsaved event cleanup stays active independently.</li>
+            </ul>
+          </div>
+        </label>
+        <div class="boolean-control">
+          <input id="talkDeleteRoomOnEventDelete" type="checkbox">
+        </div>
+      </div>
       <div class="row" id="talkDefaultRoomTypeRow">
         <label for="talkDefaultRoomType" data-i18n="options_talk_default_roomtype_label">Room type</label>
         <div class="roomtype-picker" id="talkDefaultRoomTypePicker">

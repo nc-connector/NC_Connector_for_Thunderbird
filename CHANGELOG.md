@@ -4,6 +4,27 @@ All notable changes to **NC Connector for Thunderbird** will be documented in th
 
 This project targets **Thunderbird ESR 140.\***.
 
+## 3.0.4
+
+Release package version is **3.0.4**.  
+Functional delta documented here corresponds to **3.0.3 -> 3.0.4**.
+
+### Added
+- Optional Talk setting to delete linked Talk rooms when saved NC Connector calendar events are deleted:
+  - available as a local add-on setting
+  - controllable by backend policy via `talk_delete_room_on_event_delete`
+  - off by default
+
+### Changed
+- Saved-event Talk room deletion now requires both explicit opt-in and trusted NC Connector `X-NCTALK-*` metadata.
+- Legacy calendar token mappings without a trusted source are no longer accepted as room-deletion ownership proof.
+- Release/version references were aligned to `3.0.4` across manifest, reviewer notes, smoke plan, and readmes.
+
+### Fixed
+- Generic Talk links in calendar `LOCATION` or `URL` fields no longer grant NC Connector ownership over a Talk room.
+- Deleting a normal calendar event with a manually pasted Talk link no longer deletes the linked room.
+- Unsaved event cleanup remains active for rooms created and then discarded during event creation.
+
 ## 3.0.3
 
 Release package version is **3.0.3**.  

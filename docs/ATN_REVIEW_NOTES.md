@@ -1,8 +1,8 @@
-# Reviewer Notes - 3.0.3
+# Reviewer Notes - 3.0.4
 NC Connector for Thunderbird (`{4a35421f-0906-439c-bff2-8eef39e2baee}`)
 
 This document summarizes the currently implemented reviewer-relevant contract
-for add-on version 3.0.3.
+for add-on version 3.0.4.
 
 ---
 
@@ -45,10 +45,12 @@ for persisted monitoring (`browser.calendar.items.onCreated/onUpdated/onRemoved`
 5) Event move/delete handling remains driven by official calendar item events.
 6) Talk/Sharing wizard windows use best-effort focus retries after popup creation; focus requests remain non-fatal due to OS/window-manager policy.
 7) Lobby timer updates consume `X-NCTALK-START` as authoritative value; no runtime fallback from `DTSTART/TZID` is used.
+8) Existing saved-event Talk room deletion is opt-in only and requires trusted NC Connector `X-NCTALK-*` metadata.
+9) Generic Talk links in `LOCATION` or `URL` fields are deliberately ignored for room-deletion ownership.
 
 ---
 
-## Reviewer Alignment Notes (3.0.3)
+## Reviewer Alignment Notes (3.0.4)
 
 - Core contracts are explicit; fallback behavior is bounded and logged instead of relying on silent heuristics.
 - Active runtime paths touched in this release log failures explicitly; silent failure is not an intended contract.
@@ -74,7 +76,12 @@ for persisted monitoring (`browser.calendar.items.onCreated/onUpdated/onRemoved`
 - Talk user search, moderator selection, and participant toggles (users/guests)
   are runtime-gated by system-addressbook availability checks and are disabled
   with explicit user guidance when the addressbook endpoint is unavailable.
-- Separate-password follow-up dispatch is implemented in 3.0.3, but remains runtime-gated behind the backend endpoint, an active assigned seat, and enabled password protection.
+- Talk room deletion for existing saved calendar events is disabled by default and can be enabled locally or locked by backend policy via `talk_delete_room_on_event_delete`.
+  - the event must have trusted NC Connector `X-NCTALK-*` metadata written by Thunderbird/Outlook integration
+  - generic Talk URLs copied into event `LOCATION` or `URL` fields are not parsed as ownership proof
+  - old cached mappings without trusted source metadata are ignored and cleared instead of deleting a room
+  - cleanup for a room created in an unsaved and then discarded event editor remains active independently
+- Separate-password follow-up dispatch remains runtime-gated behind the backend endpoint, an active assigned seat, and enabled password protection.
   - the options/UI toggle surface is only functional when those runtime conditions are met
   - `accountsRead` is requested only to resolve the actual Thunderbird sender identity of the already-open primary compose window, so the password follow-up can reuse the same sender identity instead of guessing from a visible `From` header string.
   - live sender switches are tracked on `compose.onIdentityChanged`, and the final primary-mail envelope is captured on `compose.onBeforeSend`

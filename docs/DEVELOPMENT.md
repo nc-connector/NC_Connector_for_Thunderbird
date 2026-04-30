@@ -271,6 +271,7 @@ Talk defaults:
 - `talkDefaultListable`
 - `talkDefaultRoomType` (`"event"` or `"normal"`)
 - `talkPasswordDefaultEnabled`
+- `talkDeleteRoomOnEventDelete`
 - `talkAddUsersDefaultEnabled`
 - `talkAddGuestsDefaultEnabled`
 - `talkAddParticipantsDefaultEnabled` (legacy; kept for backward compatibility as `addUsers || addGuests`)
@@ -531,8 +532,9 @@ On create/update (`handleCalendarItemUpsert` in `modules/bgCalendar.js`):
 - Trigger delegation flow if pending (`DELEGATE-READY`)
 
 On remove:
-- If the removed event has a Talk token, attempt to delete the room.
-  - If moderation was delegated, deletion may fail (403). This is expected and should be handled gracefully.
+- Existing saved-event room deletion is opt-in only (`talkDeleteRoomOnEventDelete` or locked backend policy `talk_delete_room_on_event_delete`).
+- The removed event must have a trusted token mapping created from NC Connector `X-NCTALK-*` properties. Tokens derived from generic `LOCATION` or `URL` fields are never accepted as ownership proof.
+- If moderation was delegated, deletion may fail (403). This is expected and should be handled gracefully.
 
 ### 9.3 Orphan-room prevention
 
@@ -691,6 +693,7 @@ Room runtime metadata:
 Event ↔ token mapping:
 - Key: `nctalkEventTokenMap`
 - Used to find a token when an event changes or is deleted.
+- Deletion uses only mappings marked as `source: "x-nctalk"`. Legacy mappings without a source are ignored fail-closed because older builds could also store tokens from ordinary `LOCATION`/`URL` fields.
 
 ---
 

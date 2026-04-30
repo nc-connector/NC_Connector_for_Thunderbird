@@ -518,6 +518,21 @@
   "options_talk_default_password_label": {
     "message": "Nastavit heslo"
   },
+  "options_talk_delete_room_on_event_delete_label": {
+    "message": "Odstranit místnost Talk při odstranění uložené události"
+  },
+  "options_talk_delete_room_on_event_delete_title": {
+    "message": "Odstranit propojené místnosti Talk"
+  },
+  "options_talk_delete_room_on_event_delete_line1": {
+    "message": "Platí pouze pro uložené události kalendáře s metadaty Talk NC Connector."
+  },
+  "options_talk_delete_room_on_event_delete_line2": {
+    "message": "Obecné odkazy Talk v polích místa nebo URL se ignorují."
+  },
+  "options_talk_delete_room_on_event_delete_line3": {
+    "message": "Čištění neuložených událostí zůstává aktivní nezávisle."
+  },
   "options_talk_default_roomtype_label": {
     "message": "Typ místnosti"
   },
@@ -867,4 +882,3 @@
     "message": "Váš seat NC Connector je momentálně pozastaven. Obraťte se prosím na správce Nextcloud."
   }
 }
-
