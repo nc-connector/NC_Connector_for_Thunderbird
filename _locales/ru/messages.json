@@ -518,6 +518,21 @@
   "options_talk_default_password_label": {
     "message": "Установить пароль"
   },
+  "options_talk_delete_room_on_event_delete_label": {
+    "message": "Удалять комнату Talk при удалении сохранённого события"
+  },
+  "options_talk_delete_room_on_event_delete_title": {
+    "message": "Удаление связанных комнат Talk"
+  },
+  "options_talk_delete_room_on_event_delete_line1": {
+    "message": "Применяется только к сохранённым событиям календаря с метаданными Talk NC Connector."
+  },
+  "options_talk_delete_room_on_event_delete_line2": {
+    "message": "Обычные ссылки Talk в полях места или URL игнорируются."
+  },
+  "options_talk_delete_room_on_event_delete_line3": {
+    "message": "Очистка несохранённых событий остаётся включённой независимо от этого."
+  },
   "options_talk_default_roomtype_label": {
     "message": "Тип комнаты"
   },
@@ -867,4 +882,3 @@
     "message": "Ваш seat NC Connector сейчас приостановлен. Пожалуйста, обратитесь к администратору Nextcloud."
   }
 }
-

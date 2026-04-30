@@ -518,6 +518,21 @@
   "options_talk_default_password_label": {
     "message": "Set password"
   },
+  "options_talk_delete_room_on_event_delete_label": {
+    "message": "Delete Talk room when deleting a saved event"
+  },
+  "options_talk_delete_room_on_event_delete_title": {
+    "message": "Delete linked Talk rooms"
+  },
+  "options_talk_delete_room_on_event_delete_line1": {
+    "message": "Only applies to saved calendar events with NC Connector Talk metadata."
+  },
+  "options_talk_delete_room_on_event_delete_line2": {
+    "message": "Generic Talk links in location or URL fields are ignored."
+  },
+  "options_talk_delete_room_on_event_delete_line3": {
+    "message": "Unsaved event cleanup stays active independently."
+  },
   "options_talk_default_roomtype_label": {
     "message": "Room type"
   },
@@ -867,4 +882,3 @@
     "message": "Your NC Connector seat is currently paused. Please contact your Nextcloud administrator."
   }
 }
-

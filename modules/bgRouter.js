@@ -305,7 +305,11 @@ browser.runtime.onMessage.addListener((msg, sender) => {
       }
 
       if (meta?.token && context.item?.calendarId && context.item?.id){
-        await setEventTokenEntry(context.item.calendarId, context.item.id, { token: meta.token, url: meta.url || "" });
+        await setEventTokenEntry(context.item.calendarId, context.item.id, {
+          token: meta.token,
+          url: meta.url || "",
+          source: "x-nctalk"
+        });
       }
       return { ok:true };
     }catch(e){

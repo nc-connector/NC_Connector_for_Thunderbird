@@ -518,6 +518,21 @@
   "options_talk_default_password_label": {
     "message": "設定密碼"
   },
+  "options_talk_delete_room_on_event_delete_label": {
+    "message": "刪除已儲存事件時刪除 Talk 房間"
+  },
+  "options_talk_delete_room_on_event_delete_title": {
+    "message": "刪除已連結的 Talk 房間"
+  },
+  "options_talk_delete_room_on_event_delete_line1": {
+    "message": "僅適用於含有 NC Connector Talk 中繼資料的已儲存行事曆事件。"
+  },
+  "options_talk_delete_room_on_event_delete_line2": {
+    "message": "位置或 URL 欄位中的一般 Talk 連結會被忽略。"
+  },
+  "options_talk_delete_room_on_event_delete_line3": {
+    "message": "未儲存事件的清理仍會獨立保持啟用。"
+  },
   "options_talk_default_roomtype_label": {
     "message": "房間類型"
   },
@@ -867,4 +882,3 @@
     "message": "您的 NC Connector 席位目前已暫停。請聯絡您的 Nextcloud 管理員。"
   }
 }
-

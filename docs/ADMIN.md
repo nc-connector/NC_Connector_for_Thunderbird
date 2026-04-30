@@ -120,11 +120,14 @@ These defaults are used by the **Talk Wizard** (calendar event editor).
 | Add users | `talkAddUsersDefaultEnabled` | After the event is saved, internal Nextcloud users from invitees are added to the room |
 | Add guests | `talkAddGuestsDefaultEnabled` | After the event is saved, external e-mail invitees are invited as guests |
 | Set password | `talkPasswordDefaultEnabled` | Pre-enables the password toggle in the wizard |
+| Delete Talk room when deleting a saved event | `talkDeleteRoomOnEventDelete` | Optional opt-in for deleting linked Talk rooms when a saved NC Connector event is deleted |
 | Room type | `talkDefaultRoomType` | `event` (Event conversation) or `normal` (Group conversation) |
 
 Important behavior details:
 - **Invitee sync happens after saving the event**, driven by calendar item updates (not immediately when clicking the toolbar button).
 - “Guests” may trigger **additional invitation e-mails** from Nextcloud depending on server configuration and Talk version.
+- Deleting a saved calendar event deletes the linked Talk room only when this opt-in is enabled and the event has NC Connector `X-NCTALK-*` metadata. Generic Talk links in `LOCATION` or `URL` fields are ignored.
+- Cleanup for rooms created in an unsaved and then discarded event editor remains active independently.
 
 ### 2.3.1 Optional NC Connector backend policies
 

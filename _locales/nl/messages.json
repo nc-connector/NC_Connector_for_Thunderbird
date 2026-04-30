@@ -518,6 +518,21 @@
   "options_talk_default_password_label": {
     "message": "Wachtwoord instellen"
   },
+  "options_talk_delete_room_on_event_delete_label": {
+    "message": "Talk-ruimte verwijderen wanneer een opgeslagen afspraak wordt verwijderd"
+  },
+  "options_talk_delete_room_on_event_delete_title": {
+    "message": "Gekoppelde Talk-ruimten verwijderen"
+  },
+  "options_talk_delete_room_on_event_delete_line1": {
+    "message": "Alleen van toepassing op opgeslagen agenda-items met NC Connector Talk-metagegevens."
+  },
+  "options_talk_delete_room_on_event_delete_line2": {
+    "message": "Algemene Talk-links in locatie- of URL-velden worden genegeerd."
+  },
+  "options_talk_delete_room_on_event_delete_line3": {
+    "message": "Opschoning van niet-opgeslagen afspraken blijft onafhankelijk actief."
+  },
   "options_talk_default_roomtype_label": {
     "message": "Type ruimte"
   },
@@ -867,4 +882,3 @@
     "message": "Uw NC Connector-seat is momenteel gepauzeerd. Neem contact op met uw Nextcloud-beheerder."
   }
 }
-

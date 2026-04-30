@@ -518,6 +518,21 @@
   "options_talk_default_password_label": {
     "message": "パスワードを設定"
   },
+  "options_talk_delete_room_on_event_delete_label": {
+    "message": "保存済み予定を削除するときに Talk ルームも削除する"
+  },
+  "options_talk_delete_room_on_event_delete_title": {
+    "message": "リンクされた Talk ルームを削除"
+  },
+  "options_talk_delete_room_on_event_delete_line1": {
+    "message": "NC Connector Talk メタデータを持つ保存済みカレンダー予定にのみ適用されます。"
+  },
+  "options_talk_delete_room_on_event_delete_line2": {
+    "message": "場所または URL フィールド内の一般的な Talk リンクは無視されます。"
+  },
+  "options_talk_delete_room_on_event_delete_line3": {
+    "message": "未保存予定のクリーンアップは独立して有効のままです。"
+  },
   "options_talk_default_roomtype_label": {
     "message": "ルームタイプ"
   },
@@ -867,4 +882,3 @@
     "message": "あなたの NC Connector seat は現在一時停止されています。Nextcloud 管理者に連絡してください。"
   }
 }
-

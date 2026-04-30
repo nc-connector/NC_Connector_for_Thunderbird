@@ -512,6 +512,21 @@
   "options_talk_default_password_label": {
     "message": "Définir un mot de passe"
   },
+  "options_talk_delete_room_on_event_delete_label": {
+    "message": "Supprimer la salle Talk lors de la suppression d’un événement enregistré"
+  },
+  "options_talk_delete_room_on_event_delete_title": {
+    "message": "Supprimer les salles Talk liées"
+  },
+  "options_talk_delete_room_on_event_delete_line1": {
+    "message": "S’applique uniquement aux événements de calendrier enregistrés avec des métadonnées Talk NC Connector."
+  },
+  "options_talk_delete_room_on_event_delete_line2": {
+    "message": "Les liens Talk génériques dans les champs lieu ou URL sont ignorés."
+  },
+  "options_talk_delete_room_on_event_delete_line3": {
+    "message": "Le nettoyage des événements non enregistrés reste actif indépendamment."
+  },
   "options_talk_default_roomtype_label": {
     "message": "Type de salle"
   },
@@ -867,4 +882,3 @@
     "message": "Votre seat NC Connector est actuellement en pause. Veuillez contacter votre administrateur Nextcloud."
   }
 }
-

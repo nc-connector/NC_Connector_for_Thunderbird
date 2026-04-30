@@ -83,6 +83,8 @@ const talkAddressbookWarningRow = document.getElementById("talkAddressbookWarnin
 const optionsTalkAddressbookAdminLink = document.getElementById("optionsTalkAddressbookAdminLink");
 const talkDefaultPasswordRow = document.getElementById("talkDefaultPasswordRow");
 const talkDefaultPasswordInput = document.getElementById("talkDefaultPassword");
+const talkDeleteRoomOnEventDeleteRow = document.getElementById("talkDeleteRoomOnEventDeleteRow");
+const talkDeleteRoomOnEventDeleteInput = document.getElementById("talkDeleteRoomOnEventDelete");
 const talkDefaultRoomTypeRow = document.getElementById("talkDefaultRoomTypeRow");
 const talkDefaultRoomTypePicker = document.getElementById("talkDefaultRoomTypePicker");
 const talkDefaultRoomTypeButton = document.getElementById("talkDefaultRoomTypeButton");
@@ -648,6 +650,7 @@ function applyPolicySettingsOverlay(){
   policyLockTalkAddUsers = policyActive && isPolicyLocked("talk", "talk_add_users");
   policyLockTalkAddGuests = policyActive && isPolicyLocked("talk", "talk_add_guests");
   const lockTalkPassword = policyActive && isPolicyLocked("talk", "talk_set_password");
+  const lockTalkDeleteRoomOnEventDelete = policyActive && isPolicyLocked("talk", "talk_delete_room_on_event_delete");
   const lockTalkRoomType = policyActive && isPolicyLocked("talk", "talk_room_type");
   const lockTalkLang = policyActive && isPolicyLocked("talk", "language_talk_description");
 
@@ -729,6 +732,12 @@ function applyPolicySettingsOverlay(){
   if (lockTalkPassword && talkDefaultPasswordInput){
     talkDefaultPasswordInput.checked = coercePolicyBoolean(readBackendPolicyValue("talk", "talk_set_password"), talkDefaultPasswordInput.checked);
   }
+  if (lockTalkDeleteRoomOnEventDelete && talkDeleteRoomOnEventDeleteInput){
+    talkDeleteRoomOnEventDeleteInput.checked = coercePolicyBoolean(
+      readBackendPolicyValue("talk", "talk_delete_room_on_event_delete"),
+      talkDeleteRoomOnEventDeleteInput.checked
+    );
+  }
   if (lockTalkRoomType){
     const raw = coercePolicyString(readBackendPolicyValue("talk", "talk_room_type"), getSelectedTalkDefaultRoomType());
     setTalkDefaultRoomType(raw === "event" ? "event" : "normal");
@@ -790,6 +799,10 @@ function applyPolicySettingsOverlay(){
     talkDefaultPasswordInput.disabled = lockTalkPassword;
     applyLockTitle(talkDefaultPasswordRow, talkDefaultPasswordInput, lockTalkPassword);
   }
+  if (talkDeleteRoomOnEventDeleteInput){
+    talkDeleteRoomOnEventDeleteInput.disabled = lockTalkDeleteRoomOnEventDelete;
+    applyLockTitle(talkDeleteRoomOnEventDeleteRow, talkDeleteRoomOnEventDeleteInput, lockTalkDeleteRoomOnEventDelete);
+  }
   if (eventDescriptionLangSelect){
     eventDescriptionLangSelect.disabled = lockTalkLang;
     applyLockTitle(eventDescriptionLangRow, eventDescriptionLangSelect, lockTalkLang);
@@ -839,6 +852,7 @@ async function load(){
     "talkAddGuestsDefaultEnabled",
     "talkAddParticipantsDefaultEnabled",
     "talkPasswordDefaultEnabled",
+    "talkDeleteRoomOnEventDelete",
     "talkDefaultRoomType",
     "shareBlockLang",
     "eventDescriptionLang"
@@ -927,6 +941,9 @@ async function load(){
     talkDefaultPasswordInput.checked = stored.talkPasswordDefaultEnabled !== undefined
       ? !!stored.talkPasswordDefaultEnabled
       : true;
+  }
+  if (talkDeleteRoomOnEventDeleteInput){
+    talkDeleteRoomOnEventDeleteInput.checked = stored.talkDeleteRoomOnEventDelete === true;
   }
   const storedShareBlockLang = stored.shareBlockLang;
   const storedEventDescriptionLang = stored.eventDescriptionLang;
@@ -1146,6 +1163,7 @@ async function save(){
   let talkAddGuestsDefaultEnabled = talkDefaultAddGuestsInput ? !!talkDefaultAddGuestsInput.checked : false;
   let talkAddParticipantsDefaultEnabled = talkAddUsersDefaultEnabled || talkAddGuestsDefaultEnabled;
   let talkPasswordDefaultEnabled = talkDefaultPasswordInput ? !!talkDefaultPasswordInput.checked : true;
+  let talkDeleteRoomOnEventDelete = talkDeleteRoomOnEventDeleteInput ? !!talkDeleteRoomOnEventDeleteInput.checked : false;
   let talkDefaultRoomType = getSelectedTalkDefaultRoomType();
   let shareBlockLang = normalizeLangChoice(shareBlockLangSelect?.value);
   let eventDescriptionLang = normalizeLangChoice(eventDescriptionLangSelect?.value);
@@ -1183,6 +1201,12 @@ async function save(){
   talkAddGuestsDefaultEnabled = resolvePersistedValue("talk", "talk_add_guests", talkAddGuestsDefaultEnabled, coercePolicyBoolean);
   talkAddParticipantsDefaultEnabled = talkAddUsersDefaultEnabled || talkAddGuestsDefaultEnabled;
   talkPasswordDefaultEnabled = resolvePersistedValue("talk", "talk_set_password", talkPasswordDefaultEnabled, coercePolicyBoolean);
+  talkDeleteRoomOnEventDelete = resolvePersistedValue(
+    "talk",
+    "talk_delete_room_on_event_delete",
+    talkDeleteRoomOnEventDelete,
+    coercePolicyBoolean
+  );
   talkDefaultRoomType = resolvePersistedValue("talk", "talk_room_type", talkDefaultRoomType, coercePolicyString);
   talkDefaultRoomType = talkDefaultRoomType === "event" ? "event" : "normal";
   eventDescriptionLang = normalizeLangChoice(
@@ -1216,6 +1240,7 @@ async function save(){
     talkAddGuestsDefaultEnabled,
     talkAddParticipantsDefaultEnabled,
     talkPasswordDefaultEnabled,
+    talkDeleteRoomOnEventDelete,
     talkDefaultRoomType,
     shareBlockLang,
     eventDescriptionLang

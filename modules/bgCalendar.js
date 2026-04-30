@@ -181,7 +181,7 @@ function makeEventMapKey(calendarId, itemId){
  * Lookup a stored token mapping for a calendar item.
  * @param {string} calendarId
  * @param {string} itemId
- * @returns {{token:string,url?:string,updated?:number}|null}
+ * @returns {{token:string,url?:string,source?:string,updated?:number}|null}
  */
 function getEventTokenEntry(calendarId, itemId){
   const key = makeEventMapKey(calendarId, itemId);
@@ -190,10 +190,21 @@ function getEventTokenEntry(calendarId, itemId){
 }
 
 /**
+ * Return true only for mappings written from NC Connector iCalendar metadata.
+ * Legacy mappings without a source are not trusted because older builds also
+ * stored tokens discovered from ordinary LOCATION/URL fields.
+ * @param {{source?:string}|null} entry
+ * @returns {boolean}
+ */
+function isTrustedEventTokenEntry(entry){
+  return entry?.source === "x-nctalk";
+}
+
+/**
  * Persist the token mapping for a calendar item.
  * @param {string} calendarId
  * @param {string} itemId
- * @param {{token:string,url?:string}} entry
+ * @param {{token:string,url?:string,source?:string}} entry
  * @returns {Promise<void>}
  */
 async function setEventTokenEntry(calendarId, itemId, entry){
@@ -205,6 +216,7 @@ async function setEventTokenEntry(calendarId, itemId, entry){
     [key]: {
       token: entry.token,
       url: entry.url || "",
+      source: entry.source || "x-nctalk",
       updated: Date.now()
     }
   });
@@ -732,15 +744,10 @@ function parseEventStartUnixSeconds(ical){
   return contract.parseEventStartUnixSeconds(ical);
 }
 
-const TALK_URL_TOKEN_REGEX = /https?:\/\/[^\s"'<>]+\/call\/([A-Za-z0-9_-]+)/i;
-
 /**
  * Extract Talk token/url strictly from contract properties.
- * Contract priority:
- * 1) X-NCTALK-TOKEN / X-NCTALK-URL
- * 2) deterministic URL token extraction from LOCATION/URL as interop bridge
- *
- * Note: Lobby timer authority remains X-NCTALK-START only.
+ * LOCATION/URL are deliberately ignored: generic calendar links must never
+ * grant NC Connector ownership over an existing Talk room.
  * @param {object} props
  * @returns {{token:string,url:string}|null}
  */
@@ -751,25 +758,6 @@ function extractTalkLinkFromProps(props){
     return {
       token: propToken,
       url: propUrl || ""
-    };
-  }
-
-  const candidates = [props["LOCATION"], props["URL"]];
-  for (const candidate of candidates){
-    if (typeof candidate !== "string"){
-      continue;
-    }
-    const match = TALK_URL_TOKEN_REGEX.exec(candidate);
-    if (!match){
-      continue;
-    }
-    const token = String(match[1] || "").trim();
-    if (!token){
-      continue;
-    }
-    return {
-      token,
-      url: String(match[0] || "").trim()
     };
   }
   return null;
@@ -905,7 +893,7 @@ async function handleCalendarItemUpsert(item){
       }
     }
     removeRoomCleanupEntry(meta.token, "calendar_upsert");
-    await setEventTokenEntry(item.calendarId, item.id, { token: meta.token, url: meta.url });
+    await setEventTokenEntry(item.calendarId, item.id, { token: meta.token, url: meta.url, source: "x-nctalk" });
 
     if (meta.lobbyEnabled !== false){
       if (typeof meta.startTimestamp === "number"){
@@ -1017,7 +1005,39 @@ async function handleCalendarItemUpsert(item){
 }
 
 /**
- * Handle calendar item deletion and remove the Talk room.
+ * Resolve whether deleting an existing saved calendar event may also delete
+ * the linked Talk room. Unsaved-editor cleanup is handled separately and stays
+ * active so newly created but discarded rooms do not leak.
+ * @returns {Promise<boolean>}
+ */
+async function isSavedEventRoomDeleteEnabled(){
+  let localEnabled = false;
+  try{
+    const stored = await browser.storage.local.get(["talkDeleteRoomOnEventDelete"]);
+    localEnabled = stored.talkDeleteRoomOnEventDelete === true;
+  }catch(error){
+    console.error("[NCBG] talk delete-room option read failed", error);
+  }
+
+  try{
+    if (typeof NCPolicyRuntime !== "undefined" && NCPolicyRuntime?.getPolicyStatus){
+      const status = await NCPolicyRuntime.getPolicyStatus();
+      if (
+        status?.policyActive
+        && NCPolicyRuntime.isLocked(status, "talk", "talk_delete_room_on_event_delete")
+      ){
+        return NCPolicyRuntime.readPolicyValue(status, "talk", "talk_delete_room_on_event_delete") === true;
+      }
+    }
+  }catch(error){
+    console.error("[NCBG] talk delete-room policy check failed", error);
+  }
+  return localEnabled;
+}
+
+/**
+ * Handle calendar item deletion and remove the Talk room only for trusted
+ * NC Connector events when the saved-event cleanup opt-in is enabled.
  * @param {string} calendarId
  * @param {string} id
  * @returns {Promise<void>}
@@ -1026,6 +1046,21 @@ async function handleCalendarItemRemoved(calendarId, id){
   try{
     const entry = getEventTokenEntry(calendarId, id);
     if (!entry?.token){
+      return;
+    }
+    if (!isTrustedEventTokenEntry(entry)){
+      L("calendar item removed: skip room delete (untrusted token mapping)", {
+        calendarId,
+        itemId: id
+      });
+      await removeEventTokenEntry(calendarId, id);
+      return;
+    }
+    if (!(await isSavedEventRoomDeleteEnabled())){
+      L("calendar item removed: room delete disabled", {
+        token: shortToken(entry.token)
+      });
+      await removeEventTokenEntry(calendarId, id);
       return;
     }
     const token = entry.token;
