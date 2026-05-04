@@ -181,6 +181,13 @@ const NCEmailSignature = (() => {
     return false;
   }
 
+  function resolveShouldClearForeign(policy, composeKind){
+    if (!policy?.onCompose){
+      return false;
+    }
+    return composeKind === "new" || composeKind === "reply" || composeKind === "forward";
+  }
+
   function resolvePlainTextMode(details){
     const deliveryFormat = typeof details?.deliveryFormat === "string"
       ? details.deliveryFormat.trim().toLowerCase()
@@ -333,14 +340,15 @@ const NCEmailSignature = (() => {
     }
 
     const shouldInsert = resolveShouldInsert(policy, composeKind);
+    const shouldClearForeign = resolveShouldClearForeign(policy, composeKind);
     const requireExistingOwnUnchanged = reason === "identity_changed" && previousState.managed === true;
     const sanitizedHtml = shouldInsert ? sanitizeSignatureHtml(policy.templateHtml) : "";
     const plainTextMode = shouldInsert && resolvePlainTextMode(details);
     const plainText = plainTextMode ? signatureHtmlToPlainText(sanitizedHtml) : "";
     const result = await sendSignatureMessage(tabId, {
       desired: shouldInsert,
-      clearForeign: shouldInsert,
-      clearOwnOnly: !shouldInsert,
+      clearForeign: shouldClearForeign,
+      clearOwnOnly: !shouldInsert && !shouldClearForeign,
       requireExistingOwnUnchanged,
       html: sanitizedHtml,
       plainText,
@@ -357,6 +365,7 @@ const NCEmailSignature = (() => {
       reason,
       composeType: composeKind,
       desired: shouldInsert,
+      clearForeign: shouldClearForeign,
       changed: result.changed === true,
       result: String(result.reason || ""),
       plainTextMode
