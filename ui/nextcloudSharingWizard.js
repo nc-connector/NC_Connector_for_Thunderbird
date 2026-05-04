@@ -73,6 +73,29 @@
   }
 
   /**
+   * Return true when one backend policy domain is usable for the current seat.
+   * @param {object|null} status
+   * @param {"share"|"talk"|"email_signature"} domain
+   * @returns {boolean}
+   */
+  function isPolicyDomainActive(status, domain){
+    const domainState = status?.policyDomains?.[domain];
+    if (domainState && typeof domainState === "object"
+      && Object.prototype.hasOwnProperty.call(domainState, "active")){
+      return domainState.active === true;
+    }
+    const policy = status?.policy?.[domain];
+    const editable = status?.policyEditable?.[domain];
+    return !!(
+      status?.policyActive
+      && policy
+      && typeof policy === "object"
+      && editable
+      && typeof editable === "object"
+    );
+  }
+
+  /**
    * Return true when separate password delivery is available.
    * @returns {boolean}
    */
@@ -209,13 +232,7 @@
       const status = response?.ok ? (response.status || null) : null;
       const sharePolicy = status?.policy?.share;
       const editable = status?.policyEditable?.share;
-      const active = !!(
-        status?.policyActive
-        && sharePolicy
-        && typeof sharePolicy === "object"
-        && editable
-        && typeof editable === "object"
-      );
+      const active = isPolicyDomainActive(status, "share");
       state.policy.status = status;
       state.policy.active = active;
       state.policy.share = active ? sharePolicy : null;

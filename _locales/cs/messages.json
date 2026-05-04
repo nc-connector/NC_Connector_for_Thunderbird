@@ -901,5 +901,8 @@
   },
   "options_signature_backend_inactive_tooltip": {
     "message": "Centrální zásada podpisu je neaktivní nebo neúplná."
+  },
+  "options_signature_backend_update_required_tooltip": {
+    "message": "Aktualizujte prosím backend NC Connector. Tato verze backendu zatím nepodporuje centrální e-mailové podpisy."
   }
 }

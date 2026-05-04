@@ -73,7 +73,8 @@ See [`CHANGELOG.md`](https://github.com/nc-connector/NC_Connector_for_Thunderbir
   - missing backend / no seat / invalid seat falls back to local add-on settings
   - invalid seat states are surfaced in the UI so users can contact their administrator
 - centrally managed email signatures apply only to Thunderbird sender identities matching the Nextcloud seat email address
-- signature controls stay disabled until the backend endpoint is available and the current user has an active assigned seat
+- signature controls stay disabled until the backend endpoint is available, the current user has an active assigned seat, and the backend exposes the `email_signature` policy domain
+- older backends without the `email_signature` policy domain disable only central email signatures; Share/Talk backend policies remain active when their own policy domains are present
 - backend share/Talk templates are only activated when the language override is set to `Custom`
 - `Custom` is only shown when the NC Connector backend endpoint exists and stays disabled unless the effective backend policy for that domain is actually `custom` and provides a template
 - if `Custom` is selected but the backend template is empty or unavailable, Thunderbird falls back to the local UI-default text block

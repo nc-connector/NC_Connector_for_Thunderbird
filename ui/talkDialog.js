@@ -313,6 +313,29 @@
   }
 
   /**
+   * Return true when one backend policy domain is usable for the current seat.
+   * @param {object|null} status
+   * @param {"share"|"talk"|"email_signature"} domain
+   * @returns {boolean}
+   */
+  function isPolicyDomainActive(status, domain){
+    const domainState = status?.policyDomains?.[domain];
+    if (domainState && typeof domainState === "object"
+      && Object.prototype.hasOwnProperty.call(domainState, "active")){
+      return domainState.active === true;
+    }
+    const policy = status?.policy?.[domain];
+    const editable = status?.policyEditable?.[domain];
+    return !!(
+      status?.policyActive
+      && policy
+      && typeof policy === "object"
+      && editable
+      && typeof editable === "object"
+    );
+  }
+
+  /**
    * Load current backend policy status for the wizard.
    * @returns {Promise<void>}
    */
@@ -324,13 +347,7 @@
       const status = response?.ok ? (response.status || null) : null;
       const talkPolicy = status?.policy?.talk;
       const editable = status?.policyEditable?.talk;
-      const active = !!(
-        status?.policyActive
-        && talkPolicy
-        && typeof talkPolicy === "object"
-        && editable
-        && typeof editable === "object"
-      );
+      const active = isPolicyDomainActive(status, "talk");
       state.policy.status = status;
       state.policy.active = active;
       state.policy.talk = active ? talkPolicy : null;

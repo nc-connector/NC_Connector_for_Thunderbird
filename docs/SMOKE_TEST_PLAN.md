@@ -161,15 +161,17 @@ Run all cases at least once on M1 and M2, except cases marked `3.0.4 only`.
   - Pass: signature settings are disabled with the existing backend-required guidance; Thunderbird identity signatures or Signature Switch signatures remain untouched at compose time.
 - [ ] `SIG-02` `3.0.4 only`: backend available but no active assigned seat.
   - Pass: signature settings are disabled with the existing seat-required guidance; Thunderbird identity signatures or Signature Switch signatures remain untouched at compose time.
-- [ ] `SIG-03` `3.0.4 only`: matching Nextcloud sender identity, compose signature enabled.
+- [ ] `SIG-03` `3.0.4 only`: backend available with active assigned seat but without `policy.email_signature`.
+  - Pass: signature settings are disabled with the backend-update guidance; Share/Talk backend policy remains active when their domains are present; Thunderbird identity signatures or Signature Switch signatures remain untouched at compose time.
+- [ ] `SIG-04` `3.0.4 only`: matching Nextcloud sender identity, compose signature enabled.
   - Pass: backend signature is inserted once, sanitized before insertion, and any Thunderbird/Signature Switch signature for that same identity is replaced.
-- [ ] `SIG-04` `3.0.4 only`: non-matching sender identity.
+- [ ] `SIG-05` `3.0.4 only`: non-matching sender identity.
   - Pass: backend signature is not inserted and Thunderbird identity signatures or Signature Switch signatures for that identity remain untouched.
-- [ ] `SIG-05` `3.0.4 only`: matching identity, compose signature enabled, reply/forward insertion disabled.
+- [ ] `SIG-06` `3.0.4 only`: matching identity, compose signature enabled, reply/forward insertion disabled.
   - Pass: replies/forwards remove Thunderbird/Signature Switch signatures for that matching identity but do not insert a backend signature.
-- [ ] `SIG-06` `3.0.4 only`: backend signature sanitizer fail-closed behavior.
+- [ ] `SIG-07` `3.0.4 only`: backend signature sanitizer fail-closed behavior.
   - Pass: unavailable sanitizer or empty sanitized output aborts signature insertion with an explicit error/debug log and does not insert raw backend HTML.
-- [ ] `SIG-07` `3.0.4 only`: plain-text compose mode.
+- [ ] `SIG-08` `3.0.4 only`: plain-text compose mode.
   - Pass: the signature is inserted as deterministic plain text converted from the sanitized backend HTML.
 
 ### I. Focus Behavior

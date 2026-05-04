@@ -901,5 +901,8 @@
   },
   "options_signature_backend_inactive_tooltip": {
     "message": "A központi aláírási házirend inaktív vagy hiányos."
+  },
+  "options_signature_backend_update_required_tooltip": {
+    "message": "Kérjük, frissítse az NC Connector backendet. Ez a backendverzió még nem támogatja a központi e-mail aláírásokat."
   }
 }

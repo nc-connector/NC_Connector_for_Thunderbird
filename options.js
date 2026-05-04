@@ -345,6 +345,42 @@ function isBackendPolicyActive(){
 }
 
 /**
+ * Return true when one backend policy domain exists in the status payload.
+ * @param {"share"|"talk"|"email_signature"} domain
+ * @returns {boolean}
+ */
+function isBackendPolicyDomainAvailable(domain){
+  if (typeof NCPolicyRuntime !== "undefined" && typeof NCPolicyRuntime.isDomainAvailable === "function"){
+    return NCPolicyRuntime.isDomainAvailable(runtimePolicyStatus, domain);
+  }
+  const domainState = runtimePolicyStatus?.policyDomains?.[domain];
+  if (domainState && typeof domainState === "object"
+    && Object.prototype.hasOwnProperty.call(domainState, "available")){
+    return domainState.available === true;
+  }
+  const policy = runtimePolicyStatus?.policy?.[domain];
+  const editable = runtimePolicyStatus?.policyEditable?.[domain];
+  return !!policy && typeof policy === "object" && !!editable && typeof editable === "object";
+}
+
+/**
+ * Return true when one backend policy domain is usable for the current seat.
+ * @param {"share"|"talk"|"email_signature"} domain
+ * @returns {boolean}
+ */
+function isBackendPolicyDomainActive(domain){
+  if (typeof NCPolicyRuntime !== "undefined" && typeof NCPolicyRuntime.isDomainActive === "function"){
+    return NCPolicyRuntime.isDomainActive(runtimePolicyStatus, domain);
+  }
+  const domainState = runtimePolicyStatus?.policyDomains?.[domain];
+  if (domainState && typeof domainState === "object"
+    && Object.prototype.hasOwnProperty.call(domainState, "active")){
+    return domainState.active === true;
+  }
+  return isBackendPolicyActive() && isBackendPolicyDomainAvailable(domain);
+}
+
+/**
  * Return true when the NC Connector backend endpoint is available.
  * @returns {boolean}
  */
@@ -392,7 +428,7 @@ function getPolicyTemplateKey(domain){
  * @returns {boolean}
  */
 function isCustomLanguageModeAvailable(domain){
-  if (!isBackendEndpointAvailable() || !isBackendPolicyActive()){
+  if (!isBackendEndpointAvailable() || !isBackendPolicyDomainActive(domain)){
     return false;
   }
   const language = normalizeLangChoice(
@@ -510,7 +546,7 @@ function isBackendPolicyExplicitNull(domain, key){
  * @returns {boolean}
  */
 function isPolicyLocked(domain, key){
-  if (!runtimePolicyStatus?.policyActive){
+  if (!isBackendPolicyDomainActive(domain)){
     return false;
   }
   const editableDomain = runtimePolicyStatus?.policyEditable?.[domain];
@@ -622,7 +658,11 @@ function getEmailSignatureUnavailableHint(){
     return i18n("sharing_password_separate_paused_tooltip")
       || "Your NC Connector seat is currently paused. Please contact your Nextcloud administrator.";
   }
-  if (!isBackendPolicyActive()
+  if (!isBackendPolicyDomainAvailable("email_signature")){
+    return i18n("options_signature_backend_update_required_tooltip")
+      || "Please update the NC Connector backend. This backend version does not support central email signatures yet.";
+  }
+  if (!isBackendPolicyDomainActive("email_signature")
     || readBackendPolicyValue("email_signature", "email_signature_on_compose") !== true
     || !String(readBackendPolicyValue("email_signature", "email_signature_template") || "").trim()
     || !normalizeEmailAddress(readBackendPolicyValue("email_signature", "user_email"))){
@@ -753,27 +793,26 @@ async function refreshBackendPolicyStatus(){
  * Locked controls always show the policy value.
  */
 function applyPolicySettingsOverlay(){
-  const policyActive = isBackendPolicyActive();
-  const lockShareBase = policyActive && isPolicyLocked("share", "share_base_directory");
-  const lockShareName = policyActive && isPolicyLocked("share", "share_name_template");
-  const lockPermUpload = policyActive && isPolicyLocked("share", "share_permission_upload");
-  const lockPermEdit = policyActive && isPolicyLocked("share", "share_permission_edit");
-  const lockPermDelete = policyActive && isPolicyLocked("share", "share_permission_delete");
-  const lockSharePassword = policyActive && isPolicyLocked("share", "share_set_password");
-  const lockSharePasswordSeparate = policyActive && isPolicyLocked("share", "share_send_password_separately");
-  const lockShareExpire = policyActive && isPolicyLocked("share", "share_expire_days");
-  policyLockSharingAttachmentsAlways = policyActive && isPolicyLocked("share", "attachments_always_via_ncconnector");
-  policyLockSharingAttachmentsThreshold = policyActive && isPolicyLocked("share", "attachments_min_size_mb");
-  const lockShareLang = policyActive && isPolicyLocked("share", "language_share_html_block");
-  const lockTalkTitle = policyActive && isPolicyLocked("talk", "talk_title");
-  const lockTalkLobby = policyActive && isPolicyLocked("talk", "talk_lobby_active");
-  const lockTalkListable = policyActive && isPolicyLocked("talk", "talk_show_in_search");
-  policyLockTalkAddUsers = policyActive && isPolicyLocked("talk", "talk_add_users");
-  policyLockTalkAddGuests = policyActive && isPolicyLocked("talk", "talk_add_guests");
-  const lockTalkPassword = policyActive && isPolicyLocked("talk", "talk_set_password");
-  const lockTalkDeleteRoomOnEventDelete = policyActive && isPolicyLocked("talk", "talk_delete_room_on_event_delete");
-  const lockTalkRoomType = policyActive && isPolicyLocked("talk", "talk_room_type");
-  const lockTalkLang = policyActive && isPolicyLocked("talk", "language_talk_description");
+  const lockShareBase = isPolicyLocked("share", "share_base_directory");
+  const lockShareName = isPolicyLocked("share", "share_name_template");
+  const lockPermUpload = isPolicyLocked("share", "share_permission_upload");
+  const lockPermEdit = isPolicyLocked("share", "share_permission_edit");
+  const lockPermDelete = isPolicyLocked("share", "share_permission_delete");
+  const lockSharePassword = isPolicyLocked("share", "share_set_password");
+  const lockSharePasswordSeparate = isPolicyLocked("share", "share_send_password_separately");
+  const lockShareExpire = isPolicyLocked("share", "share_expire_days");
+  policyLockSharingAttachmentsAlways = isPolicyLocked("share", "attachments_always_via_ncconnector");
+  policyLockSharingAttachmentsThreshold = isPolicyLocked("share", "attachments_min_size_mb");
+  const lockShareLang = isPolicyLocked("share", "language_share_html_block");
+  const lockTalkTitle = isPolicyLocked("talk", "talk_title");
+  const lockTalkLobby = isPolicyLocked("talk", "talk_lobby_active");
+  const lockTalkListable = isPolicyLocked("talk", "talk_show_in_search");
+  policyLockTalkAddUsers = isPolicyLocked("talk", "talk_add_users");
+  policyLockTalkAddGuests = isPolicyLocked("talk", "talk_add_guests");
+  const lockTalkPassword = isPolicyLocked("talk", "talk_set_password");
+  const lockTalkDeleteRoomOnEventDelete = isPolicyLocked("talk", "talk_delete_room_on_event_delete");
+  const lockTalkRoomType = isPolicyLocked("talk", "talk_room_type");
+  const lockTalkLang = isPolicyLocked("talk", "language_talk_description");
 
   if (lockShareBase && sharingBaseInput){
     sharingBaseInput.value = coercePolicyString(readBackendPolicyValue("share", "share_base_directory"), sharingBaseInput.value || DEFAULT_SHARING_BASE);

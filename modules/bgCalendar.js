@@ -1023,7 +1023,7 @@ async function isSavedEventRoomDeleteEnabled(){
     if (typeof NCPolicyRuntime !== "undefined" && NCPolicyRuntime?.getPolicyStatus){
       const status = await NCPolicyRuntime.getPolicyStatus();
       if (
-        status?.policyActive
+        NCPolicyRuntime.isDomainActive(status, "talk")
         && NCPolicyRuntime.isLocked(status, "talk", "talk_delete_room_on_event_delete")
       ){
         return NCPolicyRuntime.readPolicyValue(status, "talk", "talk_delete_room_on_event_delete") === true;

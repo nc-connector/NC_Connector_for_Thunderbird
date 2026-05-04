@@ -901,5 +901,8 @@
   },
   "options_signature_backend_inactive_tooltip": {
     "message": "集中签名策略未启用或不完整。"
+  },
+  "options_signature_backend_update_required_tooltip": {
+    "message": "请更新 NC Connector 后端。此后端版本尚不支持集中管理的电子邮件签名。"
   }
 }

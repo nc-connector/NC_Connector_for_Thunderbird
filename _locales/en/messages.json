@@ -901,5 +901,8 @@
   },
   "options_signature_backend_inactive_tooltip": {
     "message": "Central signature policy is inactive or incomplete."
+  },
+  "options_signature_backend_update_required_tooltip": {
+    "message": "Please update the NC Connector backend. This backend version does not support central email signatures yet."
   }
 }

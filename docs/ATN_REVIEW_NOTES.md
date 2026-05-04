@@ -93,6 +93,10 @@ for persisted monitoring (`browser.calendar.items.onCreated/onUpdated/onRemoved`
   - Share HTML policy templates (`share_html_block_template`, `share_password_template`)
   - Email signature HTML policy template (`email_signature_template`)
   - bundled sanitizer: `DOMPurify 3.3.1` documented in `VENDOR.md`
+- Backend policy availability is evaluated per policy domain. Older backend
+  payloads without `policy.email_signature` disable only central email
+  signatures with an update hint; Share/Talk policy domains remain active when
+  present.
 - Share compose insertion is mode-aware:
   - HTML compose receives pre-rendered share HTML from `NCSharing.buildHtmlBlock(...)`
   - plain-text compose receives a dedicated pre-rendered share text block from `NCSharing.buildPlainTextBlock(...)`

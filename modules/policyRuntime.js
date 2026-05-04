@@ -12,6 +12,7 @@
  */
 const NCPolicyRuntime = (() => {
   const STATUS_ENDPOINT_PATH = "/apps/ncc_backend_4mc/api/v1/status";
+  const POLICY_DOMAINS = ["share", "talk", "email_signature"];
 
   /**
    * Build the status endpoint URL from a normalized base URL.
@@ -115,12 +116,46 @@ const NCPolicyRuntime = (() => {
         graceUntilIso: details?.graceUntilIso || null
       },
       policyActive: false,
+      policyDomains: {
+        share: { available: false, active: false },
+        talk: { available: false, active: false },
+        email_signature: { available: false, active: false }
+      },
       policy: { share: null, talk: null, email_signature: null },
       policyEditable: { share: null, talk: null, email_signature: null },
       warning: {
         visible: !!warningCode,
         code: warningCode
       }
+    };
+  }
+
+  /**
+   * Return true when the backend status allows policy use for assigned seats.
+   * @param {object} status
+   * @returns {boolean}
+   */
+  function isSeatUsable(status){
+    return !!(
+      status?.seatAssigned
+      && status?.isValid
+      && status?.seatState === "active"
+      && !status?.overlicensed
+    );
+  }
+
+  /**
+   * Build availability/activation state for one policy domain.
+   * @param {any} policyDomain
+   * @param {any} editableDomain
+   * @param {boolean} seatUsable
+   * @returns {{available:boolean, active:boolean}}
+   */
+  function buildDomainState(policyDomain, editableDomain, seatUsable){
+    const available = isObject(policyDomain) && isObject(editableDomain);
+    return {
+      available,
+      active: !!seatUsable && available
     };
   }
 
@@ -132,7 +167,7 @@ const NCPolicyRuntime = (() => {
   function normalizeStatusPayload(payload){
     const rawStatus = isObject(payload?.status) ? payload.status : {};
     const status = {
-        userId: String(rawStatus.user_id || ""),
+      userId: String(rawStatus.user_id || ""),
       seatAssigned: !!rawStatus.seat_assigned,
       seatState: String(rawStatus.seat_state || "none"),
       overlicensed: !!rawStatus.overlicensed,
@@ -147,17 +182,16 @@ const NCPolicyRuntime = (() => {
     const editableShare = isObject(payload?.policy_editable?.share) ? payload.policy_editable.share : null;
     const editableTalk = isObject(payload?.policy_editable?.talk) ? payload.policy_editable.talk : null;
     const editableEmailSignature = isObject(payload?.policy_editable?.email_signature) ? payload.policy_editable.email_signature : null;
-    const policyActive = !!(
-      status.seatAssigned
-      && status.isValid
-      && status.seatState === "active"
-      && policyShare
-      && policyTalk
-      && policyEmailSignature
-      && editableShare
-      && editableTalk
-      && editableEmailSignature
-    );
+    const seatUsable = isSeatUsable(status);
+    const policyDomains = {
+      share: buildDomainState(policyShare, editableShare, seatUsable),
+      talk: buildDomainState(policyTalk, editableTalk, seatUsable),
+      email_signature: buildDomainState(policyEmailSignature, editableEmailSignature, seatUsable)
+    };
+    const policyActive = POLICY_DOMAINS.some((domain) => policyDomains[domain]?.active === true);
+    const reason = policyActive
+      ? "policy_active"
+      : (seatUsable ? "policy_domains_unavailable" : "seat_not_usable");
     const warningCode = status.seatAssigned && (!status.isValid || status.seatState !== "active")
       ? "license_invalid"
       : "";
@@ -166,12 +200,13 @@ const NCPolicyRuntime = (() => {
       fetchSucceeded: true,
       cached: false,
       mode: policyActive ? "policy" : "local",
-      reason: policyActive ? "policy_active" : "seat_not_usable",
+      reason,
       endpointAvailable: true,
       endpointChecked: true,
       endpointUrl: "",
       status,
       policyActive,
+      policyDomains,
       policy: {
         share: policyShare,
         talk: policyTalk,
@@ -292,6 +327,11 @@ const NCPolicyRuntime = (() => {
     L("policy status fetched", {
       mode: normalized.mode,
       policyActive: normalized.policyActive,
+      domains: {
+        share: normalized.policyDomains?.share?.active === true,
+        talk: normalized.policyDomains?.talk?.active === true,
+        emailSignature: normalized.policyDomains?.email_signature?.active === true
+      },
       seatAssigned: normalized.status.seatAssigned,
       seatState: normalized.status.seatState,
       isValid: normalized.status.isValid,
@@ -308,16 +348,46 @@ const NCPolicyRuntime = (() => {
    * @returns {boolean}
    */
   function isLocked(status, domain, key){
-    if (!status?.policyActive){
+    if (!isDomainActive(status, domain)){
       return false;
     }
     return readEditableFlag(status, domain, key) === false;
+  }
+
+  /**
+   * Return true when a policy domain exists in the backend payload.
+   * @param {any} status
+   * @param {"share"|"talk"|"email_signature"} domain
+   * @returns {boolean}
+   */
+  function isDomainAvailable(status, domain){
+    const domainState = status?.policyDomains?.[domain];
+    if (isObject(domainState) && Object.prototype.hasOwnProperty.call(domainState, "available")){
+      return domainState.available === true;
+    }
+    return isObject(status?.policy?.[domain]) && isObject(status?.policyEditable?.[domain]);
+  }
+
+  /**
+   * Return true when a policy domain exists and the seat may use backend policy.
+   * @param {any} status
+   * @param {"share"|"talk"|"email_signature"} domain
+   * @returns {boolean}
+   */
+  function isDomainActive(status, domain){
+    const domainState = status?.policyDomains?.[domain];
+    if (isObject(domainState) && Object.prototype.hasOwnProperty.call(domainState, "active")){
+      return domainState.active === true;
+    }
+    return !!status?.policyActive && isDomainAvailable(status, domain);
   }
 
   return {
     getPolicyStatus,
     readPolicyValue,
     readEditableFlag,
+    isDomainAvailable,
+    isDomainActive,
     isLocked
   };
 })();

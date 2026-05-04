@@ -901,5 +901,8 @@
   },
   "options_signature_backend_inactive_tooltip": {
     "message": "Центральная политика подписи неактивна или неполная."
+  },
+  "options_signature_backend_update_required_tooltip": {
+    "message": "Обновите backend NC Connector. Эта версия backend ещё не поддерживает централизованные подписи электронной почты."
   }
 }

@@ -252,7 +252,7 @@ async function getComposeAttachmentAutomationSettings(){
   if (typeof NCPolicyRuntime !== "undefined" && NCPolicyRuntime?.getPolicyStatus){
     try{
       const policyStatus = await NCPolicyRuntime.getPolicyStatus();
-      if (policyStatus?.policyActive){
+      if (NCPolicyRuntime.isDomainActive(policyStatus, "share")){
         if (NCPolicyRuntime.isLocked(policyStatus, "share", "attachments_always_via_ncconnector")){
           alwaysConnector = !!NCPolicyRuntime.readPolicyValue(
             policyStatus,

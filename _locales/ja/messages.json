@@ -901,5 +901,8 @@
   },
   "options_signature_backend_inactive_tooltip": {
     "message": "中央管理の署名ポリシーが無効または不完全です。"
+  },
+  "options_signature_backend_update_required_tooltip": {
+    "message": "NC Connector バックエンドを更新してください。このバックエンドバージョンは、中央管理のメール署名をまだサポートしていません。"
   }
 }

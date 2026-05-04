@@ -901,5 +901,8 @@
   },
   "options_signature_backend_inactive_tooltip": {
     "message": "A política central de assinatura está inativa ou incompleta."
+  },
+  "options_signature_backend_update_required_tooltip": {
+    "message": "Atualize o backend do NC Connector. Esta versão do backend ainda não suporta assinaturas de e-mail centrais."
   }
 }

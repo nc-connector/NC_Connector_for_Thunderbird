@@ -901,5 +901,8 @@
   },
   "options_signature_backend_inactive_tooltip": {
     "message": "Het centrale handtekeningbeleid is inactief of onvolledig."
+  },
+  "options_signature_backend_update_required_tooltip": {
+    "message": "Werk de NC Connector-backend bij. Deze backendversie ondersteunt centrale e-mailhandtekeningen nog niet."
   }
 }

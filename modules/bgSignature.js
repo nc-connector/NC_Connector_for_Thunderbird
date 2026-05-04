@@ -98,7 +98,7 @@ const NCEmailSignature = (() => {
   }
 
   function readSignaturePolicyValue(status, key){
-    if (typeof NCPolicyRuntime?.readPolicyValue === "function"){
+    if (typeof NCPolicyRuntime !== "undefined" && typeof NCPolicyRuntime.readPolicyValue === "function"){
       return NCPolicyRuntime.readPolicyValue(status, "email_signature", key);
     }
     const policy = status?.policy?.email_signature;
@@ -109,13 +109,20 @@ const NCEmailSignature = (() => {
   }
 
   function isSignaturePolicyLocked(status, key){
-    return typeof NCPolicyRuntime?.isLocked === "function"
+    return typeof NCPolicyRuntime !== "undefined" && typeof NCPolicyRuntime.isLocked === "function"
       ? NCPolicyRuntime.isLocked(status, "email_signature", key)
       : false;
   }
 
   function resolveSignaturePolicy(status, localOptions){
-    if (!status?.policyActive){
+    if (typeof NCPolicyRuntime !== "undefined"
+      && typeof NCPolicyRuntime.isDomainAvailable === "function"
+      && !NCPolicyRuntime.isDomainAvailable(status, "email_signature")){
+      return { active: false, reason: "signature_backend_unsupported" };
+    }
+    if (typeof NCPolicyRuntime !== "undefined" && typeof NCPolicyRuntime.isDomainActive === "function"
+      ? !NCPolicyRuntime.isDomainActive(status, "email_signature")
+      : !status?.policyActive){
       return { active: false, reason: "policy_inactive" };
     }
     const backendOnCompose = readSignaturePolicyValue(status, "email_signature_on_compose") === true;

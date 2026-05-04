@@ -139,9 +139,10 @@ Runtime behavior:
 - checked when Sharing wizard opens
 - checked when add-on settings open and when add-on settings are saved
 - valid active seat => backend policy values apply and `policy_editable=false` fields are locked in the UI
-- missing backend / no seat / invalid seat => local add-on settings remain active
-- if the backend is unreachable, Thunderbird falls back to the locally saved add-on settings
-- if the backend is reachable but the license/seat state is no longer usable, Thunderbird also falls back to the locally saved add-on settings
+- missing backend / no seat / invalid seat => local add-on settings remain active for the normal local defaults
+- backend-only features stay disabled until their backend/seat requirements are met
+- if the backend is unreachable, Thunderbird falls back to the locally saved add-on settings for Share/Talk defaults
+- if the backend is reachable but the license/seat state is no longer usable, Thunderbird also falls back to the locally saved add-on settings for Share/Talk defaults
 - invalid seat states remain visible in the UI so users can contact their administrator
 - separate password delivery is only available when the backend endpoint exists and the current user has an active assigned seat
 - separate password follow-up mails target only the primary mail `To` recipients
@@ -152,6 +153,7 @@ Runtime behavior:
 - for the matching sender identity, enabled compose signature policy also clears Thunderbird identity signatures or Signature Switch signatures in replies and forwards when backend insertion is disabled for that compose type
 - Thunderbird applies the central signature only to sender identities whose email address matches `policy.email_signature.user_email`; other identities are left untouched so Thunderbird identity signatures or Signature Switch can continue to work
 - the signature settings tab is disabled with the existing backend/seat guidance text while the backend endpoint is unavailable or the current user has no active assigned seat
+- if the backend endpoint is available and the seat is active, but the status payload has no `policy.email_signature` domain, only central email signatures stay disabled and the UI asks the user to update/check the backend; Share and Talk policy domains keep working independently
 - backend custom templates stay inactive until the corresponding language override is set to `custom`
 - the `custom` option is only shown when the backend endpoint exists and stays disabled unless the effective backend policy for that domain is actually `custom` and provides a template
 - if `custom` is selected but the backend template is empty or unavailable, Thunderbird falls back to the local UI-default text block

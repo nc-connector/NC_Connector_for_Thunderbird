@@ -901,5 +901,8 @@
   },
   "options_signature_backend_inactive_tooltip": {
     "message": "Die zentrale Signaturrichtlinie ist inaktiv oder unvollständig."
+  },
+  "options_signature_backend_update_required_tooltip": {
+    "message": "Bitte aktualisieren Sie das NC Connector Backend. Diese Backend-Version unterstützt zentrale E-Mail-Signaturen noch nicht."
   }
 }
