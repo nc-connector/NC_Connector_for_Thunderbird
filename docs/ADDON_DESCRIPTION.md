@@ -52,7 +52,7 @@ Data flow:
   - main share block hides inline password and shows a separate-password notice
   - password-only follow-up mail is sent after the main compose message is sent (auto-send with timeout guard + manual fallback draft on send failure)
   - successful password-mail delivery triggers a desktop success notification
-  - if manual fallback is closed without send, remote share cleanup removes the related share folder
+  - once the primary mail was sent, password-follow-up problems never delete the committed remote share
 - Optional compose attachment automation:
   - always route attachments via NC Connector, or
   - route only when total attachment size exceeds configured threshold
@@ -82,8 +82,9 @@ Data flow:
 - Lobby timer synchronization uses `X-NCTALK-START` as the single authoritative source (no fallback derivation from `DTSTART/TZID`).
 - Uses the calendar experiment API “as-is” for persisted monitoring:
   - lobby updates when the event time changes
-  - delete room when an event is removed
+  - optionally delete linked rooms when saved NC Connector events are removed
   - delegation + participant auto-add triggered by calendar item updates
+- Saved-event room deletion is opt-in only and requires trusted NC Connector `X-NCTALK-*` metadata; generic Talk links in `LOCATION` or `URL` are ignored.
 - Cleans up newly created rooms when the editor is closed without saving (prevents orphan rooms)
 
 ### Logging and Debug

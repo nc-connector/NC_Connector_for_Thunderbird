@@ -10,13 +10,14 @@ This plan covers end-to-end smoke checks for:
 - Talk wizard
 - Sharing wizard
 - Attachment automation
+- Central email signature handling
 - Cleanup/lifecycle paths
 - Focus behavior
 - Runtime logging quality
 
 Known version delta:
 - `2.2.9`: separate password mail is feature-gated (disabled).
-- `3.0.4`: separate password mail is available only when the backend endpoint exists, the current user has an active assigned seat, and password protection is enabled. Saved-event Talk room deletion is opt-in only and requires NC Connector `X-NCTALK-*` metadata.
+- `3.0.4`: separate password mail is available only when the backend endpoint exists, the current user has an active assigned seat, and password protection is enabled. Saved-event Talk room deletion is opt-in only and requires NC Connector `X-NCTALK-*` metadata. Central email signatures are available only with backend endpoint, active seat, a rendered signature template, and a Thunderbird sender identity matching the Nextcloud user email address.
 
 ## 2. Test Matrix
 
@@ -35,6 +36,7 @@ Run all cases at least once on M1 and M2, except cases marked `3.0.4 only`.
 - [ ] Nextcloud account configured and reachable
 - [ ] Talk + Sharing (DAV) available on server
 - [ ] For `3.0.4` separate-password and backend-policy cases: backend endpoint available and active seat assigned to the current user
+- [ ] For `3.0.4` email-signature cases: backend signature policy prepared with `user_email`, compose/reply/forward variants, and a rendered signature template
 - [ ] Test mailbox and test calendar writable
 - [ ] Test files prepared (small, large, duplicate names, folder tree)
 - [ ] System address book scenario A prepared (available)
@@ -153,7 +155,24 @@ Run all cases at least once on M1 and M2, except cases marked `3.0.4 only`.
 - [ ] `P-07` `3.0.4 only`: sanitizer fail-closed behavior for backend follow-up template.
   - Pass: when backend custom password template is active, registration/send aborts deterministically with explicit debug/error log if sanitization cannot be completed.
 
-### H. Focus Behavior
+### H. Central Email Signature
+
+- [ ] `SIG-01` `3.0.4 only`: backend unavailable.
+  - Pass: signature settings are disabled with the existing backend-required guidance; Thunderbird identity signatures or Signature Switch signatures remain untouched at compose time.
+- [ ] `SIG-02` `3.0.4 only`: backend available but no active assigned seat.
+  - Pass: signature settings are disabled with the existing seat-required guidance; Thunderbird identity signatures or Signature Switch signatures remain untouched at compose time.
+- [ ] `SIG-03` `3.0.4 only`: matching Nextcloud sender identity, compose signature enabled.
+  - Pass: backend signature is inserted once, sanitized before insertion, and any Thunderbird/Signature Switch signature for that same identity is replaced.
+- [ ] `SIG-04` `3.0.4 only`: non-matching sender identity.
+  - Pass: backend signature is not inserted and Thunderbird identity signatures or Signature Switch signatures for that identity remain untouched.
+- [ ] `SIG-05` `3.0.4 only`: matching identity, compose signature enabled, reply/forward insertion disabled.
+  - Pass: replies/forwards remove Thunderbird/Signature Switch signatures for that matching identity but do not insert a backend signature.
+- [ ] `SIG-06` `3.0.4 only`: backend signature sanitizer fail-closed behavior.
+  - Pass: unavailable sanitizer or empty sanitized output aborts signature insertion with an explicit error/debug log and does not insert raw backend HTML.
+- [ ] `SIG-07` `3.0.4 only`: plain-text compose mode.
+  - Pass: the signature is inserted as deterministic plain text converted from the sanitized backend HTML.
+
+### I. Focus Behavior
 
 - [ ] `F-01` Talk wizard focus best effort.
   - Pass: focus attempt logged; wizard remains functional even if OS/WM blocks focus.
@@ -162,7 +181,7 @@ Run all cases at least once on M1 and M2, except cases marked `3.0.4 only`.
 - [ ] `F-03` No functional regression if focus cannot be forced.
   - Pass: user can continue flow manually.
 
-### I. Logging Quality
+### J. Logging Quality
 
 - [ ] `L-01` No duplicated addon error logs for same exception in active path.
   - Pass: one deterministic error signal per failure.
@@ -177,8 +196,8 @@ Run all cases at least once on M1 and M2, except cases marked `3.0.4 only`.
 2. Run `B + C` with address book available.
 3. Run `B + C` with address book unavailable.
 4. Run `E + F`.
-5. Run `G` (respect version-specific gating/availability conditions).
-6. Run `H + I` as final regression pass.
+5. Run `G + H` (respect version-specific gating/availability conditions).
+6. Run `I + J` as final regression pass.
 
 ## 6. Result Sheet
 

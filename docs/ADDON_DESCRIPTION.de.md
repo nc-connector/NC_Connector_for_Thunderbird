@@ -25,7 +25,7 @@ Kalender-Integration (high level):
   - deterministischen editor-targeted Read/Write-Pfad bereitstellen (`getCurrent` / `updateCurrent`)
   - tracked Editor-Close-Signale liefern (`onTrackedEditorClosed`)
 - Die komplette Talk/Freigabe-Logik bleibt in den WebExtension-Background-Laufzeitmodulen (`modules/bgState.js`, `modules/bgComposeAttachments.js`, `modules/bgComposeShareCleanup.js`, `modules/bgComposePasswordDispatch.js`, `modules/bgCompose.js`, `modules/bgCalendar.js`, `modules/bgRouter.js`).
-- Persistentes Monitoring (Lobby-Updates, Room-Delete bei Termin-Löschung, Delegation, Teilnehmer-Auto-Add) läuft über `browser.calendar.items.*` aus `experiments/calendar` (unverändert).
+- Persistentes Monitoring (Lobby-Updates, optionales Löschen verknüpfter Räume für gespeicherte NC Connector Termine, Delegation, Teilnehmer-Auto-Add) läuft über `browser.calendar.items.*` aus `experiments/calendar` (unverändert).
 
 Datenfluss:
 1. Optionen werden in storage gespeichert (Base URL, Auth-Modus, Defaults)
@@ -52,7 +52,7 @@ Datenfluss:
   - Hauptmail blendet das Inline-Passwort aus und zeigt einen Hinweis auf die separate Passwortmail
   - Passwort-Only-Follow-up wird nach Versand der Hauptmail gesendet (Auto-Send mit Timeout-Guard; bei Sendefehler mit manuellem Fallback-Entwurf)
   - bei erfolgreichem Passwortversand wird eine Desktop-Erfolgsmeldung angezeigt
-  - wird der manuelle Fallback ohne Versand geschlossen, entfernt der Cleanup den zugehörigen Remote-Share-Ordner
+  - sobald die Hauptmail gesendet wurde, löschen Probleme beim Passwort-Follow-up niemals die bereits freigegebene Remote-Freigabe
 - Optionale Compose-Anhang-Automatisierung:
   - Anhänge immer über NC Connector teilen, oder
   - nur bei Überschreiten eines konfigurierten Gesamtgrößen-Grenzwerts
@@ -82,8 +82,9 @@ Datenfluss:
 - Die Lobby-Zeitsynchronisierung nutzt `X-NCTALK-START` als einzige autoritative Quelle (keine Fallback-Ableitung aus `DTSTART/TZID`).
 - Persistentes Monitoring über die Kalender-Experiment-API “as-is”:
   - Lobby-Updates bei Termin-Verschiebung
-  - Room-Delete bei Termin-Löschung
+  - optionales Löschen verknüpfter Räume bei gelöschten gespeicherten NC Connector Terminen
   - Delegation + Teilnehmer-Auto-Add über Kalender-Item-Updates
+- Das Löschen verknüpfter Räume bei gespeicherten Terminen ist opt-in und benötigt vertrauenswürdige NC Connector `X-NCTALK-*`-Metadaten; generische Talk-Links in `LOCATION` oder `URL` werden ignoriert.
 - Räumt neu erstellte Räume auf, wenn der Editor ohne Speichern geschlossen wird (keine „Orphan“-Räume)
 
 ### Logging und Debug

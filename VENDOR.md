@@ -25,8 +25,10 @@
 - Usage in this add-on:
   - Client-side sanitization of backend-provided Talk invitation HTML
   - Client-side sanitization of backend-provided Share/Password HTML templates
+  - Client-side sanitization of backend-provided email-signature HTML templates
   - Runtime consumers:
     - `modules/htmlSanitizer.js`
     - `modules/bgRouter.js`
     - `modules/ncSharing.js`
+    - `modules/bgSignature.js`
     - `ui/talkDialog.js`
