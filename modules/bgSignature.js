@@ -300,8 +300,13 @@ const NCEmailSignature = (() => {
       readLocalSignatureOptions()
     ]);
     const policy = resolveSignaturePolicy(status, localOptions);
+    const previousState = TAB_STATE.get(tabId) || {};
     if (!policy.active){
-      TAB_STATE.set(tabId, { managed: false, matched: false });
+      if (previousState.managed === true){
+        await clearOwnSignatureIfUnchanged(tabId, policy.reason);
+      }else{
+        TAB_STATE.set(tabId, { managed: false, matched: false });
+      }
       L("email signature inactive", {
         tabId,
         reason,
@@ -328,14 +333,14 @@ const NCEmailSignature = (() => {
     }
 
     const shouldInsert = resolveShouldInsert(policy, composeKind);
-    const previousState = TAB_STATE.get(tabId) || {};
     const requireExistingOwnUnchanged = reason === "identity_changed" && previousState.managed === true;
     const sanitizedHtml = shouldInsert ? sanitizeSignatureHtml(policy.templateHtml) : "";
     const plainTextMode = shouldInsert && resolvePlainTextMode(details);
     const plainText = plainTextMode ? signatureHtmlToPlainText(sanitizedHtml) : "";
     const result = await sendSignatureMessage(tabId, {
       desired: shouldInsert,
-      clearForeign: true,
+      clearForeign: shouldInsert,
+      clearOwnOnly: !shouldInsert,
       requireExistingOwnUnchanged,
       html: sanitizedHtml,
       plainText,
@@ -344,7 +349,7 @@ const NCEmailSignature = (() => {
     if (!result?.ok){
       throw new Error(result?.error || "email_signature_apply_failed");
     }
-    const managed = shouldInsert ? result.managed !== false : true;
+    const managed = shouldInsert ? result.managed !== false : false;
     TAB_STATE.set(tabId, { managed, matched: true });
     await resetModifiedStateIfNeeded(tabId, details?.isModified === true, result);
     L("email signature processed", {
