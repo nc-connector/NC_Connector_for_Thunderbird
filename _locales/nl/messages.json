@@ -880,5 +880,26 @@
   },
   "sharing_password_separate_paused_tooltip": {
     "message": "Uw NC Connector-seat is momenteel gepauzeerd. Neem contact op met uw Nextcloud-beheerder."
+  },
+  "options_tab_signature": {
+    "message": "Handtekening"
+  },
+  "options_signature_defaults_heading": {
+    "message": "E-mailhandtekening"
+  },
+  "options_signature_identity_hint": {
+    "message": "De centrale handtekening wordt alleen toegepast wanneer de Thunderbird-afzenderidentiteit overeenkomt met het e-mailadres van de Nextcloud-gebruiker."
+  },
+  "options_signature_on_compose_label": {
+    "message": "Handtekening toevoegen bij opstellen"
+  },
+  "options_signature_on_reply_label": {
+    "message": "Handtekening toevoegen bij antwoorden"
+  },
+  "options_signature_on_forward_label": {
+    "message": "Handtekening toevoegen bij doorsturen"
+  },
+  "options_signature_backend_inactive_tooltip": {
+    "message": "Het centrale handtekeningbeleid is inactief of onvolledig."
   }
 }

@@ -49,6 +49,7 @@
       "modules/bgComposeShareCleanup.js",
       "modules/bgComposePasswordDispatch.js",
       "modules/bgCompose.js",
+      "modules/bgSignature.js",
       "modules/bgCalendarLifecycle.js",
       "modules/bgCalendar.js",
       "modules/bgComposeShareInsert.js",

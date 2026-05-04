@@ -18,6 +18,11 @@ const SYSTEM_ADDRESSBOOK_ADMIN_URL = "https://github.com/nc-connector/NC_Connect
 const POLICY_ADMIN_URL = "https://github.com/nc-connector/NC_Connector_for_Thunderbird/blob/main/docs/ADMIN.md";
 const ATTACHMENT_AUTOMATION_ADMIN_URL = "https://github.com/nc-connector/NC_Connector_for_Thunderbird/blob/main/docs/ADMIN.md#47-attachment-automation-prerequisite-disable-competing-thunderbird-compose-features";
 const NC_CONNECTOR_HOMEPAGE_URL = "https://nc-connector.de";
+const EMAIL_SIGNATURE_KEYS = {
+  onCompose: "emailSignatureOnCompose",
+  onReply: "emailSignatureOnReply",
+  onForward: "emailSignatureOnForward"
+};
 
 /**
  * Log internal options-page errors.
@@ -96,6 +101,13 @@ const shareBlockLangRow = document.getElementById("shareBlockLangRow");
 const shareBlockLangSelect = document.getElementById("shareBlockLang");
 const eventDescriptionLangRow = document.getElementById("eventDescriptionLangRow");
 const eventDescriptionLangSelect = document.getElementById("eventDescriptionLang");
+const emailSignaturePolicyHint = document.getElementById("emailSignaturePolicyHint");
+const emailSignatureOnComposeRow = document.getElementById("emailSignatureOnComposeRow");
+const emailSignatureOnComposeInput = document.getElementById("emailSignatureOnCompose");
+const emailSignatureOnReplyRow = document.getElementById("emailSignatureOnReplyRow");
+const emailSignatureOnReplyInput = document.getElementById("emailSignatureOnReply");
+const emailSignatureOnForwardRow = document.getElementById("emailSignatureOnForwardRow");
+const emailSignatureOnForwardInput = document.getElementById("emailSignatureOnForward");
 const DEFAULT_SHARING_BASE = (typeof NCSharing !== "undefined" ? NCSharing.DEFAULT_BASE_PATH : "NC Connector");
 let statusTimer = null;
 let composeAttachmentSettingsLocked = false;
@@ -106,6 +118,11 @@ let policyLockSharingAttachmentsAlways = false;
 let policyLockSharingAttachmentsThreshold = false;
 let talkAddressbookLockActive = false;
 let talkAddressbookLockDetail = "";
+let emailSignatureStoredState = {
+  hasOnCompose: false,
+  hasOnReply: false,
+  hasOnForward: false
+};
 const SUPPORTED_OVERRIDE_LOCALES = getSupportedOverrideLocales();
 const LANG_OPTIONS = new Set(["default", "custom", ...SUPPORTED_OVERRIDE_LOCALES]);
 initLanguageOverrideSelects();
@@ -352,7 +369,7 @@ function hasBackendSeatEntitlement(){
 
 /**
  * Return the language policy key for one domain.
- * @param {"share"|"talk"} domain
+ * @param {"share"|"talk"|"email_signature"} domain
  * @returns {string}
  */
 function getPolicyLanguageKey(domain){
@@ -361,7 +378,7 @@ function getPolicyLanguageKey(domain){
 
 /**
  * Return the backend template key for one domain.
- * @param {"share"|"talk"} domain
+ * @param {"share"|"talk"|"email_signature"} domain
  * @returns {string}
  */
 function getPolicyTemplateKey(domain){
@@ -371,7 +388,7 @@ function getPolicyTemplateKey(domain){
 /**
  * Return true when backend-driven custom template mode can be selected for one domain.
  * This requires an active backend policy, language=`custom`, and a non-empty template.
- * @param {"share"|"talk"} domain
+ * @param {"share"|"talk"|"email_signature"} domain
  * @returns {boolean}
  */
 function isCustomLanguageModeAvailable(domain){
@@ -449,7 +466,7 @@ function refreshLanguageOverrideSelects(){
 
 /**
  * Read one backend policy value.
- * @param {"share"|"talk"} domain
+ * @param {"share"|"talk"|"email_signature"} domain
  * @param {string} key
  * @returns {any}
  */
@@ -465,7 +482,7 @@ function readBackendPolicyValue(domain, key){
 
 /**
  * Return true when a backend policy key exists, even if its value is `null`.
- * @param {"share"|"talk"} domain
+ * @param {"share"|"talk"|"email_signature"} domain
  * @param {string} key
  * @returns {boolean}
  */
@@ -478,7 +495,7 @@ function hasBackendPolicyKey(domain, key){
 
 /**
  * Return true when the backend explicitly disables one setting via `null`.
- * @param {"share"|"talk"} domain
+ * @param {"share"|"talk"|"email_signature"} domain
  * @param {string} key
  * @returns {boolean}
  */
@@ -488,7 +505,7 @@ function isBackendPolicyExplicitNull(domain, key){
 
 /**
  * Return true when a policy setting is admin-locked.
- * @param {"share"|"talk"} domain
+ * @param {"share"|"talk"|"email_signature"} domain
  * @param {string} key
  * @returns {boolean}
  */
@@ -554,7 +571,7 @@ function coercePolicyString(value, fallback){
 
 /**
  * Resolve one persisted value with policy lock override.
- * @param {"share"|"talk"} domain
+ * @param {"share"|"talk"|"email_signature"} domain
  * @param {string} key
  * @param {any} localValue
  * @param {(value:any, fallback:any)=>any} coerce
@@ -582,6 +599,110 @@ function applyLockTitle(row, input, locked){
   }
   if (input){
     input.title = title;
+  }
+}
+
+function normalizeEmailAddress(value){
+  const email = String(value || "").trim().toLowerCase();
+  return email.includes("@") ? email : "";
+}
+
+function getEmailSignatureUnavailableHint(){
+  const status = runtimePolicyStatus?.status;
+  const seatState = String(status?.seatState || "").trim().toLowerCase();
+  if (!isBackendEndpointAvailable()){
+    return i18n("sharing_password_separate_backend_required_tooltip")
+      || "This feature requires the Nextcloud backend.";
+  }
+  if (!status?.seatAssigned){
+    return i18n("sharing_password_separate_no_seat_tooltip")
+      || "Your administrator must assign an NC Connector seat to your account for this feature.";
+  }
+  if (!status?.isValid || seatState !== "active"){
+    return i18n("sharing_password_separate_paused_tooltip")
+      || "Your NC Connector seat is currently paused. Please contact your Nextcloud administrator.";
+  }
+  if (!isBackendPolicyActive()
+    || readBackendPolicyValue("email_signature", "email_signature_on_compose") !== true
+    || !String(readBackendPolicyValue("email_signature", "email_signature_template") || "").trim()
+    || !normalizeEmailAddress(readBackendPolicyValue("email_signature", "user_email"))){
+    return i18n("options_signature_backend_inactive_tooltip")
+      || "Central signature policy is inactive or incomplete.";
+  }
+  return "";
+}
+
+function isEmailSignatureRuntimeAvailable(){
+  return !getEmailSignatureUnavailableHint();
+}
+
+function applyEmailSignatureRowState(row, input, disabled, title){
+  if (row){
+    row.classList.toggle("is-disabled", !!disabled);
+    row.title = title || "";
+  }
+  if (input){
+    input.disabled = !!disabled;
+    input.title = title || "";
+  }
+}
+
+function applyEmailSignatureSettingsOverlay(){
+  const runtimeAvailable = isEmailSignatureRuntimeAvailable();
+  const backendOnCompose = readBackendPolicyValue("email_signature", "email_signature_on_compose") === true;
+  const backendOnReply = readBackendPolicyValue("email_signature", "email_signature_on_reply") === true;
+  const backendOnForward = readBackendPolicyValue("email_signature", "email_signature_on_forward") === true;
+  const lockOnCompose = isPolicyLocked("email_signature", "email_signature_on_compose");
+  const lockOnReply = isPolicyLocked("email_signature", "email_signature_on_reply");
+  const lockOnForward = isPolicyLocked("email_signature", "email_signature_on_forward");
+  const inactiveHint = getEmailSignatureUnavailableHint();
+  const adminHint = getAdminControlledHint();
+
+  if (emailSignaturePolicyHint){
+    emailSignaturePolicyHint.textContent = inactiveHint || "";
+    emailSignaturePolicyHint.hidden = !inactiveHint;
+  }
+
+  if (emailSignatureOnComposeInput){
+    if (!runtimeAvailable){
+      emailSignatureOnComposeInput.checked = false;
+    }else if (lockOnCompose || !emailSignatureStoredState.hasOnCompose){
+      emailSignatureOnComposeInput.checked = backendOnCompose;
+    }
+    applyEmailSignatureRowState(
+      emailSignatureOnComposeRow,
+      emailSignatureOnComposeInput,
+      !runtimeAvailable || lockOnCompose,
+      !runtimeAvailable ? inactiveHint : (lockOnCompose ? adminHint : "")
+    );
+  }
+
+  const composeEnabled = runtimeAvailable && emailSignatureOnComposeInput?.checked === true;
+  if (emailSignatureOnReplyInput){
+    if (!composeEnabled){
+      emailSignatureOnReplyInput.checked = false;
+    }else if (lockOnReply || !emailSignatureStoredState.hasOnReply){
+      emailSignatureOnReplyInput.checked = backendOnReply;
+    }
+    applyEmailSignatureRowState(
+      emailSignatureOnReplyRow,
+      emailSignatureOnReplyInput,
+      !composeEnabled || lockOnReply,
+      !runtimeAvailable ? inactiveHint : (lockOnReply ? adminHint : "")
+    );
+  }
+  if (emailSignatureOnForwardInput){
+    if (!composeEnabled){
+      emailSignatureOnForwardInput.checked = false;
+    }else if (lockOnForward || !emailSignatureStoredState.hasOnForward){
+      emailSignatureOnForwardInput.checked = backendOnForward;
+    }
+    applyEmailSignatureRowState(
+      emailSignatureOnForwardRow,
+      emailSignatureOnForwardInput,
+      !composeEnabled || lockOnForward,
+      !runtimeAvailable ? inactiveHint : (lockOnForward ? adminHint : "")
+    );
   }
 }
 
@@ -815,6 +936,7 @@ function applyPolicySettingsOverlay(){
     closeTalkDefaultRoomTypeDropdown();
   }
 
+  applyEmailSignatureSettingsOverlay();
   updateSharingPasswordState();
   updateAttachmentThresholdState();
   applyTalkSystemAddressbookLockState(talkAddressbookLockActive, talkAddressbookLockDetail);
@@ -855,7 +977,10 @@ async function load(){
     "talkDeleteRoomOnEventDelete",
     "talkDefaultRoomType",
     "shareBlockLang",
-    "eventDescriptionLang"
+    "eventDescriptionLang",
+    EMAIL_SIGNATURE_KEYS.onCompose,
+    EMAIL_SIGNATURE_KEYS.onReply,
+    EMAIL_SIGNATURE_KEYS.onForward
   ]);
   if (stored.baseUrl) baseUrlInput.value = stored.baseUrl;
   if (stored.user) userInput.value = stored.user;
@@ -944,6 +1069,26 @@ async function load(){
   }
   if (talkDeleteRoomOnEventDeleteInput){
     talkDeleteRoomOnEventDeleteInput.checked = stored.talkDeleteRoomOnEventDelete === true;
+  }
+  emailSignatureStoredState = {
+    hasOnCompose: typeof stored[EMAIL_SIGNATURE_KEYS.onCompose] === "boolean",
+    hasOnReply: typeof stored[EMAIL_SIGNATURE_KEYS.onReply] === "boolean",
+    hasOnForward: typeof stored[EMAIL_SIGNATURE_KEYS.onForward] === "boolean"
+  };
+  if (emailSignatureOnComposeInput){
+    emailSignatureOnComposeInput.checked = emailSignatureStoredState.hasOnCompose
+      ? !!stored[EMAIL_SIGNATURE_KEYS.onCompose]
+      : true;
+  }
+  if (emailSignatureOnReplyInput){
+    emailSignatureOnReplyInput.checked = emailSignatureStoredState.hasOnReply
+      ? !!stored[EMAIL_SIGNATURE_KEYS.onReply]
+      : false;
+  }
+  if (emailSignatureOnForwardInput){
+    emailSignatureOnForwardInput.checked = emailSignatureStoredState.hasOnForward
+      ? !!stored[EMAIL_SIGNATURE_KEYS.onForward]
+      : false;
   }
   const storedShareBlockLang = stored.shareBlockLang;
   const storedEventDescriptionLang = stored.eventDescriptionLang;
@@ -1167,6 +1312,9 @@ async function save(){
   let talkDefaultRoomType = getSelectedTalkDefaultRoomType();
   let shareBlockLang = normalizeLangChoice(shareBlockLangSelect?.value);
   let eventDescriptionLang = normalizeLangChoice(eventDescriptionLangSelect?.value);
+  let emailSignatureOnCompose = emailSignatureOnComposeInput ? !!emailSignatureOnComposeInput.checked : false;
+  let emailSignatureOnReply = emailSignatureOnReplyInput ? !!emailSignatureOnReplyInput.checked : false;
+  let emailSignatureOnForward = emailSignatureOnForwardInput ? !!emailSignatureOnForwardInput.checked : false;
   const permissionOk = await ensureOriginPermissionInteractive();
   if (!permissionOk){
     return;
@@ -1213,6 +1361,35 @@ async function save(){
     resolvePersistedValue("talk", "language_talk_description", eventDescriptionLang, coercePolicyString),
     { allowCustom: isCustomLanguageModeAvailable("talk") }
   );
+  if (!isEmailSignatureRuntimeAvailable()){
+    emailSignatureOnCompose = false;
+    emailSignatureOnReply = false;
+    emailSignatureOnForward = false;
+  }else{
+    emailSignatureOnCompose = resolvePersistedValue(
+      "email_signature",
+      "email_signature_on_compose",
+      emailSignatureOnCompose,
+      coercePolicyBoolean
+    );
+    if (!emailSignatureOnCompose){
+      emailSignatureOnReply = false;
+      emailSignatureOnForward = false;
+    }else{
+      emailSignatureOnReply = resolvePersistedValue(
+        "email_signature",
+        "email_signature_on_reply",
+        emailSignatureOnReply,
+        coercePolicyBoolean
+      );
+      emailSignatureOnForward = resolvePersistedValue(
+        "email_signature",
+        "email_signature_on_forward",
+        emailSignatureOnForward,
+        coercePolicyBoolean
+      );
+    }
+  }
   if (!isSeparatePasswordMailFeatureAvailable()){
     sharingDefaultPasswordSeparate = false;
   }
@@ -1243,8 +1420,16 @@ async function save(){
     talkDeleteRoomOnEventDelete,
     talkDefaultRoomType,
     shareBlockLang,
-    eventDescriptionLang
+    eventDescriptionLang,
+    [EMAIL_SIGNATURE_KEYS.onCompose]: emailSignatureOnCompose,
+    [EMAIL_SIGNATURE_KEYS.onReply]: emailSignatureOnReply,
+    [EMAIL_SIGNATURE_KEYS.onForward]: emailSignatureOnForward
   });
+  emailSignatureStoredState = {
+    hasOnCompose: true,
+    hasOnReply: true,
+    hasOnForward: true
+  };
   await refreshTalkSystemAddressbookState({ forceRefresh: true });
   showStatus(i18n("options_status_saved"));
 }
@@ -1261,6 +1446,22 @@ document.getElementById("save").addEventListener("click", async () => {
 if (sharingAttachmentsOfferAboveEnabledInput){
   sharingAttachmentsOfferAboveEnabledInput.addEventListener("change", () => {
     updateAttachmentThresholdState();
+  });
+}
+if (emailSignatureOnComposeInput){
+  emailSignatureOnComposeInput.addEventListener("change", () => {
+    emailSignatureStoredState.hasOnCompose = true;
+    applyEmailSignatureSettingsOverlay();
+  });
+}
+if (emailSignatureOnReplyInput){
+  emailSignatureOnReplyInput.addEventListener("change", () => {
+    emailSignatureStoredState.hasOnReply = true;
+  });
+}
+if (emailSignatureOnForwardInput){
+  emailSignatureOnForwardInput.addEventListener("change", () => {
+    emailSignatureStoredState.hasOnForward = true;
   });
 }
 if (sharingAttachmentsAlwaysNcInput){

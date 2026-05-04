@@ -47,7 +47,7 @@ const NCPolicyRuntime = (() => {
   /**
    * Read one boolean policy-editable flag.
    * @param {any} payload
-   * @param {"share"|"talk"} domain
+   * @param {"share"|"talk"|"email_signature"} domain
    * @param {string} key
    * @returns {boolean|null}
    */
@@ -68,7 +68,7 @@ const NCPolicyRuntime = (() => {
   /**
    * Read one policy value.
    * @param {any} payload
-   * @param {"share"|"talk"} domain
+   * @param {"share"|"talk"|"email_signature"} domain
    * @param {string} key
    * @returns {any}
    */
@@ -115,8 +115,8 @@ const NCPolicyRuntime = (() => {
         graceUntilIso: details?.graceUntilIso || null
       },
       policyActive: false,
-      policy: { share: null, talk: null },
-      policyEditable: { share: null, talk: null },
+      policy: { share: null, talk: null, email_signature: null },
+      policyEditable: { share: null, talk: null, email_signature: null },
       warning: {
         visible: !!warningCode,
         code: warningCode
@@ -132,7 +132,7 @@ const NCPolicyRuntime = (() => {
   function normalizeStatusPayload(payload){
     const rawStatus = isObject(payload?.status) ? payload.status : {};
     const status = {
-      userId: String(rawStatus.user_id || ""),
+        userId: String(rawStatus.user_id || ""),
       seatAssigned: !!rawStatus.seat_assigned,
       seatState: String(rawStatus.seat_state || "none"),
       overlicensed: !!rawStatus.overlicensed,
@@ -143,16 +143,20 @@ const NCPolicyRuntime = (() => {
     };
     const policyShare = isObject(payload?.policy?.share) ? payload.policy.share : null;
     const policyTalk = isObject(payload?.policy?.talk) ? payload.policy.talk : null;
+    const policyEmailSignature = isObject(payload?.policy?.email_signature) ? payload.policy.email_signature : null;
     const editableShare = isObject(payload?.policy_editable?.share) ? payload.policy_editable.share : null;
     const editableTalk = isObject(payload?.policy_editable?.talk) ? payload.policy_editable.talk : null;
+    const editableEmailSignature = isObject(payload?.policy_editable?.email_signature) ? payload.policy_editable.email_signature : null;
     const policyActive = !!(
       status.seatAssigned
       && status.isValid
       && status.seatState === "active"
       && policyShare
       && policyTalk
+      && policyEmailSignature
       && editableShare
       && editableTalk
+      && editableEmailSignature
     );
     const warningCode = status.seatAssigned && (!status.isValid || status.seatState !== "active")
       ? "license_invalid"
@@ -170,11 +174,13 @@ const NCPolicyRuntime = (() => {
       policyActive,
       policy: {
         share: policyShare,
-        talk: policyTalk
+        talk: policyTalk,
+        email_signature: policyEmailSignature
       },
       policyEditable: {
         share: editableShare,
-        talk: editableTalk
+        talk: editableTalk,
+        email_signature: editableEmailSignature
       },
       warning: {
         visible: !!warningCode,
@@ -297,7 +303,7 @@ const NCPolicyRuntime = (() => {
   /**
    * Return true when a policy setting is locked by admin.
    * @param {any} status
-   * @param {"share"|"talk"} domain
+   * @param {"share"|"talk"|"email_signature"} domain
    * @param {string} key
    * @returns {boolean}
    */

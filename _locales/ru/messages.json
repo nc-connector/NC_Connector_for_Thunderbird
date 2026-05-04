@@ -880,5 +880,26 @@
   },
   "sharing_password_separate_paused_tooltip": {
     "message": "Ваш seat NC Connector сейчас приостановлен. Пожалуйста, обратитесь к администратору Nextcloud."
+  },
+  "options_tab_signature": {
+    "message": "Подпись"
+  },
+  "options_signature_defaults_heading": {
+    "message": "Подпись электронной почты"
+  },
+  "options_signature_identity_hint": {
+    "message": "Центральная подпись применяется только тогда, когда идентичность отправителя Thunderbird совпадает с адресом электронной почты пользователя Nextcloud."
+  },
+  "options_signature_on_compose_label": {
+    "message": "Добавлять подпись при создании письма"
+  },
+  "options_signature_on_reply_label": {
+    "message": "Добавлять подпись при ответе"
+  },
+  "options_signature_on_forward_label": {
+    "message": "Добавлять подпись при пересылке"
+  },
+  "options_signature_backend_inactive_tooltip": {
+    "message": "Центральная политика подписи неактивна или неполная."
   }
 }

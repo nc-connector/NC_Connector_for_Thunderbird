@@ -880,5 +880,26 @@
   },
   "sharing_password_separate_paused_tooltip": {
     "message": "Ihr NC Connector Seat ist derzeit pausiert. Bitte wenden Sie sich an Ihren Nextcloud-Administrator."
+  },
+  "options_tab_signature": {
+    "message": "Signatur"
+  },
+  "options_signature_defaults_heading": {
+    "message": "E-Mail-Signatur"
+  },
+  "options_signature_identity_hint": {
+    "message": "Die zentrale Signatur wird nur angewendet, wenn die Thunderbird-Absenderidentität mit der E-Mail-Adresse des Nextcloud-Benutzers übereinstimmt."
+  },
+  "options_signature_on_compose_label": {
+    "message": "Signatur beim Verfassen hinzufügen"
+  },
+  "options_signature_on_reply_label": {
+    "message": "Signatur beim Antworten hinzufügen"
+  },
+  "options_signature_on_forward_label": {
+    "message": "Signatur beim Weiterleiten hinzufügen"
+  },
+  "options_signature_backend_inactive_tooltip": {
+    "message": "Die zentrale Signaturrichtlinie ist inaktiv oder unvollständig."
   }
 }

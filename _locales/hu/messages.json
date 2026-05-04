@@ -880,5 +880,26 @@
   },
   "sharing_password_separate_paused_tooltip": {
     "message": "Az Ön NC Connector seatje jelenleg szünetel. Kérjük, forduljon a Nextcloud rendszergazdájához."
+  },
+  "options_tab_signature": {
+    "message": "Aláírás"
+  },
+  "options_signature_defaults_heading": {
+    "message": "E-mail aláírás"
+  },
+  "options_signature_identity_hint": {
+    "message": "A központi aláírás csak akkor kerül alkalmazásra, ha a Thunderbird feladói identitása megegyezik a Nextcloud-felhasználó e-mail-címével."
+  },
+  "options_signature_on_compose_label": {
+    "message": "Aláírás hozzáadása új levél írásakor"
+  },
+  "options_signature_on_reply_label": {
+    "message": "Aláírás hozzáadása válaszkor"
+  },
+  "options_signature_on_forward_label": {
+    "message": "Aláírás hozzáadása továbbításkor"
+  },
+  "options_signature_backend_inactive_tooltip": {
+    "message": "A központi aláírási házirend inaktív vagy hiányos."
   }
 }

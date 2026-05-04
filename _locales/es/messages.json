@@ -880,5 +880,26 @@
   },
   "sharing_password_separate_paused_tooltip": {
     "message": "Su seat de NC Connector está actualmente en pausa. Póngase en contacto con su administrador de Nextcloud."
+  },
+  "options_tab_signature": {
+    "message": "Firma"
+  },
+  "options_signature_defaults_heading": {
+    "message": "Firma de correo electrónico"
+  },
+  "options_signature_identity_hint": {
+    "message": "La firma central solo se aplica cuando la identidad remitente de Thunderbird coincide con la dirección de correo del usuario de Nextcloud."
+  },
+  "options_signature_on_compose_label": {
+    "message": "Añadir firma al redactar"
+  },
+  "options_signature_on_reply_label": {
+    "message": "Añadir firma al responder"
+  },
+  "options_signature_on_forward_label": {
+    "message": "Añadir firma al reenviar"
+  },
+  "options_signature_backend_inactive_tooltip": {
+    "message": "La política central de firma está inactiva o incompleta."
   }
 }

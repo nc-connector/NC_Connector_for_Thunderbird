@@ -113,6 +113,8 @@ Key files you’ll touch most:
 - `modules/bgComposeShareInsert.js` — mode-aware share-block insertion (HTML vs plain-text compose)
 - `modules/bgComposePasswordDispatch.js` — separate-password-mail dispatch and password policy fetch/generate
 - `modules/bgCompose.js` — compose/window/tab listener wiring
+- `modules/bgSignature.js` — central backend email-signature policy orchestration for compose windows
+- `ui/signatureCompose.js` — compose-script DOM bridge for managed signature cleanup/insertion
 - `modules/bgCalendarLifecycle.js` — calendar wizard context and editor-close cleanup lifecycle helpers
 - `modules/bgCalendar.js` — `ncCalToolbar` integration, room metadata mapping, and persisted calendar monitoring sync
 - `modules/bgRouter.js` — `runtime.onMessage` dispatcher for Talk/Sharing/Options/UI bridge contracts
@@ -179,7 +181,7 @@ Implementation:
 - Attachment automation adds debug traces for:
   - threshold evaluation and prompt decisions in `[NCBG]`
   - attachment-mode wizard/prompt flow in `[NCUI][Sharing]`
-- `modules/htmlSanitizer.js` adds compact debug summaries for backend Talk/share HTML sanitization when `debugEnabled` is on:
+- `modules/htmlSanitizer.js` adds compact debug summaries for backend Talk/share/email-signature HTML sanitization when `debugEnabled` is on:
   - input/sanitized/normalized lengths
   - input/output element + attribute counts
   - removed tag/attribute deltas
@@ -187,6 +189,7 @@ Implementation:
   - summaries stay on the existing channels instead of introducing a separate log path:
     - UI sanitization appears through `[NCUI][Talk]` / `[NCUI][Sharing]`
     - background sanitization appears through `[NCBG]`
+  - email signatures deliberately reuse the existing Share/Talk sanitizer rules; no separate HTML allowlist is introduced
 - `ui/debugForwarder.js` also centralizes debug-flag/runtime behavior for all add-on popup UIs:
   - live `debugEnabled` updates while the popup stays open
   - one shared forwarding path for Talk/Sharing/attachment prompt UI logs
@@ -649,6 +652,9 @@ Runtime rules:
 - Separate password follow-up dispatch is seat-gated and only available with backend endpoint + active assigned seat.
 - Backend attachment-threshold policy uses `attachments_min_size_mb` as both value and enable-state: a positive integer enables threshold mode, `null` disables it.
 - Locked backend attachment-automation policy is enforced in compose runtime, not only in the settings surface.
+- Backend email signatures are applied only when `policy.email_signature.email_signature_on_compose=true`, a rendered `email_signature_template` exists, and `policy.email_signature.user_email` matches the active Thunderbird sender identity email.
+- Non-matching sender identities are left untouched so Thunderbird identity signatures or Signature Switch can continue to manage those identities.
+- The signature settings surface stays disabled until the backend endpoint is available and the current user has an active assigned seat; the hint text reuses the existing backend/seat policy messages.
 
 ---
 

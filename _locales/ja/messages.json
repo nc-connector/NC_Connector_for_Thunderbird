@@ -880,5 +880,26 @@
   },
   "sharing_password_separate_paused_tooltip": {
     "message": "あなたの NC Connector seat は現在一時停止されています。Nextcloud 管理者に連絡してください。"
+  },
+  "options_tab_signature": {
+    "message": "署名"
+  },
+  "options_signature_defaults_heading": {
+    "message": "メール署名"
+  },
+  "options_signature_identity_hint": {
+    "message": "中央管理の署名は、Thunderbird の差出人 ID が Nextcloud ユーザーのメールアドレスと一致する場合にのみ適用されます。"
+  },
+  "options_signature_on_compose_label": {
+    "message": "新規作成時に署名を追加"
+  },
+  "options_signature_on_reply_label": {
+    "message": "返信時に署名を追加"
+  },
+  "options_signature_on_forward_label": {
+    "message": "転送時に署名を追加"
+  },
+  "options_signature_backend_inactive_tooltip": {
+    "message": "中央管理の署名ポリシーが無効または不完全です。"
   }
 }

@@ -880,5 +880,26 @@
   },
   "sharing_password_separate_paused_tooltip": {
     "message": "Váš seat NC Connector je momentálně pozastaven. Obraťte se prosím na správce Nextcloud."
+  },
+  "options_tab_signature": {
+    "message": "Podpis"
+  },
+  "options_signature_defaults_heading": {
+    "message": "E-mailový podpis"
+  },
+  "options_signature_identity_hint": {
+    "message": "Centrální podpis se použije pouze tehdy, když identita odesílatele v Thunderbirdu odpovídá e-mailové adrese uživatele Nextcloud."
+  },
+  "options_signature_on_compose_label": {
+    "message": "Přidat podpis při psaní zprávy"
+  },
+  "options_signature_on_reply_label": {
+    "message": "Přidat podpis při odpovědi"
+  },
+  "options_signature_on_forward_label": {
+    "message": "Přidat podpis při přeposílání"
+  },
+  "options_signature_backend_inactive_tooltip": {
+    "message": "Centrální zásada podpisu je neaktivní nebo neúplná."
   }
 }

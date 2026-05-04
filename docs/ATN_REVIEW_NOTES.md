@@ -91,6 +91,7 @@ for persisted monitoring (`browser.calendar.items.onCreated/onUpdated/onRemoved`
 - Backend-provided rich HTML is sanitized client-side before use:
   - Talk HTML policy template (`talk_invitation_template`)
   - Share HTML policy templates (`share_html_block_template`, `share_password_template`)
+  - Email signature HTML policy template (`email_signature_template`)
   - bundled sanitizer: `DOMPurify 3.3.1` documented in `VENDOR.md`
 - Share compose insertion is mode-aware:
   - HTML compose receives pre-rendered share HTML from `NCSharing.buildHtmlBlock(...)`
@@ -104,7 +105,7 @@ for persisted monitoring (`browser.calendar.items.onCreated/onUpdated/onRemoved`
   - HTML follow-up keeps the pre-rendered HTML block
   - plain-text follow-up uses the dedicated pre-rendered plain-text block
 - Sanitizer-dependent backend HTML paths now fail closed:
-  - if the expected Talk/share HTML sanitizer is unavailable, the add-on throws instead of falling back to raw HTML
+  - if the expected Talk/share/signature HTML sanitizer is unavailable, the add-on throws instead of falling back to raw HTML
   - the privileged `descriptionHtml` bridge rejects unsanitized HTML instead of forwarding it
   - when `debugEnabled` is active, the bundled sanitizer logs compact structural summaries (removed tag/attribute deltas, element/attribute counts, anchor rel-normalization adjustments) without logging raw backend template HTML, using the existing `[NCUI][Talk]` / `[NCUI][Sharing]` / `[NCBG]` debug channels
 - `experiments/ncCalToolbar/parent.js` no longer uses `innerHTML` to parse

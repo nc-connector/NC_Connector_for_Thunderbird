@@ -880,5 +880,26 @@
   },
   "sharing_password_separate_paused_tooltip": {
     "message": "您的 NC Connector 席位当前已暂停。请联系您的 Nextcloud 管理员。"
+  },
+  "options_tab_signature": {
+    "message": "签名"
+  },
+  "options_signature_defaults_heading": {
+    "message": "电子邮件签名"
+  },
+  "options_signature_identity_hint": {
+    "message": "仅当 Thunderbird 发件人身份与 Nextcloud 用户电子邮件地址匹配时，才会应用集中签名。"
+  },
+  "options_signature_on_compose_label": {
+    "message": "撰写时添加签名"
+  },
+  "options_signature_on_reply_label": {
+    "message": "回复时添加签名"
+  },
+  "options_signature_on_forward_label": {
+    "message": "转发时添加签名"
+  },
+  "options_signature_backend_inactive_tooltip": {
+    "message": "集中签名策略未启用或不完整。"
   }
 }

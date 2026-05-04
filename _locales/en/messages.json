@@ -880,5 +880,26 @@
   },
   "sharing_password_separate_paused_tooltip": {
     "message": "Your NC Connector seat is currently paused. Please contact your Nextcloud administrator."
+  },
+  "options_tab_signature": {
+    "message": "Signature"
+  },
+  "options_signature_defaults_heading": {
+    "message": "Email signature"
+  },
+  "options_signature_identity_hint": {
+    "message": "The central signature is only applied when the Thunderbird sender identity matches the Nextcloud user email address."
+  },
+  "options_signature_on_compose_label": {
+    "message": "Add signature when composing"
+  },
+  "options_signature_on_reply_label": {
+    "message": "Add signature when replying"
+  },
+  "options_signature_on_forward_label": {
+    "message": "Add signature when forwarding"
+  },
+  "options_signature_backend_inactive_tooltip": {
+    "message": "Central signature policy is inactive or incomplete."
   }
 }

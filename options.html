@@ -384,6 +384,7 @@ footer{
     <button type="button" class="tab-btn active" data-tab="general" data-i18n="options_tab_general">General</button>
     <button type="button" class="tab-btn" data-tab="sharing" data-i18n="options_tab_sharing">Sharing</button>
     <button type="button" class="tab-btn" data-tab="talklink" data-i18n="options_tab_talklink">Talk Link</button>
+    <button type="button" class="tab-btn" data-tab="signature" data-i18n="options_tab_signature">Signature</button>
     <button type="button" class="tab-btn" data-tab="advanced" data-i18n="options_tab_advanced">Advanced</button>
     <button type="button" class="tab-btn" data-tab="debug" data-i18n="options_tab_debug">Debug</button>
     <button type="button" class="tab-btn" data-tab="about" data-i18n="options_tab_about">About</button>
@@ -653,6 +654,31 @@ footer{
             </button>
           </div>
           <input type="hidden" id="talkDefaultRoomType" value="event">
+        </div>
+      </div>
+    </fieldset>
+  </section>
+  <section id="tab-signature" class="tab-panel">
+    <fieldset class="auth-block">
+      <legend data-i18n="options_signature_defaults_heading">Email signature</legend>
+      <p class="hint" data-i18n="options_signature_identity_hint">The central signature is only applied when the Thunderbird sender identity matches the Nextcloud user email address.</p>
+      <p class="hint" id="emailSignaturePolicyHint" hidden></p>
+      <div class="row" id="emailSignatureOnComposeRow">
+        <label for="emailSignatureOnCompose" data-i18n="options_signature_on_compose_label">Add signature when composing</label>
+        <div class="boolean-control">
+          <input id="emailSignatureOnCompose" type="checkbox">
+        </div>
+      </div>
+      <div class="row" id="emailSignatureOnReplyRow">
+        <label for="emailSignatureOnReply" data-i18n="options_signature_on_reply_label">Add signature when replying</label>
+        <div class="boolean-control">
+          <input id="emailSignatureOnReply" type="checkbox">
+        </div>
+      </div>
+      <div class="row" id="emailSignatureOnForwardRow">
+        <label for="emailSignatureOnForward" data-i18n="options_signature_on_forward_label">Add signature when forwarding</label>
+        <div class="boolean-control">
+          <input id="emailSignatureOnForward" type="checkbox">
         </div>
       </div>
     </fieldset>

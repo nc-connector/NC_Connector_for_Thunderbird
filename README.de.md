@@ -74,6 +74,8 @@ Siehe [`CHANGELOG.md`](https://github.com/nc-connector/NC_Connector_for_Thunderb
   - gueltiger aktiver Seat aktiviert Backend-Policy-Werte und Admin-Locks
   - fehlendes Backend / kein Seat / ungueltiger Seat faellt auf lokale Add-on-Settings zurueck
   - ungueltige Seat-Zustaende werden sichtbar im UI angezeigt, damit sich Benutzer an den Administrator wenden koennen
+- zentral verwaltete E-Mail-Signaturen greifen nur bei Thunderbird-Absenderidentitaeten, die zur Nextcloud-Seat-E-Mail-Adresse passen
+- Signatur-Optionen bleiben deaktiviert, bis der Backend-Endpunkt erreichbar ist und der aktuelle Benutzer einen aktiven Seat hat
 - Backend-Templates fuer Freigabe- und Talk-Texte werden nur aktiv, wenn in den Sprach-Overrides `Benutzerdefiniert` gewaehlt ist
 - `Benutzerdefiniert` wird nur angezeigt, wenn der NC-Connector-Backend-Endpunkt existiert, und bleibt deaktiviert, solange die effektive Backend-Policy fuer diesen Bereich nicht wirklich `custom` ist oder keine Vorlage liefert
 - ist `Benutzerdefiniert` aktiv, aber die Backend-Vorlage leer oder nicht verfuegbar, faellt Thunderbird auf den lokalen UI-Default-Text zurueck

@@ -148,6 +148,9 @@ Runtime behavior:
 - automatic password follow-up send reuses the same Thunderbird sender identity as the primary mail
 - if Thunderbird cannot resolve the sender identity cleanly, or if automatic send fails, the add-on opens a prefilled manual fallback draft instead of attempting an unsafe partial send
 - once the primary mail was sent, password-follow-up problems never delete the committed share
+- central email signatures are applied only when `policy.email_signature` provides enabled compose policy, rendered HTML, and `user_email`
+- Thunderbird applies the central signature only to sender identities whose email address matches `policy.email_signature.user_email`; other identities are left untouched so Thunderbird identity signatures or Signature Switch can continue to work
+- the signature settings tab is disabled with the existing backend/seat guidance text while the backend endpoint is unavailable or the current user has no active assigned seat
 - backend custom templates stay inactive until the corresponding language override is set to `custom`
 - the `custom` option is only shown when the backend endpoint exists and stays disabled unless the effective backend policy for that domain is actually `custom` and provides a template
 - if `custom` is selected but the backend template is empty or unavailable, Thunderbird falls back to the local UI-default text block
@@ -157,6 +160,7 @@ Central policy can currently control:
 - Talk defaults and lock state
 - Sharing defaults and lock state
 - share HTML/password templates
+- central email signature defaults and lock state
 - Talk description language / custom invitation template
 
 ### System address book required for user search and moderator selection
@@ -555,6 +559,4 @@ If you need “preseeded” settings for many users, typical approaches are:
 - use a central onboarding guide and require users to complete Login Flow v2
 
 (A future enhancement could use `browser.storage.managed` to read admin-provided settings, but this is not implemented currently.)
-
-
 
