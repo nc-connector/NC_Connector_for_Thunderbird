@@ -578,146 +578,6 @@ function parseNumberProp(value){
 }
 
 /**
- * Determine whether a timezone id looks like an IANA zone.
- * Windows ids like "W. Europe Standard Time" are intentionally excluded.
- * @param {string} timeZone
- * @returns {boolean}
- */
-function isLikelyIanaTimeZone(timeZone){
-  if (typeof timeZone !== "string") return false;
-  const value = timeZone.trim();
-  if (!value) return false;
-  return /^[A-Za-z_]+(?:\/[A-Za-z0-9_+\-]+)+$/.test(value);
-}
-
-/**
- * Calculate the time zone offset for a Date in a specific IANA time zone.
- * Returns null for unsupported/non-IANA zones.
- * @param {string} timeZone
- * @param {Date} date
- * @returns {number|null}
- */
-function getTimeZoneOffsetMs(timeZone, date){
-  const tz = String(timeZone || "").trim();
-  if (!isLikelyIanaTimeZone(tz)){
-    return null;
-  }
-  try{
-    const dtf = new Intl.DateTimeFormat("en-US", {
-      timeZone: tz,
-      hour12: false,
-      year: "numeric",
-      month: "2-digit",
-      day: "2-digit",
-      hour: "2-digit",
-      minute: "2-digit",
-      second: "2-digit"
-    });
-    const parts = dtf.formatToParts(date);
-    const values = {};
-    for (const part of parts){
-      if (part.type !== "literal"){
-        values[part.type] = part.value;
-      }
-    }
-    const asUTC = Date.UTC(
-      Number(values.year),
-      Number(values.month) - 1,
-      Number(values.day),
-      Number(values.hour),
-      Number(values.minute),
-      Number(values.second)
-    );
-    return asUTC - date.getTime();
-  }catch{
-    return null;
-  }
-}
-
-/**
- * Convert local date parts in an IANA time zone to a UTC timestamp.
- * Returns null for unsupported/non-IANA zones.
- * @param {number} year
- * @param {number} month
- * @param {number} day
- * @param {number} hour
- * @param {number} minute
- * @param {number} second
- * @param {string} tzid
- * @returns {number|null}
- */
-function zonedTimeToUtc(year, month, day, hour, minute, second, tzid){
-  const utcGuess = Date.UTC(year, month - 1, day, hour, minute, second);
-  const offset = tzid ? getTimeZoneOffsetMs(tzid, new Date(utcGuess)) : null;
-  if (offset == null){
-    return null;
-  }
-  return utcGuess - offset;
-}
-
-/**
- * Parse an iCalendar DATE or DATE-TIME into unix seconds.
- * This parser is only used for UI/event snapshots, not as lobby-time authority.
- * Lobby updates use X-NCTALK-START only.
- * @param {string} rawValue
- * @param {string} tzid
- * @returns {number|null}
- */
-function parseIcalDateTime(rawValue, tzid){
-  if (!rawValue){
-    return null;
-  }
-  const contract = getIcalContractApi();
-  if (!contract || typeof contract.ensureIcal !== "function"){
-    return null;
-  }
-  const value = String(rawValue).trim();
-  if (!value){
-    return null;
-  }
-  const normalizedTzid = typeof tzid === "string" ? tzid.trim() : "";
-  try{
-    const ICAL = contract.ensureIcal();
-    const isDateOnly = value.indexOf("T") === -1;
-    const valueParam = isDateOnly ? ";VALUE=DATE" : "";
-    const tzParam = !isDateOnly && normalizedTzid && !value.endsWith("Z")
-      ? `;TZID=${normalizedTzid}`
-      : "";
-    const parsedProperty = new ICAL.Property(
-      ICAL.parse.property(`DTSTART${valueParam}${tzParam}:${value}`)
-    );
-    const parsedTime = parsedProperty.getFirstValue();
-    if (!parsedTime || typeof parsedTime.year !== "number"){
-      return null;
-    }
-
-    const year = parsedTime.year;
-    const month = parsedTime.month;
-    const day = parsedTime.day;
-    const hour = parsedTime.isDate ? 0 : parsedTime.hour;
-    const minute = parsedTime.isDate ? 0 : parsedTime.minute;
-    const second = parsedTime.isDate ? 0 : parsedTime.second;
-
-    if (value.endsWith("Z") || normalizedTzid.toUpperCase() === "UTC"){
-      return Math.floor(Date.UTC(year, month - 1, day, hour, minute, second) / 1000);
-    }
-    if (normalizedTzid){
-      const utcTimestamp = zonedTimeToUtc(year, month, day, hour, minute, second, normalizedTzid);
-      if (utcTimestamp != null){
-        return Math.floor(utcTimestamp / 1000);
-      }
-    }
-    const local = new Date(year, month - 1, day, hour, minute, second);
-    if (Number.isNaN(local.getTime())){
-      return null;
-    }
-    return Math.floor(local.getTime() / 1000);
-  }catch{
-    return null;
-  }
-}
-
-/**
  * Extract event properties and start/end fields from VEVENT.
  * @param {string} ical
  * @returns {{props:Object,dtStart:{value:string,tzid:string}|null,dtEnd:{value:string,tzid:string}|null}}
@@ -732,7 +592,8 @@ function parseIcalEventData(ical){
 
 /**
  * Parse VEVENT DTSTART into unix epoch seconds through the shared contract.
- * No heuristic timezone fallbacks are allowed.
+ * Uses explicit contract timezone resolution only (IANA + mapped Windows TZIDs).
+ * If DTSTART cannot be resolved deterministically, this returns null (fail-closed).
  * @param {string} ical
  * @returns {number|null}
  */
@@ -799,8 +660,7 @@ function extractTalkMetadataFromIcal(ical){
     delegateId: props["X-NCTALK-DELEGATE"] || "",
     delegateName: props["X-NCTALK-DELEGATE-NAME"] || "",
     delegated: parseBooleanProp(props["X-NCTALK-DELEGATED"]),
-    delegateReady: parseBooleanProp(delegateReadyRaw),
-    delegateReadyKnown: Object.prototype.hasOwnProperty.call(props, "X-NCTALK-DELEGATE-READY")
+    delegateReady: parseBooleanProp(delegateReadyRaw)
   };
 }
 
@@ -856,9 +716,33 @@ async function handleCalendarItemUpsert(item){
       return;
     }
     const icalPayload = String(item.item || "");
-    const meta = extractTalkMetadataFromIcal(icalPayload);
+    let meta = extractTalkMetadataFromIcal(icalPayload);
     if (!meta?.token){
+      const mapped = getEventTokenEntry(item.calendarId, item.id);
+      const mappedToken = String(mapped?.token || "").trim();
+      L("calendar upsert skipped (token missing)", {
+        calendarId: item.calendarId || "",
+        itemId: item.id || "",
+        hasMapping: !!mappedToken,
+        mappingSource: mapped?.source || ""
+      });
       return;
+    }
+    const persistedMeta = getRoomMeta(meta.token) || {};
+    if (meta.lobbyEnabled == null && typeof persistedMeta.lobbyEnabled === "boolean"){
+      meta.lobbyEnabled = persistedMeta.lobbyEnabled;
+    }
+    if (typeof meta.startTimestamp !== "number" && typeof persistedMeta.startTimestamp === "number"){
+      meta.startTimestamp = persistedMeta.startTimestamp;
+    }
+    if (!meta.delegateId && persistedMeta.delegateId){
+      meta.delegateId = String(persistedMeta.delegateId);
+    }
+    if (!meta.delegateName && persistedMeta.delegateName){
+      meta.delegateName = String(persistedMeta.delegateName);
+    }
+    if (meta.delegated == null && typeof persistedMeta.delegated === "boolean"){
+      meta.delegated = persistedMeta.delegated;
     }
     const startFromEvent = parseEventStartUnixSeconds(icalPayload);
     if (typeof startFromEvent === "number" && Number.isFinite(startFromEvent)){
@@ -972,9 +856,8 @@ async function handleCalendarItemUpsert(item){
       }
     }
 
-    const legacyMode = !meta.delegateReadyKnown;
     if (meta.delegateId && meta.delegated !== true){
-      if (meta.delegateReady === true || legacyMode){
+      if (meta.delegateReady === true){
         if (DELEGATION_IN_FLIGHT.has(meta.token)){
           L("calendar delegation skipped (inflight)", { token: shortToken(meta.token) });
         }else{
@@ -997,6 +880,11 @@ async function handleCalendarItemUpsert(item){
             DELEGATION_IN_FLIGHT.delete(meta.token);
           }
         }
+      }else{
+        L("calendar delegation pending (delegate-ready missing/false)", {
+          token: shortToken(meta.token),
+          delegate: meta.delegateId || ""
+        });
       }
     }
   }catch(e){

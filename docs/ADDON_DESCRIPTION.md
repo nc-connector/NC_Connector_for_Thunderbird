@@ -79,7 +79,7 @@ Data flow:
 - Writes back into the open editor:
   - title/location/description (link + optional password/help text block)
   - `X-NCTALK-*` custom properties (TOKEN, URL, LOBBY, START, EVENT, OBJECTID, ADD-USERS, ADD-GUESTS, legacy ADD-PARTICIPANTS, DELEGATE, DELEGATE-NAME, DELEGATED, DELEGATE-READY)
-- Lobby timer synchronization uses `X-NCTALK-START` as the single authoritative source (no fallback derivation from `DTSTART/TZID`).
+- Lobby timer synchronization keeps `X-NCTALK-START` as the authoritative value and re-syncs it from `DTSTART` on calendar upserts via the shared iCal contract parser.
 - Uses the calendar experiment API “as-is” for persisted monitoring:
   - lobby updates when the event time changes
   - optionally delete linked rooms when saved NC Connector events are removed

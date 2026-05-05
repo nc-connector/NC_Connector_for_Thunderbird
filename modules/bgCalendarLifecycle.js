@@ -187,6 +187,25 @@ function deleteCalendarWizardContext(contextId){
 }
 
 /**
+ * Resolve the shared iCal contract API used by lifecycle snapshots.
+ * @returns {object|null}
+ */
+function getLifecycleIcalContract(){
+  const api = globalThis?.NCIcalContract || null;
+  if (!api){
+    return null;
+  }
+  if (
+    typeof api.parseEventData !== "function"
+    || typeof api.parseEventStartUnixSeconds !== "function"
+    || typeof api.parseEventEndUnixSeconds !== "function"
+  ){
+    return null;
+  }
+  return api;
+}
+
+/**
  * Refresh parsed event/metadata snapshot for a wizard context entry.
  * @param {object} entry
  */
@@ -195,6 +214,13 @@ function refreshCalendarWizardContextSnapshot(entry){
     return;
   }
   const ical = String(entry.item.item || "");
+  const contract = getLifecycleIcalContract();
+  if (!contract){
+    console.error("[NCBG] iCal contract unavailable for calendar snapshot");
+    entry.event = entry.event || {};
+    entry.metadata = entry.metadata || {};
+    return;
+  }
   try{
     entry.metadata = extractTalkMetadataFromIcal(ical) || {};
   }catch(error){
@@ -202,13 +228,13 @@ function refreshCalendarWizardContextSnapshot(entry){
     entry.metadata = entry.metadata || {};
   }
   try{
-    const { props, dtStart, dtEnd } = parseIcalEventData(ical);
+    const { props } = contract.parseEventData(ical);
     entry.event = {
       title: props["SUMMARY"] || "",
       location: props["LOCATION"] || "",
       description: props["DESCRIPTION"] || "",
-      startTimestamp: parseIcalDateTime(dtStart?.value || "", dtStart?.tzid || null),
-      endTimestamp: parseIcalDateTime(dtEnd?.value || "", dtEnd?.tzid || null)
+      startTimestamp: contract.parseEventStartUnixSeconds(ical),
+      endTimestamp: contract.parseEventEndUnixSeconds(ical)
     };
   }catch(error){
     console.error("[NCBG] parseIcalEventData failed", error);

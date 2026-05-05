@@ -44,7 +44,7 @@ for persisted monitoring (`browser.calendar.items.onCreated/onUpdated/onRemoved`
 4) Cleanup flow handles persisted/discarded/superseded editor close actions.
 5) Event move/delete handling remains driven by official calendar item events.
 6) Talk/Sharing wizard windows use best-effort focus retries after popup creation; focus requests remain non-fatal due to OS/window-manager policy.
-7) Lobby timer updates consume `X-NCTALK-START` as authoritative value; no runtime fallback from `DTSTART/TZID` is used.
+7) Lobby timer updates consume `X-NCTALK-START` as authoritative value; on calendar upserts, `DTSTART` is parsed through the shared iCal contract and synchronized back into `X-NCTALK-START`.
 8) Existing saved-event Talk room deletion is opt-in only and requires trusted NC Connector `X-NCTALK-*` metadata.
 9) Generic Talk links in `LOCATION` or `URL` fields are deliberately ignored for room-deletion ownership.
 

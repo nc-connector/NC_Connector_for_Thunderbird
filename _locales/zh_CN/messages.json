@@ -849,7 +849,7 @@
     "message": "https://nc-connector.de"
   },
   "options_about_overview_text": {
-    "message": "不只是文件链接\n\nNC Connector 将安全文件共享、Talk 会议和附件自动化直接整合到 Thunderbird 和 Outlook 中。这样，重要的团队工作流程就能保留在它应在的位置：邮件与日历客户端中。\n\nNC Connector 覆盖的内容\n- 带密码、到期日期以及可选单独发送密码的文件共享\n- 直接从日历事件创建和更新 Talk 会议\n- 以清晰规则实现附件自动化，而不是手动逐个处理\n- 在熟悉的工作流程中直接插入统一的共享块和邀请块\n\n可选搭配 Nextcloud 后端\n- 集中的 Seat 分配和策略管理\n- 用于分享和 Talk 邀请的自定义模板与设计\n- 独立密码投递以及面向组织的集中控制\n- 1 Seat = 1 个 Nextcloud 用户\n\n即使没有后端，这些附加组件也可直接使用。有了后端后，还会增加面向团队和组织的集中控制。"
+    "message": "不只是文件链接\n\nNC Connector 将安全文件共享、Talk 会议、附件自动化以及集中管理的电子邮件签名直接整合到 Thunderbird 和 Outlook 中。这样，重要的团队工作流程就能保留在它应在的位置：邮件与日历客户端中。\n\nNC Connector 覆盖的内容\n- 带密码、到期日期以及可选单独发送密码的文件共享\n- 直接从日历事件创建和更新 Talk 会议\n- 以清晰规则实现附件自动化，而不是手动逐个处理\n- 在熟悉的工作流程中直接插入统一的共享块和邀请块\n- 使用 Nextcloud 个人资料数据的集中电子邮件签名（用于撰写、回复和转发）\n\n可选搭配 Nextcloud 后端\n- 集中的 Seat 分配和策略管理\n- 用于分享、Talk 邀请和电子邮件签名的自定义模板与设计\n- 独立密码投递以及面向组织的集中控制\n- 1 Seat = 1 个 Nextcloud 用户\n\n即使没有后端，这些附加组件也可直接使用。有了后端后，还会增加面向团队和组织的集中控制。"
   },
   "options_about_more_info_label": {
     "message": "更多信息 -->"

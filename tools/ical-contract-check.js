@@ -45,6 +45,39 @@ function run(){
   assert(attendees.length === 2, "Outlook attendee count mismatch");
   assert(attendees[0].value.toLowerCase().includes("mailto:alpha@example.com"), "Outlook attendee value mismatch");
   assert(attendees[1].emailParam === "beta@example.com", "Outlook EMAIL param mismatch");
+  const outlookStart = contract.parseEventStartUnixSeconds(outlookIcal);
+  const berlinEquivalent = [
+    "BEGIN:VCALENDAR",
+    "BEGIN:VEVENT",
+    "DTSTART;TZID=Europe/Berlin:20260301T140000",
+    "DTEND;TZID=Europe/Berlin:20260301T150000",
+    "END:VEVENT",
+    "END:VCALENDAR"
+  ].join("\r\n");
+  const berlinStart = contract.parseEventStartUnixSeconds(berlinEquivalent);
+  assert(typeof outlookStart === "number", "Outlook DTSTART parse failed");
+  assert(outlookStart === berlinStart, "Windows TZID mapping mismatch for W. Europe Standard Time");
+
+  const easternWindows = [
+    "BEGIN:VCALENDAR",
+    "BEGIN:VEVENT",
+    "DTSTART;TZID=Eastern Standard Time:20260301T140000",
+    "DTEND;TZID=Eastern Standard Time:20260301T150000",
+    "END:VEVENT",
+    "END:VCALENDAR"
+  ].join("\r\n");
+  const easternIana = [
+    "BEGIN:VCALENDAR",
+    "BEGIN:VEVENT",
+    "DTSTART;TZID=America/New_York:20260301T140000",
+    "DTEND;TZID=America/New_York:20260301T150000",
+    "END:VEVENT",
+    "END:VCALENDAR"
+  ].join("\r\n");
+  assert(
+    contract.parseEventStartUnixSeconds(easternWindows) === contract.parseEventStartUnixSeconds(easternIana),
+    "Windows TZID mapping mismatch for Eastern Standard Time"
+  );
 
   const nextcloudIcal = fixture("nextcloud-event.ics");
   const updateResult = contract.applyEventPropertyUpdates(nextcloudIcal, {

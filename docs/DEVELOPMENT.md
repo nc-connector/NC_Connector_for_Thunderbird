@@ -533,6 +533,7 @@ On create/update (`handleCalendarItemUpsert` in `modules/bgCalendar.js`):
   - store token ↔ event mapping
 - Trigger invitee sync if enabled (`ADD-USERS` and/or `ADD-GUESTS`)
 - Trigger delegation flow if pending (`DELEGATE-READY`)
+- If `X-NCTALK-TOKEN` is missing in the event payload, processing is skipped fail-closed (no token recovery from cached mapping).
 
 On remove:
 - Existing saved-event room deletion is opt-in only (`talkDeleteRoomOnEventDelete` or locked backend policy `talk_delete_room_on_event_delete`).
@@ -675,8 +676,9 @@ Room settings:
 
 Lobby timer contract:
 - `X-NCTALK-START` is the single authoritative source for lobby timer updates.
-- Runtime lobby updates do not derive fallback timer values from `DTSTART/TZID`.
-- Missing/invalid `X-NCTALK-START` yields explicit error logging and skips lobby update.
+- On calendar upserts, `DTSTART` is parsed through the shared iCal contract and synchronized into `X-NCTALK-START` when the value changed.
+- If `DTSTART` parsing fails, runtime keeps the current `X-NCTALK-START` value (if present) and logs a contract parse error.
+- Lobby update is skipped only when no valid `X-NCTALK-START` is available after metadata merge.
 
 Invitee sync:
 - `X-NCTALK-ADD-USERS` — `TRUE`/`FALSE`
@@ -700,7 +702,7 @@ Room runtime metadata:
 
 Event ↔ token mapping:
 - Key: `nctalkEventTokenMap`
-- Used to find a token when an event changes or is deleted.
+- Used for trusted ownership checks on event deletion and for diagnostics.
 - Deletion uses only mappings marked as `source: "x-nctalk"`. Legacy mappings without a source are ignored fail-closed because older builds could also store tokens from ordinary `LOCATION`/`URL` fields.
 
 ---
@@ -780,6 +782,7 @@ Before you ship:
 2. Update `docs/ATN_REVIEW_NOTES.md` and README “What’s new”.
 3. Run the manual tests (Talk dialog + tab editor, sharing wizard, event move/delete, delegation, invitee sync).
 4. Run parser contract checks:
+   - `node tools/check-review-clean.js`
    - `node tools/ical-contract-check.js`
    - `node tools/share-plaintext-contract-check.js`
    - `node tools/i18n-locale-parity-check.js`

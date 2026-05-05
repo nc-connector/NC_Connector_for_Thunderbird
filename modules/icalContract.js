@@ -13,6 +13,145 @@
   const ICAL_LOG_PREFIX =
     global.NCLogContext?.resolveAddonLogPrefix?.("Ical")
     || "[NCBG]";
+  const WINDOWS_TZID_TO_IANA = Object.freeze({
+    "afghanistan standard time": "Asia/Kabul",
+    "alaskan standard time": "America/Anchorage",
+    "aleutian standard time": "America/Adak",
+    "altai standard time": "Asia/Barnaul",
+    "arab standard time": "Asia/Riyadh",
+    "arabian standard time": "Asia/Dubai",
+    "arabic standard time": "Asia/Baghdad",
+    "argentina standard time": "America/Buenos_Aires",
+    "astrakhan standard time": "Europe/Astrakhan",
+    "atlantic standard time": "America/Halifax",
+    "aus central standard time": "Australia/Darwin",
+    "aus central w. standard time": "Australia/Eucla",
+    "aus eastern standard time": "Australia/Sydney",
+    "azerbaijan standard time": "Asia/Baku",
+    "azores standard time": "Atlantic/Azores",
+    "bahia standard time": "America/Bahia",
+    "bangladesh standard time": "Asia/Dhaka",
+    "belarus standard time": "Europe/Minsk",
+    "bougainville standard time": "Pacific/Bougainville",
+    "canada central standard time": "America/Regina",
+    "cape verde standard time": "Atlantic/Cape_Verde",
+    "caucasus standard time": "Asia/Yerevan",
+    "cen. australia standard time": "Australia/Adelaide",
+    "central america standard time": "America/Guatemala",
+    "central asia standard time": "Asia/Bishkek",
+    "central brazilian standard time": "America/Cuiaba",
+    "central europe standard time": "Europe/Budapest",
+    "central european standard time": "Europe/Warsaw",
+    "central pacific standard time": "Pacific/Guadalcanal",
+    "central standard time": "America/Chicago",
+    "central standard time (mexico)": "America/Mexico_City",
+    "chatham islands standard time": "Pacific/Chatham",
+    "china standard time": "Asia/Shanghai",
+    "cuba standard time": "America/Havana",
+    "dateline standard time": "Etc/GMT+12",
+    "e. africa standard time": "Africa/Nairobi",
+    "e. australia standard time": "Australia/Brisbane",
+    "e. europe standard time": "Europe/Chisinau",
+    "e. south america standard time": "America/Sao_Paulo",
+    "easter island standard time": "Pacific/Easter",
+    "eastern standard time": "America/New_York",
+    "eastern standard time (mexico)": "America/Cancun",
+    "egypt standard time": "Africa/Cairo",
+    "ekaterinburg standard time": "Asia/Yekaterinburg",
+    "fiji standard time": "Pacific/Fiji",
+    "fle standard time": "Europe/Kiev",
+    "georgian standard time": "Asia/Tbilisi",
+    "gmt standard time": "Europe/London",
+    "greenland standard time": "America/Godthab",
+    "greenwich standard time": "Atlantic/Reykjavik",
+    "gtb standard time": "Europe/Bucharest",
+    "haiti standard time": "America/Port-au-Prince",
+    "hawaiian standard time": "Pacific/Honolulu",
+    "india standard time": "Asia/Calcutta",
+    "iran standard time": "Asia/Tehran",
+    "israel standard time": "Asia/Jerusalem",
+    "jordan standard time": "Asia/Amman",
+    "kaliningrad standard time": "Europe/Kaliningrad",
+    "korea standard time": "Asia/Seoul",
+    "libya standard time": "Africa/Tripoli",
+    "line islands standard time": "Pacific/Kiritimati",
+    "lord howe standard time": "Australia/Lord_Howe",
+    "magadan standard time": "Asia/Magadan",
+    "magallanes standard time": "America/Punta_Arenas",
+    "marquesas standard time": "Pacific/Marquesas",
+    "mauritius standard time": "Indian/Mauritius",
+    "middle east standard time": "Asia/Beirut",
+    "montevideo standard time": "America/Montevideo",
+    "morocco standard time": "Africa/Casablanca",
+    "mountain standard time": "America/Denver",
+    "mountain standard time (mexico)": "America/Mazatlan",
+    "myanmar standard time": "Asia/Rangoon",
+    "n. central asia standard time": "Asia/Novosibirsk",
+    "namibia standard time": "Africa/Windhoek",
+    "nepal standard time": "Asia/Katmandu",
+    "new zealand standard time": "Pacific/Auckland",
+    "newfoundland standard time": "America/St_Johns",
+    "norfolk standard time": "Pacific/Norfolk",
+    "north asia east standard time": "Asia/Irkutsk",
+    "north asia standard time": "Asia/Krasnoyarsk",
+    "north korea standard time": "Asia/Pyongyang",
+    "omsk standard time": "Asia/Omsk",
+    "pacific sa standard time": "America/Santiago",
+    "pacific standard time": "America/Los_Angeles",
+    "pacific standard time (mexico)": "America/Tijuana",
+    "pakistan standard time": "Asia/Karachi",
+    "paraguay standard time": "America/Asuncion",
+    "qyzylorda standard time": "Asia/Qyzylorda",
+    "romance standard time": "Europe/Paris",
+    "russia time zone 10": "Asia/Srednekolymsk",
+    "russia time zone 11": "Asia/Kamchatka",
+    "russia time zone 3": "Europe/Samara",
+    "russian standard time": "Europe/Moscow",
+    "sa eastern standard time": "America/Cayenne",
+    "sa pacific standard time": "America/Bogota",
+    "sa western standard time": "America/La_Paz",
+    "saint pierre standard time": "America/Miquelon",
+    "sakhalin standard time": "Asia/Sakhalin",
+    "samoa standard time": "Pacific/Apia",
+    "sao tome standard time": "Africa/Sao_Tome",
+    "saratov standard time": "Europe/Saratov",
+    "se asia standard time": "Asia/Bangkok",
+    "singapore standard time": "Asia/Singapore",
+    "south africa standard time": "Africa/Johannesburg",
+    "sri lanka standard time": "Asia/Colombo",
+    "sudan standard time": "Africa/Khartoum",
+    "syria standard time": "Asia/Damascus",
+    "taipei standard time": "Asia/Taipei",
+    "tasmania standard time": "Australia/Hobart",
+    "tocantins standard time": "America/Araguaina",
+    "tokyo standard time": "Asia/Tokyo",
+    "tomsk standard time": "Asia/Tomsk",
+    "tonga standard time": "Pacific/Tongatapu",
+    "transbaikal standard time": "Asia/Chita",
+    "turkey standard time": "Europe/Istanbul",
+    "turks and caicos standard time": "America/Grand_Turk",
+    "u.s. eastern standard time": "America/Indianapolis",
+    "u.s. mountain standard time": "America/Phoenix",
+    "utc": "Etc/UTC",
+    "utc-02": "Etc/GMT+2",
+    "utc-08": "Etc/GMT+8",
+    "utc-09": "Etc/GMT+9",
+    "utc-11": "Etc/GMT+11",
+    "utc+12": "Etc/GMT-12",
+    "utc+13": "Etc/GMT-13",
+    "venezuela standard time": "America/Caracas",
+    "vladivostok standard time": "Asia/Vladivostok",
+    "volgograd standard time": "Europe/Volgograd",
+    "w. australia standard time": "Australia/Perth",
+    "w. central africa standard time": "Africa/Lagos",
+    "w. europe standard time": "Europe/Berlin",
+    "w. mongolia standard time": "Asia/Hovd",
+    "west asia standard time": "Asia/Tashkent",
+    "west bank standard time": "Asia/Hebron",
+    "west pacific standard time": "Pacific/Port_Moresby",
+    "yakutsk standard time": "Asia/Yakutsk",
+    "yukon standard time": "America/Whitehorse"
+  });
 
   /**
    * Resolve the global ical.js API and fail loudly if it is missing.
@@ -59,6 +198,149 @@
       return value.map((entry) => stringifyValue(entry)).join(";");
     }
     return String(value);
+  }
+
+  /**
+   * Determine whether a timezone id looks like an IANA timezone identifier.
+   * @param {string} value
+   * @returns {boolean}
+   */
+  function isIanaTimeZone(value){
+    if (typeof value !== "string"){
+      return false;
+    }
+    const tzid = value.trim();
+    if (!tzid){
+      return false;
+    }
+    if (tzid.toUpperCase() === "UTC"){
+      return true;
+    }
+    return /^[A-Za-z_]+(?:\/[A-Za-z0-9_+\-]+)+$/.test(tzid);
+  }
+
+  /**
+   * Resolve a calendar TZID to a deterministic runtime timezone id.
+   * @param {string} tzid
+   * @returns {string}
+   */
+  function resolveRuntimeTimeZone(tzid){
+    const raw = String(tzid || "").trim();
+    if (!raw){
+      return "";
+    }
+    if (isIanaTimeZone(raw)){
+      return raw.toUpperCase() === "UTC" ? "UTC" : raw;
+    }
+    return WINDOWS_TZID_TO_IANA[raw.toLowerCase()] || "";
+  }
+
+  /**
+   * Calculate timezone offset in milliseconds for one instant and timezone id.
+   * @param {string} timeZone
+   * @param {Date} instant
+   * @returns {number|null}
+   */
+  function getTimeZoneOffsetMs(timeZone, instant){
+    const tz = String(timeZone || "").trim();
+    if (!tz){
+      return null;
+    }
+    try{
+      const formatter = new Intl.DateTimeFormat("en-US", {
+        timeZone: tz,
+        hour12: false,
+        year: "numeric",
+        month: "2-digit",
+        day: "2-digit",
+        hour: "2-digit",
+        minute: "2-digit",
+        second: "2-digit"
+      });
+      const parts = formatter.formatToParts(instant);
+      const values = {};
+      for (const part of parts){
+        if (part.type !== "literal"){
+          values[part.type] = part.value;
+        }
+      }
+      const asUtc = Date.UTC(
+        Number(values.year),
+        Number(values.month) - 1,
+        Number(values.day),
+        Number(values.hour),
+        Number(values.minute),
+        Number(values.second)
+      );
+      return asUtc - instant.getTime();
+    }catch{
+      return null;
+    }
+  }
+
+  /**
+   * Convert date/time parts interpreted in a target timezone into unix seconds.
+   * Uses a short fixed-point iteration for DST boundary stability.
+   * @param {number} year
+   * @param {number} month
+   * @param {number} day
+   * @param {number} hour
+   * @param {number} minute
+   * @param {number} second
+   * @param {string} timeZone
+   * @returns {number|null}
+   */
+  function zonedDateTimeToUnixSeconds(year, month, day, hour, minute, second, timeZone){
+    const utcGuess = Date.UTC(year, month - 1, day, hour, minute, second);
+    if (!Number.isFinite(utcGuess)){
+      return null;
+    }
+    let current = utcGuess;
+    for (let i = 0; i < 3; i += 1){
+      const offset = getTimeZoneOffsetMs(timeZone, new Date(current));
+      if (offset == null){
+        return null;
+      }
+      const next = utcGuess - offset;
+      if (next === current){
+        break;
+      }
+      current = next;
+    }
+    const unix = current / 1000;
+    return Number.isFinite(unix) ? Math.floor(unix) : null;
+  }
+
+  /**
+   * Convert unresolved/floating ICAL.Time values using explicit TZID mapping.
+   * @param {any} value
+   * @param {string} tzid
+   * @returns {number|null}
+   */
+  function convertFloatingValueToUnixSeconds(value, tzid){
+    if (!value || typeof value.year !== "number" || typeof value.month !== "number" || typeof value.day !== "number"){
+      return null;
+    }
+    const resolvedZone = resolveRuntimeTimeZone(tzid);
+    if (!resolvedZone){
+      return null;
+    }
+    const hour = value.isDate ? 0 : Number(value.hour || 0);
+    const minute = value.isDate ? 0 : Number(value.minute || 0);
+    const second = value.isDate ? 0 : Number(value.second || 0);
+    if (resolvedZone === "UTC"){
+      const unix = Date.UTC(value.year, value.month - 1, value.day, hour, minute, second) / 1000;
+      return Number.isFinite(unix) ? Math.floor(unix) : null;
+    }
+    return zonedDateTimeToUnixSeconds(
+      value.year,
+      value.month,
+      value.day,
+      hour,
+      minute,
+      second,
+      resolvedZone
+    );
   }
 
   /**
@@ -150,60 +432,64 @@
   }
 
   /**
-   * Parse DTSTART of the first VEVENT into unix epoch seconds.
-   * Rules:
-   * - strict contract parsing only (no heuristic TZ fallbacks)
-   * - if TZID is present, it must be resolvable either by embedded VTIMEZONE
-   *   or by an explicit resolved zone id that matches TZID
+   * Parse one VEVENT date/datetime property into unix epoch seconds.
+   * Parsing relies on the vendored ical.js behavior without custom timezone
+   * heuristics in this contract module.
    *
    * @param {string} ical
+   * @param {"dtstart"|"dtend"} propertyName
    * @returns {number|null}
    */
-  function parseEventStartUnixSeconds(ical){
+  function parseEventPropertyUnixSeconds(ical, propertyName){
     try{
       const context = resolveFirstEventContext(ical);
       if (!context?.event){
         return null;
       }
-      const startProp = context.event.getFirstProperty("dtstart");
-      if (!startProp){
+      const targetName = propertyName === "dtend" ? "dtend" : "dtstart";
+      const prop = context.event.getFirstProperty(targetName);
+      if (!prop){
         return null;
       }
-      const startValue = startProp.getFirstValue();
-      if (!startValue || typeof startValue.toUnixTime !== "function"){
+      const value = prop.getFirstValue();
+      if (!value || typeof value.toUnixTime !== "function"){
         return null;
       }
-
-      const tzid = String(startProp.getParameter("tzid") || "").trim();
-      if (tzid){
-        let hasEmbeddedZone = false;
-        if (context.root?.name === "vcalendar"){
-          const zones = context.root.getAllSubcomponents("vtimezone") || [];
-          hasEmbeddedZone = zones.some((zoneComp) => {
-            const zoneTzid = String(zoneComp?.getFirstPropertyValue("tzid") || "").trim();
-            return !!zoneTzid && zoneTzid.toLowerCase() === tzid.toLowerCase();
-          });
-        }
-        const resolvedZoneId = String(startValue?.zone?.tzid || "").trim();
-        const hasMatchingResolvedZone =
-          !!resolvedZoneId &&
-          resolvedZoneId.toLowerCase() === tzid.toLowerCase() &&
-          resolvedZoneId.toLowerCase() !== "floating" &&
-          resolvedZoneId.toLowerCase() !== "local";
-        if (!hasEmbeddedZone && !hasMatchingResolvedZone){
-          return null;
-        }
+      const tzid = String(prop.getParameter("tzid") || "").trim();
+      const resolvedZoneId = String(value?.zone?.tzid || "").trim().toLowerCase();
+      const unresolvedZone = !resolvedZoneId || resolvedZoneId === "floating" || resolvedZoneId === "local";
+      if (tzid && unresolvedZone){
+        return convertFloatingValueToUnixSeconds(value, tzid);
       }
-
-      const unix = startValue.toUnixTime();
+      const unix = value.toUnixTime();
       if (!Number.isFinite(unix)){
         return null;
       }
       return Math.floor(unix);
     }catch(error){
-      console.error(ICAL_LOG_PREFIX, "parseEventStartUnixSeconds failed", error);
+      console.error(ICAL_LOG_PREFIX, "parseEventPropertyUnixSeconds failed", {
+        propertyName
+      }, error);
       return null;
     }
+  }
+
+  /**
+   * Parse DTSTART of the first VEVENT into unix epoch seconds.
+   * @param {string} ical
+   * @returns {number|null}
+   */
+  function parseEventStartUnixSeconds(ical){
+    return parseEventPropertyUnixSeconds(ical, "dtstart");
+  }
+
+  /**
+   * Parse DTEND of the first VEVENT into unix epoch seconds.
+   * @param {string} ical
+   * @returns {number|null}
+   */
+  function parseEventEndUnixSeconds(ical){
+    return parseEventPropertyUnixSeconds(ical, "dtend");
   }
 
   /**
@@ -328,6 +614,7 @@
     stringifyValue,
     parseEventData,
     parseEventStartUnixSeconds,
+    parseEventEndUnixSeconds,
     extractEventAttendees,
     applyEventPropertyUpdates,
     parseVcardComponents
