@@ -4,6 +4,27 @@ All notable changes to **NC Connector for Thunderbird** will be documented in th
 
 This project targets **Thunderbird ESR 140.\***.
 
+## 3.1.0
+
+Release package version is **3.1.0**.  
+Functional delta documented here corresponds to **3.0.4 -> 3.1.0**.
+
+### Added
+- Backend-gated email signature settings were added for compose/reply/forward handling.
+
+### Changed
+- Signature ownership on replies/forwards is now bound strictly to the matching Nextcloud identity.
+- Local Thunderbird/signature-switch signatures are preserved when backend signature delivery is disabled.
+- Backend policy domains are handled independently to avoid cross-domain policy coupling.
+- Talk calendar contract handling was hardened and simplified around the active deterministic path.
+
+### Fixed
+- Calendar contract/runtime behavior was hardened to reduce fragility in Talk event processing.
+
+### Documentation
+- Thunderbird reviewer notes and sender parsing documentation were cleaned up and aligned with runtime behavior.
+- Locale/doc alignment for the new contract and signature behavior was refreshed.
+
 ## 3.0.4
 
 Release package version is **3.0.4**.  
