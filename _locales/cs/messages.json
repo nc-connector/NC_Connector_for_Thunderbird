@@ -212,6 +212,9 @@
   "talk_error_apply_failed": {
     "message": "Nepodařilo se použít změny na událost."
   },
+  "talk_error_event_context_missing": {
+    "message": "Nelze vytvořit událostní Talk místnost, protože otevřená událost nemá čas začátku. Zkontrolujte editor události a zkuste to znovu."
+  },
   "talk_section_settings": {
     "message": "Nastavení Talk"
   },

@@ -212,6 +212,9 @@
   "talk_error_apply_failed": {
     "message": "Kon wijzigingen niet toepassen op de afspraak."
   },
+  "talk_error_event_context_missing": {
+    "message": "Kan geen event-Talkruimte maken omdat de geopende afspraak geen starttijd heeft. Controleer de afspraakeditor en probeer het opnieuw."
+  },
   "talk_section_settings": {
     "message": "Talk-instellingen"
   },

@@ -212,6 +212,9 @@
   "talk_error_apply_failed": {
     "message": "无法将更改应用到事件。"
   },
+  "talk_error_event_context_missing": {
+    "message": "无法创建事件 Talk 房间，因为打开的事件没有开始时间。请检查事件编辑器，然后重试。"
+  },
   "talk_section_settings": {
     "message": "Talk 设置"
   },

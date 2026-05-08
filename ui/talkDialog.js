@@ -939,7 +939,17 @@
     const startTimestamp = ensureUnixSeconds(state.event?.startTimestamp || state.metadata?.startTimestamp);
     const endTimestamp = ensureUnixSeconds(state.event?.endTimestamp || state.metadata?.endTimestamp || state.event?.startTimestamp);
     const type = roomTypeValue?.value === "event" ? "event" : "normal";
-    const objectMeta = buildEventObjectMetadata(startTimestamp, endTimestamp);
+    const objectMeta = type === "event" ? buildEventObjectMetadata(startTimestamp, endTimestamp) : null;
+    logDebug("event object metadata", {
+      type,
+      hasObjectId: !!objectMeta?.objectId,
+      startTimestamp,
+      endTimestamp,
+      existingObjectId: !!state.metadata?.objectId
+    });
+    if (type === "event" && !objectMeta?.objectId){
+      throw new Error(t("talk_error_event_context_missing"));
+    }
     const delegateId = delegateInput?.value.trim() || "";
     const delegateSelection = getDelegateSelectionPreview();
     const normalizedDelegateName = delegateId
@@ -960,8 +970,8 @@
       description: state.event?.description || "",
       startTimestamp: startTimestamp ?? null,
       eventConversation: type === "event",
-      objectType: type === "event" ? objectMeta.objectType : undefined,
-      objectId: type === "event" ? objectMeta.objectId : undefined,
+      objectType: objectMeta?.objectType,
+      objectId: objectMeta?.objectId,
       delegateId: delegateId || undefined,
       delegateName: normalizedDelegateName || undefined
     };
@@ -1206,23 +1216,7 @@
       const rangeEnd = stop != null ? stop : start;
       return { objectType: "event", objectId: `${start}#${rangeEnd}` };
     }
-    const seed = [state.event?.title || "", Date.now(), Math.random()].join("|");
-    return { objectType: "event", objectId: `tb-${hashStringToHex(seed)}` };
-  }
-
-  /**
-   * Hash a string into a short hex identifier.
-   * @param {string} value
-   * @returns {string}
-   */
-  function hashStringToHex(value){
-    const input = String(value ?? "");
-    let hash = 0;
-    for (let i = 0; i < input.length; i++){
-      hash = ((hash << 5) - hash) + input.charCodeAt(i);
-      hash |= 0;
-    }
-    return (hash >>> 0).toString(16).padStart(8, "0");
+    return null;
   }
 
   /**

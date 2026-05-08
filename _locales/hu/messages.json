@@ -212,6 +212,9 @@
   "talk_error_apply_failed": {
     "message": "Nem sikerült alkalmazni a módosításokat az eseményre."
   },
+  "talk_error_event_context_missing": {
+    "message": "Nem sikerült eseményhez kötött Talk-szobát létrehozni, mert a megnyitott eseménynek nincs kezdési ideje. Ellenőrizze az eseményszerkesztőt, majd próbálja újra."
+  },
   "talk_section_settings": {
     "message": "Talk beállítások"
   },

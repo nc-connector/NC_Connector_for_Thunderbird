@@ -212,6 +212,9 @@
   "talk_error_apply_failed": {
     "message": "イベントに変更を適用できませんでした。"
   },
+  "talk_error_event_context_missing": {
+    "message": "開いている予定に開始時刻がないため、イベント用の Talk ルームを作成できませんでした。予定エディターを確認してからもう一度お試しください。"
+  },
   "talk_section_settings": {
     "message": "Talk 設定"
   },

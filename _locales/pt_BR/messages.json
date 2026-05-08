@@ -212,6 +212,9 @@
   "talk_error_apply_failed": {
     "message": "Não foi possível aplicar as alterações ao evento."
   },
+  "talk_error_event_context_missing": {
+    "message": "Não foi possível criar uma sala Talk de evento porque o evento aberto não tem horário de início. Verifique o editor do evento e tente novamente."
+  },
   "talk_section_settings": {
     "message": "Configurações do Talk"
   },

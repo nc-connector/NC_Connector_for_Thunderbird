@@ -206,11 +206,127 @@ function getLifecycleIcalContract(){
 }
 
 /**
+ * Check whether a ncCalToolbar snapshot contains serialized iCal.
+ * @param {object} snapshot
+ * @returns {boolean}
+ */
+function calendarSnapshotHasIcal(snapshot){
+  return !!(
+    snapshot &&
+    snapshot.format === "ical" &&
+    typeof snapshot.item === "string" &&
+    snapshot.item
+  );
+}
+
+/**
+ * Check whether a value is a valid unix timestamp.
+ * @param {any} value
+ * @returns {boolean}
+ */
+function isCalendarSnapshotTimestamp(value){
+  return typeof value === "number" && Number.isFinite(value);
+}
+
+/**
+ * Extract live editor fields from a ncCalToolbar snapshot.
+ * @param {object} snapshot
+ * @returns {object}
+ */
+function readCalendarSnapshotLiveEvent(snapshot){
+  const event = {};
+  for (const key of ["title", "location", "description", "descriptionHtml"]){
+    if (typeof snapshot?.[key] === "string"){
+      event[key] = snapshot[key];
+    }
+  }
+  if (isCalendarSnapshotTimestamp(snapshot?.startTimestamp)){
+    event.startTimestamp = Math.floor(snapshot.startTimestamp);
+  }
+  if (isCalendarSnapshotTimestamp(snapshot?.endTimestamp)){
+    event.endTimestamp = Math.floor(snapshot.endTimestamp);
+  }
+  return event;
+}
+
+/**
+ * Merge event fields without erasing existing values with empty snapshot data.
+ * @param {object} base
+ * @param {object} update
+ * @returns {object}
+ */
+function mergeCalendarEventFields(base, update){
+  const merged = Object.assign({}, base || {});
+  for (const key of ["title", "location", "description", "descriptionHtml"]){
+    if (typeof update?.[key] === "string" && update[key]){
+      merged[key] = update[key];
+    }
+  }
+  if (isCalendarSnapshotTimestamp(update?.startTimestamp)){
+    merged.startTimestamp = Math.floor(update.startTimestamp);
+  }
+  if (isCalendarSnapshotTimestamp(update?.endTimestamp)){
+    merged.endTimestamp = Math.floor(update.endTimestamp);
+  }
+  return merged;
+}
+
+/**
+ * Check whether a ncCalToolbar snapshot contains useful iCal or live editor data.
+ * @param {object} snapshot
+ * @returns {boolean}
+ */
+function calendarSnapshotHasContent(snapshot){
+  if (calendarSnapshotHasIcal(snapshot)){
+    return true;
+  }
+  const event = readCalendarSnapshotLiveEvent(snapshot);
+  return !!(
+    event.title ||
+    event.location ||
+    event.description ||
+    event.descriptionHtml ||
+    isCalendarSnapshotTimestamp(event.startTimestamp) ||
+    isCalendarSnapshotTimestamp(event.endTimestamp)
+  );
+}
+
+/**
+ * Merge a ncCalToolbar snapshot into one wizard context.
+ * @param {object} entry
+ * @param {object} snapshot
+ */
+function mergeCalendarSnapshotIntoWizardContext(entry, snapshot){
+  if (!entry || !snapshot){
+    return;
+  }
+  entry.item = Object.assign({}, entry.item || {}, {
+    id: typeof snapshot.id === "string" ? snapshot.id : (entry.item?.id || ""),
+    calendarId: typeof snapshot.calendarId === "string" ? snapshot.calendarId : (entry.item?.calendarId || ""),
+    type: typeof snapshot.type === "string" ? snapshot.type : (entry.item?.type || "event")
+  });
+  if (calendarSnapshotHasIcal(snapshot)){
+    entry.item.format = "ical";
+    entry.item.item = snapshot.item;
+  }
+  entry.event = mergeCalendarEventFields(entry.event || {}, readCalendarSnapshotLiveEvent(snapshot));
+  entry.snapshotSource = typeof snapshot.snapshotSource === "string" ? snapshot.snapshotSource : "";
+}
+
+/**
  * Refresh parsed event/metadata snapshot for a wizard context entry.
  * @param {object} entry
  */
 function refreshCalendarWizardContextSnapshot(entry){
   if (!entry?.item?.item){
+    entry.event = entry.event || {};
+    entry.metadata = entry.metadata || {};
+    L("calendar snapshot refresh live-only", {
+      hasStart: isCalendarSnapshotTimestamp(entry.event?.startTimestamp),
+      hasEnd: isCalendarSnapshotTimestamp(entry.event?.endTimestamp),
+      hasTitle: !!entry.event?.title,
+      source: entry.snapshotSource || ""
+    });
     return;
   }
   const ical = String(entry.item.item || "");
@@ -229,13 +345,13 @@ function refreshCalendarWizardContextSnapshot(entry){
   }
   try{
     const { props } = contract.parseEventData(ical);
-    entry.event = {
+    entry.event = mergeCalendarEventFields(entry.event || {}, {
       title: props["SUMMARY"] || "",
       location: props["LOCATION"] || "",
       description: props["DESCRIPTION"] || "",
       startTimestamp: contract.parseEventStartUnixSeconds(ical),
       endTimestamp: contract.parseEventEndUnixSeconds(ical)
-    };
+    });
   }catch(error){
     console.error("[NCBG] parseIcalEventData failed", error);
     entry.event = entry.event || {};
