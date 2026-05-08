@@ -4,6 +4,14 @@ All notable changes to **NC Connector for Thunderbird** will be documented in th
 
 This project targets **Thunderbird ESR 140.\***.
 
+## 3.1.1
+
+Release package version is **3.1.1**.  
+Functional delta documented here corresponds to **3.1.0 -> 3.1.1**.
+
+### Fixed (Mainline)
+- Fix flaky iCal snapshot flow and keep X-NCTALK metadata in sync.
+
 ## 3.1.0
 
 Release package version is **3.1.0**.  

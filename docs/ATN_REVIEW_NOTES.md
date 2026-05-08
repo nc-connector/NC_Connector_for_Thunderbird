@@ -1,8 +1,8 @@
-# Reviewer Notes - 3.1.0
+# Reviewer Notes - 3.1.1
 NC Connector for Thunderbird (`{4a35421f-0906-439c-bff2-8eef39e2baee}`)
 
 This document summarizes the currently implemented reviewer-relevant contract
-for add-on version 3.1.0.
+for add-on version 3.1.1.
 
 ---
 
@@ -50,7 +50,7 @@ for persisted monitoring (`browser.calendar.items.onCreated/onUpdated/onRemoved`
 
 ---
 
-## Reviewer Alignment Notes (3.1.0)
+## Reviewer Alignment Notes (3.1.1)
 
 - Core contracts are explicit; fallback behavior is bounded and logged instead of relying on silent heuristics.
 - Active runtime paths touched in this release log failures explicitly; silent failure is not an intended contract.
