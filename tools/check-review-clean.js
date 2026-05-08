@@ -13,7 +13,8 @@ const ROOT = path.resolve(__dirname, "..");
 const CHECKS = [
   "tools/ical-contract-check.js",
   "tools/share-plaintext-contract-check.js",
-  "tools/i18n-locale-parity-check.js"
+  "tools/i18n-locale-parity-check.js",
+  "tools/i18n-no-english-placeholders-check.js"
 ];
 
 /**
@@ -40,4 +41,3 @@ function run(){
 }
 
 run();
-
