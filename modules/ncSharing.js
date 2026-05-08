@@ -13,6 +13,10 @@
     create: 4,
     delete: 8
   };
+  const DIRECT_UPLOAD_LIMIT_BYTES = 20 * 1024 * 1024;
+  const CHUNK_UPLOAD_CHUNK_SIZE_BYTES = 20 * 1024 * 1024;
+  const CHUNK_UPLOAD_MIN_CHUNK_BYTES = 5 * 1024 * 1024;
+  const CHUNK_UPLOAD_MAX_CHUNKS = 10000;
   const RIGHTS_SEGMENT_START = NCShareTemplateContract.RIGHTS_SEGMENT_START;
   const RIGHTS_SEGMENT_END = NCShareTemplateContract.RIGHTS_SEGMENT_END;
   const INVALID_PATH_CHARS = /[\\/:*?"<>|]/g;
@@ -398,32 +402,155 @@
   }
 
   /**
-   * Upload a file with progress callbacks.
+   * Build a temporary upload folder name for Nextcloud chunked upload v2.
+   * @returns {string}
+   */
+  function buildChunkUploadId(){
+    if (globalThis.crypto && typeof globalThis.crypto.randomUUID === "function"){
+      return `ncconnector-${globalThis.crypto.randomUUID()}`;
+    }
+    const random = Math.random().toString(36).slice(2, 12);
+    return `ncconnector-${Date.now().toString(36)}-${random}`;
+  }
+
+  /**
+   * Decide whether a file should use Nextcloud chunked upload v2.
+   * @param {File|Blob} file
+   * @returns {boolean}
+   */
+  function shouldUseChunkedUpload(file){
+    const size = Number(file?.size) || 0;
+    return size > DIRECT_UPLOAD_LIMIT_BYTES;
+  }
+
+  /**
+   * Calculate a chunk size that stays inside Nextcloud chunk-count limits.
+   * @param {number} fileSize
+   * @returns {number}
+   */
+  function getChunkSize(fileSize){
+    const minimumForChunkLimit = Math.ceil((Number(fileSize) || 0) / CHUNK_UPLOAD_MAX_CHUNKS);
+    return Math.max(CHUNK_UPLOAD_CHUNK_SIZE_BYTES, CHUNK_UPLOAD_MIN_CHUNK_BYTES, minimumForChunkLimit);
+  }
+
+  /**
+   * Read a failed DAV response body without hiding the original HTTP status.
+   * @param {Response} response
+   * @returns {Promise<string>}
+   */
+  async function readDavErrorText(response){
+    if (!response){
+      return "";
+    }
+    return response.text().catch((error) => {
+      logInternalError("DAV error response read failed", error);
+      return "";
+    });
+  }
+
+  /**
+   * Create the temporary Nextcloud chunked upload folder.
+   * @param {{uploadFolderUrl:string,targetUrl:string,authHeader:string}} options
+   * @returns {Promise<void>}
+   */
+  async function createChunkUploadFolder({ uploadFolderUrl, targetUrl, authHeader }){
+    const res = await fetch(uploadFolderUrl, {
+      method: "MKCOL",
+      headers: {
+        "Authorization": authHeader,
+        "Destination": targetUrl
+      }
+    });
+    if (res.status === 201){
+      return;
+    }
+    const text = await readDavErrorText(res);
+    throw new Error(text || `Upload failed (${res.status})`);
+  }
+
+  /**
+   * Delete an unfinished Nextcloud chunked upload folder.
+   * @param {{uploadFolderUrl:string,authHeader:string}} options
+   * @returns {Promise<void>}
+   */
+  async function cleanupChunkUploadFolder({ uploadFolderUrl, authHeader }){
+    try{
+      const res = await fetch(uploadFolderUrl, {
+        method: "DELETE",
+        headers: {
+          "Authorization": authHeader
+        }
+      });
+      if (res.ok || res.status === 404){
+        return;
+      }
+      const text = await readDavErrorText(res);
+      logInternalError("chunked upload cleanup failed", text || `DELETE failed (${res.status})`);
+    }catch(error){
+      logInternalError("chunked upload cleanup failed", error);
+    }
+  }
+
+  /**
+   * Assemble uploaded chunks into the final WebDAV file.
+   * @param {{uploadFolderUrl:string,targetUrl:string,authHeader:string,totalSize:number}} options
+   * @returns {Promise<void>}
+   */
+  async function moveChunkedUpload({ uploadFolderUrl, targetUrl, authHeader, totalSize }){
+    const res = await fetch(`${uploadFolderUrl}/.file`, {
+      method: "MOVE",
+      headers: {
+        "Authorization": authHeader,
+        "Destination": targetUrl,
+        "OC-Total-Length": String(totalSize)
+      }
+    });
+    if (res.ok){
+      return;
+    }
+    const text = await readDavErrorText(res);
+    throw new Error(text || `Upload failed (${res.status})`);
+  }
+
+  /**
+   * Upload one file or chunk using XMLHttpRequest to preserve upload progress.
    * @param {object} options
    * @returns {Promise<void>}
    */
-  async function uploadFile({ davRoot, relativeFolder, fileName, file, authHeader, progressCb, statusCb, displayPath, itemId }){
-    const relativePath = joinRelativePath(relativeFolder, fileName);
-    const url = davRoot + "/" + encodePath(relativePath);
-    if (typeof statusCb === "function"){
-      statusCb({ phase: "start", fileName, displayPath, itemId });
-    }
+  async function uploadBlobWithProgress({
+    url,
+    blob,
+    authHeader,
+    headers = {},
+    statusCb,
+    progressCb,
+    fileName,
+    displayPath,
+    itemId,
+    loadedOffset = 0,
+    totalSize = 0
+  }){
     await new Promise((resolve, reject) => {
       const xhr = new XMLHttpRequest();
       xhr.open("PUT", url, true);
       xhr.setRequestHeader("Authorization", authHeader);
-      xhr.setRequestHeader("Content-Type", file.type || "application/octet-stream");
+      xhr.setRequestHeader("Content-Type", blob?.type || "application/octet-stream");
+      for (const [headerName, headerValue] of Object.entries(headers)){
+        xhr.setRequestHeader(headerName, headerValue);
+      }
       xhr.upload.onprogress = (event) => {
         if (event.lengthComputable){
-          const percent = Math.round((event.loaded / event.total) * 100);
+          const loaded = Math.min(totalSize || event.total, loadedOffset + event.loaded);
+          const total = totalSize || event.total;
+          const percent = total > 0 ? Math.round((loaded / total) * 100) : 0;
           if (typeof statusCb === "function"){
             statusCb({
               phase: "progress",
               fileName,
               displayPath,
               itemId,
-              loaded: event.loaded,
-              total: event.total,
+              loaded,
+              total,
               percent
             });
           }
@@ -438,10 +565,7 @@
       xhr.onload = () => {
         if (xhr.status >= 200 && xhr.status < 300){
           if (typeof progressCb === "function"){
-            progressCb(file.name);
-          }
-          if (typeof statusCb === "function"){
-            statusCb({ phase: "done", fileName, displayPath, itemId });
+            progressCb();
           }
           resolve();
         }else{
@@ -451,7 +575,133 @@
           reject(new Error(`Upload failed (${xhr.status})`));
         }
       };
-      xhr.send(file);
+      xhr.send(blob);
+    });
+  }
+
+  /**
+   * Upload a file with a direct WebDAV PUT.
+   * @param {object} options
+   * @returns {Promise<void>}
+   */
+  async function uploadFileDirect({ targetUrl, file, authHeader, progressCb, statusCb, displayPath, itemId, fileName }){
+    await uploadBlobWithProgress({
+      url: targetUrl,
+      blob: file,
+      authHeader,
+      statusCb,
+      progressCb: () => {
+        if (typeof progressCb === "function"){
+          progressCb(file.name);
+        }
+      },
+      fileName,
+      displayPath,
+      itemId,
+      loadedOffset: 0,
+      totalSize: Number(file?.size) || 0
+    });
+    if (typeof statusCb === "function"){
+      statusCb({ phase: "done", fileName, displayPath, itemId });
+    }
+  }
+
+  /**
+   * Upload a file using Nextcloud chunked upload v2.
+   * @param {object} options
+   * @returns {Promise<void>}
+   */
+  async function uploadFileChunked({ uploadRoot, targetUrl, file, authHeader, progressCb, statusCb, displayPath, itemId, fileName }){
+    const totalSize = Number(file?.size) || 0;
+    const chunkSize = getChunkSize(totalSize);
+    const chunkCount = Math.ceil(totalSize / chunkSize);
+    if (chunkCount > CHUNK_UPLOAD_MAX_CHUNKS){
+      throw new Error("Upload failed (too many chunks)");
+    }
+
+    const uploadFolderUrl = `${uploadRoot}/${encodeURIComponent(buildChunkUploadId())}`;
+    let cleanupRequired = false;
+    await createChunkUploadFolder({ uploadFolderUrl, targetUrl, authHeader });
+    cleanupRequired = true;
+    try{
+      for (let index = 0; index < chunkCount; index++){
+        const start = index * chunkSize;
+        const end = Math.min(totalSize, start + chunkSize);
+        const chunkName = String(index + 1).padStart(5, "0");
+        const chunk = file.slice(start, end, file.type || "application/octet-stream");
+        await uploadBlobWithProgress({
+          url: `${uploadFolderUrl}/${chunkName}`,
+          blob: chunk,
+          authHeader,
+          headers: {
+            "Destination": targetUrl,
+            "OC-Total-Length": String(totalSize)
+          },
+          statusCb,
+          fileName,
+          displayPath,
+          itemId,
+          loadedOffset: start,
+          totalSize
+        });
+      }
+
+      await moveChunkedUpload({ uploadFolderUrl, targetUrl, authHeader, totalSize });
+      cleanupRequired = false;
+      if (typeof progressCb === "function"){
+        progressCb(file.name);
+      }
+      if (typeof statusCb === "function"){
+        statusCb({ phase: "done", fileName, displayPath, itemId });
+      }
+    }catch(error){
+      if (cleanupRequired){
+        await cleanupChunkUploadFolder({ uploadFolderUrl, authHeader });
+      }
+      throw error;
+    }
+  }
+
+  /**
+   * Upload a file with progress callbacks.
+   * @param {object} options
+   * @returns {Promise<void>}
+   */
+  async function uploadFile({ davRoot, uploadRoot, relativeFolder, fileName, file, authHeader, progressCb, statusCb, displayPath, itemId, debugOpts }){
+    const relativePath = joinRelativePath(relativeFolder, fileName);
+    const targetUrl = davRoot + "/" + encodePath(relativePath);
+    const useChunked = shouldUseChunkedUpload(file);
+    if (typeof statusCb === "function"){
+      statusCb({ phase: "start", fileName, displayPath, itemId });
+    }
+    logDebug(debugOpts, "upload:method", {
+      file: fileName,
+      bytes: Number(file?.size) || 0,
+      method: useChunked ? "chunked-v2" : "put"
+    });
+    if (useChunked){
+      await uploadFileChunked({
+        uploadRoot,
+        targetUrl,
+        file,
+        authHeader,
+        progressCb,
+        statusCb,
+        displayPath,
+        itemId,
+        fileName
+      });
+      return;
+    }
+    await uploadFileDirect({
+      targetUrl,
+      file,
+      authHeader,
+      progressCb,
+      statusCb,
+      displayPath,
+      itemId,
+      fileName
     });
   }
 
@@ -627,7 +877,8 @@
     await ensureHostPermission(opts.baseUrl);
     const info = buildShareFolderInfo(basePath || await getFileLinkBasePath(), shareName, shareDate ? new Date(shareDate) : new Date());
     const authHeader = NCOcs.buildAuthHeader(opts.user, opts.appPass);
-    const davRoot = `${opts.baseUrl.replace(/\/+$/, "")}/remote.php/dav/files/${encodeURIComponent(opts.user)}`;
+    const davBase = opts.baseUrl.replace(/\/+$/, "");
+    const davRoot = `${davBase}/remote.php/dav/files/${encodeURIComponent(opts.user)}`;
     logDebug(opts, "availability:check", {
       shareName,
       basePath: basePath || "",
@@ -1242,7 +1493,9 @@
     const relativeBase = folderInfo.relativeBase;
     const relativeFolder = folderInfo.relativeFolder;
     const authHeader = NCOcs.buildAuthHeader(opts.user, opts.appPass);
-    const davRoot = `${opts.baseUrl.replace(/\/+$/, "")}/remote.php/dav/files/${encodeURIComponent(opts.user)}`;
+    const davBase = opts.baseUrl.replace(/\/+$/, "");
+    const davRoot = `${davBase}/remote.php/dav/files/${encodeURIComponent(opts.user)}`;
+    const uploadRoot = `${davBase}/remote.php/dav/uploads/${encodeURIComponent(opts.user)}`;
     logDebug(opts, "folders:ensure", { relativeBase, relativeFolder });
     const baseExists = relativeBase
       ? await pathExists({
@@ -1284,8 +1537,10 @@
           fileName: sanitizedFileName,
           file: item.file,
           authHeader,
+          uploadRoot,
           displayPath,
           itemId: item.id,
+          debugOpts: opts,
           statusCb: statusCallback,
           progressCb: () => {
             uploaded++;
