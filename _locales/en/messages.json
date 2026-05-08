@@ -212,6 +212,9 @@
   "talk_error_apply_failed": {
     "message": "Could not apply changes to the event."
   },
+  "talk_error_event_context_missing": {
+    "message": "Could not create an event Talk room because the open event has no start time. Please check the event editor and try again."
+  },
   "talk_section_settings": {
     "message": "Talk Settings"
   },

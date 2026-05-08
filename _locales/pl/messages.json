@@ -212,6 +212,9 @@
   "talk_error_apply_failed": {
     "message": "Nie można zastosować zmian do wydarzenia."
   },
+  "talk_error_event_context_missing": {
+    "message": "Nie można utworzyć pokoju Talk dla wydarzenia, ponieważ otwarte wydarzenie nie ma godziny rozpoczęcia. Sprawdź edytor wydarzenia i spróbuj ponownie."
+  },
   "talk_section_settings": {
     "message": "Ustawienia Talk"
   },

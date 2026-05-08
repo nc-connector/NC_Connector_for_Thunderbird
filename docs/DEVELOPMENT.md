@@ -422,7 +422,8 @@ What happens:
 1. Create a `contextId` (calendar wizard context)
 2. Store:
    - `editorId`
-   - `item` (iCal)
+   - `item` (iCal when Thunderbird exposes it)
+   - live editor fields (`title`, `location`, `description`, `startTimestamp`, `endTimestamp`) when iCal is not available yet
    - derived `event` + `metadata` snapshot
 3. Open `ui/talkDialog.html?contextId=...` as a **real popup window** via `browser.windows.create({ type: "popup" })`
 4. Run a best-effort popup focus request (`browser.windows.update({ focused: true })`) with short retries.
@@ -442,7 +443,7 @@ Background:
 - uses `modules/talkcore.js` + `modules/ocs.js` + `modules/nccore.js`
 - creates the room, applies lobby/listable/password, etc.
 - If the user selected an event conversation, runtime performs exactly one event-bound create request.
-- Runtime does not fall back from event conversation to standard room and does not fabricate pseudo Talk URLs.
+- Runtime does not fall back from event conversation to standard room and does not fabricate pseudo object ids. Event conversations require a real start timestamp from the opened editor.
 
 ### 8.3 Write-back to the currently edited event
 

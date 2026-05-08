@@ -212,6 +212,9 @@
   "talk_error_apply_failed": {
     "message": "無法將變更套用到事件。"
   },
+  "talk_error_event_context_missing": {
+    "message": "無法建立事件 Talk 會議室，因為開啟的事件沒有開始時間。請檢查事件編輯器後再試一次。"
+  },
   "talk_section_settings": {
     "message": "Talk 設定"
   },

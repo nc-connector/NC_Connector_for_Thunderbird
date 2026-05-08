@@ -212,6 +212,9 @@
   "talk_error_apply_failed": {
     "message": "Änderungen konnten nicht in den Termin übernommen werden."
   },
+  "talk_error_event_context_missing": {
+    "message": "Es konnte kein Event-Talkraum erstellt werden, weil der geöffnete Termin keine Startzeit liefert. Bitte den Termin-Editor prüfen und erneut versuchen."
+  },
   "talk_section_settings": {
     "message": "Talk-Einstellungen"
   },

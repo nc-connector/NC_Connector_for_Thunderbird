@@ -752,18 +752,180 @@ this.ncCalToolbar = class extends ExtensionAPI {
   }
 
   /**
+   * Resolve the embedded calendar editor panel window for tab editors.
+   * @param {Window} window
+   * @returns {Window|null}
+   */
+  _panelWindow(window) {
+    return (
+      window?.document?.getElementById(EVENT_PANEL_IFRAME_ID)?.contentWindow ||
+      window?.document?.getElementById(EVENT_PANEL_IFRAME_ID)?.contentDocument?.defaultView ||
+      null
+    );
+  }
+
+  /**
+   * Resolve an editor field without requiring it to be writable.
+   * @param {Window} window
+   * @param {"title"|"location"|"description"} key
+   * @returns {{kind:"value"|"html-body",element:any,host?:any}|null}
+   */
+  _resolveReadableField(window, key) {
+    const idMap = {
+      title: "item-title",
+      location: "item-location",
+      description: "item-description",
+    };
+    const id = idMap[key];
+    for (const doc of this._editorDocs(window)) {
+      const host = doc.getElementById(id);
+      if (!host) {
+        continue;
+      }
+      if (key == "description") {
+        const inputField = host.inputField || null;
+        if (inputField && "value" in inputField) {
+          return { kind: "value", element: inputField };
+        }
+        if ("value" in host) {
+          return { kind: "value", element: host };
+        }
+        const body = host.contentDocument?.body || null;
+        if (body) {
+          return { kind: "html-body", element: body, host };
+        }
+      } else if ("value" in host) {
+        return { kind: "value", element: host };
+      }
+    }
+    return null;
+  }
+
+  /**
+   * Read plain text and HTML from the calendar description editor.
+   * @param {{kind:string,element:any}|null} target
+   * @returns {{text:string,html:string}}
+   */
+  _readDescriptionField(target) {
+    if (!target?.element) {
+      return { text: "", html: "" };
+    }
+    if (target.kind == "value") {
+      return { text: String(target.element.value ?? ""), html: "" };
+    }
+    const text = String(target.element.innerText ?? target.element.textContent ?? "");
+    const html = String(target.element.innerHTML ?? "");
+    return { text, html };
+  }
+
+  /**
+   * Read a calendar item property as string.
+   * @param {object} item
+   * @param {string} name
+   * @returns {string}
+   */
+  _readItemProperty(item, name) {
+    if (typeof item?.getProperty != "function") {
+      return "";
+    }
+    const value = item.getProperty(name);
+    return value == null ? "" : String(value);
+  }
+
+  /**
+   * Convert calIDateTime-like values to unix seconds.
+   * @param {any} value
+   * @returns {number|null}
+   */
+  _calendarDateTimeToUnixSeconds(value) {
+    if (!value) {
+      return null;
+    }
+    if (typeof value == "number" && Number.isFinite(value)) {
+      return value > 1e12 ? Math.floor(value / 1000) : Math.floor(value);
+    }
+    const nativeTime = Number(value.nativeTime);
+    if (Number.isFinite(nativeTime) && nativeTime > 0) {
+      return Math.floor(nativeTime / 1000000);
+    }
+    if (typeof cal?.dtz?.dateTimeToJsDate == "function") {
+      const date = cal.dtz.dateTimeToJsDate(value);
+      const millis = Number(date?.getTime?.());
+      if (Number.isFinite(millis)) {
+        return Math.floor(millis / 1000);
+      }
+    }
+    return null;
+  }
+
+  /**
+   * Read live event fields from the current editor and item.
+   * @param {Window} window
+   * @param {object} item
+   * @returns {object}
+   */
+  _readLiveEventSnapshot(window, item) {
+    const panelWindow = this._panelWindow(window);
+    const titleTarget = this._resolveReadableField(window, "title");
+    const locationTarget = this._resolveReadableField(window, "location");
+    const descriptionTarget = this._resolveReadableField(window, "description");
+    const description = this._readDescriptionField(descriptionTarget);
+    const startTimestamp = this._calendarDateTimeToUnixSeconds(
+      panelWindow?.gStartTime || window?.gStartTime || item?.startDate || item?.entryDate
+    );
+    const endTimestamp = this._calendarDateTimeToUnixSeconds(
+      panelWindow?.gEndTime || window?.gEndTime || item?.endDate || item?.dueDate
+    );
+    const live = {
+      title: this._readField(titleTarget) || String(item?.title ?? ""),
+      location: this._readField(locationTarget) || this._readItemProperty(item, "LOCATION"),
+      description: description.text || String(item?.descriptionText ?? "") || this._readItemProperty(item, "DESCRIPTION"),
+      descriptionHtml: description.html || String(item?.descriptionHTML ?? ""),
+    };
+    if (startTimestamp != null) {
+      live.startTimestamp = startTimestamp;
+    }
+    if (endTimestamp != null) {
+      live.endTimestamp = endTimestamp;
+    }
+    return live;
+  }
+
+  /**
+   * Check whether a live snapshot carries useful editor data.
+   * @param {object} live
+   * @returns {boolean}
+   */
+  _hasLiveEventSnapshotData(live) {
+    return !!(
+      live &&
+      (
+        live.title ||
+        live.location ||
+        live.description ||
+        live.descriptionHtml ||
+        typeof live.startTimestamp == "number" ||
+        typeof live.endTimestamp == "number"
+      )
+    );
+  }
+
+  /**
    * Build API snapshot payload from a calendar item.
    * @param {object} item
    * @param {string} editorId
    * @param {"dialog"|"tab"|""} editorType
+   * @param {Window|null} editorWindow
    * @returns {object|null}
    */
-  _snapshotItem(item, editorId, editorType = "") {
+  _snapshotItem(item, editorId, editorType = "", editorWindow = null) {
     if (!item) {
       return null;
     }
     const ical = typeof item.icalString == "string" ? item.icalString : String(item.icalString || "");
-    if (!ical) {
+    const live = editorWindow ? this._readLiveEventSnapshot(editorWindow, item) : {};
+    const hasLive = this._hasLiveEventSnapshotData(live);
+    if (!ical && !hasLive) {
       return null;
     }
     const snapshot = {
@@ -771,9 +933,13 @@ this.ncCalToolbar = class extends ExtensionAPI {
       calendarId: item.calendar?.id ? String(item.calendar.id) : "",
       id: item.id ? String(item.id) : "",
       type: typeof item.isTodo == "function" && item.isTodo() ? "task" : "event",
-      format: "ical",
-      item: ical,
+      ...live,
+      snapshotSource: ical ? (hasLive ? "mixed" : "ical") : "live",
     };
+    if (ical) {
+      snapshot.format = "ical";
+      snapshot.item = ical;
+    }
     if (editorType == "tab" || editorType == "dialog") {
       snapshot.editorType = editorType;
     }
@@ -885,7 +1051,12 @@ this.ncCalToolbar = class extends ExtensionAPI {
         console.error("[ncCalToolbar] click ignored: target editor not resolvable");
         return;
       }
-      const snapshot = this._snapshotItem(this._getEditedItem(editorWindow), click.editorId, click.editorType);
+      const snapshot = this._snapshotItem(
+        this._getEditedItem(editorWindow),
+        click.editorId,
+        click.editorType,
+        editorWindow
+      );
       if (!snapshot) {
         console.error("[ncCalToolbar] click ignored: no editable item");
         return;
@@ -1502,7 +1673,7 @@ this.ncCalToolbar = class extends ExtensionAPI {
             return null;
           }
           this._ensureLifecycleWatch(window, editorId);
-          return this._snapshotItem(item, editorId);
+          return this._snapshotItem(item, editorId, "", window);
         },
 
         updateCurrent: async updateOptions => {
@@ -1635,7 +1806,7 @@ this.ncCalToolbar = class extends ExtensionAPI {
             throw propertyError;
           }
 
-          return this._snapshotItem(item, editorId);
+          return this._snapshotItem(item, editorId, "", window);
         },
       },
     };
