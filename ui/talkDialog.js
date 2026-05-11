@@ -4,7 +4,7 @@
  * See LICENSE.txt for details.
  */
 (() => {
-  "use strict";
+  'use strict';
 
   const POPUP_CONTENT_WIDTH = 520;
   const MIN_CONTENT_HEIGHT = 0;
@@ -76,15 +76,15 @@
   let i18nLookupErrorLogged = false;
 
   /**
-   * Log internal UI errors in a deterministic way.
+   * Log internal UI errors with stable context.
    * @param {string} scope
    * @param {any} error
    */
   function logUiError(scope, error){
     try{
       console.error(LOG_PREFIX, scope, error);
-    }catch(logError){
-      console.error(LOG_PREFIX, scope, error?.message || String(error), logError?.message || String(logError));
+    }catch(error){
+      console.error(LOG_PREFIX, scope, error?.message || String(error), error?.message || String(error));
     }
   }
 
@@ -177,7 +177,7 @@
   }
 
   /**
-   * Toggle one tooltip list between normal and lock-hint entries via shared UI helper.
+   * Toggle one tooltip list between normal and lock-hint entries
    * @param {HTMLElement|null} tooltipList
    * @param {boolean} lockActive
    */
@@ -313,7 +313,7 @@
   }
 
   /**
-   * Return true when one backend policy domain is usable for the current seat.
+   * Return true when one backend policy domain is usable for this seat
    * @param {object|null} status
    * @param {"share"|"talk"|"email_signature"} domain
    * @returns {boolean}
@@ -1058,7 +1058,7 @@
     if (!applyFieldsResponse?.ok){
       throw new Error(applyFieldsResponse?.error || t("talk_error_apply_failed"));
     }
-    // Re-apply metadata after field writes to keep X-NCTALK-* properties authoritative.
+    // Re-apply metadata after field writes so X-NCTALK-* properties stay current.
     const reapplyMetaResponse = await browser.runtime.sendMessage({
       type: "talk:applyMetadata",
       contextId: state.contextId,
@@ -2141,6 +2141,7 @@
         overlay.addEventListener("click", overlayHandler);
         document.body.appendChild(overlay);
         window.setTimeout(() => {
+  'use strict';
           try{
             const focusTarget = actions.querySelector("button.primary") || actions.querySelector("button");
             focusTarget?.focus();
@@ -2152,8 +2153,8 @@
         logUiError("inline modal failed", error);
         try{
           window.alert?.(message);
-        }catch(alertError){
-          logUiError("window.alert fallback failed", alertError);
+        }catch(error){
+          logUiError("window.alert fallback failed", error);
         }
         resolve("fallback");
       }

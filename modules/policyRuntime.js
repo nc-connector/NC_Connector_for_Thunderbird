@@ -160,7 +160,7 @@ const NCPolicyRuntime = (() => {
   }
 
   /**
-   * Normalize the server payload to the internal runtime status contract.
+   * Normalize server payload into internal runtime status shape.
    * @param {any} payload
    * @returns {object}
    */
@@ -369,7 +369,7 @@ const NCPolicyRuntime = (() => {
   }
 
   /**
-   * Return true when a policy domain exists and the seat may use backend policy.
+   * Return true when one policy domain exists and the seat may use
    * @param {any} status
    * @param {"share"|"talk"|"email_signature"} domain
    * @returns {boolean}

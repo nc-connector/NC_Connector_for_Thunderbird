@@ -3,6 +3,8 @@
  * Licensed under the GNU Affero General Public License v3.0.
  * See LICENSE.txt for details.
  */
+'use strict';
+
 /**
  * Return stored add-on credentials via NCCore.getOpts().
  * @returns {Promise<{baseUrl:string,user:string,appPass:string,debugEnabled:boolean,authMode:string}>}
@@ -193,9 +195,9 @@ async function requestTalkCapabilities(url, headers){
       return { supported:false, reason:"Talk capabilities: " + parsed.hint + " => event not available." };
     }
     return { supported:null, reason: parsed.hint ? "Talk capabilities: " + parsed.hint : "Talk capabilities without event flag." };
-  }catch(e){
-    logTalkCoreError("requestTalkCapabilities failed", e, { url });
-    return { supported:null, reason: e?.message || "Talk capabilities endpoint unreachable." };
+  }catch(error){
+    logTalkCoreError("requestTalkCapabilities failed", error, { url });
+    return { supported:null, reason: error?.message || "Talk capabilities endpoint unreachable." };
   }
 }
 
@@ -252,9 +254,9 @@ async function requestCoreCapabilities(baseUrl, headers){
       return { supported:null, reason:"Cloud capabilities: Nextcloud version " + versionMajor + " does not expose an event flag." };
     }
     return { supported:null, reason:"Cloud capabilities without event indicators." };
-  }catch(e){
-    logTalkCoreError("requestCoreCapabilities failed", e, { url: coreUrl });
-    return { supported:null, reason: e?.message || "Cloud capabilities endpoint unreachable." };
+  }catch(error){
+    logTalkCoreError("requestCoreCapabilities failed", error, { url: coreUrl });
+    return { supported:null, reason: error?.message || "Cloud capabilities endpoint unreachable." };
   }
 }
 

@@ -1,7 +1,7 @@
 [
   {
     "namespace": "ncCalToolbar",
-    "description": "Custom calendar editor toolbar bridge with deterministic editorId context and editor-targeted read/write APIs.",
+    "description": "Custom calendar editor toolbar bridge with stable editorId context and editor-targeted read/write APIs.",
     "types": [
       {
         "id": "EditorId",
@@ -77,7 +77,7 @@
       {
         "name": "onClicked",
         "type": "function",
-        "description": "Fired when the ncCalToolbar button is clicked in an editor window and includes a deterministic editorId plus the current iCal and/or live editor snapshot.",
+        "description": "Fired when the ncCalToolbar button is clicked in an editor window and includes a stable editorId plus the current iCal and/or live editor snapshot.",
         "parameters": [{ "name": "snapshot", "$ref": "CurrentItemSnapshot" }]
       },
       {

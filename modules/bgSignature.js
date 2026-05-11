@@ -9,7 +9,7 @@
  * Central email signature runtime.
  * Uses standard Thunderbird compose APIs plus a compose script for live editor
  * DOM cleanup/insertion. Backend HTML is sanitized with the existing Share/Talk
- * sanitizer contract before it enters the compose document.
+ * sanitizer path before it enters the compose document.
  */
 const NCEmailSignature = (() => {
   const COMPOSE_SCRIPT_FILE = "ui/signatureCompose.js";

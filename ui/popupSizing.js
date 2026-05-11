@@ -7,7 +7,7 @@
  * Popup sizing helpers for fixed-width and dynamic-height dialogs.
  */
 (() => {
-  "use strict";
+  'use strict';
 
   const globalScope = typeof window !== "undefined"
     ? window
@@ -26,13 +26,13 @@
   function logPopupSizingError(scope, error){
     try{
       console.error(LOG_PREFIX, scope, error);
-    }catch(logError){
-      console.error(LOG_PREFIX, scope, error?.message || String(error), logError?.message || String(logError));
+    }catch(error){
+      console.error(LOG_PREFIX, scope, error?.message || String(error), error?.message || String(error));
     }
   }
 
   /**
-   * Create a popup sizing helper that keeps a fixed width and min height.
+   * Create a popup sizing helper with fixed width and minimum height
    * @param {object} options
    * @returns {object}
    */
@@ -185,6 +185,7 @@
         window.clearTimeout(resizeTimer);
       }
       resizeTimer = window.setTimeout(() => {
+  'use strict';
         enforceFixedWidth();
         enforceMinHeight();
         enforceWindowBoundsAsync();

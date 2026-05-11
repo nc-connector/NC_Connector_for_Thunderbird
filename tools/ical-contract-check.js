@@ -1,8 +1,5 @@
 /**
- * Contract checks for iCal/vCard parser behavior used by NC Connector.
- *
- * Run:
- *   node tools/ical-contract-check.js
+ * Parser checks for iCal/vCard behavior used by NC Connector
  */
 "use strict";
 

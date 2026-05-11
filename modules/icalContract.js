@@ -4,8 +4,8 @@
  * See LICENSE.txt for details.
  */
 /**
- * Shared iCalendar/vCard parser contract based on vendored ical.js.
- * This module provides deterministic parser/writer operations used by
+ * Shared iCalendar/vCard parser based on vendored ical.js.
+ * This module provides stable parser/writer operations used by
  * background and UI code paths.
  */
 (function(global){
@@ -177,7 +177,7 @@
   }
 
   /**
-   * Convert a parsed property value into deterministic string form.
+   * Convert a parsed property value into stable string form.
    * @param {any} value
    * @returns {string}
    */
@@ -220,7 +220,7 @@
   }
 
   /**
-   * Resolve a calendar TZID to a deterministic runtime timezone id.
+   * Resolve a calendar TZID to a stable runtime timezone id.
    * @param {string} tzid
    * @returns {string}
    */
@@ -273,7 +273,7 @@
         Number(values.second)
       );
       return asUtc - instant.getTime();
-    }catch{
+    }catch (error) {
       return null;
     }
   }
@@ -389,9 +389,9 @@
 
   /**
    * Parse first VEVENT and return property bag + DTSTART/DTEND metadata.
-   * Contract:
+   * Rules:
    * - props keys are uppercase property names
-   * - props values are deterministic strings
+   * - props values are stable strings
    * - dtStart/dtEnd are { value, tzid } or null
    *
    * @param {string} ical
@@ -434,7 +434,7 @@
   /**
    * Parse one VEVENT date/datetime property into unix epoch seconds.
    * Parsing relies on the vendored ical.js behavior without custom timezone
-   * heuristics in this contract module.
+   * heuristics in this parser module.
    *
    * @param {string} ical
    * @param {"dtstart"|"dtend"} propertyName
@@ -517,7 +517,7 @@
 
   /**
    * Apply property updates to first VEVENT and serialize updated iCal payload.
-   * Contract:
+   * Rules:
    * - update key normalization: uppercase input keys
    * - null/undefined value => property removal
    * - existing properties updated in-place; missing properties are created

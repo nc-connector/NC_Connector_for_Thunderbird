@@ -1,3 +1,5 @@
+'use strict';
+
 const fs = require("node:fs");
 const path = require("node:path");
 const vm = require("node:vm");
@@ -355,7 +357,7 @@ async function testInsertRejectsMissingPlainTextVariant(){
     html: "<p>share block</p>"
   });
   assert(result.ok === false, "Insert handler must reject missing plainText render variant");
-  assert(result.error === "tab/html/plainText missing", "Insert handler should report the explicit missing-variant contract");
+  assert(result.error === "tab/html/plainText missing", "Insert handler should report the explicit missing-variant rule");
 }
 
 async function run(){

@@ -3,8 +3,8 @@
  * Licensed under the GNU Affero General Public License v3.0.
  * See LICENSE.txt for details.
  */
-"use strict";
 (function(global){
+  'use strict';
   const LOG_PREFIX =
     global.NCLogContext?.resolveAddonLogPrefix?.("HostPermissions")
     || "[NCBG]";
@@ -23,8 +23,8 @@
   function logHostPermissionError(scope, error){
     try{
       console.error(LOG_PREFIX, scope, error);
-    }catch(logError){
-      console.error(LOG_PREFIX, scope, error?.message || String(error), logError?.message || String(logError));
+    }catch(error){
+      console.error(LOG_PREFIX, scope, error?.message || String(error), error?.message || String(error));
     }
   }
 
@@ -48,7 +48,7 @@
   }
 
   /**
-   * Check if the extension already has host permission for the given base URL.
+   * Check whether the extension already has host permission for one base URL
    * @param {string} baseUrl
    * @returns {Promise<boolean>}
    */
@@ -140,8 +140,8 @@
         if (global?.browser?.permissions?.contains){
           return await global.browser.permissions.contains({ origins: [pattern] });
         }
-      }catch(containsError){
-        logHostPermissionError("permissions.contains fallback failed", containsError);
+      }catch(error){
+        logHostPermissionError("permissions.contains fallback failed", error);
       }
       return false;
     }

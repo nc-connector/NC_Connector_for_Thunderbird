@@ -3,8 +3,8 @@
  * Licensed under the GNU Affero General Public License v3.0.
  * See LICENSE.txt for details.
  */
-"use strict";
 (function(global){
+  'use strict';
   let runtimeDisconnectGuardInstalled = false;
   let runtimeContextUnloading = false;
   let mirroredDebugEnabled = false;
@@ -25,10 +25,10 @@
     }
     try{
       onError(scope, error);
-    }catch(callbackError){
+    }catch(error){
       try{
-        console.error(FORWARDER_LOG_PREFIX, "onError callback failed", callbackError);
-      }catch(logError){
+        console.error(FORWARDER_LOG_PREFIX, "onError callback failed", error);
+      }catch(error){
         // Ignore teardown-time logging errors.
       }
     }
@@ -331,6 +331,7 @@
       });
       pendingDebugSends.add(trackedSend);
       void trackedSend.finally(() => {
+  'use strict';
         pendingDebugSends.delete(trackedSend);
       });
     }catch(error){

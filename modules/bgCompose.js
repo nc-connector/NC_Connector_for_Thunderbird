@@ -16,8 +16,8 @@ browser.composeAction.onClicked.addListener(async (tab) => {
   try{
     L("composeAction.onClicked", { tabId: Number(tab?.id) || 0 });
     await openSharingWizardWindow(tab.id);
-  }catch(e){
-    console.error("[NCBG] composeAction.onClicked", e);
+  }catch(error){
+    console.error("[NCBG] composeAction.onClicked", error);
   }
 });
 
@@ -32,7 +32,7 @@ browser.compose.onAttachmentAdded.addListener((tab, attachment) => {
 
 /**
  * Track live sender identity changes for queued password-follow-up dispatch.
- * onBeforeSend remains the authoritative final envelope capture.
+ * onBeforeSend captures the final envelope.
  */
 browser.compose.onIdentityChanged.addListener((tab, identityId) => {
   const tabId = Number(tab?.id);

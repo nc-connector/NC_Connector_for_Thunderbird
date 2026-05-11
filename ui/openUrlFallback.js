@@ -4,7 +4,7 @@
  * See LICENSE.txt for details.
  */
 (() => {
-  "use strict";
+  'use strict';
 
   /**
    * Translate a message key using the WebExtension API.

@@ -3,8 +3,8 @@
  * Licensed under the GNU Affero General Public License v3.0.
  * See LICENSE.txt for details.
  */
-"use strict";
 (function(global){
+  'use strict';
   const UI_RUNTIME_LABELS = Object.freeze([
     { suffix: "/ui/talkdialog.html", label: "Talk" },
     { suffix: "/ui/nextcloudsharingwizard.html", label: "Sharing" },

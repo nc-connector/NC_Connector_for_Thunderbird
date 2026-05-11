@@ -32,8 +32,8 @@ const EMAIL_SIGNATURE_KEYS = {
 function logOptionsError(scope, error){
   try{
     console.error(OPTIONS_LOG_PREFIX, scope, error);
-  }catch(logError){
-    console.error(OPTIONS_LOG_PREFIX, scope, error?.message || String(error), logError?.message || String(logError));
+  }catch(error){
+    console.error(OPTIONS_LOG_PREFIX, scope, error?.message || String(error), error?.message || String(error));
   }
 }
 
@@ -138,7 +138,7 @@ if (sharingAttachmentsAdminLink){
 }
 
 /**
- * Toggle one tooltip list between normal and lock-hint entries via shared UI helper.
+ * Toggle one tooltip list between normal and lock-hint entries
  * @param {HTMLElement|null} tooltipList
  * @param {boolean} lockActive
  */
@@ -364,7 +364,7 @@ function isBackendPolicyDomainAvailable(domain){
 }
 
 /**
- * Return true when one backend policy domain is usable for the current seat.
+ * Return true when one backend policy domain is usable for this seat
  * @param {"share"|"talk"|"email_signature"} domain
  * @returns {boolean}
  */
@@ -422,7 +422,7 @@ function getPolicyTemplateKey(domain){
 }
 
 /**
- * Return true when backend-driven custom template mode can be selected for one domain.
+ * Return true when backend custom template mode can be selected
  * This requires an active backend policy, language=`custom`, and a non-empty template.
  * @param {"share"|"talk"|"email_signature"} domain
  * @returns {boolean}
@@ -517,7 +517,7 @@ function readBackendPolicyValue(domain, key){
 }
 
 /**
- * Return true when a backend policy key exists, even if its value is `null`.
+ * Return true when one backend policy key exists, even when `null`
  * @param {"share"|"talk"|"email_signature"} domain
  * @param {string} key
  * @returns {boolean}
@@ -1476,9 +1476,9 @@ async function save(){
 document.getElementById("save").addEventListener("click", async () => {
   try{
     await save();
-  }catch(e){
-    logOptionsError("save failed", e);
-    showStatus(e?.message || i18n("options_status_save_failed"), true);
+  }catch(error){
+    logOptionsError("save failed", error);
+    showStatus(error?.message || i18n("options_status_save_failed"), true);
   }
 });
 
@@ -1524,9 +1524,9 @@ if (testButton){
     button.textContent = i18n("options_test_running");
     try{
       await runConnectionTest({ showMissing: true });
-    }catch(err){
-      logOptionsError("test connection failed", err);
-      showStatus(err?.message || i18n("options_test_failed"), true);
+    }catch(error){
+      logOptionsError("test connection failed", error);
+      showStatus(error?.message || i18n("options_test_failed"), true);
     }finally{
       button.disabled = false;
       button.textContent = originalLabel || i18n("options_test_button");
@@ -1534,7 +1534,7 @@ if (testButton){
   });
 }
 
-load().catch((e) => {
+load().catch((error) => {
   logOptionsError("options load failed", e);
   showStatus(e?.message || i18n("options_status_load_failed"), true);
 });
@@ -1973,9 +1973,9 @@ function updateAttachmentThresholdState(){
       }else{
         showStatus(response?.error || i18n("options_loginflow_failed"), true);
       }
-    }catch(err){
-      logOptionsError("login flow failed", err);
-      showStatus(err?.message || i18n("options_loginflow_failed"), true);
+    }catch(error){
+      logOptionsError("login flow failed", error);
+      showStatus(error?.message || i18n("options_loginflow_failed"), true);
     }finally{
       loginFlowInProgress = false;
       updateAuthModeUI();
@@ -2016,9 +2016,9 @@ async function runConnectionTest({ showMissing = true } = {}){
       showStatus(message, true);
     }
     return response;
-  }catch(err){
-    logOptionsError("testConnection runtime failed", err);
-    showStatus(err?.message || i18n("options_test_failed"), true);
-    return { ok:false, error: err?.message || String(err) };
+  }catch(error){
+    logOptionsError("testConnection runtime failed", error);
+    showStatus(error?.message || i18n("options_test_failed"), true);
+    return { ok:false, error: error?.message || String(error) };
   }
 }

@@ -34,7 +34,7 @@ const resolveTalkAddressbookLogPrefix = () =>
   || "[NCBG]";
 
 /**
- * Resolve shared iCal/vCard parser contract API for Talk module.
+ * Resolve shared iCal/vCard parser API for the Talk module.
  * @returns {object|null}
  */
 function getTalkIcalContractApi(){
@@ -50,12 +50,6 @@ function getTalkIcalContractApi(){
   return NCIcalContract;
 }
 
-/**
- * Build a normalized parameter map from one parsed vCard property.
- * @param {object} prop
- * @param {object} contract
- * @returns {Record<string,string>}
- */
 function getVcardPropertyParams(prop, contract){
   const params = {};
   const raw = prop?.jCal?.[1] && typeof prop.jCal[1] === "object" ? prop.jCal[1] : {};
@@ -73,13 +67,6 @@ function getVcardPropertyParams(prop, contract){
   return params;
 }
 
-/**
- * Read first text-like property value from a vCard component.
- * @param {object} card
- * @param {string} propertyName
- * @param {object} contract
- * @returns {string}
- */
 function readVcardTextProperty(card, propertyName, contract){
   const prop = card?.getFirstProperty(propertyName);
   if (!prop){

@@ -20,8 +20,8 @@
   function logOcsError(scope, error){
     try{
       console.error(LOG_PREFIX, scope, error);
-    }catch(logError){
-      console.error(LOG_PREFIX, scope, error?.message || String(error), logError?.message || String(logError));
+    }catch(error){
+      console.error(LOG_PREFIX, scope, error?.message || String(error), error?.message || String(error));
     }
   }
 

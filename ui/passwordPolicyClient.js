@@ -93,8 +93,8 @@
     }
     try{
       console.error(prefix, message, error);
-    }catch(logError){
-      console.error(prefix, message, error?.message || String(error), logError?.message || String(logError));
+    }catch(error){
+      console.error(prefix, message, error?.message || String(error), error?.message || String(error));
     }
   }
 

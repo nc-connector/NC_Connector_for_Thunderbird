@@ -3,8 +3,8 @@
  * Licensed under the GNU Affero General Public License v3.0.
  * See LICENSE.txt for details.
  */
-"use strict";
 (function(global){
+  'use strict';
   /**
    * Toggle one tooltip list between normal and lock-hint entries.
    * @param {HTMLElement|null} tooltipList

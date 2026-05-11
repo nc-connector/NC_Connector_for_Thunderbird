@@ -173,16 +173,16 @@ function logNCCoreError(scope, error, details = undefined){
           const detail = userData?.ocs?.meta?.message || userRaw || (userRes.status + " " + userRes.statusText);
           return { ok:false, code:"http", message: detail };
         }
-      }catch(userErr){
-        console.error(resolveLogPrefix(), "user endpoint request failed", userErr);
-        logNCCoreError("user endpoint request failed", userErr, { base: normalizedBase });
-        return { ok:false, code:"network", message: userErr?.message || String(userErr) };
+      }catch(error){
+        console.error(resolveLogPrefix(), "user endpoint request failed", error);
+        logNCCoreError("user endpoint request failed", error, { base: normalizedBase });
+        return { ok:false, code:"network", message: error?.message || String(error) };
       }
       return { ok:true, version: versionStr, message };
-    }catch(e){
-      console.error(resolveLogPrefix(), "capabilities request failed", e);
-      logNCCoreError("capabilities request failed", e, { base: normalizedBase });
-      return { ok:false, code:"network", message: e?.message || String(e) };
+    }catch(error){
+      console.error(resolveLogPrefix(), "capabilities request failed", error);
+      logNCCoreError("capabilities request failed", error, { base: normalizedBase });
+      return { ok:false, code:"network", message: error?.message || String(error) };
     }
   }
 
@@ -290,19 +290,19 @@ function logNCCoreError(scope, error, details = undefined){
           loginName,
           appPassword
         };
-      }catch(err){
-        if (err?.ncLoginFlowFatal){
-          console.error(resolveLogPrefix(), "login flow poll fatal error", err);
-          logNCCoreError("login flow poll fatal error", err);
-          throw err;
+      }catch(error){
+        if (error?.ncLoginFlowFatal){
+          console.error(resolveLogPrefix(), "login flow poll fatal error", error);
+          logNCCoreError("login flow poll fatal error", error);
+          throw error;
         }
-        if (err && err.statusCode === 404){
+        if (error && error.statusCode === 404){
           await delay(intervalMs);
           continue;
         }
-        console.error(resolveLogPrefix(), "login flow poll failed", err);
-        logNCCoreError("login flow poll failed", err);
-        throw err;
+        console.error(resolveLogPrefix(), "login flow poll failed", error);
+        logNCCoreError("login flow poll failed", error);
+        throw error;
       }
     }
     throw createLoginFlowError();

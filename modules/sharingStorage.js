@@ -49,7 +49,7 @@ const NCSharingStorage = (() => {
   }
 
   /**
-   * Migrate legacy filelink storage keys to sharing keys and clean up old entries.
+   * Migrate legacy filelink keys to sharing keys and clean up leftovers
    * @returns {Promise<void>}
    */
   async function migrateLegacySharingKeys(){

@@ -3,8 +3,8 @@
  * Licensed under the GNU Affero General Public License v3.0.
  * See LICENSE.txt for details.
  */
-'use strict';
 (function(){
+  'use strict';
   const POPUP_CONTENT_WIDTH = 640;
   const POPUP_CONTENT_HEIGHT = 640;
   const MIN_CONTENT_HEIGHT = POPUP_CONTENT_HEIGHT;
@@ -29,15 +29,15 @@
   let disposeDebugFlagMirror = null;
 
   /**
-   * Log internal UI errors in a deterministic way.
+   * Log internal UI errors with stable context.
    * @param {string} scope
    * @param {any} error
    */
   function logUiError(scope, error){
     try{
       console.error(LOG_PREFIX, scope, error);
-    }catch(logError){
-      console.error(LOG_PREFIX, scope, error?.message || String(error), logError?.message || String(logError));
+    }catch(error){
+      console.error(LOG_PREFIX, scope, error?.message || String(error), error?.message || String(error));
     }
   }
 
@@ -73,7 +73,7 @@
   }
 
   /**
-   * Return true when one backend policy domain is usable for the current seat.
+   * Return true when one backend policy domain is usable for this seat
    * @param {object|null} status
    * @param {"share"|"talk"|"email_signature"} domain
    * @returns {boolean}
@@ -331,16 +331,16 @@
       }
       try{
         await loadDefaultSettings();
-      }catch(err){
-        logUiError('defaults', err);
+      }catch(error){
+        logUiError('defaults', error);
       }
       setDefaultShareName();
       await loadPasswordPolicy();
       await applyDefaultSecuritySettings();
       try{
         await loadBasePath();
-      }catch(err){
-        logUiError('init', err);
+      }catch(error){
+        logUiError('init', error);
       }
       await loadLaunchContext();
       if (state.mode === "attachments"){
@@ -655,8 +655,8 @@
       if (dom.basePathLabel){
         dom.basePathLabel.textContent = state.basePath || '';
       }
-    }catch(err){
-      logUiError('basePath', err);
+    }catch(error){
+      logUiError('basePath', error);
       state.basePath = NCSharing?.DEFAULT_BASE_PATH || '';
       if (dom.basePathLabel){
         dom.basePathLabel.textContent = state.basePath || '';
@@ -717,9 +717,9 @@
         state.attachmentReason = context.reason || null;
         preloadAttachmentEntries(context.attachments);
       }
-    }catch(err){
-      logUiError('launch context', err);
-      log('Launch context error', err?.message || String(err));
+    }catch(error){
+      logUiError('launch context', error);
+      log('Launch context error', error?.message || String(error));
     }
   }
 
@@ -844,10 +844,10 @@
         });
         return;
       }
-    }catch(err){
-      logUiError("attachment finish guard failed", err);
+    }catch(error){
+      logUiError("attachment finish guard failed", error);
       setMessage(i18n('sharing_status_error'), 'error');
-      log('Attachment finish check failed', err?.message || String(err));
+      log('Attachment finish check failed', error?.message || String(error));
       return;
     }
     log('Attachment finish started', {
@@ -1112,10 +1112,10 @@
       try{
         await resolveAttachmentShareName();
         return true;
-      }catch(err){
-        logUiError("resolve attachment share name failed", err);
-        setMessage(err?.message || i18n('sharing_error_folder_exists'), 'error');
-        log('Attachment shareName error', err?.message || String(err));
+      }catch(error){
+        logUiError("resolve attachment share name failed", error);
+        setMessage(error?.message || i18n('sharing_error_folder_exists'), 'error');
+        log('Attachment shareName error', error?.message || String(error));
         return false;
       }
     }
@@ -1143,10 +1143,10 @@
       setMessage('');
       log('Folder name available', shareName);
       return true;
-    }catch(err){
-      logUiError("ensure share name availability failed", err);
-      setMessage(err?.message || i18n('sharing_status_error'), 'error');
-      log('Folder check error', err?.message);
+    }catch(error){
+      logUiError("ensure share name availability failed", error);
+      setMessage(error?.message || i18n('sharing_status_error'), 'error');
+      log('Folder check error', error?.message);
       return false;
     }
   }
@@ -1459,12 +1459,12 @@
       setMessage(i18n('sharing_status_ready'), 'success');
       setUploadStatus(i18n('sharing_status_ready'));
       log('Upload completed');
-    }catch(err){
-      logUiError("upload failed", err);
+    }catch(error){
+      logUiError("upload failed", error);
       state.uploadCompleted = false;
-      setMessage(err?.message || i18n('sharing_status_error'), 'error');
-      setUploadStatus(err?.message || i18n('sharing_status_error'));
-      log('Upload failed', err?.message);
+      setMessage(error?.message || i18n('sharing_status_error'), 'error');
+      setUploadStatus(error?.message || i18n('sharing_status_error'));
+      log('Upload failed', error?.message);
     }finally{
       state.uploadInProgress = false;
       renderFileTable();
@@ -1576,10 +1576,10 @@
       await clearWizardRemoteCleanup();
       state.remoteFolderInfo = null;
       await closeWizardWindow();
-    }catch(err){
-      logUiError("finalize share failed", err);
-      setMessage(err?.message || i18n('sharing_status_error'), 'error');
-      log('Share insert failed', err?.message);
+    }catch(error){
+      logUiError("finalize share failed", error);
+      setMessage(error?.message || i18n('sharing_status_error'), 'error');
+      log('Share insert failed', error?.message);
     }
   }
 

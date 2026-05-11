@@ -3,8 +3,8 @@
  * Licensed under the GNU Affero General Public License v3.0.
  * See LICENSE.txt for details.
  */
-'use strict';
 (function(__context){
+  'use strict';
   const api = Object.freeze({
     RIGHTS_SEGMENT_START: "[[NCSHARE_RIGHTS_START]]",
     RIGHTS_SEGMENT_END: "[[NCSHARE_RIGHTS_END]]"

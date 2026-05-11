@@ -6,7 +6,7 @@
 'use strict';
 /**
  * Runtime message router.
- * Centralizes WebExtension message contracts used by options/talk/sharing UIs.
+ * Centralizes WebExtension message types used by options/talk/sharing UIs.
  */
 
 /**
@@ -32,7 +32,7 @@ function readMessageContextId(msg){
 
 /**
  * Central runtime.onMessage dispatcher.
- * Keep this as the single message contract entrypoint for UI/background calls.
+ * Keep this as the single message entrypoint for UI/background calls.
  */
 browser.runtime.onMessage.addListener((msg, sender) => {
   if (!msg || !msg.type) return;
@@ -70,24 +70,24 @@ browser.runtime.onMessage.addListener((msg, sender) => {
       try{
         const status = await NCPolicyRuntime.getPolicyStatus();
         return { ok:true, status };
-      }catch(e){
-        return messageError("policy:getStatus", e);
+      }catch(error){
+        return messageError("policy:getStatus", error);
       }
     }
   if (msg.type === "talk:searchUsers"){
     try{
       const users = await NCTalkCore.searchSystemAddressbook(msg.payload || {});
       return { ok:true, users };
-    }catch(e){
-      return messageError("talk:searchUsers", e);
+    }catch(error){
+      return messageError("talk:searchUsers", error);
     }
   }
   if (msg.type === "talk:getSystemAddressbookStatus"){
     try{
       const status = await NCTalkCore.getSystemAddressbookStatus(msg.payload || {});
       return { ok:true, status };
-    }catch(e){
-      return messageError("talk:getSystemAddressbookStatus", e);
+    }catch(error){
+      return messageError("talk:getSystemAddressbookStatus", error);
     }
   }
   if (msg.type === "talk:initDialog"){
@@ -176,17 +176,17 @@ browser.runtime.onMessage.addListener((msg, sender) => {
       context.item.item = applyResponse.item;
       refreshCalendarWizardContextSnapshot(context);
       return { ok:true };
-    }catch(e){
-      console.error("[NCBG] talk:applyEventFields error", { contextId, error: e?.message || String(e) });
-      return { ok:false, error: e?.message || String(e) };
+    }catch(error){
+      console.error("[NCBG] talk:applyEventFields error", { contextId, error: error?.message || String(error) });
+      return { ok:false, error: error?.message || String(error) };
     }
   }
   if (msg.type === "talk:createRoom"){
     try{
       const result = await NCTalkCore.createTalkPublicRoom(msg.payload);
       return { ok:true, result };
-    }catch(e){
-      return messageError("talk:createRoom", e);
+    }catch(error){
+      return messageError("talk:createRoom", error);
     }
   }
   if (msg.type === "talk:trackRoom"){
@@ -209,8 +209,8 @@ browser.runtime.onMessage.addListener((msg, sender) => {
       }
       await setRoomMeta(token, updates);
       return { ok:true };
-    }catch(e){
-      return messageError("talk:trackRoom", e);
+    }catch(error){
+      return messageError("talk:trackRoom", error);
     }
   }
   if (msg.type === "talk:applyMetadata"){
@@ -312,8 +312,8 @@ browser.runtime.onMessage.addListener((msg, sender) => {
         });
       }
       return { ok:true };
-    }catch(e){
-      console.error("[NCBG] talk:applyMetadata error", { contextId, error: e?.message || String(e) });
+    }catch(error){
+      console.error("[NCBG] talk:applyMetadata error", { contextId, error: error?.message || String(error) });
       if (meta?.token){
         try{
           await NCTalkCore.deleteTalkRoom({ token: meta.token });
@@ -322,7 +322,7 @@ browser.runtime.onMessage.addListener((msg, sender) => {
           console.error("[NCBG] talk:applyMetadata rollback failed", error);
         }
       }
-      return { ok:false, error: e?.message || String(e) };
+      return { ok:false, error: error?.message || String(error) };
     }
   }
   if (msg.type === "talk:registerCleanup"){
@@ -377,8 +377,8 @@ browser.runtime.onMessage.addListener((msg, sender) => {
 
       deleteCalendarWizardContext(contextId);
       return { ok:true };
-    }catch(e){
-      return messageError("talk:registerCleanup", e);
+    }catch(error){
+      return messageError("talk:registerCleanup", error);
     }
   }
   if (msg.type === "options:testConnection"){
@@ -388,8 +388,8 @@ browser.runtime.onMessage.addListener((msg, sender) => {
         return { ok:true, message: result.message || "", version: result.version || "" };
       }
       return { ok:false, error: result.message || bgI18n("error_credentials_missing"), code: result.code || "" };
-    }catch(e){
-      return messageError("options:testConnection", e);
+    }catch(error){
+      return messageError("options:testConnection", error);
     }
   }
   if (msg.type === "options:loginFlowStart"){
@@ -409,9 +409,9 @@ browser.runtime.onMessage.addListener((msg, sender) => {
         pollEndpoint: start.pollEndpoint,
         pollToken: start.pollToken
       };
-    }catch(e){
-      console.error("[NCBG] options:loginFlowStart", e);
-      return { ok:false, error: e?.message || bgI18n("options_loginflow_failed") };
+    }catch(error){
+      console.error("[NCBG] options:loginFlowStart", error);
+      return { ok:false, error: error?.message || bgI18n("options_loginflow_failed") };
     }
   }
   if (msg.type === "options:loginFlowComplete"){
@@ -423,9 +423,9 @@ browser.runtime.onMessage.addListener((msg, sender) => {
       }
       const creds = await NCCore.completeLoginFlow({ pollEndpoint, pollToken });
       return { ok:true, user: creds.loginName, appPass: creds.appPassword };
-    }catch(e){
-      console.error("[NCBG] options:loginFlowComplete", e);
-      return { ok:false, error: e?.message || bgI18n("options_loginflow_failed") };
+    }catch(error){
+      console.error("[NCBG] options:loginFlowComplete", error);
+      return { ok:false, error: error?.message || bgI18n("options_loginflow_failed") };
     }
   }
   if (msg.type === "sharing:getLaunchContext"){
@@ -446,9 +446,9 @@ browser.runtime.onMessage.addListener((msg, sender) => {
         attachmentCount: Array.isArray(context?.attachments) ? context.attachments.length : 0
       });
       return { ok:true, context };
-    }catch(e){
-      console.error("[NCBG] sharing:getLaunchContext", e);
-      return { ok:false, error: e?.message || String(e) };
+    }catch(error){
+      console.error("[NCBG] sharing:getLaunchContext", error);
+      return { ok:false, error: error?.message || String(error) };
     }
   }
   if (msg.type === "sharing:resolveAttachmentPrompt"){
@@ -467,9 +467,9 @@ browser.runtime.onMessage.addListener((msg, sender) => {
       });
       const resolved = resolveAttachmentPrompt(promptId, normalizedDecision, "runtime_message");
       return { ok:resolved };
-    }catch(e){
-      console.error("[NCBG] sharing:resolveAttachmentPrompt", e);
-      return { ok:false, error: e?.message || String(e) };
+    }catch(error){
+      console.error("[NCBG] sharing:resolveAttachmentPrompt", error);
+      return { ok:false, error: error?.message || String(error) };
     }
   }
   if (msg.type === "sharing:checkAttachmentAutomationAllowed"){
@@ -490,9 +490,9 @@ browser.runtime.onMessage.addListener((msg, sender) => {
         };
       }
       return { ok:true, thresholdMb: guard.thresholdMb };
-    }catch(e){
-      console.error("[NCBG] sharing:checkAttachmentAutomationAllowed", e);
-      return { ok:false, error: e?.message || String(e) };
+    }catch(error){
+      console.error("[NCBG] sharing:checkAttachmentAutomationAllowed", error);
+      return { ok:false, error: error?.message || String(error) };
     }
   }
   if (msg.type === "sharing:registerSeparatePasswordDispatch"){
@@ -503,9 +503,9 @@ browser.runtime.onMessage.addListener((msg, sender) => {
       }
       await registerSeparatePasswordMailDispatch(tabId, msg.payload || {});
       return { ok:true };
-    }catch(e){
-      console.error("[NCBG] sharing:registerSeparatePasswordDispatch", e);
-      return { ok:false, error: e?.message || String(e) };
+    }catch(error){
+      console.error("[NCBG] sharing:registerSeparatePasswordDispatch", error);
+      return { ok:false, error: error?.message || String(error) };
     }
   }
   if (msg.type === "sharing:armComposeShareCleanup"){
@@ -516,9 +516,9 @@ browser.runtime.onMessage.addListener((msg, sender) => {
       }
       await armComposeShareCleanup(tabId, msg.payload || {});
       return { ok:true };
-    }catch(e){
-      console.error("[NCBG] sharing:armComposeShareCleanup", e);
-      return { ok:false, error: e?.message || String(e) };
+    }catch(error){
+      console.error("[NCBG] sharing:armComposeShareCleanup", error);
+      return { ok:false, error: error?.message || String(error) };
     }
   }
   if (msg.type === "sharing:armWizardRemoteCleanup"){
@@ -529,9 +529,9 @@ browser.runtime.onMessage.addListener((msg, sender) => {
       }
       await armSharingWizardRemoteCleanup(windowId, msg.payload || {});
       return { ok:true };
-    }catch(e){
-      console.error("[NCBG] sharing:armWizardRemoteCleanup", e);
-      return { ok:false, error: e?.message || String(e) };
+    }catch(error){
+      console.error("[NCBG] sharing:armWizardRemoteCleanup", error);
+      return { ok:false, error: error?.message || String(error) };
     }
   }
   if (msg.type === "sharing:clearWizardRemoteCleanup"){
@@ -542,16 +542,16 @@ browser.runtime.onMessage.addListener((msg, sender) => {
       }
       clearSharingWizardRemoteCleanup(windowId, "wizard_finalize");
       return { ok:true };
-    }catch(e){
-      console.error("[NCBG] sharing:clearWizardRemoteCleanup", e);
-      return { ok:false, error: e?.message || String(e) };
+    }catch(error){
+      console.error("[NCBG] sharing:clearWizardRemoteCleanup", error);
+      return { ok:false, error: error?.message || String(error) };
     }
   }
   if (msg.type === "sharing:insertRenderedBlock"){
     try{
       return await handleSharingInsertHtmlMessage(msg.payload || {});
-    }catch(e){
-      return messageError("sharing:insertRenderedBlock", e);
+    }catch(error){
+      return messageError("sharing:insertRenderedBlock", error);
     }
   }
   console.error("[NCBG] unknown runtime message type", {

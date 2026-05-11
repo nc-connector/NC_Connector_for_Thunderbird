@@ -187,7 +187,7 @@ function deleteCalendarWizardContext(contextId){
 }
 
 /**
- * Resolve the shared iCal contract API used by lifecycle snapshots.
+ * Resolve the shared iCal parser API used by lifecycle snapshots.
  * @returns {object|null}
  */
 function getLifecycleIcalContract(){

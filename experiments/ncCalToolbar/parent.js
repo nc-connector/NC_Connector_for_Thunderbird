@@ -37,7 +37,7 @@ function createEditorId() {
 }
 
 /**
- * Maintains deterministic mapping between UI targets (dialog/tab) and opaque editor IDs.
+ * Maps dialog/tab editor surfaces to opaque editor IDs.
  */
 class EditorContextBridge {
   /**
@@ -512,9 +512,9 @@ this.ncCalToolbar = class extends ExtensionAPI {
    *   selected `currentTabInfo`. After tab switches or with multiple open editor
    *   tabs, this could target the wrong editor context.
    * - In 3.0.0 this was tightened to opaque `editorId` mapping to achieve a
-   *   deterministic API contract aligned with upstream PR #65.
+   *   stable API path aligned with upstream PR #65.
    * - Remove this correlation once upstream calendar APIs provide the same
-   *   deterministic editor-targeting contract.
+   *   stable editor-targeting API.
    *
    * @param {Window} window
    * @returns {object|null}
@@ -545,7 +545,7 @@ this.ncCalToolbar = class extends ExtensionAPI {
    *
    * Note:
    * - This uses explicit tab/iframe resolution instead of generic active-tab
-   *   heuristics to keep click/context targeting deterministic.
+   *   resolution to keep click/context targeting stable.
    * - The logic is intentionally scoped to calendar editor surfaces only.
    *
    * @param {Window} window
@@ -689,7 +689,7 @@ this.ncCalToolbar = class extends ExtensionAPI {
   }
 
   /**
-   * Build click context with deterministic editorId.
+   * Build click context with stable editorId.
    * @param {Window} window
    * @returns {{editorType:"dialog"|"tab",editorId:string}|null}
    */
@@ -961,7 +961,7 @@ this.ncCalToolbar = class extends ExtensionAPI {
   }
 
   /**
-   * Hook messenger panel-load method to re-ensure toolbar button.
+   * Hook messenger panel-load method to re-add the toolbar button.
    * @param {Window} window
    */
   _ensureMessengerHook(window) {
@@ -1106,8 +1106,8 @@ this.ncCalToolbar = class extends ExtensionAPI {
     for (const listener of this._clickedListeners || []) {
       try {
         listener(snapshot);
-      } catch (e) {
-        console.error("[ncCalToolbar] onClicked listener failed", e);
+      } catch (error) {
+        console.error("[ncCalToolbar] onClicked listener failed", error);
       }
     }
   }
@@ -1139,8 +1139,8 @@ this.ncCalToolbar = class extends ExtensionAPI {
     for (const listener of this._editorClosedListeners || []) {
       try {
         listener(info);
-      } catch (e) {
-        console.error("[ncCalToolbar] onTrackedEditorClosed listener failed", e);
+      } catch (error) {
+        console.error("[ncCalToolbar] onTrackedEditorClosed listener failed", error);
       }
     }
   }
@@ -1747,8 +1747,8 @@ this.ncCalToolbar = class extends ExtensionAPI {
                 appliedFields[key] = true;
               }
             }
-          } catch (fieldError) {
-            this._logError("updateCurrent field write failed", fieldError, {
+          } catch (error) {
+            this._logError("updateCurrent field write failed", error, {
               editorId,
             });
             for (const key of ["description", "location", "title"]) {
@@ -1762,28 +1762,28 @@ this.ncCalToolbar = class extends ExtensionAPI {
                 if (key == "description" && beforeDescriptionState) {
                   this._applyDescriptionState(item, beforeDescriptionState);
                 }
-              } catch (rollbackError) {
-                this._logError("updateCurrent field rollback failed", rollbackError, {
+              } catch (error) {
+                this._logError("updateCurrent field rollback failed", error, {
                   editorId,
                   field: key,
                 });
               }
             }
-            throw fieldError;
+            throw error;
           }
 
           const beforeProps = this._snapshotProperties(item, properties);
           let appliedProps = [];
           try {
             appliedProps = this._applyProperties(item, properties);
-          } catch (propertyError) {
-            this._logError("updateCurrent property write failed", propertyError, {
+          } catch (error) {
+            this._logError("updateCurrent property write failed", error, {
               editorId,
             });
             try {
               this._rollbackProperties(item, beforeProps, appliedProps);
-            } catch (rollbackError) {
-              this._logError("updateCurrent property rollback failed", rollbackError, {
+            } catch (error) {
+              this._logError("updateCurrent property rollback failed", error, {
                 editorId,
               });
             }
@@ -1798,12 +1798,12 @@ this.ncCalToolbar = class extends ExtensionAPI {
                   }
                 }
               }
-            } catch (rollbackFieldError) {
-              this._logError("updateCurrent field rollback failed", rollbackFieldError, {
+            } catch (error) {
+              this._logError("updateCurrent field rollback failed", error, {
                 editorId,
               });
             }
-            throw propertyError;
+            throw error;
           }
 
           return this._snapshotItem(item, editorId, "", window);

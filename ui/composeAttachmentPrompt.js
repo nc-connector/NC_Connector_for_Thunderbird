@@ -3,8 +3,8 @@
  * Licensed under the GNU Affero General Public License v3.0.
  * See LICENSE.txt for details.
  */
-'use strict';
 (function(){
+  'use strict';
   const LOG_SOURCE = "composeAttachmentPrompt";
   const LOG_CHANNEL = "NCUI";
   const LOG_LABEL = "Sharing";
@@ -172,15 +172,15 @@
   }
 
   /**
-   * Log internal UI errors in a deterministic way.
+   * Log internal UI errors with stable context.
    * @param {string} scope
    * @param {any} error
    */
   function logUiError(scope, error){
     try{
       console.error(LOG_PREFIX, scope, error);
-    }catch(logError){
-      console.error(LOG_PREFIX, scope, error?.message || String(error), logError?.message || String(logError));
+    }catch(error){
+      console.error(LOG_PREFIX, scope, error?.message || String(error), error?.message || String(error));
     }
   }
 

@@ -5,17 +5,6 @@
  */
 'use strict';
 /**
- * Bootstrap entrypoint.
- * Runtime listeners and feature handlers are registered in:
- * - modules/shareTemplateContract.js
- * - modules/bgState.js
- * - modules/talkAddressbook.js
- * - modules/bgCalendarLifecycle.js
- * - modules/bgComposeAttachments.js
- * - modules/bgComposeShareCleanup.js
- * - modules/bgComposePasswordDispatch.js
- * - modules/bgCompose.js (listener wiring)
- * - modules/bgCalendar.js
- * - modules/bgComposeShareInsert.js
- * - modules/bgRouter.js
+ * Bootstrap entrypoint for the background runtime
+ * Imports feature modules so each module can register its own listeners
  */

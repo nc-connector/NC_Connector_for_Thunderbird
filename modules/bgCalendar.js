@@ -102,8 +102,8 @@ browser.ncCalToolbar?.onClicked?.addListener((snapshot) => {
         windowId: Number(popupWindow?.id) || 0,
         focusApplied
       });
-    }catch(e){
-      console.error("[NCBG] ncCalToolbar.onClicked error", e);
+    }catch(error){
+      console.error("[NCBG] ncCalToolbar.onClicked error", error);
     }
   })();
 });
@@ -114,13 +114,13 @@ browser.ncCalToolbar?.onClicked?.addListener((snapshot) => {
 browser.ncCalToolbar?.onTrackedEditorClosed?.addListener((event) => {
   try{
     handleCalendarItemsEditorClosed(event || {});
-  }catch(e){
-    console.error("[NCBG] ncCalToolbar.onTrackedEditorClosed handler failed", e);
+  }catch(error){
+    console.error("[NCBG] ncCalToolbar.onTrackedEditorClosed handler failed", error);
   }
 });
 
 // Calendar event editor integration uses the custom `ncCalToolbar` experiment
-// for deterministic editor context, snapshot and editor-targeted write-back.
+// for stable editor context, snapshot, and editor-targeted write-back.
 
 /**
  * Merge and persist room metadata for a Talk token.
@@ -134,8 +134,8 @@ async function setRoomMeta(token, data = {}){
   ROOM_META[token] = next;
   try{
     await browser.storage.local.set({ [ROOM_META_KEY]: ROOM_META });
-  }catch(e){
-    console.error("[NCBG] setRoomMeta", e);
+  }catch(error){
+    console.error("[NCBG] setRoomMeta", error);
   }
 }
 
@@ -149,8 +149,8 @@ async function deleteRoomMeta(token){
   delete ROOM_META[token];
   try{
     await browser.storage.local.set({ [ROOM_META_KEY]: ROOM_META });
-  }catch(e){
-    console.error("[NCBG] deleteRoomMeta", e);
+  }catch(error){
+    console.error("[NCBG] deleteRoomMeta", error);
   }
 }
 
@@ -223,8 +223,8 @@ async function setEventTokenEntry(calendarId, itemId, entry){
   EVENT_TOKEN_MAP = next;
   try{
     await browser.storage.local.set({ [EVENT_TOKEN_MAP_KEY]: next });
-  }catch(e){
-    console.error("[NCBG] event token map save failed", e);
+  }catch(error){
+    console.error("[NCBG] event token map save failed", error);
   }
 }
 
@@ -244,8 +244,8 @@ async function removeEventTokenEntry(calendarId, itemId){
   EVENT_TOKEN_MAP = next;
   try{
     await browser.storage.local.set({ [EVENT_TOKEN_MAP_KEY]: next });
-  }catch(e){
-    console.error("[NCBG] event token map remove failed", e);
+  }catch(error){
+    console.error("[NCBG] event token map remove failed", error);
   }
 }
 
@@ -356,7 +356,7 @@ async function applyCalendarDelegation(payload = {}){
 }
 
 /**
- * Resolve shared iCal parser contract API.
+ * Resolve shared iCal parser API.
  * @returns {object|null}
  */
 function getIcalContractApi(){
@@ -481,8 +481,8 @@ async function addInviteesToTalkRoom({ token, ical, addUsers = true, addGuests =
     if (typeof NCTalkCore?.getSystemAddressbookContacts === "function"){
       contacts = await NCTalkCore.getSystemAddressbookContacts(false);
     }
-  }catch(err){
-    console.error("[NCBG] system addressbook lookup failed", err);
+  }catch(error){
+    console.error("[NCBG] system addressbook lookup failed", error);
     contacts = [];
   }
   const emailToUserId = new Map();
@@ -520,12 +520,12 @@ async function addInviteesToTalkRoom({ token, ical, addUsers = true, addGuests =
     try{
       await NCTalkCore.addTalkParticipant({ token, actorId, source });
       added += 1;
-    }catch(err){
+    }catch(error){
       failed += 1;
       console.error("[NCBG] add participant failed", {
         actor: actorId,
         source,
-        error: err?.message || String(err)
+        error: error?.message || String(error)
       });
     }
   }
@@ -591,9 +591,9 @@ function parseIcalEventData(ical){
 }
 
 /**
- * Parse VEVENT DTSTART into unix epoch seconds through the shared contract.
- * Uses explicit contract timezone resolution only (IANA + mapped Windows TZIDs).
- * If DTSTART cannot be resolved deterministically, this returns null (fail-closed).
+ * Parse VEVENT DTSTART into unix epoch seconds through the shared parser.
+ * Uses explicit timezone resolution only (IANA + mapped Windows TZIDs).
+ * If DTSTART cannot be resolved, return null (fail-closed).
  * @param {string} ical
  * @returns {number|null}
  */
@@ -606,7 +606,7 @@ function parseEventStartUnixSeconds(ical){
 }
 
 /**
- * Extract Talk token/url strictly from contract properties.
+ * Extract Talk token/url only from X-NCTALK-* properties.
  * LOCATION/URL are deliberately ignored: generic calendar links must never
  * grant NC Connector ownership over an existing Talk room.
  * @param {object} props
@@ -699,8 +699,8 @@ async function updateCalendarItemProps(item, updates){
       returnFormat: "ical"
     });
     return true;
-  }catch(e){
-    console.error("[NCBG] calendar item update failed", e);
+  }catch(error){
+    console.error("[NCBG] calendar item update failed", error);
     return false;
   }
 }
@@ -762,7 +762,7 @@ async function handleCalendarItemUpsert(item){
           to: startFromEvent
         });
         // Stop this cycle. The follow-up onUpdated from the X-NCTALK-START write
-        // is the single authoritative path for lobby update and room-meta update.
+        // is the single path for lobby update and room-meta update.
         return;
       }
       meta.startTimestamp = startFromEvent;
@@ -770,7 +770,7 @@ async function handleCalendarItemUpsert(item){
       console.error("[NCBG] calendar contract start parse failed", {
         token: shortToken(meta.token)
       });
-      // Keep the authoritative X-NCTALK-START value from metadata when DTSTART
+      // Keep the stored X-NCTALK-START value from metadata when DTSTART
       // cannot be parsed (for example unsupported external TZIDs from other clients).
       if (!(typeof meta.startTimestamp === "number" && Number.isFinite(meta.startTimestamp))){
         meta.startTimestamp = null;
@@ -851,8 +851,8 @@ async function handleCalendarItemUpsert(item){
             }
           }
         }
-      }catch(e){
-        console.error("[NCBG] add invitees failed", e);
+      }catch(error){
+        console.error("[NCBG] add invitees failed", error);
       }
     }
 
@@ -874,8 +874,8 @@ async function handleCalendarItemUpsert(item){
                 "X-NCTALK-DELEGATE-READY": null
               });
             }
-          }catch(e){
-            console.error("[NCBG] calendar delegation failed", e);
+          }catch(error){
+            console.error("[NCBG] calendar delegation failed", error);
           }finally{
             DELEGATION_IN_FLIGHT.delete(meta.token);
           }
@@ -887,8 +887,8 @@ async function handleCalendarItemUpsert(item){
         });
       }
     }
-  }catch(e){
-    console.error("[NCBG] calendar item upsert failed", e);
+  }catch(error){
+    console.error("[NCBG] calendar item upsert failed", error);
   }
 }
 
@@ -976,19 +976,19 @@ async function handleCalendarItemRemoved(calendarId, id){
 
     try{
       await NCTalkCore.deleteTalkRoom({ token });
-    }catch(e){
-      const msg = e?.message || String(e);
+    }catch(error){
+      const msg = error?.message || String(error);
       if (/\b403\b/.test(msg)){
         L("calendar item removed: room delete forbidden", { token: shortToken(token) });
       }else{
-        console.error("[NCBG] calendar item removed: room delete failed", e);
+        console.error("[NCBG] calendar item removed: room delete failed", error);
       }
     }finally{
       await deleteRoomMeta(token);
       await removeEventTokenEntry(calendarId, id);
     }
-  }catch(e){
-    console.error("[NCBG] calendar item removed handler failed", e);
+  }catch(error){
+    console.error("[NCBG] calendar item removed handler failed", error);
   }
 }
 
@@ -1012,7 +1012,7 @@ function startCalendarMonitor(){
 (async () => {
   try{
     startCalendarMonitor();
-  }catch(e){
-    console.error("[NCBG] calendar monitor init error", e);
+  }catch(error){
+    console.error("[NCBG] calendar monitor init error", error);
   }
 })();

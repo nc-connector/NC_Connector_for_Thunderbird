@@ -3,8 +3,8 @@
  * Licensed under the GNU Affero General Public License v3.0.
  * See LICENSE.txt for details.
  */
-'use strict';
 (function(global){
+  'use strict';
   const LOG_PREFIX =
     global.NCLogContext?.resolveAddonLogPrefix?.("I18N")
     || "[NCBG]";
@@ -22,8 +22,8 @@
           return msg;
         }
       }
-    }catch(err){
-      console.error(LOG_PREFIX, "browser.i18n.getMessage failed", err);
+    }catch(error){
+      console.error(LOG_PREFIX, "browser.i18n.getMessage failed", error);
     }
     if (Array.isArray(substitutions) && substitutions.length){
       return String(substitutions[0] ?? '');

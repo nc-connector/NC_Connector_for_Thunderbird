@@ -99,7 +99,7 @@ function normalize(value){
 }
 
 /**
- * Check whether one key is allowed to be identical to en for this locale.
+ * Check whether one key may match en for this locale
  * @param {string} locale
  * @param {string} key
  * @returns {boolean}

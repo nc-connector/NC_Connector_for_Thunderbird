@@ -446,7 +446,7 @@ async function registerSeparatePasswordMailDispatch(tabId, payload = {}){
 /**
  * Capture the final sender/recipient envelope from compose.onBeforeSend.
  * The password follow-up itself targets only `To`, but `Cc`/`Bcc` are still
- * recorded here as the authoritative primary-mail recipient state.
+ * recorded here as the final primary-mail recipient state.
  * @param {number} tabId
  * @param {object} details
  * @returns {Promise<void>}
@@ -528,7 +528,7 @@ async function captureSeparatePasswordDispatchRecipients(tabId, details = {}){
 /**
  * Track live sender identity changes before the final onBeforeSend capture.
  * This keeps queued password-follow-up drafts closer to the current compose
- * sender state, while onBeforeSend remains the authoritative final source.
+ * sender state, while onBeforeSend stays the final source.
  * @param {number} tabId
  * @param {string} identityId
  * @returns {Promise<void>}
@@ -800,7 +800,7 @@ async function openManualPasswordComposeFallback(sourceTabId, dispatch, failedCo
 }
 
 /**
- * Send a compose tab immediately with timeout, so hung sends can fail fast.
+ * Send a compose tab with timeout to fail fast on hangs
  * @param {number} composeTabId
  * @param {number} timeoutMs
  * @returns {Promise<void>}
@@ -931,7 +931,7 @@ async function armManualPasswordFallbackCleanup(sourceTabId, manualComposeTabId,
 }
 
 /**
- * Keep the share when password-only dispatch fails after the primary mail was sent.
+ * Keep the share when password-only dispatch fails after the primary mail
  * The sent message already contains the link, so post-send password-dispatch
  * problems must never delete the share.
  * @param {number} sourceTabId
@@ -1004,12 +1004,12 @@ async function sendSeparatePasswordMail(tabId, queue){
         await armManualPasswordFallbackCleanup(tabId, manualComposeTabId, dispatch);
         manualFallbackOpenedCount++;
         manualFallbackNeedsSenderCount++;
-      }catch(fallbackError){
+      }catch(error){
         manualFallbackFailedCount++;
         console.error("[NCBG] sharing separate password mail manual fallback failed", {
           sourceTabId: tabId,
           failedComposeTabId: 0,
-          error: fallbackError?.message || String(fallbackError)
+          error: error?.message || String(error)
         });
         await deleteShareAfterPasswordDispatchFailure(tabId, dispatch, "identity_unresolved_manual_fallback_open_failed");
       }
@@ -1032,12 +1032,12 @@ async function sendSeparatePasswordMail(tabId, queue){
         sourceTabId: tabId,
         composeTabId
       });
-    }catch(sendError){
+    }catch(error){
       autoSendFailedCount++;
       console.error("[NCBG] sharing separate password mail auto-send failed", {
         sourceTabId: tabId,
         composeTabId,
-        error: sendError?.message || String(sendError)
+        error: error?.message || String(error)
       });
       if (Number.isInteger(composeTabId) && composeTabId > 0){
         try{
@@ -1046,11 +1046,11 @@ async function sendSeparatePasswordMail(tabId, queue){
             sourceTabId: tabId,
             composeTabId
           });
-        }catch(removeError){
+        }catch(error){
           console.error("[NCBG] sharing separate password mail failed auto tab remove failed", {
             sourceTabId: tabId,
             composeTabId,
-            error: removeError?.message || String(removeError)
+            error: error?.message || String(error)
           });
         }
       }
@@ -1061,12 +1061,12 @@ async function sendSeparatePasswordMail(tabId, queue){
         if (!String(dispatch?.identityId || "").trim()){
           manualFallbackNeedsSenderCount++;
         }
-      }catch(fallbackError){
+      }catch(error){
         manualFallbackFailedCount++;
         console.error("[NCBG] sharing separate password mail manual fallback failed", {
           sourceTabId: tabId,
           failedComposeTabId: composeTabId,
-          error: fallbackError?.message || String(fallbackError)
+          error: error?.message || String(error)
         });
         await deleteShareAfterPasswordDispatchFailure(tabId, dispatch, "manual_fallback_open_failed");
       }
@@ -1190,8 +1190,8 @@ async function fetchPasswordPolicy(){
       apiGenerateUrl: normalized.apiGenerateUrl || ""
     });
     return normalized;
-  }catch(err){
-    console.error("[NCBG] password policy fetch error", err);
+  }catch(error){
+    console.error("[NCBG] password policy fetch error", error);
     return { ...FALLBACK_PASSWORD_POLICY };
   }
 }
@@ -1238,9 +1238,8 @@ async function generatePasswordViaPolicy(policy){
     const generated = String(password);
     L("password generate success", { length: generated.length });
     return { ok: true, password: generated };
-  }catch(err){
-    console.error("[NCBG] password generate error", err);
-    return { ok: false, error: err?.message || String(err) };
+  }catch(error){
+    console.error("[NCBG] password generate error", error);
+    return { ok: false, error: error?.message || String(error) };
   }
 }
-

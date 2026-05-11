@@ -14,7 +14,7 @@ const PREF_BIG_ATTACH_THRESHOLD_KB = "mail.compose.big_attachments.threshold_kb"
 const DEFAULT_THRESHOLD_KB = 5120;
 
 /**
- * Read compose-related Thunderbird preferences in a deterministic, read-only way.
+ * Read compose-related Thunderbird preferences without side effects
  */
 class NcComposePrefsContext {
   /**

@@ -3,9 +3,8 @@
  * Licensed under the GNU Affero General Public License v3.0.
  * See LICENSE.txt for details.
  */
-'use strict';
-
 (() => {
+  'use strict';
   const MESSAGE_TYPE = "nc-signature:apply";
   const PING_TYPE = "nc-signature:ping";
   const SIGNATURE_SELECTOR = '[data-nc-connector-signature="true"]';

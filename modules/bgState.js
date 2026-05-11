@@ -76,8 +76,8 @@ const normalizeAttachmentThresholdMb = NCSharingStorage.normalizeAttachmentThres
           hasApiNcCalToolbarUpdateCurrent: !!browser?.ncCalToolbar?.updateCurrent,
           hasApiNcCalToolbarOnTrackedEditorClosed: !!browser?.ncCalToolbar?.onTrackedEditorClosed
         });
-      }catch(e){
-        console.error("[NCBG] startup manifest probe failed", e);
+      }catch(error){
+        console.error("[NCBG] startup manifest probe failed", error);
       }
     }
   }catch(error){
@@ -101,7 +101,7 @@ browser.storage.onChanged.addListener((changes, area) => {
   }
 });
 /**
- * Log helper gated by the debug flag.
+ * Log helper that only runs when debug is enabled.
  * @param {...any} a
  */
 function L(...a){

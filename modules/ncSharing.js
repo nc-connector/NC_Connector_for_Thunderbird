@@ -3,8 +3,8 @@
  * Licensed under the GNU Affero General Public License v3.0.
  * See LICENSE.txt for details.
  */
-'use strict';
 (function(__context){
+  'use strict';
   const DEFAULT_BASE_PATH = "NC Connector";
   const NEXTCLOUD_DEVICE_NAME = "NC Connector for Thunderbird";
   const PERMISSION_FLAGS = {
@@ -85,12 +85,12 @@
   function logInternalError(scope, error){
     try{
       console.error(getSharingRuntimePrefix(), scope, error);
-    }catch(logError){
+    }catch(error){
       console.error(
         getSharingRuntimePrefix(),
         scope,
         error?.message || String(error),
-        logError?.message || String(logError)
+        error?.message || String(error)
       );
     }
   }
@@ -247,7 +247,7 @@
   }
 
   /**
-   * Build the folder info for a share (base folder + date + share name).
+   * Build folder info for one share (base folder, date, share name)
    * @param {string} basePath
    * @param {string} shareName
    * @param {Date} referenceDate
@@ -846,8 +846,8 @@
         throw new Error(`Asset fetch failed (${response.status})`);
       }
       return bufferToBase64(await response.arrayBuffer());
-    }catch(err){
-      console.error(getSharingRuntimePrefix(), "asset base64 failed", assetPath, err?.message || err);
+    }catch(error){
+      console.error(getSharingRuntimePrefix(), "asset base64 failed", assetPath, error?.message || error);
       return "";
     }
   }
@@ -1596,7 +1596,7 @@
   }
 
   /**
-   * Update note/label metadata for an existing share (for example after wizard step 4).
+   * Update note and label metadata for one existing share
    * @param {{shareInfo:Object,noteEnabled:boolean,note:string}} options
    */
   async function updateShareDetails({ shareInfo, noteEnabled, note } = {}){
