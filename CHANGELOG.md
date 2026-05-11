@@ -4,6 +4,18 @@ All notable changes to **NC Connector for Thunderbird** will be documented in th
 
 This project targets **Thunderbird ESR 140.\***.
 
+## 3.1.2
+
+Release package version is **3.1.2**.  
+Functional delta documented here corresponds to **3.1.1 -> 3.1.2**.
+
+### Added
+- Improve large file uploads with Nextcloud chunked WebDAV v2.
+- Show upload speed below progress bar and fix status text clipping.
+
+### Changed
+- Refactor: standardize error naming in runtime modules.
+
 ## 3.1.1
 
 Release package version is **3.1.1**.  
