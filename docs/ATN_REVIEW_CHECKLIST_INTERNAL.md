@@ -11,7 +11,7 @@ It is intended to guide ongoing and future maintenance.
 
 - Experiments have **full access to Thunderbird internals** and must therefore be:
   - minimal
-  - deterministic
+  - predictable
   - easy to audit
   - free of trial-and-error code
 

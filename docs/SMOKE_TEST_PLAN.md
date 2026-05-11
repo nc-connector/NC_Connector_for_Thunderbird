@@ -1,7 +1,6 @@
 # Smoke Test Plan (NC Connector for Thunderbird)
 
 Version scope:
-- `2.2.9`
 - `3.1.1`
 
 ## 1. Scope
@@ -16,14 +15,12 @@ This plan covers end-to-end smoke checks for:
 - Runtime logging quality
 
 Known version delta:
-- `2.2.9`: separate password mail is feature-gated (disabled).
 - `3.1.1`: separate password mail is available only when the backend endpoint exists, the current user has an active assigned seat, and password protection is enabled. Saved-event Talk room deletion is opt-in only and requires NC Connector `X-NCTALK-*` metadata. Central email signatures are available only with backend endpoint, active seat, a rendered signature template, and a Thunderbird sender identity matching the Nextcloud user email address.
 
 ## 2. Test Matrix
 
 | Matrix ID | Version | Separate Password Mail |
 |---|---|---|
-| M1 | 2.2.9 | Disabled (gated) |
 | M2 | 3.1.1 | Available only with backend + active seat + password protection |
 
 Run all cases at least once on M1 and M2, except cases marked `3.1.1 only`.
@@ -125,7 +122,7 @@ Run all cases at least once on M1 and M2, except cases marked `3.1.1 only`.
 
 ### F. Attachment Automation
 
-- [ ] `AT-01` Mode `always`: attachment flow opens deterministic wizard path.
+- [ ] `AT-01` Mode `always`: attachment flow opens the expected wizard path.
   - Pass: compose attachments route through NC flow.
 - [ ] `AT-02` Mode `threshold`: prompt appears only above threshold.
   - Pass: below threshold no prompt; above threshold prompt visible.
@@ -134,14 +131,12 @@ Run all cases at least once on M1 and M2, except cases marked `3.1.1 only`.
 - [ ] `AT-04` Prompt action: remove last selected attachments batch.
   - Pass: only last batch is removed.
 - [ ] `AT-05` Conflict lock with Thunderbird native large-file setting.
-  - Pass: deterministic block/guidance behavior.
+  - Pass: clear block/guidance behavior.
 - [ ] `AT-06` Abort/no-send cleanup after attachment/share flow.
   - Pass: no orphaned server artifacts remain.
 
 ### G. Separate Password Mail
 
-- [ ] `P-01` `2.2.9`: feature is disabled/gated in settings and sharing wizard.
-  - Pass: control is non-functional and clearly marked as gated.
 - [ ] `P-02` `3.1.1 only`: auto-send success path with backend endpoint + active seat.
   - Pass: password mail sent, success notification shown.
 - [ ] `P-03` `3.1.1 only`: auto-send failure path with backend endpoint + active seat.
@@ -172,7 +167,7 @@ Run all cases at least once on M1 and M2, except cases marked `3.1.1 only`.
 - [ ] `SIG-07` `3.1.1 only`: backend signature sanitizer fail-closed behavior.
   - Pass: unavailable sanitizer or empty sanitized output aborts signature insertion with an explicit error/debug log and does not insert raw backend HTML.
 - [ ] `SIG-08` `3.1.1 only`: plain-text compose mode.
-  - Pass: the signature is inserted as deterministic plain text converted from the sanitized backend HTML.
+  - Pass: the signature is inserted as stable plain text converted from the sanitized backend HTML.
 
 ### I. Focus Behavior
 
@@ -186,7 +181,7 @@ Run all cases at least once on M1 and M2, except cases marked `3.1.1 only`.
 ### J. Logging Quality
 
 - [ ] `L-01` No duplicated addon error logs for same exception in active path.
-  - Pass: one deterministic error signal per failure.
+  - Pass: one clear error signal per failure.
 - [ ] `L-02` Expected teardown disconnect noise is suppressed where intended.
   - Pass: no recurring addon-side `context unloaded/Conduits` forwarder noise regression.
 - [ ] `L-03` Debug logs remain readable and trace core actions.

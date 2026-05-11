@@ -67,7 +67,7 @@ Goals for this project:
 - Provide **Nextcloud Talk** room creation directly from the **calendar event editor** (dialog + tab).
 - Provide **Nextcloud sharing** directly from the **compose window** (sharing wizard).
 - Maintain **no feature loss** across reviewer-driven changes.
-- Keep custom experiments **minimal, deterministic, and auditable**.
+- Keep custom experiments **minimal, predictable, and auditable**.
 - Keep all user-facing text **localized** via WebExtension i18n (`_locales/**/messages.json`).
 
 Non-goals:
@@ -101,7 +101,7 @@ Top-level:
 - `ui/` — HTML/JS/CSS for options and wizards
 - `experiments/`
   - `experiments/calendar/` — official calendar experiment API (kept **as-is**) for persisted item monitoring
-  - `experiments/ncCalToolbar/` — minimal custom experiment for deterministic editor toolbar integration (dialog + tab)
+  - `experiments/ncCalToolbar/` — minimal custom experiment for stable editor toolbar integration (dialog + tab)
   - `experiments/ncComposePrefs/` — read-only experiment exposing Thunderbird compose big-attachment prefs for conflict locking
 - `_locales/` — translations (`messages.json` per locale)
 - `docs/` — developer & reviewer documentation
@@ -121,12 +121,12 @@ Key files you’ll touch most:
 - `modules/policyRuntime.js` — centralized backend seat/policy status fetch + normalization (`/apps/ncc_backend_4mc/api/v1/status`)
 - `modules/background.js` — thin bootstrap entrypoint
 - `modules/hostPermissions.js` — single host-permission gate used by core/talk/sharing runtime modules
-- `modules/shareTemplateContract.js` — shared share-template marker contract used by render + insert modules
+- `modules/shareTemplateContract.js` — shared share-template marker rules used by render + insert modules
 - `modules/nccore.js` — Nextcloud auth/login-flow helpers
 - `modules/talkAddressbook.js` — system-addressbook CardDAV fetch/cache/search/status helpers
 - `modules/talkcore.js` — Nextcloud Talk API helpers (OCS, room lifecycle, capabilities)
 - `modules/ncSharing.js` — Nextcloud sharing/DAV helpers used by the sharing wizard
-- `modules/icalContract.js` — shared iCal/vCard parser contract (powered by vendored `vendor/ical.js`)
+- `modules/icalContract.js` — shared iCal/vCard parser rules (powered by vendored `vendor/ical.js`)
 - `experiments/ncComposePrefs/parent.js` — read-only compose preference bridge (`mail.compose.big_attachments.*`)
 - `ui/talkDialog.html` + `ui/talkDialog.js` — Talk wizard UI
 - `ui/nextcloudSharingWizard.html` + `ui/nextcloudSharingWizard.js` — Sharing wizard UI
@@ -163,11 +163,11 @@ What to look for:
 - `[NCUI][Options]` — settings/options page flow
 - `[NCUI][OpenUrlFallback]` — browser-open fallback dialog
 - `[ncCalToolbar]` — custom editor integration logs (button/context/read-write lifecycle)
-- The bundled `experiments/calendar/**` package remains upstream/as-is; any console output coming from it is outside the add-on debug-channel contract above.
+- The bundled `experiments/calendar/**` package remains upstream/as-is; any console output coming from it is outside the add-on debug-channel rules above.
 
 ### 4.3 Debug logging
 
-Debug output is gated by the option:
+Debug output is controlled by the option:
 - `debugEnabled` in `browser.storage.local`
 
 Implementation:
@@ -318,13 +318,13 @@ Reviewer goal:
 - Prefer the official calendar experiment API (`experiments/calendar/**`) and avoid custom injection.
 
 Reality in Thunderbird ESR 140:
-- We need a deterministic editor-targeted contract for **dialog + tab** editors, including **new/unsaved** items.
+- We need stable editor-targeted rules for **dialog + tab** editors, including **new/unsaved** items.
 - We must not modify `experiments/calendar/**` (reviewer rule), so editor UI integration cannot be solved there.
 
 Current implementation:
 - `experiments/ncCalToolbar/**` provides only editor integration:
-  - deterministic click/context bridge for the official `calendar_item_action` button in both editor variants
-  - deterministic editor identity (`editorId`)
+  - stable click/context bridge for the official `calendar_item_action` button in both editor variants
+  - stable editor identity (`editorId`)
   - editor-targeted snapshot/write-back (`getCurrent` / `updateCurrent`)
   - tracked close lifecycle (`onTrackedEditorClosed`)
 - `experiments/calendar/**` remains untouched and is used only for persisted item monitoring.
@@ -341,10 +341,10 @@ We must support both, without duplicating logic or increasing experiment scope.
 ### 7.2.1 Why manual tab/window correlation exists today
 
 Current constraint:
-- Thunderbird ESR 140 does not yet provide a stable upstream API contract to resolve the active event-editor iframe context purely via API IDs in all dialog/tab permutations we need.
+- Thunderbird ESR 140 does not yet provide a stable upstream API surface to resolve the active event-editor iframe context purely via API IDs in all dialog/tab permutations we need.
 
 Current implementation in `ncCalToolbar`:
-- We correlate the editor iframe to its `tabInfo` in a scoped way to produce a deterministic opaque `editorId`.
+- We correlate the editor iframe to its `tabInfo` in a scoped way to produce a stable opaque `editorId`.
 - This is intentionally limited to calendar editor surfaces only (`ExtensionSupport.registerWindowListener` with editor chrome URLs), not generic window scanning.
 - Reviewer/ATN implementation detail:
   - `ExtensionSupport` is consumed as a global experiment symbol (no `ChromeUtils.importESModule(...)` re-import in `parent.js`).
@@ -355,11 +355,11 @@ Current implementation in `ncCalToolbar`:
   - In 2.2.7 tab mode, `windowId` identified the 3-pane host window only; follow-up
     editor operations could resolve via selected `currentTabInfo`, which can drift
     after tab switches or with multiple open editor tabs.
-  - In 3.0.0 this is based on an opaque `editorId` bridge so targeting is deterministic and API-contract oriented.
+  - In 3.0.0 this is based on an opaque `editorId` bridge so targeting stays stable and API-oriented.
 
 Upstream direction:
-- We track this as a temporary bridge until upstream APIs expose the same deterministic contract.
-- Reference: PR #65 (deterministic editor context contract proposal): https://github.com/thunderbird/webext-experiments/pull/65
+- We track this as a temporary bridge until upstream APIs expose the same stable rules.
+- Reference: PR #65 (stable editor context rules proposal): https://github.com/thunderbird/webext-experiments/pull/65
 
 ### 7.3 `ncCalToolbar` API surface (editor-targeted)
 
@@ -383,7 +383,7 @@ On click, background receives:
 - an iCal snapshot of the **currently edited** item (`format: "ical"`, `item: "BEGIN:VCALENDAR..."`)
 - `calendarId` and `id` (note: `id` can be empty for new/unsaved items)
 - an `editorId` (opaque identifier for one specific open editor)
-  - contract: add-ons must treat `editorId` as opaque and must not parse it
+  - rule: add-ons must treat `editorId` as opaque and must not parse it
   - lifetime: valid only while that editor remains open in the current Thunderbird session
 
 For fresh reads before write-back, background can call:
@@ -562,7 +562,7 @@ Entry point:
 
 Responsibilities:
 - The sharing wizard UI performs most DAV/OCS actions using shared modules.
-- Public-link share creation follows the documented OCS contract: `label` is sent during create, and mutable metadata such as `note` is updated later via form-encoded OCS update arguments.
+- Public-link share creation follows the documented OCS rules: `label` is sent during create, and mutable metadata such as `note` is updated later via form-encoded OCS update arguments.
 - The background is used for **compose insertion**, because the compose APIs are executed from the background.
 - In attachment mode, background removes selected attachments from compose and
   passes them as a one-time launch context to the wizard.
@@ -580,7 +580,7 @@ Key files:
 Attachment mode specifics:
 - Wizard starts in step 3 (files queue), without note step.
 - Share label is fixed at create time; note metadata is pushed at finalize time via the documented OCS update endpoint.
-- Share name base is fixed to `email_attachment` with deterministic `_1`, `_2`, ... suffix handling.
+- Share name base is fixed to `email_attachment` with predictable `_1`, `_2`, ... suffix handling.
 - Compose HTML block for this mode uses ZIP download URL (`/s/<token>/download`) and hides permission row.
 - Recipient permissions are enforced as read-only in this mode (`read=true`, `create/write/delete=false`), independent of sharing defaults.
 - Queue UI behavior:
@@ -590,7 +590,7 @@ Attachment mode specifics:
 - Upload uniqueness behavior:
   - local duplicate target paths are resolved before upload (rename prompt)
   - no per-file remote preflight checks are executed for each queue entry in newly created share folders
-- Share cleanup contract:
+- Share cleanup rules:
   - cleanup is armed in background once a share was created and prepared for compose insertion
   - cleanup is cleared only after successful `compose.onAfterSend` (`sendNow`/`sendLater` with message id)
   - if compose tab is closed without successful send, background deletes the share folder on the server
@@ -602,8 +602,8 @@ Attachment mode specifics:
   - This toggle is only active when password protection is enabled.
   - Main compose block omits the inline password and shows a dedicated hint when enabled.
   - Background tracks live sender switches on `compose.onIdentityChanged`, captures the final main-mail envelope on `compose.onBeforeSend`, and dispatches password-only mail on `compose.onAfterSend`.
-  - The authoritative primary-mail sender is resolved via Thunderbird compose details plus `accountsRead` identity lookup; the password follow-up must use the same Thunderbird identity as the main mail.
-  - The password follow-up itself targets only the primary mail `To` recipients; `Cc`/`Bcc` are still captured as part of the authoritative main-mail envelope.
+  - The primary-mail sender is resolved via Thunderbird compose details plus `accountsRead` identity lookup; the password follow-up must use the same Thunderbird identity as the main mail.
+  - The password follow-up itself targets only the primary mail `To` recipients; `Cc`/`Bcc` are still captured as part of the primary main-mail envelope.
   - Backend custom password templates (`language_share_html_block=custom` + `share_password_template`) are sanitized in the render path before follow-up registration; rich HTML uses `NCSharing.buildHtmlBlock(...)`, plain text uses `NCSharing.buildPlainTextBlock(...)`, and missing sanitizer or empty sanitized output aborts finalize (fail-closed).
   - Follow-up mail delivery mode mirrors the source compose mode (`isPlainText` / `deliveryFormat`) captured from compose details and refreshed on `compose.onBeforeSend`.
   - Follow-up registration now requires both pre-rendered HTML and pre-rendered plain text; when follow-up is plain text, background uses the provided plain-text block and frames it with a fixed 50-character `#` border.
@@ -626,13 +626,13 @@ Background:
 - routes `sharing:insertRenderedBlock` through `modules/bgComposeShareInsert.js`.
 - receives pre-rendered share HTML from `NCSharing.buildHtmlBlock(...)`.
 - receives pre-rendered share plain text from `NCSharing.buildPlainTextBlock(...)`.
-- requires both render variants as part of the runtime message contract.
+- requires both render variants as part of the runtime message rules.
 - backend custom templates are sanitized in both rendering paths before use; local built-in templates stay on the trusted local render path and are not passed through the backend HTML sanitizer.
 - backend custom templates prune empty optional placeholders (`{RIGHTS}`, `{PASSWORD}`, `{EXPIRATIONDATE}`, `{NOTE}`) before replacement to reduce orphaned labels/wrappers in arbitrary layouts.
 - resolves compose mode from `isPlainText` + `deliveryFormat`:
   - HTML compose mode: inserts source HTML near `<body>`.
   - Plain-text compose mode: prefers the pre-rendered `plainText` block, normalizes permission markers (`[x]` / `[ ]`), compacts permission rows inside explicit add-on-generated rights segments, and frames the block with a fixed 60-character `#` border.
-  - For HTML editors with plain-text delivery format, inserts an escaped plain-text rendering to preserve deterministic plain-text output.
+  - For HTML editors with plain-text delivery format, inserts an escaped plain-text rendering to preserve stable plain-text output.
 
 ### 10.3 Share block language override
 
@@ -651,7 +651,7 @@ Runtime rules:
 - Backend custom templates use the sanitizer in both rich-HTML rendering and plain-text rendering; local built-in share blocks remain trusted local render output.
 - Privileged calendar-editor code does not parse backend HTML via `innerHTML`; sanitized markup is imported via `DOMParser` + DOM fragment replacement.
 - Active UI/runtime paths should avoid legacy `innerHTML` and `execCommand(...)` write APIs where ESR-140-compatible DOM/clipboard alternatives exist.
-- Separate password follow-up dispatch is seat-gated and only available with backend endpoint + active assigned seat.
+- Separate password follow-up dispatch is seat-restricted and only available with backend endpoint + active assigned seat.
 - Backend attachment-threshold policy uses `attachments_min_size_mb` as both value and enable-state: a positive integer enables threshold mode, `null` disables it.
 - Locked backend attachment-automation policy is enforced in compose runtime, not only in the settings surface.
 - Backend email signatures are applied only when `policy.email_signature.email_signature_on_compose=true`, a rendered `email_signature_template` exists, and `policy.email_signature.user_email` matches the active Thunderbird sender identity email.
@@ -675,10 +675,10 @@ Room settings:
 - `X-NCTALK-START` — Unix seconds (string)
 - `X-NCTALK-EVENT` — `"event"` or `"standard"`
 
-Lobby timer contract:
-- `X-NCTALK-START` is the single authoritative source for lobby timer updates.
-- On calendar upserts, `DTSTART` is parsed through the shared iCal contract and synchronized into `X-NCTALK-START` when the value changed.
-- If `DTSTART` parsing fails, runtime keeps the current `X-NCTALK-START` value (if present) and logs a contract parse error.
+Lobby timer rules:
+- `X-NCTALK-START` is the single source value for lobby timer updates.
+- On calendar upserts, `DTSTART` is parsed through the shared iCal rules and synchronized into `X-NCTALK-START` when the value changed.
+- If `DTSTART` parsing fails, runtime keeps the current `X-NCTALK-START` value (if present) and logs a parser error.
 - Lobby update is skipped only when no valid `X-NCTALK-START` is available after metadata merge.
 
 Invitee sync:
@@ -713,7 +713,7 @@ Event ↔ token mapping:
 ### 12.1 Background message types
 
 Common utility:
-- `debug:log` — structured log forwarding (debug-gated)
+- `debug:log` — structured log forwarding (debug-controlled)
 - `passwordPolicy:fetch` — returns active password policy endpoints + min length
 - `passwordPolicy:generate` — server-side password generation
 
@@ -782,7 +782,7 @@ Before you ship:
 1. Bump `manifest.json` version.
 2. Update `docs/ATN_REVIEW_NOTES.md` and README “What’s new”.
 3. Run the manual tests (Talk dialog + tab editor, sharing wizard, event move/delete, delegation, invitee sync).
-4. Run parser contract checks:
+4. Run parser rules checks:
    - `node tools/check-review-clean.js`
    - `node tools/ical-contract-check.js`
    - `node tools/share-plaintext-contract-check.js`
@@ -824,7 +824,7 @@ Before changing experiments or calendar integration, read:
 
 Key rules:
 - Do not modify `experiments/calendar/**`.
-- Keep experiments minimal, deterministic, and auditable.
+- Keep experiments minimal, predictable, and auditable.
 - No trial-and-error code paths.
 - No broad window/tab monitoring; target only required windows via window listeners.
 

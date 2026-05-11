@@ -79,7 +79,7 @@ Datenfluss:
 - Write-back direkt in den offenen Editor:
   - Titel/Ort/Beschreibung (Link + optionaler Passwort/Hilfe-Textblock)
   - `X-NCTALK-*` Custom Properties (TOKEN, URL, LOBBY, START, EVENT, OBJECTID, ADD-USERS, ADD-GUESTS, legacy ADD-PARTICIPANTS, DELEGATE, DELEGATE-NAME, DELEGATED, DELEGATE-READY)
-- Die Lobby-Zeitsynchronisierung nutzt `X-NCTALK-START` als autoritativen Wert und synchronisiert ihn bei Kalender-Updates über den gemeinsamen iCal-Contract-Parser aus `DTSTART` nach.
+- Die Lobby-Zeitsynchronisierung nutzt `X-NCTALK-START` als Quellwert und synchronisiert ihn bei Kalender-Updates über die gemeinsamen iCal-Parserregeln aus `DTSTART` nach.
 - Persistentes Monitoring über die Kalender-Experiment-API “as-is”:
   - Lobby-Updates bei Termin-Verschiebung
   - optionales Löschen verknüpfter Räume bei gelöschten gespeicherten NC Connector Terminen

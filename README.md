@@ -35,7 +35,7 @@ See [`CHANGELOG.md`](https://github.com/nc-connector/NC_Connector_for_Thunderbir
 - The Talk button in event editors is provided via Thunderbird's standard `calendar_item_action`.
 - Talk popup with lobby, password, listable option, room type, and moderator search.
 - Automatic insertion of title, location, and description (including help link and password) into the event.
-- Lobby timer synchronization uses `X-NCTALK-START` (UTC epoch seconds) as the authoritative value.
+- Lobby timer synchronization uses `X-NCTALK-START` (UTC epoch seconds) as the source value.
 - Room tracking, lobby updates, delegation workflow, and cleanup if the event is discarded or moved.
 - Calendar changes (drag-and-drop or dialog edits) keep lobby/start time in sync on the server.
 - Optional invitee sync after saving the event:

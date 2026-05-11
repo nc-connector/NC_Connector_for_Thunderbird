@@ -228,7 +228,7 @@ When enabled, logs appear with prefixes such as:
 - `[NCUI][OpenUrlFallback]` (browser-open fallback dialog)
 - `[ncCalToolbar]` (custom calendar editor toolbar/context bridge)
 
-The bundled `experiments/calendar/**` package remains upstream/as-is. Any console output coming from it is outside the add-on debug-channel contract above.
+The bundled `experiments/calendar/**` package remains upstream/as-is. Any console output coming from it is outside the add-on debug-channel rules above.
 
 ### 2.6 About & Support
 
@@ -398,7 +398,7 @@ Why this is necessary:
   - **Check for missing attachments**
   - **Upload for files larger than ...**
 - Per reviewer constraints and the add-on’s limited experiment scope, **NC Connector must not change these Thunderbird-wide compose settings itself**.
-- Therefore, if you want a deterministic admin-managed rollout, disable and lock these Thunderbird settings via `policies.json`.
+- Therefore, if you want a predictable admin-managed rollout, disable and lock these Thunderbird settings via `policies.json`.
 
 Relevant Thunderbird preferences:
 - `mail.compose.attachment_reminder`

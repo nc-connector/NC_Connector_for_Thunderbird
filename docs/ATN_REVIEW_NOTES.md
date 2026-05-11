@@ -1,7 +1,7 @@
 # Reviewer Notes - 3.1.1
 NC Connector for Thunderbird (`{4a35421f-0906-439c-bff2-8eef39e2baee}`)
 
-This document summarizes the currently implemented reviewer-relevant contract
+This document summarizes the currently implemented reviewer-relevant behavior
 for add-on version 3.1.1.
 
 ---
@@ -16,14 +16,14 @@ for add-on version 3.1.1.
 
 ---
 
-## Calendar Editor Contract
+## Calendar Editor Rules
 
 The active editor integration is provided by `experiments/ncCalToolbar/**` and
 is intentionally minimal:
 
-- deterministic Talk button via standard `calendar_item_action` in event dialog and event tab
+- stable Talk button via standard `calendar_item_action` in event dialog and event tab
 - click entrypoint via `ncCalToolbar.onClicked` bridge (bound to official `calendarItemAction` button)
-- deterministic editor targeting via opaque `editorId`
+- stable editor targeting via opaque `editorId`
 - editor snapshot read via `ncCalToolbar.getCurrent({ editorId, returnFormat: "ical" })`
 - editor write-back via `ncCalToolbar.updateCurrent({ editorId, fields, properties, returnFormat })`
 - tracked lifecycle via `ncCalToolbar.onTrackedEditorClosed`
@@ -44,7 +44,7 @@ for persisted monitoring (`browser.calendar.items.onCreated/onUpdated/onRemoved`
 4) Cleanup flow handles persisted/discarded/superseded editor close actions.
 5) Event move/delete handling remains driven by official calendar item events.
 6) Talk/Sharing wizard windows use best-effort focus retries after popup creation; focus requests remain non-fatal due to OS/window-manager policy.
-7) Lobby timer updates consume `X-NCTALK-START` as authoritative value; on calendar upserts, `DTSTART` is parsed through the shared iCal contract and synchronized back into `X-NCTALK-START`.
+7) Lobby timer updates consume `X-NCTALK-START` as source value; on calendar upserts, `DTSTART` is parsed through the shared iCal rules and synchronized back into `X-NCTALK-START`.
 8) Existing saved-event Talk room deletion is opt-in only and requires trusted NC Connector `X-NCTALK-*` metadata.
 9) Generic Talk links in `LOCATION` or `URL` fields are deliberately ignored for room-deletion ownership.
 
@@ -52,13 +52,13 @@ for persisted monitoring (`browser.calendar.items.onCreated/onUpdated/onRemoved`
 
 ## Reviewer Alignment Notes (3.1.1)
 
-- Core contracts are explicit; fallback behavior is bounded and logged instead of relying on silent heuristics.
-- Active runtime paths touched in this release log failures explicitly; silent failure is not an intended contract.
+- Core rules are explicit; fallback behavior is bounded and logged instead of relying on silent heuristics.
+- Active runtime paths touched in this release log failures explicitly; silent failure is not intended behavior.
 - Experiment scope is restricted to editor UI/context needs plus the read-only
   compose preference lookup required for attachment-automation conflict locking.
 - No custom calendar monitoring inside experiments.
 - Background consumers use the exported `NCTalkCore` API surface instead of
-  ad-hoc global function calls, to keep Talk runtime contracts centralized.
+  ad-hoc global function calls, to keep Talk runtime rules centralized.
 - `experiments/ncCalToolbar/parent.js` uses `ExtensionSupport` directly as an
   Experiment global (no local `ChromeUtils.importESModule(...)` re-import),
   aligned with ATN guidance for experiment scripts.
@@ -74,14 +74,14 @@ for persisted monitoring (`browser.calendar.items.onCreated/onUpdated/onRemoved`
   with bounded retries; failures are intentionally non-fatal due OS/window-manager
   focus-stealing policies.
 - Talk user search, moderator selection, and participant toggles (users/guests)
-  are runtime-gated by system-addressbook availability checks and are disabled
+  depend on runtime system-addressbook availability checks and are disabled
   with explicit user guidance when the addressbook endpoint is unavailable.
 - Talk room deletion for existing saved calendar events is disabled by default and can be enabled locally or locked by backend policy via `talk_delete_room_on_event_delete`.
   - the event must have trusted NC Connector `X-NCTALK-*` metadata written by Thunderbird/Outlook integration
   - generic Talk URLs copied into event `LOCATION` or `URL` fields are not parsed as ownership proof
   - old cached mappings without trusted source metadata are ignored and cleared instead of deleting a room
   - cleanup for a room created in an unsaved and then discarded event editor remains active independently
-- Separate-password follow-up dispatch remains runtime-gated behind the backend endpoint, an active assigned seat, and enabled password protection.
+- Separate-password follow-up dispatch remains restricted to backend endpoint, active assigned seat, and enabled password protection.
   - the options/UI toggle surface is only functional when those runtime conditions are met
   - `accountsRead` is requested only to resolve the actual Thunderbird sender identity of the already-open primary compose window, so the password follow-up can reuse the same sender identity instead of guessing from a visible `From` header string.
   - live sender switches are tracked on `compose.onIdentityChanged`, and the final primary-mail envelope is captured on `compose.onBeforeSend`
@@ -100,8 +100,8 @@ for persisted monitoring (`browser.calendar.items.onCreated/onUpdated/onRemoved`
 - Share compose insertion is mode-aware:
   - HTML compose receives pre-rendered share HTML from `NCSharing.buildHtmlBlock(...)`
   - plain-text compose receives a dedicated pre-rendered share text block from `NCSharing.buildPlainTextBlock(...)`
-  - local validation covers this render contract via `node tools/share-plaintext-contract-check.js`
-  - the runtime contract requires both variants; background does not rebuild missing plain text from HTML
+  - local validation covers these render rules via `node tools/share-plaintext-contract-check.js`
+  - runtime requires both variants; background does not rebuild missing plain text from HTML
   - backend custom share templates are sanitized before rich or plain-text rendering
   - empty optional placeholders in backend custom share templates are pruned before replacement so hidden rights/password/expiry/note sections do not rely on fixed table rows
   - local built-in share templates stay on the trusted local render path and are not passed through the backend HTML sanitizer
@@ -134,7 +134,7 @@ for persisted monitoring (`browser.calendar.items.onCreated/onUpdated/onRemoved`
 - Talk + Sharing now mark the forwarder as unloading before close and briefly
   flush already-started `debug:log` sends, reducing teardown-time DevTools noise
   without changing functional runtime behavior.
-- The attachment-mode prompt now uses the same `debugEnabled`-gated shared UI
+- The attachment-mode prompt now uses the same `debugEnabled`-controlled shared UI
   debug forwarder/runtime-teardown path as Talk + Sharing, instead of a
   separate always-on prompt-specific variant.
 - Forwarded UI debug lines no longer produce redundant `[NCBG] msg debug:log`
@@ -146,6 +146,6 @@ for persisted monitoring (`browser.calendar.items.onCreated/onUpdated/onRemoved`
 
 Known temporary deviation:
 - The editor context bridge still includes scoped tab/window correlation inside
-  `ncCalToolbar` for deterministic tab-editor targeting on current ESR builds.
+  `ncCalToolbar` for stable tab-editor targeting on current ESR builds.
   This is tracked as a temporary bridge until upstream calendar APIs provide an
-  equivalent deterministic editor-targeting contract.
+  equivalent stable editor-targeting rules.

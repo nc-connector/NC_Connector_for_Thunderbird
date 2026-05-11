@@ -9,7 +9,7 @@
 - Included file: `vendor/ical.js` (UMD/CJS distribution from `dist/ical.es5.cjs`)
 - License: MPL-2.0
 - Usage in this add-on:
-  - iCalendar parsing/writing contract in `modules/icalContract.js`
+  - iCalendar parsing/writing rules in `modules/icalContract.js`
   - Runtime consumers:
     - `modules/bgCalendar.js`
     - `modules/talkcore.js`

@@ -15,14 +15,14 @@ This add-on integrates Nextcloud Talk and Nextcloud Sharing into Thunderbird.
 - `modules/hostPermissions.js`: centralized optional-host-permission gate reused by core/talk/sharing runtime modules
 - ui/*: HTML/JS dialogs and helpers (options, sharing wizard, talk dialog, popup sizing, DOM i18n)
 - experiments/calendar/*: Thunderbird calendar experiment API (items CRUD + item lifecycle events) used “as-is”
-- experiments/ncCalToolbar/*: minimal custom experiment for deterministic editor context bridging (dialog + tab)
+- experiments/ncCalToolbar/*: minimal custom experiment for stable editor context bridging (dialog + tab)
 - experiments/ncComposePrefs/*: read-only compose preference bridge used to detect Thunderbird's built-in big-attachment setting and lock conflicting NC attachment automation
 
 Calendar integration (high level):
 - `experiments/ncCalToolbar` is responsible only for editor-targeted integration:
-  - bind deterministic click/context handling to the official `calendar_item_action` button in both editor variants
-  - provide deterministic click context + iCal snapshot (`editorId`)
-  - provide deterministic editor-targeted read/write (`getCurrent` / `updateCurrent`)
+  - bind stable click/context handling to the official `calendar_item_action` button in both editor variants
+  - provide stable click context + iCal snapshot (`editorId`)
+  - provide stable editor-targeted read/write (`getCurrent` / `updateCurrent`)
   - signal tracked editor close state (`onTrackedEditorClosed`)
 - All Talk/Sharing control logic remains in the WebExtension background runtime modules (`modules/bgState.js`, `modules/bgComposeAttachments.js`, `modules/bgComposeShareCleanup.js`, `modules/bgComposePasswordDispatch.js`, `modules/bgCompose.js`, `modules/bgCalendar.js`, `modules/bgRouter.js`).
 - Persistent monitoring (lobby updates, delete-room-on-event-delete, delegation flow, participant auto-add) uses `browser.calendar.items.*` from `experiments/calendar` (unchanged).
@@ -79,7 +79,7 @@ Data flow:
 - Writes back into the open editor:
   - title/location/description (link + optional password/help text block)
   - `X-NCTALK-*` custom properties (TOKEN, URL, LOBBY, START, EVENT, OBJECTID, ADD-USERS, ADD-GUESTS, legacy ADD-PARTICIPANTS, DELEGATE, DELEGATE-NAME, DELEGATED, DELEGATE-READY)
-- Lobby timer synchronization keeps `X-NCTALK-START` as the authoritative value and re-syncs it from `DTSTART` on calendar upserts via the shared iCal contract parser.
+- Lobby timer synchronization keeps `X-NCTALK-START` as the source value and re-syncs it from `DTSTART` on calendar upserts via the shared iCal parser rules.
 - Uses the calendar experiment API “as-is” for persisted monitoring:
   - lobby updates when the event time changes
   - optionally delete linked rooms when saved NC Connector events are removed
