@@ -907,5 +907,8 @@
   },
   "options_signature_backend_update_required_tooltip": {
     "message": "Aktualizujte prosím backend NC Connector. Tato verze backendu zatím nepodporuje centrální e-mailové podpisy."
+  },
+  "sharing_status_speed_kbps": {
+    "message": "Rychlost: $1 KB/s"
   }
 }

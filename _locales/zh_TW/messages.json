@@ -907,5 +907,8 @@
   },
   "options_signature_backend_update_required_tooltip": {
     "message": "請更新 NC Connector 後端。此後端版本尚未支援集中管理的電子郵件簽名。"
+  },
+  "sharing_status_speed_kbps": {
+    "message": "速度: $1 KB/s"
   }
 }

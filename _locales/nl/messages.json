@@ -907,5 +907,8 @@
   },
   "options_signature_backend_update_required_tooltip": {
     "message": "Werk de NC Connector-backend bij. Deze backendversie ondersteunt centrale e-mailhandtekeningen nog niet."
+  },
+  "sharing_status_speed_kbps": {
+    "message": "Snelheid: $1 KB/s"
   }
 }

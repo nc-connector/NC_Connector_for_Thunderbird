@@ -23,7 +23,7 @@ Known version delta:
 |---|---|---|
 | M2 | 3.1.1 | Available only with backend + active seat + password protection |
 
-Run all cases at least once on M1 and M2, except cases marked `3.1.1 only`.
+Run all cases at least once on M2, except cases marked `3.1.1 only`.
 
 ## 3. Preconditions
 
@@ -104,7 +104,7 @@ Run all cases at least once on M1 and M2, except cases marked `3.1.1 only`.
 - [ ] `S-02` Share name availability check.
   - Pass: duplicate folder names are detected.
 - [ ] `S-03` Upload path with files.
-  - Pass: files upload and status/progress update correctly.
+  - Pass: files upload and status/progress update correctly; current upload speed (KB/s) is shown below the progress bar without clipping.
 - [ ] `S-04` No-file path (create-only share), when applicable.
   - Pass: share creation works without upload if flow allows it.
 - [ ] `S-05` Duplicate file names in queue trigger rename behavior.
@@ -216,4 +216,3 @@ Fill after each matrix run:
   - Actual result:
   - Expected result:
   - Log excerpt:
-

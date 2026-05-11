@@ -907,5 +907,8 @@
   },
   "options_signature_backend_update_required_tooltip": {
     "message": "Actualice el backend de NC Connector. Esta versión del backend aún no admite firmas de correo centrales."
+  },
+  "sharing_status_speed_kbps": {
+    "message": "Velocidad: $1 KB/s"
   }
 }

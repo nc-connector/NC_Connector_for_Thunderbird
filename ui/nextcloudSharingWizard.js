@@ -755,7 +755,9 @@
           renamedName: '',
           status: 'pending',
           progress: 0,
-          error: ''
+          error: '',
+          speedKbps: 0,
+          progressStartedAt: 0
         };
       });
     state.selectedFileId = null;
@@ -1196,7 +1198,9 @@
         renamedName: '',
         status: 'pending',
         progress: 0,
-        error: ''
+        error: '',
+        speedKbps: 0,
+        progressStartedAt: 0
       };
     });
     state.files.push(...entries);
@@ -1309,6 +1313,20 @@
   }
 
   /**
+   * Format one upload speed value for the status row.
+   * @param {number} kbps
+   * @returns {string}
+   */
+  function formatUploadSpeedKbps(kbps){
+    const numeric = Number(kbps);
+    const safeValue = Number.isFinite(numeric) && numeric > 0 ? numeric : 0;
+    const rounded = safeValue >= 100
+      ? String(Math.round(safeValue))
+      : safeValue.toFixed(1);
+    return i18n('sharing_status_speed_kbps', [rounded]);
+  }
+
+  /**
    * Build the status cell DOM for a file entry.
    * @param {object} entry
    * @returns {Node}
@@ -1317,7 +1335,9 @@
     if (entry.status === 'uploading'){
       const percent = entry.progress || 0;
       const wrapper = document.createElement('div');
-      wrapper.className = 'status-progress';
+      wrapper.className = 'status-upload';
+      const progressRow = document.createElement('div');
+      progressRow.className = 'status-progress';
       const percentLabel = document.createElement('span');
       percentLabel.className = 'percent';
       percentLabel.textContent = `${percent}%`;
@@ -1326,7 +1346,11 @@
       const fill = document.createElement('span');
       fill.style.width = `${percent}%`;
       bar.appendChild(fill);
-      wrapper.append(percentLabel, bar);
+      progressRow.append(percentLabel, bar);
+      const speedLabel = document.createElement('div');
+      speedLabel.className = 'status-speed';
+      speedLabel.textContent = formatUploadSpeedKbps(entry.speedKbps);
+      wrapper.append(progressRow, speedLabel);
       return wrapper;
     }
     const text = document.createElement('span');
@@ -1487,17 +1511,28 @@
     if (event.phase === 'start'){
       resetFileEntry(entry);
       entry.status = 'uploading';
+      entry.progressStartedAt = Date.now();
       log('Upload file started', entry.displayPath || entry.file?.name || entry.id);
     }else if (event.phase === 'progress'){
       entry.status = 'uploading';
       entry.progress = event.percent || 0;
+      const loaded = Number(event.loaded) || 0;
+      if (loaded > 0){
+        if (!Number.isFinite(entry.progressStartedAt) || entry.progressStartedAt <= 0){
+          entry.progressStartedAt = Date.now();
+        }
+        const elapsedSeconds = Math.max(0.001, (Date.now() - entry.progressStartedAt) / 1000);
+        entry.speedKbps = loaded / 1024 / elapsedSeconds;
+      }
     }else if (event.phase === 'done'){
       entry.status = 'done';
       entry.progress = 100;
+      entry.speedKbps = 0;
       log('Upload file completed', entry.displayPath || entry.file?.name || entry.id);
     }else if (event.phase === 'error'){
       entry.status = 'error';
       entry.error = event.error || '';
+      entry.speedKbps = 0;
       log('Upload file error', { name: entry.displayPath || entry.file?.name || entry.id, error: entry.error });
     }
     pendingUploadScroll = entry.id;
@@ -2060,6 +2095,8 @@
     entry.status = 'pending';
     entry.progress = 0;
     entry.error = '';
+    entry.speedKbps = 0;
+    entry.progressStartedAt = 0;
   }
 
   /**

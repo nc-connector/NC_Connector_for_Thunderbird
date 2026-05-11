@@ -907,5 +907,8 @@
   },
   "options_signature_backend_update_required_tooltip": {
     "message": "Обновите backend NC Connector. Эта версия backend ещё не поддерживает централизованные подписи электронной почты."
+  },
+  "sharing_status_speed_kbps": {
+    "message": "Скорость: $1 KB/s"
   }
 }

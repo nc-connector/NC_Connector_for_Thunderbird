@@ -371,7 +371,7 @@ tbody tr.uploading td{
   white-space:nowrap;
 }
 .status-cell{
-  white-space:nowrap;
+  white-space:normal;
 }
 .empty-placeholder{
   padding:24px;
@@ -383,6 +383,12 @@ tbody tr.uploading td{
   display:flex;
   align-items:center;
   gap:10px;
+}
+.status-upload{
+  display:flex;
+  flex-direction:column;
+  gap:4px;
+  min-width:0;
 }
 .status-progress .percent{
   width:38px;
@@ -407,6 +413,17 @@ tbody tr.uploading .status-progress .bar{
 }
 tbody tr.uploading .status-progress .bar span{
   background:var(--status-green);
+}
+.status-speed{
+  font-size:11px;
+  color:var(--tb-muted);
+  line-height:1.2;
+  white-space:normal;
+  overflow-wrap:anywhere;
+}
+tbody tr.uploading .status-speed{
+  color:#fff;
+  opacity:0.95;
 }
 .status-done{
   color:var(--status-green);
@@ -591,8 +608,6 @@ tbody tr.uploading .status-progress .bar span{
   <script src="debugForwarder.js"></script>
   <script src="nextcloudSharingWizard.js"></script>
 </body>
-
-
 
 
 
