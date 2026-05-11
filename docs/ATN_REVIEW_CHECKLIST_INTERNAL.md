@@ -11,7 +11,7 @@ It is intended to guide ongoing and future maintenance.
 
 - Experiments have **full access to Thunderbird internals** and must therefore be:
   - minimal
-  - predictable
+  - stable in behavior
   - easy to audit
   - free of trial-and-error code
 
@@ -154,5 +154,4 @@ It is intended to guide ongoing and future maintenance.
 - Avoid legacy or obsolete references (e.g. XUL in Thunderbird ≥ 128).
 
 _Last updated for 3.1.1 worktree._
-
 

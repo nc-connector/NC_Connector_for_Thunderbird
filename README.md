@@ -20,7 +20,7 @@ This is a community project and is not an official Nextcloud GmbH product.
   Lobby until start time, moderator delegation, automatic cleanup of unsaved events, required passwords, and expiration policies protect sensitive meetings and files.
 - **Central backend policies (optional)**
   If the optional NC Connector backend is installed, Talk and Sharing defaults can be managed centrally. The add-on checks backend status whenever the Talk or Sharing wizard opens, when Settings open, and again when Settings are saved, applies valid-seat policies, and locks admin-controlled settings while still showing their effective values.
-- **Seamless Nextcloud integration**
+- **Direct Nextcloud integration**
   Login Flow V2, automatic room tracking, and debug logs in [NCBG], [NCUI][Talk], [NCUI][Sharing], [NCUI][Options], [NCUI][OpenUrlFallback], and [ncCalToolbar] help with troubleshooting.
 - **ESR-ready**
   Optimized and tested for Thunderbird ESR 140.X with a minimal experiment footprint.
@@ -128,7 +128,6 @@ Good luck with secure, professional work using NC Connector for Thunderbird!
 | --- | --- |
 
 </details>
-
 
 
 

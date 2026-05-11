@@ -15,14 +15,14 @@ Dieses Add-on integriert Nextcloud Talk und Nextcloud-Freigaben in Thunderbird.
 - `modules/hostPermissions.js`: zentralisierte Optional-Host-Permission-Logik, wiederverwendet von Core/Talk/Freigabe-Laufzeitmodulen
 - ui/*: HTML/JS-Dialoge und Helfer (Optionen, Freigabe-Wizard, Talk Dialog, Popup Sizing, DOM i18n)
 - experiments/calendar/*: Thunderbird Kalender-Experiment-API (Items CRUD + Lifecycle-Events) wird “as-is” genutzt
-- experiments/ncCalToolbar/*: minimales Custom-Experiment für deterministische Editor-Context-Bridge (Dialog + Tab)
+- experiments/ncCalToolbar/*: minimales Custom-Experiment für stabile Editor-Context-Bridge (Dialog + Tab)
 - experiments/ncComposePrefs/*: read-only Compose-Pref-Bridge, um Thunderbirds eingebaute Großanhang-Option zu erkennen und kollidierende NC-Anhangsautomatisierung zu sperren
 
 Kalender-Integration (high level):
 - `experiments/ncCalToolbar` übernimmt nur die editor-targeted Integration:
-  - deterministische Klick-/Kontext-Bridge an den offiziellen `calendar_item_action`-Button in beiden Editor-Varianten binden
-  - deterministischen Klick-Kontext + iCal-Snapshot liefern (`editorId`)
-  - deterministischen editor-targeted Read/Write-Pfad bereitstellen (`getCurrent` / `updateCurrent`)
+  - stabile Klick-/Kontext-Bridge an den offiziellen `calendar_item_action`-Button in beiden Editor-Varianten binden
+  - stabilen Klick-Kontext + iCal-Snapshot liefern (`editorId`)
+  - stabilen editor-targeted Read/Write-Pfad bereitstellen (`getCurrent` / `updateCurrent`)
   - tracked Editor-Close-Signale liefern (`onTrackedEditorClosed`)
 - Die komplette Talk/Freigabe-Logik bleibt in den WebExtension-Background-Laufzeitmodulen (`modules/bgState.js`, `modules/bgComposeAttachments.js`, `modules/bgComposeShareCleanup.js`, `modules/bgComposePasswordDispatch.js`, `modules/bgCompose.js`, `modules/bgCalendar.js`, `modules/bgRouter.js`).
 - Persistentes Monitoring (Lobby-Updates, optionales Löschen verknüpfter Räume für gespeicherte NC Connector Termine, Delegation, Teilnehmer-Auto-Add) läuft über `browser.calendar.items.*` aus `experiments/calendar` (unverändert).

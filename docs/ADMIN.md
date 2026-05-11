@@ -398,7 +398,7 @@ Why this is necessary:
   - **Check for missing attachments**
   - **Upload for files larger than ...**
 - Per reviewer constraints and the add-on’s limited experiment scope, **NC Connector must not change these Thunderbird-wide compose settings itself**.
-- Therefore, if you want a predictable admin-managed rollout, disable and lock these Thunderbird settings via `policies.json`.
+- Therefore, if you want a consistent admin-managed rollout, disable and lock these Thunderbird settings via `policies.json`.
 
 Relevant Thunderbird preferences:
 - `mail.compose.attachment_reminder`
@@ -562,4 +562,3 @@ If you need “preseeded” settings for many users, typical approaches are:
 - use a central onboarding guide and require users to complete Login Flow v2
 
 (A future enhancement could use `browser.storage.managed` to read admin-provided settings, but this is not implemented currently.)
-

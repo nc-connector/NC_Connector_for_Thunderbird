@@ -1,6 +1,6 @@
 # Development Guide — NC Connector for Thunderbird
 
-This document is the **single source of truth** for developers maintaining or extending **NC Connector for Thunderbird**.
+This document is the **main developer reference** for maintaining or extending **NC Connector for Thunderbird**.
 
 It complements:
 - `docs/ADDON_DESCRIPTION.md` (architecture overview)
@@ -67,7 +67,7 @@ Goals for this project:
 - Provide **Nextcloud Talk** room creation directly from the **calendar event editor** (dialog + tab).
 - Provide **Nextcloud sharing** directly from the **compose window** (sharing wizard).
 - Maintain **no feature loss** across reviewer-driven changes.
-- Keep custom experiments **minimal, predictable, and auditable**.
+- Keep custom experiments **minimal and easy to review**.
 - Keep all user-facing text **localized** via WebExtension i18n (`_locales/**/messages.json`).
 
 Non-goals:
@@ -580,7 +580,7 @@ Key files:
 Attachment mode specifics:
 - Wizard starts in step 3 (files queue), without note step.
 - Share label is fixed at create time; note metadata is pushed at finalize time via the documented OCS update endpoint.
-- Share name base is fixed to `email_attachment` with predictable `_1`, `_2`, ... suffix handling.
+- Share name base is fixed to `email_attachment` with fixed `_1`, `_2`, ... suffix handling.
 - Compose HTML block for this mode uses ZIP download URL (`/s/<token>/download`) and hides permission row.
 - Recipient permissions are enforced as read-only in this mode (`read=true`, `create/write/delete=false`), independent of sharing defaults.
 - Queue UI behavior:
@@ -824,8 +824,7 @@ Before changing experiments or calendar integration, read:
 
 Key rules:
 - Do not modify `experiments/calendar/**`.
-- Keep experiments minimal, predictable, and auditable.
+- Keep experiments minimal and easy to review.
 - No trial-and-error code paths.
 - No broad window/tab monitoring; target only required windows via window listeners.
-
 
