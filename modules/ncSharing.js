@@ -1215,12 +1215,12 @@
     const downloadLink = `<a href="${escapeHtml(downloadUrl)}" style="color:#0082C9;text-decoration:none;">${escapeHtml(downloadUrl)}</a>`;
     const rows = [];
     if (passwordOnly){
-      const badge = `<span style="display:inline-block;font-family:'Consolas','Courier New',monospace;padding:2px 6px;border:1px solid #c7c7c7;border-radius:3px;-ms-user-select:all;user-select:all;" ondblclick="window.getSelection().selectAllChildren(this);" onclick="window.getSelection().selectAllChildren(this);">${escapeHtml(result.password || "")}</span>`;
+      const badge = buildPasswordBadge(result.password || "");
       rows.push(buildTableRow(await tShare(effectiveLang, "sharing_html_password_label"), badge));
     }else{
       rows.push(buildTableRow(await tShare(effectiveLang, "sharing_html_download_label"), downloadLink));
       if (result.password && !hidePassword){
-        const badge = `<span style="display:inline-block;font-family:'Consolas','Courier New',monospace;padding:2px 6px;border:1px solid #c7c7c7;border-radius:3px;-ms-user-select:all;user-select:all;" ondblclick="window.getSelection().selectAllChildren(this);" onclick="window.getSelection().selectAllChildren(this);">${escapeHtml(result.password)}</span>`;
+        const badge = buildPasswordBadge(result.password);
         rows.push(buildTableRow(await tShare(effectiveLang, "sharing_html_password_label"), badge));
       }
       if (showPasswordSeparateHint && result.password){
@@ -1408,6 +1408,10 @@
       <th style="text-align:left;width:12ch;vertical-align:top;padding:6px 10px 6px 0;">${escapeHtml(label)}</th>
       <td style="padding:6px 0;max-width:50ch;word-break:break-word;">${valueHtml}</td>
     </tr>`;
+  }
+
+  function buildPasswordBadge(password){
+    return `<span class="nc-share-password" style="display:inline-block;font-family:'Consolas','Courier New',monospace;padding:2px 6px;border:1px solid #c7c7c7;border-radius:3px;-ms-user-select:all;user-select:all;">${escapeHtml(password || "")}</span>`;
   }
 
   /**
