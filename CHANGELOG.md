@@ -6,7 +6,7 @@ This project targets **Thunderbird ESR 140.\***.
 
 ## 3.1.2
 
-Release package version is **3.1.2**.  
+Release package version is **3.1.2**.
 Functional delta documented here corresponds to **3.1.1 -> 3.1.2**.
 
 ### Added
@@ -18,7 +18,7 @@ Functional delta documented here corresponds to **3.1.1 -> 3.1.2**.
 
 ## 3.1.1
 
-Release package version is **3.1.1**.  
+Release package version is **3.1.1**.
 Functional delta documented here corresponds to **3.1.0 -> 3.1.1**.
 
 ### Fixed (Mainline)

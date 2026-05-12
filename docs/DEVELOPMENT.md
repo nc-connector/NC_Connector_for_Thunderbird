@@ -79,7 +79,7 @@ Non-goals:
 ## 2. Supported versions
 
 Thunderbird:
-- Target: **Thunderbird ESR 140.\***  
+- Target: **Thunderbird ESR 140.\***
   Enforced by `manifest.json`:
   - `strict_min_version: "140.0"`
   - `strict_max_version: "140.*"`
@@ -827,4 +827,3 @@ Key rules:
 - Keep experiments minimal and easy to review.
 - No trial-and-error code paths.
 - No broad window/tab monitoring; target only required windows via window listeners.
-
