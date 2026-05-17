@@ -101,6 +101,7 @@ const shareBlockLangRow = document.getElementById("shareBlockLangRow");
 const shareBlockLangSelect = document.getElementById("shareBlockLang");
 const eventDescriptionLangRow = document.getElementById("eventDescriptionLangRow");
 const eventDescriptionLangSelect = document.getElementById("eventDescriptionLang");
+const sharingPlaintextTemplateInput = document.getElementById("sharingPlaintextTemplate");
 const emailSignaturePolicyHint = document.getElementById("emailSignaturePolicyHint");
 const emailSignatureOnComposeRow = document.getElementById("emailSignatureOnComposeRow");
 const emailSignatureOnComposeInput = document.getElementById("emailSignatureOnCompose");
@@ -1017,6 +1018,7 @@ async function load(){
     "talkDefaultRoomType",
     "shareBlockLang",
     "eventDescriptionLang",
+    SHARING_KEYS.plaintextTemplate,
     EMAIL_SIGNATURE_KEYS.onCompose,
     EMAIL_SIGNATURE_KEYS.onReply,
     EMAIL_SIGNATURE_KEYS.onForward
@@ -1138,6 +1140,11 @@ async function load(){
   }
   if (eventDescriptionLangSelect){
     eventDescriptionLangSelect.value = normalizeLangChoice(storedEventDescriptionLang);
+  }
+  if (sharingPlaintextTemplateInput){
+    sharingPlaintextTemplateInput.value = stored[SHARING_KEYS.plaintextTemplate] !== undefined
+      ? stored[SHARING_KEYS.plaintextTemplate]
+      : "";
   }
   applyPolicySettingsOverlay();
   await refreshTalkSystemAddressbookState({ forceRefresh: true });
@@ -1351,6 +1358,7 @@ async function save(){
   let talkDefaultRoomType = getSelectedTalkDefaultRoomType();
   let shareBlockLang = normalizeLangChoice(shareBlockLangSelect?.value);
   let eventDescriptionLang = normalizeLangChoice(eventDescriptionLangSelect?.value);
+  let sharingPlaintextTemplate = sharingPlaintextTemplateInput ? sharingPlaintextTemplateInput.value : "";
   let emailSignatureOnCompose = emailSignatureOnComposeInput ? !!emailSignatureOnComposeInput.checked : false;
   let emailSignatureOnReply = emailSignatureOnReplyInput ? !!emailSignatureOnReplyInput.checked : false;
   let emailSignatureOnForward = emailSignatureOnForwardInput ? !!emailSignatureOnForwardInput.checked : false;
@@ -1460,6 +1468,7 @@ async function save(){
     talkDefaultRoomType,
     shareBlockLang,
     eventDescriptionLang,
+    [SHARING_KEYS.plaintextTemplate]: sharingPlaintextTemplate,
     [EMAIL_SIGNATURE_KEYS.onCompose]: emailSignatureOnCompose,
     [EMAIL_SIGNATURE_KEYS.onReply]: emailSignatureOnReply,
     [EMAIL_SIGNATURE_KEYS.onForward]: emailSignatureOnForward

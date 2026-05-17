@@ -401,7 +401,13 @@
   "options_event_description_lang_hint": {
     "message": "Steuert die Sprache des Talk-Textblocks in Terminen."
   },
-  "options_lang_default": {
+  "options_sharing_plaintext_template_label": {
+    "message": "Text-Vorlage"
+  },
+  "options_sharing_plaintext_template_hint": {
+    "message": "Ermöglicht es dir, deine eigene Textvorlage zu erstellen. Die Platzhalter sind: {URL}, {PASSWORD}, {EXPIRATIONDATE}, {RIGHTS}, {NOTE}"
+  },
+  "options_tab_signature": {
     "message": "Standard (UI)"
   },
   "options_about_version_label": {

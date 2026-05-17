@@ -73,9 +73,7 @@ body{
   margin:0;
 }
 .field-stack{display:flex; flex-direction:column; gap:6px; max-width:420px; width:100%;}
-input[type="url"], input[type="text"], input[type="password"], input[type="number"], select{
-  height:var(--control-height);
-  padding:0 var(--control-padding-x);
+input[type="url"], input[type="text"], input[type="password"], input[type="number"], select, textarea{
   border:1px solid var(--tb-border-strong);
   border-radius:var(--control-radius);
   width:100%;
@@ -83,6 +81,15 @@ input[type="url"], input[type="text"], input[type="password"], input[type="numbe
   background:var(--tb-surface);
   color:var(--tb-text);
   font:inherit;
+}
+input[type="url"], input[type="text"], input[type="password"], input[type="number"], select{
+  height:var(--control-height);
+  padding:0 var(--control-padding-x);
+}
+textarea{
+  padding:8px;
+  resize:vertical;
+  font-family:monospace;
 }
 input[type="checkbox"],
 input[type="radio"]{
@@ -698,6 +705,13 @@ footer{
         <div>
           <select id="eventDescriptionLang"></select>
           <p class="hint" data-i18n="options_event_description_lang_hint">Controls the language of the Talk text block in events.</p>
+        </div>
+      </div>
+      <div class="row" id="sharingPlaintextTemplateRow">
+        <label for="sharingPlaintextTemplate" data-i18n="options_sharing_plaintext_template_label">Plaintext template</label>
+        <div>
+          <textarea id="sharingPlaintextTemplate" rows="10"></textarea>
+          <p class="hint" data-i18n="options_sharing_plaintext_template_hint">Placeholders: {URL}, {PASSWORD}, {EXPIRATIONDATE}, {RIGHTS}, {NOTE}</p>
         </div>
       </div>
     </fieldset>

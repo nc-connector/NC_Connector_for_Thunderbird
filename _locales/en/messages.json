@@ -401,7 +401,13 @@
   "options_event_description_lang_hint": {
     "message": "Controls the language of the Talk text block in events."
   },
-  "options_lang_default": {
+  "options_sharing_plaintext_template_label": {
+    "message": "Plaintext template"
+  },
+  "options_sharing_plaintext_template_hint": {
+    "message": "Let's you create your custom text template. The placeholders are: {URL}, {PASSWORD}, {EXPIRATIONDATE}, {RIGHTS}, {NOTE}"
+  },
+  "options_tab_signature": {
     "message": "Default (UI)"
   },
   "options_about_version_label": {

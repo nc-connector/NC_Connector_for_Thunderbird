@@ -247,6 +247,7 @@ function createHarness(){
   context.globalThis = context;
   vm.createContext(context);
   loadScriptIntoContext("modules/shareTemplateContract.js", context);
+  loadScriptIntoContext("modules/sharingStorage.js", context);
   loadScriptIntoContext("modules/ncSharing.js", context);
   loadScriptIntoContext("modules/bgComposeShareInsert.js", context);
   return { context, storageState, composeState };
@@ -360,11 +361,49 @@ async function testInsertRejectsMissingPlainTextVariant(){
   assert(result.error === "tab/html/plainText missing", "Insert handler should report the explicit missing-variant rule");
 }
 
+async function testPlainTextInsertUsesCustomTemplate(){
+  const { context, storageState, composeState } = createHarness();
+  const customTemplate = "LINK: {URL}\nPASS: {PASSWORD}\nNOTE: {NOTE}";
+  storageState.sharingPlaintextTemplate = customTemplate;
+  composeState.detailsByTab.set(10, {
+    isPlainText: true,
+    deliveryFormat: "plaintext",
+    body: "",
+    plainTextBody: "Existing body"
+  });
+
+  const result = await context.NCSharing.buildPlainTextBlock({
+    shareUrl: "https://cloud.example/s/abc123",
+    password: "SecretPassword",
+    expireDate: "2026-12-31",
+    permissions: { read: true, create: false, write: false, delete: false }
+  }, {
+    noteEnabled: true,
+    note: "My custom note",
+    permissions: { read: true, create: false, write: false, delete: false }
+  });
+
+  assert(result.includes("LINK: https://cloud.example/s/abc123"), "Custom template must resolve {URL}");
+  assert(result.includes("PASS: SecretPassword"), "Custom template must resolve {PASSWORD}");
+  assert(result.includes("NOTE: My custom note"), "Custom template must resolve {NOTE}");
+
+  const insertResult = await context.handleSharingInsertHtmlMessage({
+    tabId: 10,
+    html: "<p>ignored</p>",
+    plainText: result
+  });
+
+  assert(insertResult.ok === true, "Insert with custom template should succeed");
+  const writtenBody = composeState.setCalls[0].details.plainTextBody;
+  assert(writtenBody.includes("LINK: https://cloud.example/s/abc123"), "Final body must contain rendered template");
+}
+
 async function run(){
   await testLocalPlainTextBuildSkipsSanitizer();
   await testCustomTemplatePrunesEmptyPasswordAndSanitizes();
   await testCustomTemplateUsesSeparatePasswordHint();
   await testPlainTextInsertCompactsMarkedRightsSegment();
+  await testPlainTextInsertUsesCustomTemplate();
   await testInsertRejectsMissingPlainTextVariant();
   console.log("[OK] share-plaintext-contract-check passed");
 }

@@ -1311,6 +1311,29 @@
       passwordText = String(result.password || "").trim();
     }
 
+    if (!customTemplate){
+      const userTemplateKey = NCSharingStorage?.SHARING_KEYS?.plaintextTemplate;
+      const stored = userTemplateKey ? await browser.storage.local.get([userTemplateKey]) : {};
+      const userTemplate = userTemplateKey ? String(stored[userTemplateKey] || "").trim() : "";
+      if (userTemplate){
+        const replacements = {
+          URL: downloadUrl || "",
+          PASSWORD: passwordText,
+          EXPIRATIONDATE: String(result.expireDate || ""),
+          RIGHTS: permissionsPlain,
+          NOTE: noteText
+        };
+        let rendered = userTemplate;
+        Object.keys(replacements).forEach((key) => {
+          rendered = rendered.split(`{${key}}`).join(replacements[key]);
+        });
+        const plainText = normalizePlainTextBlock(rendered);
+        if (plainText){
+          return plainText;
+        }
+      }
+    }
+
     if (customTemplate){
       const emptyPlaceholders = [];
       if (!downloadUrl){

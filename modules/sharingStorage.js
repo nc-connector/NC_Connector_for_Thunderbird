@@ -21,7 +21,8 @@ const NCSharingStorage = (() => {
     defaultExpireDays: "sharingDefaultExpireDays",
     attachmentsAlwaysConnector: "sharingAttachmentsAlwaysConnector",
     attachmentsOfferAboveEnabled: "sharingAttachmentsOfferAboveEnabled",
-    attachmentsOfferAboveMb: "sharingAttachmentsOfferAboveMb"
+    attachmentsOfferAboveMb: "sharingAttachmentsOfferAboveMb",
+    plaintextTemplate: "sharingPlaintextTemplate"
   };
   const LEGACY_KEYS = {
     basePath: "fileLinkBasePath",
