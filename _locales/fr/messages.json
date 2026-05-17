@@ -401,6 +401,12 @@
   "options_event_description_lang_hint": {
     "message": "Contrôle la langue du bloc de texte Talk dans les événements."
   },
+  "options_sharing_plaintext_template_label": {
+    "message": "Modèle en texte brut"
+  },
+  "options_sharing_plaintext_template_hint": {
+    "message": "Permet de créer votre propre modèle de texte personnalisé. Les variables sont : {URL}, {PASSWORD}, {EXPIRATIONDATE}, {RIGHTS}, {NOTE}"
+  },
   "options_lang_default": {
     "message": "Par défaut (UI)"
   },

@@ -407,7 +407,7 @@
   "options_sharing_plaintext_template_hint": {
     "message": "Ermöglicht es dir, deine eigene Textvorlage zu erstellen. Die Platzhalter sind: {URL}, {PASSWORD}, {EXPIRATIONDATE}, {RIGHTS}, {NOTE}"
   },
-  "options_tab_signature": {
+  "options_lang_default": {
     "message": "Standard (UI)"
   },
   "options_about_version_label": {

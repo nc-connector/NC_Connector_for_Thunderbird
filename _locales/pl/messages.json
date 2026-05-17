@@ -401,6 +401,12 @@
   "options_event_description_lang_hint": {
     "message": "Kontroluje język bloku tekstowego Talk w wydarzeniach."
   },
+  "options_sharing_plaintext_template_label": {
+    "message": "Szablon tekstu jawnego"
+  },
+  "options_sharing_plaintext_template_hint": {
+    "message": "Pozwala na stworzenie własnego szablonu tekstowego. Symbole zastępcze to: {URL}, {PASSWORD}, {EXPIRATIONDATE}, {RIGHTS}, {NOTE}"
+  },
   "options_lang_default": {
     "message": "Domyślny (UI)"
   },

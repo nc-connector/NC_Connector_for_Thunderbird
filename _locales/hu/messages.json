@@ -401,6 +401,12 @@
   "options_event_description_lang_hint": {
     "message": "Az eseményekben megjelenő Talk szövegblokk nyelvét állítja be."
   },
+  "options_sharing_plaintext_template_label": {
+    "message": "Egyszerű szöveges sablon"
+  },
+  "options_sharing_plaintext_template_hint": {
+    "message": "Lehetővé teszi saját egyéni szövegsablon létrehozását. A helykitöltők: {URL}, {PASSWORD}, {EXPIRATIONDATE}, {RIGHTS}, {NOTE}"
+  },
   "options_lang_default": {
     "message": "Alapértelmezett (UI)"
   },

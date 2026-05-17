@@ -401,6 +401,12 @@
   "options_event_description_lang_hint": {
     "message": "Určuje jazyk textového bloku Talk v událostech."
   },
+  "options_sharing_plaintext_template_label": {
+    "message": "Šablona čistého textu"
+  },
+  "options_sharing_plaintext_template_hint": {
+    "message": "Umožňuje vytvořit vlastní textovou šablonu. Zástupné symboly jsou: {URL}, {PASSWORD}, {EXPIRATIONDATE}, {RIGHTS}, {NOTE}"
+  },
   "options_lang_default": {
     "message": "Výchozí (UI)"
   },

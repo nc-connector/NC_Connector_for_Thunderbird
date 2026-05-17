@@ -401,6 +401,12 @@
   "options_event_description_lang_hint": {
     "message": "Определяет язык текстового блока Talk в событиях."
   },
+  "options_sharing_plaintext_template_label": {
+    "message": "Шаблон простого текста"
+  },
+  "options_sharing_plaintext_template_hint": {
+    "message": "Позволяет создать собственный текстовый шаблон. Плейсхолдеры: {URL}, {PASSWORD}, {EXPIRATIONDATE}, {RIGHTS}, {NOTE}"
+  },
   "options_lang_default": {
     "message": "По умолчанию (UI)"
   },

@@ -401,6 +401,12 @@
   "options_event_description_lang_hint": {
     "message": "Controlla la lingua del blocco di testo Talk negli eventi."
   },
+  "options_sharing_plaintext_template_label": {
+    "message": "Modello di testo semplice"
+  },
+  "options_sharing_plaintext_template_hint": {
+    "message": "Consente di creare il proprio modello di testo personalizzato. I segnaposto sono: {URL}, {PASSWORD}, {EXPIRATIONDATE}, {RIGHTS}, {NOTE}"
+  },
   "options_lang_default": {
     "message": "Predefinito (UI)"
   },

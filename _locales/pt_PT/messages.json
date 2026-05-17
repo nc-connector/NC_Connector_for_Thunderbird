@@ -401,6 +401,12 @@
   "options_event_description_lang_hint": {
     "message": "Controla o idioma do bloco de texto do Talk em eventos."
   },
+  "options_sharing_plaintext_template_label": {
+    "message": "Modelo de texto simples"
+  },
+  "options_sharing_plaintext_template_hint": {
+    "message": "Permite criar o seu próprio modelo de texto personalizado. Os espaços reservados são: {URL}, {PASSWORD}, {EXPIRATIONDATE}, {RIGHTS}, {NOTE}"
+  },
   "options_lang_default": {
     "message": "Predefinido (UI)"
   },

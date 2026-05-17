@@ -401,6 +401,12 @@
   "options_event_description_lang_hint": {
     "message": "控制事件中 Talk 文字區塊的語言。"
   },
+  "options_sharing_plaintext_template_label": {
+    "message": "純文字範本"
+  },
+  "options_sharing_plaintext_template_hint": {
+    "message": "允許您建立自訂文字範本。預留位置為：{URL}, {PASSWORD}, {預留位置}, {RIGHTS}, {NOTE}"
+  },
   "options_lang_default": {
     "message": "預設（UI）"
   },

@@ -401,6 +401,12 @@
   "options_event_description_lang_hint": {
     "message": "イベント内の Talk テキストブロックの言語を設定します。"
   },
+  "options_sharing_plaintext_template_label": {
+    "message": "プレーンテキストテンプレート"
+  },
+  "options_sharing_plaintext_template_hint": {
+    "message": "独自のカスタムテキストテンプレートを作成できます。プレースホルダーは次のとおりです: {URL}, {PASSWORD}, {EXPIRATIONDATE}, {RIGHTS}, {NOTE}"
+  },
   "options_lang_default": {
     "message": "既定（UI）"
   },

@@ -401,6 +401,12 @@
   "options_event_description_lang_hint": {
     "message": "Bepaalt de taal van het Talk-tekstblok in afspraken."
   },
+  "options_sharing_plaintext_template_label": {
+    "message": "Plattekstsjabloon"
+  },
+  "options_sharing_plaintext_template_hint": {
+    "message": "Hiermee kunt u uw eigen aangepaste tekstsjabloon maken. De tijdelijke aanduidingen zijn: {URL}, {PASSWORD}, {EXPIRATIONDATE}, {RIGHTS}, {NOTE}"
+  },
   "options_lang_default": {
     "message": "Standaard (UI)"
   },

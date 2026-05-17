@@ -401,6 +401,12 @@
   "options_event_description_lang_hint": {
     "message": "控制事件中 Talk 文本块的语言。"
   },
+  "options_sharing_plaintext_template_label": {
+    "message": "纯文本模板"
+  },
+  "options_sharing_plaintext_template_hint": {
+    "message": "允许您创建自定义文本模板。占位符为：{URL}, {PASSWORD}, {EXPIRATIONDATE}, {RIGHTS}, {NOTE}"
+  },
   "options_lang_default": {
     "message": "默认（UI）"
   },

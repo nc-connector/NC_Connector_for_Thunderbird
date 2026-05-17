@@ -401,6 +401,12 @@
   "options_event_description_lang_hint": {
     "message": "Controla el idioma del bloque de texto de Talk en eventos."
   },
+  "options_sharing_plaintext_template_label": {
+    "message": "Plantilla de texto plano"
+  },
+  "options_sharing_plaintext_template_hint": {
+    "message": "Permite crear tu propia plantilla de texto personalizada. Los marcadores son: {URL}, {PASSWORD}, {EXPIRATIONDATE}, {RIGHTS}, {NOTE}"
+  },
   "options_lang_default": {
     "message": "Predeterminado (IU)"
   },
