@@ -346,7 +346,7 @@
   }
 
   /**
-   * Convert plain text paragraphs into lightweight HTML.
+   * Convert plain text into lightweight HTML with line breaks.
    * @param {string} value
    * @returns {string}
    */
@@ -355,11 +355,7 @@
     if (!normalized){
       return "";
     }
-    const paragraphs = normalized.split(/\n{2,}/).map((part) => part.trim()).filter(Boolean);
-    return paragraphs.map((part) => {
-      const escaped = escapeHtml(part).replace(/\n/g, "<br>");
-      return `<p>${escaped}</p>`;
-    }).join("\n");
+    return escapeHtml(normalized).replace(/\n/g, "<br />");
   }
 
   /**
