@@ -407,7 +407,7 @@
   "options_sharing_plaintext_template_hint": {
     "message": "Let's you create your custom text template. The placeholders are: {URL}, {PASSWORD}, {EXPIRATIONDATE}, {RIGHTS}, {NOTE}"
   },
-  "options_tab_signature": {
+  "options_lang_default": {
     "message": "Default (UI)"
   },
   "options_about_version_label": {
