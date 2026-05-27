@@ -598,6 +598,7 @@ async function createTalkPublicRoom({
       logTalkCoreError("lobby update error", error, {
         token: shortToken(token)
       });
+      await deleteCreatedRoomAfterLobbySetupFailure(token);
       throw error;
     }
   }
@@ -648,6 +649,20 @@ async function createTalkPublicRoom({
     description: finalDescription || cleanedDescription || ""
   };
 }
+
+async function deleteCreatedRoomAfterLobbySetupFailure(token){
+  try{
+    await deleteTalkRoom({ token });
+    L("created room deleted after lobby setup failure", {
+      token: shortToken(token)
+    });
+  }catch(error){
+    logTalkCoreError("created room cleanup after lobby setup failure failed", error, {
+      token: shortToken(token)
+    });
+  }
+}
+
 /**
  * Update lobby state (and optional start time) for an existing room.
  */
