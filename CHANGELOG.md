@@ -6,9 +6,6 @@ This project targets **Thunderbird ESR 140.\***.
 
 ## 3.1.2
 
-Release package version is **3.1.2**.
-Functional delta documented here corresponds to **3.1.1 -> 3.1.2**.
-
 ### Added
 - Improve large file uploads with Nextcloud chunked WebDAV v2.
 - Show upload speed below progress bar and fix status text clipping.
@@ -18,16 +15,10 @@ Functional delta documented here corresponds to **3.1.1 -> 3.1.2**.
 
 ## 3.1.1
 
-Release package version is **3.1.1**.
-Functional delta documented here corresponds to **3.1.0 -> 3.1.1**.
-
 ### Fixed (Mainline)
 - Fix flaky iCal snapshot flow and keep X-NCTALK metadata in sync.
 
 ## 3.1.0
-
-Release package version is **3.1.0**.  
-Functional delta documented here corresponds to **3.0.4 -> 3.1.0**.
 
 ### Added
 - Backend-controlled email signature settings were added for compose/reply/forward handling.
@@ -47,9 +38,6 @@ Functional delta documented here corresponds to **3.0.4 -> 3.1.0**.
 
 ## 3.0.4
 
-Release package version is **3.0.4**.  
-Functional delta documented here corresponds to **3.0.3 -> 3.0.4**.
-
 ### Added
 - Optional Talk setting to delete linked Talk rooms when saved NC Connector calendar events are deleted:
   - available as a local add-on setting
@@ -67,9 +55,6 @@ Functional delta documented here corresponds to **3.0.3 -> 3.0.4**.
 - Unsaved event cleanup remains active for rooms created and then discarded during event creation.
 
 ## 3.0.3
-
-Release package version is **3.0.3**.  
-Functional delta documented here corresponds to **3.0.2 -> 3.0.3**.
 
 ### Added
 - Mode-aware plain-text insertion for share mails and separate password follow-up mails:
@@ -94,9 +79,6 @@ Functional delta documented here corresponds to **3.0.2 -> 3.0.3**.
 
 ## 3.0.2
 
-Release package version is **3.0.2**.  
-Functional delta documented here corresponds to **3.0.1 -> 3.0.2**.
-
 ### Changed
 - Release/version references were aligned to `3.0.2` across manifest, reviewer notes, smoke plan, and readmes.
 - Sanitizer-dependent backend HTML paths now fail closed instead of falling back to raw HTML:
@@ -105,9 +87,6 @@ Functional delta documented here corresponds to **3.0.1 -> 3.0.2**.
   - the privileged `descriptionHtml` bridge rejects the update if the expected sanitizer is unavailable
 
 ## 3.0.1
-
-Release package version is **3.0.1**.  
-Functional delta documented here corresponds to **3.0.0 -> 3.0.1**.
 
 ### Changed
 - Release/version references were aligned to `3.0.1` across manifest, review notes, readmes, and docs.
@@ -130,9 +109,6 @@ Functional delta documented here corresponds to **3.0.0 -> 3.0.1**.
 
 ## 3.0.0
 
-Release package version is **3.0.0**.  
-Functional delta documented here corresponds to **2.3.0 -> 3.0.0**.
-
 ### Changed
 - Functional runtime baseline remains equivalent to the stabilized 2.3.0 line, now including optional NC Connector backend policy mode:
   - backend status endpoint is queried on Talk wizard open, Sharing wizard open, Settings open, and Settings save
@@ -153,9 +129,6 @@ Functional delta documented here corresponds to **2.3.0 -> 3.0.0**.
   - core runtime errors now use always-on error logging independent of the debug fla
 
 ## 2.2.9
-
-Release package version is **2.2.9**.
-Functional delta documented here corresponds to **2.2.8 -> 2.2.9** only.
 
 ### Changed
 - Calendar editor Talk button wiring was switched to the official `calendar_item_action` path:
