@@ -83,18 +83,18 @@
    * @param {(message:string,error:any)=>void|null} logger
    * @param {string} scope
    * @param {string} message
-   * @param {any} error
+   * @param {any} reportedError
    */
-  function logError(logger, scope, message, error){
+  function logError(logger, scope, message, reportedError){
     const prefix = scope || "[NCUI][PasswordPolicy]";
     if (typeof logger === "function"){
-      logger(message, error);
+      logger(message, reportedError);
       return;
     }
     try{
-      console.error(prefix, message, error);
+      console.error(prefix, message, reportedError);
     }catch(error){
-      console.error(prefix, message, error?.message || String(error), error?.message || String(error));
+      console.error(prefix, message, reportedError?.message || String(reportedError), error?.message || String(error));
     }
   }
 

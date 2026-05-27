@@ -80,16 +80,16 @@
   /**
    * Log internal sharing module errors.
    * @param {string} scope
-   * @param {any} error
+   * @param {any} reportedError
    */
-  function logInternalError(scope, error){
+  function logInternalError(scope, reportedError){
     try{
-      console.error(getSharingRuntimePrefix(), scope, error);
+      console.error(getSharingRuntimePrefix(), scope, reportedError);
     }catch(error){
       console.error(
         getSharingRuntimePrefix(),
         scope,
-        error?.message || String(error),
+        reportedError?.message || String(reportedError),
         error?.message || String(error)
       );
     }
@@ -1672,4 +1672,3 @@
     __context.NCSharing = api;
   }
 })(typeof window !== "undefined" ? window : (typeof globalThis !== "undefined" ? globalThis : this));
-

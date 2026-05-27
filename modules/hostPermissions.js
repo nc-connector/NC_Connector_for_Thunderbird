@@ -18,13 +18,13 @@
   /**
    * Log internal host-permission errors.
    * @param {string} scope
-   * @param {any} error
+   * @param {any} reportedError
    */
-  function logHostPermissionError(scope, error){
+  function logHostPermissionError(scope, reportedError){
     try{
-      console.error(LOG_PREFIX, scope, error);
+      console.error(LOG_PREFIX, scope, reportedError);
     }catch(error){
-      console.error(LOG_PREFIX, scope, error?.message || String(error), error?.message || String(error));
+      console.error(LOG_PREFIX, scope, reportedError?.message || String(reportedError), error?.message || String(error));
     }
   }
 
@@ -136,15 +136,19 @@
       return false;
     }catch(error){
       logHostPermissionError("permissions.request failed", error);
-      try{
-        if (global?.browser?.permissions?.contains){
-          return await global.browser.permissions.contains({ origins: [pattern] });
-        }
-      }catch(error){
-        logHostPermissionError("permissions.contains fallback failed", error);
-      }
-      return false;
+      return await hasPermissionAfterRequestFailure(pattern);
     }
+  }
+
+  async function hasPermissionAfterRequestFailure(pattern){
+    try{
+      if (global?.browser?.permissions?.contains){
+        return await global.browser.permissions.contains({ origins: [pattern] });
+      }
+    }catch(error){
+      logHostPermissionError("permissions.contains fallback failed", error);
+    }
+    return false;
   }
 
   if (typeof module !== "undefined" && module.exports){

@@ -17,20 +17,24 @@
    * Report one internal helper failure without throwing.
    * @param {(scope:string,error:any)=>void} onError
    * @param {string} scope
-   * @param {any} error
+   * @param {any} reportedError
    */
-  function reportHelperError(onError, scope, error){
+  function reportHelperError(onError, scope, reportedError){
     if (typeof onError !== "function"){
       return;
     }
     try{
-      onError(scope, error);
+      onError(scope, reportedError);
     }catch(error){
-      try{
-        console.error(FORWARDER_LOG_PREFIX, "onError callback failed", error);
-      }catch(error){
-        // Ignore teardown-time logging errors.
-      }
+      logCallbackFailure(reportedError, error);
+    }
+  }
+
+  function logCallbackFailure(reportedError, callbackError){
+    try{
+      console.error(FORWARDER_LOG_PREFIX, "onError callback failed", reportedError, callbackError);
+    }catch(error){
+      // Runtime teardown can invalidate console while the popup is closing.
     }
   }
 

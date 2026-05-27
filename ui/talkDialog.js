@@ -78,13 +78,13 @@
   /**
    * Log internal UI errors with stable context.
    * @param {string} scope
-   * @param {any} error
+   * @param {any} reportedError
    */
-  function logUiError(scope, error){
+  function logUiError(scope, reportedError){
     try{
-      console.error(LOG_PREFIX, scope, error);
+      console.error(LOG_PREFIX, scope, reportedError);
     }catch(error){
-      console.error(LOG_PREFIX, scope, error?.message || String(error), error?.message || String(error));
+      console.error(LOG_PREFIX, scope, reportedError?.message || String(reportedError), error?.message || String(error));
     }
   }
 
