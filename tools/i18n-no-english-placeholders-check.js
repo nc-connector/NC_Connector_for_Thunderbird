@@ -76,10 +76,6 @@ function readJson(filePath){
   return JSON.parse(fs.readFileSync(filePath, "utf8"));
 }
 
-/**
- * Return sorted locale folders containing messages.json.
- * @returns {string[]}
- */
 function getLocaleFolders(){
   const entries = fs.readdirSync(LOCALES_DIR, { withFileTypes: true });
   return entries
@@ -89,21 +85,10 @@ function getLocaleFolders(){
     .sort();
 }
 
-/**
- * Normalize string for equality comparison.
- * @param {unknown} value
- * @returns {string}
- */
 function normalize(value){
   return String(value ?? "").replace(/\s+/g, " ").trim();
 }
 
-/**
- * Check whether one key may match en for this locale
- * @param {string} locale
- * @param {string} key
- * @returns {boolean}
- */
 function isAllowedIdentical(locale, key){
   if (ALLOWED_IDENTICAL_KEYS_GLOBAL.has(key)){
     return true;

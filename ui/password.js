@@ -31,19 +31,10 @@
     return Math.floor(Math.random() * max);
   }
 
-  /**
-   * Pick a random character from a string.
-   * @param {string} set
-   * @returns {string}
-   */
   function pick(set){
     return set.charAt(getRandomInt(set.length));
   }
 
-  /**
-   * Shuffle array elements in place.
-   * @param {string[]} values
-   */
   function shuffle(values){
     for (let i = values.length - 1; i > 0; i--){
       const j = getRandomInt(i + 1);

@@ -100,11 +100,6 @@ function countUniquePasswordDispatchRecipients(queue){
   return keys.size;
 }
 
-/**
- * Normalize a mailbox address to a stable lowercase email.
- * @param {string} value
- * @returns {string}
- */
 function normalizeMailboxEmail(value){
   const email = String(value || "").trim().toLowerCase();
   return email.includes("@") ? email : "";

@@ -22,10 +22,6 @@
   const INVALID_PATH_CHARS = /[\\/:*?"<>|]/g;
   let cachedHeaderBase64 = null;
 
-  /**
-   * Return the standard debug/error prefix for the current runtime context.
-   * @returns {string}
-   */
   function getSharingRuntimePrefix(){
     return typeof L === "function" ? "[NCBG]" : "[NCUI][Sharing]";
   }
@@ -157,10 +153,6 @@
     });
   }
 
-  /**
-   * Read the configured language override for the sharing HTML block.
-   * @returns {Promise<string>}
-   */
   async function getShareBlockLang(){
     if (typeof browser === "undefined" || !browser?.storage?.local){
       return "default";
@@ -210,11 +202,6 @@
     return normalized || fallback;
   }
 
-  /**
-   * Format a Date as YYYYMMDD for folder naming.
-   * @param {Date} date
-   * @returns {string}
-   */
   function formatDateForFolder(date){
     const year = date.getFullYear();
     const month = String(date.getMonth() + 1).padStart(2, "0");
@@ -222,22 +209,11 @@
     return `${year}${month}${day}`;
   }
 
-  /**
-   * Normalize a relative path to forward-slash form.
-   * @param {string} path
-   * @returns {string}
-   */
   function normalizeRelativePath(path){
     if (!path) return "";
     return String(path).replace(/\\/g, "/").replace(/^\/+/, "").replace(/\/+$/, "");
   }
 
-  /**
-   * Join two relative path segments.
-   * @param {string} base
-   * @param {string} child
-   * @returns {string}
-   */
   function joinRelativePath(base, child){
     const normalizedBase = normalizeRelativePath(base);
     const normalizedChild = normalizeRelativePath(child);
@@ -579,11 +555,6 @@
     });
   }
 
-  /**
-   * Upload a file with a direct WebDAV PUT.
-   * @param {object} options
-   * @returns {Promise<void>}
-   */
   async function uploadFileDirect({ targetUrl, file, authHeader, progressCb, statusCb, displayPath, itemId, fileName }){
     await uploadBlobWithProgress({
       url: targetUrl,
@@ -662,11 +633,6 @@
     }
   }
 
-  /**
-   * Upload a file with progress callbacks.
-   * @param {object} options
-   * @returns {Promise<void>}
-   */
   async function uploadFile({ davRoot, uploadRoot, relativeFolder, fileName, file, authHeader, progressCb, statusCb, displayPath, itemId, debugOpts }){
     const relativePath = joinRelativePath(relativeFolder, fileName);
     const targetUrl = davRoot + "/" + encodePath(relativePath);
@@ -816,11 +782,6 @@
     }
   }
 
-  /**
-   * Convert an ArrayBuffer to a base64 string.
-   * @param {ArrayBuffer} buffer
-   * @returns {string}
-   */
   function bufferToBase64(buffer){
     let binary = "";
     const bytes = new Uint8Array(buffer);
@@ -852,10 +813,6 @@
     }
   }
 
-  /**
-   * Load and cache the header image as base64 for HTML insertion.
-   * @returns {Promise<string>}
-   */
   async function getHeaderBase64(){
     if (cachedHeaderBase64){
       return cachedHeaderBase64;
@@ -939,23 +896,10 @@
     return template.trim();
   }
 
-  /**
-   * Build the permissions badge table for custom HTML template placeholders.
-   * @param {object} perms
-   * @param {object} labels
-   * @returns {string}
-   */
   function buildPermissionsTemplateHtml(perms, labels = {}){
     return buildPermissionsBadges(perms, labels);
   }
 
-  /**
-   * Build a compact plain-text permissions display with explicit check markers.
-   * Used for plain-text compose output.
-   * @param {object} perms
-   * @param {object} labels
-   * @returns {string}
-   */
   function buildPermissionsPlainTextDisplay(perms, labels = {}){
     const safePerms = perms || {};
     const entries = [
@@ -969,12 +913,6 @@
       .join(" | ");
   }
 
-  /**
-   * Wrap one generated rights block so final plain-text normalization stays
-   * scoped to the inserted permissions content.
-   * @param {string} value
-   * @returns {string}
-   */
   function wrapPermissionsPlainTextSegment(value){
     const plain = String(value || "").trim();
     if (!plain){
@@ -983,11 +921,6 @@
     return `${RIGHTS_SEGMENT_START}${plain}${RIGHTS_SEGMENT_END}`;
   }
 
-  /**
-   * Normalize line endings and vertical whitespace for plain-text rendering.
-   * @param {string} value
-   * @returns {string}
-   */
   function normalizePlainTextBlock(value){
     return String(value || "")
       .replace(/\u00A0/g, " ")
@@ -997,11 +930,6 @@
       .trim();
   }
 
-  /**
-   * Encode a plain-text replacement for temporary insertion into HTML templates.
-   * @param {string} value
-   * @returns {string}
-   */
   function plainTextToTemplateHtml(value){
     return escapeHtml(String(value || "")).replace(/\r?\n/g, "<br />");
   }
@@ -1094,12 +1022,6 @@
     return output.split(token).join("");
   }
 
-  /**
-   * Remove all placeholders whose values would render empty.
-   * @param {string} template
-   * @param {string[]} placeholders
-   * @returns {string}
-   */
   function pruneEmptyTemplatePlaceholders(template, placeholders = []){
     return placeholders.reduce((output, placeholder) => {
       return pruneTemplatePlaceholder(output, placeholder);
@@ -1414,12 +1336,6 @@
     return `<span class="nc-share-password" style="display:inline-block;font-family:'Consolas','Courier New',monospace;padding:2px 6px;border:1px solid #c7c7c7;border-radius:3px;-ms-user-select:all;user-select:all;">${escapeHtml(password || "")}</span>`;
   }
 
-  /**
-   * Build the permissions badge table for the HTML block.
-   * @param {object} perms
-   * @param {object} labels
-   * @returns {string}
-   */
   function buildPermissionsBadges(perms, labels = {}){
     const safePerms = perms || {};
     const entries = [
@@ -1587,10 +1503,6 @@
     };
   }
 
-  /**
-   * Load the configured sharing base path from storage.
-   * @returns {Promise<string>}
-   */
   async function getFileLinkBasePath(){
     if (typeof browser === "undefined" || !browser?.storage?.local){
       return DEFAULT_BASE_PATH;

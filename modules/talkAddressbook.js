@@ -181,11 +181,6 @@ function parseSystemAddressbook(data){
   return contacts;
 }
 
-/**
- * Extract a MIME type from a data URL.
- * @param {string} dataUrl
- * @returns {string}
- */
 function extractMimeFromDataUrl(dataUrl){
   const match = /^data:([^;,]+)[;,]?/i.exec(dataUrl);
   return match && match[1] ? match[1].toLowerCase() : "";

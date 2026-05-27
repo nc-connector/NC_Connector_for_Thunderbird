@@ -16,21 +16,10 @@ const NCCore = (() => {
     globalThis.NCLogContext?.resolveAddonLogPrefix?.("Core")
     || "[NCBG]";
 
-  /**
-   * Log NCCore internal errors.
-   * Errors must stay visible even when debug logging is disabled.
-   * @param {string} scope
-   * @param {any} error
-   * @param {object} details
-   */
   function logNCCoreError(scope, error, details = undefined){
     console.error(resolveLogPrefix(), scope, error, details || "");
   }
 
-  /**
-   * Build a localized login-flow error and mark it as fatal.
-   * @returns {Error}
-   */
   function createLoginFlowError(){
     const fallback = typeof bgI18n === "function"
       ? bgI18n("options_loginflow_failed")

@@ -100,20 +100,11 @@ browser.storage.onChanged.addListener((changes, area) => {
     EVENT_TOKEN_MAP = changes[EVENT_TOKEN_MAP_KEY].newValue || {};
   }
 });
-/**
- * Log helper that only runs when debug is enabled.
- * @param {...any} a
- */
 function L(...a){
   if (!DEBUG_ENABLED) return;
   logBackgroundDebugLine("[NCBG]", ...a);
 }
 
-/**
- * Log one background debug line with an explicit prefix.
- * @param {string} prefix
- * @param {...any} args
- */
 function logBackgroundDebugLine(prefix, ...args){
   if (!DEBUG_ENABLED) return;
   try{
@@ -123,10 +114,6 @@ function logBackgroundDebugLine(prefix, ...args){
   }
 }
 
-/**
- * Expose the current background debug flag to shared helper modules.
- * @returns {boolean}
- */
 function isBackgroundDebugEnabled(){
   return !!DEBUG_ENABLED;
 }
@@ -231,12 +218,6 @@ function shortToken(token, { keepStart = 4, keepEnd = 3 } = {}){
   return str.slice(0, keepStart) + "..." + str.slice(str.length - keepEnd);
 }
 
-/**
- * Create a localized Error using the i18n catalog.
- * @param {string} key
- * @param {Array<string>} substitutions
- * @returns {Error}
- */
 function localizedError(key, substitutions = []){
   const message = bgI18n(key, substitutions);
   return new Error(message || key);

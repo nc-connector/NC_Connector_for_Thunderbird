@@ -35,10 +35,6 @@ function normalizeSharingPermissionTerm(value){
     .replace(/\s+/g, " ");
 }
 
-/**
- * @param {string} line
- * @returns {boolean}
- */
 function isSharingPermissionMarker(line){
   const normalized = normalizeSharingPermissionTerm(line);
   return normalized === "[x]" || normalized === "[ ]";
@@ -116,11 +112,6 @@ function isLikelySharingPermissionActionLine(line, actionTerms){
   return true;
 }
 
-/**
- * @param {string[]} lines
- * @param {number} fromIndex
- * @returns {number}
- */
 function getNextNonEmptySharingLineIndex(lines, fromIndex){
   for (let i = fromIndex; i < lines.length; i += 1){
     if (String(lines[i] || "").trim()){
@@ -185,10 +176,6 @@ function findSharingPermissionBlock(lines, actionTerms){
   return null;
 }
 
-/**
- * @param {string} line
- * @returns {boolean}
- */
 function isLikelySharingPermissionHeadingLine(line){
   const normalized = normalizeSharingPermissionTerm(line);
   if (!normalized || normalized.length > 32){
@@ -298,12 +285,6 @@ function finalizeSharingRightsSegments(value){
     .split(RIGHTS_SEGMENT_END).join("");
 }
 
-/**
- * Render top/bottom hash separators around the plain-text sharing block.
- * Border width is fixed to 60 hash characters.
- * @param {string} plainText
- * @returns {string}
- */
 function frameSharingPlainTextBlock(plainText){
   const lines = String(plainText || "")
     .replace(/\r\n?/g, "\n")

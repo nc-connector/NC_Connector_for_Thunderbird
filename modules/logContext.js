@@ -28,11 +28,6 @@
     }
   }
 
-  /**
-   * Return true when the current pathname belongs to one extension UI page.
-   * @param {string} pathname
-   * @returns {boolean}
-   */
   function isAddonUiPath(pathname){
     const normalized = String(pathname || "").trim().toLowerCase();
     return normalized.endsWith("/options.html") || normalized.includes("/ui/");
@@ -54,10 +49,6 @@
     return fallback || "UI";
   }
 
-  /**
-   * Return true when the current runtime is one known extension UI page.
-   * @returns {boolean}
-   */
   function isKnownUiRuntime(){
     const pathname = getNormalizedPathname();
     return UI_RUNTIME_LABELS.some((entry) => pathname.endsWith(entry.suffix));

@@ -16,19 +16,10 @@ const ROOT = path.resolve(__dirname, "..");
 const LOCALES_DIR = path.join(ROOT, "_locales");
 const EN_FILE = path.join(LOCALES_DIR, "en", "messages.json");
 
-/**
- * Read and parse JSON file.
- * @param {string} filePath
- * @returns {any}
- */
 function readJson(filePath) {
   return JSON.parse(fs.readFileSync(filePath, "utf8"));
 }
 
-/**
- * Return sorted locale folders containing a messages.json.
- * @returns {string[]}
- */
 function getLocaleFolders() {
   const entries = fs.readdirSync(LOCALES_DIR, { withFileTypes: true });
   return entries

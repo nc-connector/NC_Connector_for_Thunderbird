@@ -20,12 +20,6 @@ function messageError(type, error){
   return { ok:false, error: error?.message || String(error) };
 }
 
-/**
- * Read the canonical top-level runtime message context id.
- * Legacy payload-based variants are intentionally not accepted here.
- * @param {any} msg
- * @returns {string}
- */
 function readMessageContextId(msg){
   return typeof msg?.contextId === "string" ? msg.contextId.trim() : "";
 }

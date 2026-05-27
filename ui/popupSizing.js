@@ -18,11 +18,6 @@
     return;
   }
 
-  /**
-   * Log internal popup sizing errors.
-   * @param {string} scope
-   * @param {any} reportedError
-   */
   function logPopupSizingError(scope, reportedError){
     try{
       console.error(LOG_PREFIX, scope, reportedError);
@@ -31,11 +26,6 @@
     }
   }
 
-  /**
-   * Create a popup sizing helper with fixed width and minimum height
-   * @param {object} options
-   * @returns {object}
-   */
   function createPopupSizer(options = {}){
     const fixedWidth = Number(options.fixedWidth) || 0;
     const minHeight = Number(options.minHeight) || 0;
@@ -185,7 +175,6 @@
         window.clearTimeout(resizeTimer);
       }
       resizeTimer = window.setTimeout(() => {
-  'use strict';
         enforceFixedWidth();
         enforceMinHeight();
         enforceWindowBoundsAsync();

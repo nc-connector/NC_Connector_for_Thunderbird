@@ -14,29 +14,14 @@ const NCPolicyRuntime = (() => {
   const STATUS_ENDPOINT_PATH = "/apps/ncc_backend_4mc/api/v1/status";
   const POLICY_DOMAINS = ["share", "talk", "email_signature"];
 
-  /**
-   * Build the status endpoint URL from a normalized base URL.
-   * @param {string} baseUrl
-   * @returns {string}
-   */
   function buildStatusEndpointUrl(baseUrl){
     return String(baseUrl || "").replace(/\/+$/, "") + STATUS_ENDPOINT_PATH;
   }
 
-  /**
-   * Return true when the value is a plain object.
-   * @param {any} value
-   * @returns {boolean}
-   */
   function isObject(value){
     return !!value && typeof value === "object" && !Array.isArray(value);
   }
 
-  /**
-   * Write policy-runtime errors to the console regardless of debug mode.
-   * @param {string} scope
-   * @param {object} details
-   */
   function logPolicyRuntimeError(scope, details = {}){
     try{
       console.error("[NCBG]", scope, details);
@@ -83,12 +68,6 @@ const NCPolicyRuntime = (() => {
       : null;
   }
 
-  /**
-   * Build the default local-mode status payload.
-   * @param {string} reason
-   * @param {object} details
-   * @returns {object}
-   */
   function buildLocalModeResult(reason, details = {}){
     const seatState = String(details?.seatState || "none");
     const seatAssigned = !!details?.seatAssigned;

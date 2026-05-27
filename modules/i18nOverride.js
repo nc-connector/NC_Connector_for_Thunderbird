@@ -55,12 +55,6 @@
     "ui"
   ]));
 
-  /**
-   * Normalize one language override label for alias comparisons.
-   * Backend policy payloads may use labels like `standard ui` instead of `default`.
-   * @param {string} input
-   * @returns {string}
-   */
   function normalizeLanguageAlias(input){
     return String(input || "")
       .trim()
@@ -69,11 +63,6 @@
       .replace(/\s+/g, " ");
   }
 
-  /**
-   * Return true when a value means "use the current UI language".
-   * @param {string} input
-   * @returns {boolean}
-   */
   function isDefaultLanguageAlias(input){
     return DEFAULT_LANGUAGE_ALIASES.has(normalizeLanguageAlias(input));
   }
@@ -123,14 +112,6 @@
     return null;
   }
 
-  /**
-   * Map a language tag to a supported locale folder name.
-   *
-   * Supported locale folders:
-   * - {@link SUPPORTED_LOCALES}
-   * @param {string} input
-   * @returns {string}
-   */
   function normalizeLang(input){
     return mapToSupportedLocale(input) || "en";
   }

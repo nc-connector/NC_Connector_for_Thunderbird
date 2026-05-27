@@ -28,11 +28,6 @@
   const POLICY_ADMIN_URL = "https://github.com/nc-connector/NC_Connector_for_Thunderbird/blob/main/docs/ADMIN.md";
   let disposeDebugFlagMirror = null;
 
-  /**
-   * Log internal UI errors with stable context.
-   * @param {string} scope
-   * @param {any} reportedError
-   */
   function logUiError(scope, reportedError){
     try{
       console.error(LOG_PREFIX, scope, reportedError);
@@ -41,18 +36,10 @@
     }
   }
 
-  /**
-   * Return the localized admin-control hint.
-   * @returns {string}
-   */
   function getAdminControlledHint(){
     return i18n("policy_admin_controlled_tooltip") || "Admin controlled";
   }
 
-  /**
-   * Return true when the backend endpoint exists.
-   * @returns {boolean}
-   */
   function isBackendEndpointAvailable(){
     return !!state.policy.status?.endpointAvailable;
   }
@@ -362,11 +349,6 @@
     }
   }
 
-  /**
-   * Toggle content visibility during async wizard initialization.
-   * Prevents initial step flicker before attachment launch context is applied.
-   * @param {boolean} ready
-   */
   function setWizardReady(ready){
     if (!dom.content){
       return;
@@ -425,10 +407,6 @@
     dom.cancelBtn = document.getElementById('cancelBtn');
   }
 
-  /**
-   * Parse the compose tab id from the query string.
-   * @returns {number|null}
-   */
   function parseTabId(){
     const params = new URLSearchParams(window.location.search);
     const raw = params.get('tabId');
@@ -437,10 +415,6 @@
     return Number.isFinite(parsed) ? parsed : null;
   }
 
-  /**
-   * Parse the launch context id from the query string.
-   * @returns {string}
-   */
   function parseLaunchContextId(){
     const params = new URLSearchParams(window.location.search);
     const raw = String(params.get('launchContextId') || '').trim();
@@ -866,10 +840,6 @@
     await finalizeShare();
   }
 
-  /**
-   * Read the minimum length from the active policy.
-   * @returns {number|null}
-   */
   function getPolicyMinLength(){
     return NCPasswordPolicyClient.getPolicyMinLength(state.passwordPolicy);
   }
@@ -1312,11 +1282,6 @@
     }
   }
 
-  /**
-   * Format one upload speed value for the status row.
-   * @param {number} kbps
-   * @returns {string}
-   */
   function formatUploadSpeedKbps(kbps){
     const numeric = Number(kbps);
     const safeValue = Number.isFinite(numeric) && numeric > 0 ? numeric : 0;
@@ -1884,31 +1849,18 @@
     return !!dom.permCreate?.checked && state.files.length === 0;
   }
 
-  /**
-   * Confirm that the user wants to proceed without uploads.
-   * @returns {boolean}
-   */
   function confirmNoFileUpload(){
     const title = i18n('sharing_confirm_no_files_title') || 'Share without upload';
     const body = i18n('sharing_confirm_no_files_message') || 'No files were added. Recipients can only upload their own files. Continue?';
     return window.confirm(`${title}\n\n${body}`);
   }
 
-  /**
-   * Show a message in the wizard UI.
-   * @param {string} text
-   * @param {string} type
-   */
   function setMessage(text, type = ''){
     dom.messageBar.textContent = text || '';
     dom.messageBar.className = `dialog-message ${type || ''}`.trim();
     log('Message', { text, type });
   }
 
-  /**
-   * Update the upload status line.
-   * @param {string} text
-   */
   function setUploadStatus(text){
     dom.uploadStatus.textContent = text || '';
     log('Status', text);
@@ -2024,10 +1976,6 @@
     throw new Error(i18n('sharing_error_folder_exists'));
   }
 
-  /**
-   * Compute the default expire date as YYYY-MM-DD.
-   * @returns {string}
-   */
   function getDefaultExpireDate(){
     const days = NCTalkTextUtils.normalizeExpireDays(state.defaults.expireDays, DEFAULT_EXPIRE_DAYS);
     const base = new Date();
@@ -2087,10 +2035,6 @@
     state.shareContext.verified = !!state.shareContext.folderInfo && !!state.shareContext.sanitizedName;
   }
 
-  /**
-   * Reset upload status for a file entry.
-   * @param {object} entry
-   */
   function resetFileEntry(entry){
     entry.status = 'pending';
     entry.progress = 0;
@@ -2099,11 +2043,6 @@
     entry.progressStartedAt = 0;
   }
 
-  /**
-   * Apply a rename to the file entry display path.
-   * @param {object} entry
-   * @param {string} newName
-   */
   function applyEntryRename(entry, newName){
     const clean = (newName || '').trim();
     if (!clean){
@@ -2113,11 +2052,6 @@
     entry.displayPath = buildDisplayPath(entry.displayDir || entry.relativeDir || '', clean);
   }
 
-  /**
-   * Normalize display paths to slash-separated strings.
-   * @param {string} value
-   * @returns {string}
-   */
   function normalizeDisplayPath(value){
     const raw = String(value || '').trim();
     if (!raw){
@@ -2126,11 +2060,6 @@
     return raw.replace(/\\/g, '/').replace(/\/+/g, '/');
   }
 
-  /**
-   * Return the display-directory portion of a full display path.
-   * @param {string} fullPath
-   * @returns {string}
-   */
   function extractDisplayDir(fullPath){
     const normalized = normalizeDisplayPath(fullPath);
     const idx = normalized.lastIndexOf('/');
@@ -2140,12 +2069,6 @@
     return normalized.slice(0, idx);
   }
 
-  /**
-   * Build one display path from directory + file name.
-   * @param {string} displayDir
-   * @param {string} fileName
-   * @returns {string}
-   */
   function buildDisplayPath(displayDir, fileName){
     const safeFileName = String(fileName || '').trim();
     const normalizedDir = normalizeDisplayPath(displayDir).replace(/\/+$/, '');
@@ -2353,10 +2276,6 @@
     window.close();
   }
 
-  /**
-   * Return the desired content height for popup sizing.
-   * @returns {number}
-   */
   function getContentHeight(){
     return POPUP_CONTENT_HEIGHT;
   }

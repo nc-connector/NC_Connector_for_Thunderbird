@@ -10,20 +10,10 @@ const ROOT = path.resolve(__dirname, "..");
 global.ICAL = require(path.join(ROOT, "vendor", "ical.js"));
 const contract = require(path.join(ROOT, "modules", "icalContract.js"));
 
-/**
- * Read a fixture file as UTF-8 text.
- * @param {string} name
- * @returns {string}
- */
 function fixture(name){
   return fs.readFileSync(path.join(ROOT, "tests", "fixtures", name), "utf8");
 }
 
-/**
- * Minimal assertion helper.
- * @param {boolean} condition
- * @param {string} message
- */
 function assert(condition, message){
   if (!condition){
     throw new Error(message);

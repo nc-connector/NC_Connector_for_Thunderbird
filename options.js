@@ -24,11 +24,6 @@ const EMAIL_SIGNATURE_KEYS = {
   onForward: "emailSignatureOnForward"
 };
 
-/**
- * Log internal options-page errors.
- * @param {string} scope
- * @param {any} reportedError
- */
 function logOptionsError(scope, reportedError){
   try{
     console.error(OPTIONS_LOG_PREFIX, scope, reportedError);
@@ -137,11 +132,6 @@ if (sharingAttachmentsAdminLink){
   sharingAttachmentsAdminLink.href = ATTACHMENT_AUTOMATION_ADMIN_URL;
 }
 
-/**
- * Toggle one tooltip list between normal and lock-hint entries
- * @param {HTMLElement|null} tooltipList
- * @param {boolean} lockActive
- */
 function applySharedAddressbookTooltipState(tooltipList, lockActive){
   const applyTooltipState = window.NCAddressbookUi?.applySystemAddressbookTooltipState;
   if (typeof applyTooltipState !== "function"){
@@ -187,11 +177,6 @@ function getUiLanguage(){
   return "en";
 }
 
-/**
- * Convert a locale folder name to a BCP47 language tag.
- * @param {string} locale
- * @returns {string}
- */
 function toBcp47Tag(locale){
   return String(locale || "").replace(/_/g, "-");
 }
@@ -279,12 +264,6 @@ function orderOverrideLocales(locales, displayNames, collator){
   return [...prioritized, ...remaining];
 }
 
-/**
- * Populate a select element with default + supported override locales.
- * @param {HTMLSelectElement|null} selectEl
- * @param {string[]} locales
- * @param {Intl.DisplayNames|null} displayNames
- */
 function populateLanguageSelect(selectEl, locales, displayNames, options = {}){
   if (!selectEl){
     return;
@@ -336,10 +315,6 @@ function showStatus(message, isError = false, sticky = false, isSuccess = false)
   }
 }
 
-/**
- * Return true when backend policy mode is currently active.
- * @returns {boolean}
- */
 function isBackendPolicyActive(){
   return !!runtimePolicyStatus?.policyActive;
 }
@@ -380,10 +355,6 @@ function isBackendPolicyDomainActive(domain){
   return isBackendPolicyActive() && isBackendPolicyDomainAvailable(domain);
 }
 
-/**
- * Return true when the NC Connector backend endpoint is available.
- * @returns {boolean}
- */
 function isBackendEndpointAvailable(){
   return !!runtimePolicyStatus?.endpointAvailable;
 }
@@ -556,10 +527,6 @@ function isPolicyLocked(domain, key){
   return editableDomain[key] === false;
 }
 
-/**
- * Return the localized admin-controlled tooltip text.
- * @returns {string}
- */
 function getAdminControlledHint(){
   return i18n("policy_admin_controlled_tooltip") || "Admin controlled";
 }
@@ -1599,10 +1566,6 @@ function initTabs(){
       tabContainer.style.setProperty("--tab-panel-min-height", `${Math.ceil(maxHeight)}px`);
     }
   };
-  /**
-   * Activate the selected tab and panel by id.
-   * @param {string} id
-   */
   const activate = (id, { initial = false } = {}) => {
     if (tabContainer && !initial && activeId && id){
       const currentIndex = order.indexOf(activeId);
@@ -1687,10 +1650,6 @@ authRadios.forEach((radio) => {
   });
 });
 
-/**
- * Read the selected auth mode radio value.
- * @returns {string}
- */
 function getSelectedAuthMode(){
   const checked = document.querySelector("input[name='authMode']:checked");
   return checked ? checked.value : "manual";
@@ -1835,11 +1794,6 @@ function setTalkDefaultRoomType(value, options = {}){
   }
 }
 
-/**
- * Normalize a language selection to the supported list.
- * @param {string} value
- * @returns {string}
- */
 function normalizeLangChoice(value, options = {}){
   const allowCustom = options.allowCustom !== undefined
     ? !!options.allowCustom

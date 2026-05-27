@@ -171,11 +171,6 @@
     window.close();
   }
 
-  /**
-   * Log internal UI errors with stable context.
-   * @param {string} scope
-   * @param {any} reportedError
-   */
   function logUiError(scope, reportedError){
     try{
       console.error(LOG_PREFIX, scope, reportedError);
@@ -184,11 +179,6 @@
     }
   }
 
-  /**
-   * Forward a structured debug line to the shared background-backed UI channel.
-   * @param {string} text
-   * @param {object|string|number|boolean|null} details
-   */
   function debugLog(text, details = null){
     emitDebugLog(String(text || ""), ...(details == null ? [] : [details]));
   }

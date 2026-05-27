@@ -31,13 +31,6 @@ function hostPermissionError(){
   return new Error(fallback);
 }
 
-/**
- * Log Talk core internal errors.
- * Errors must stay visible even when debug logging is disabled.
- * @param {string} scope
- * @param {any} error
- * @param {object} details
- */
 function logTalkCoreError(scope, error, details = undefined){
   console.error(resolveTalkCoreLogPrefix(), scope, error, details || "");
 }

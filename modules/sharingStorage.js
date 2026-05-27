@@ -35,11 +35,6 @@ const NCSharingStorage = (() => {
   };
   const ALL_KEYS = Object.values(SHARING_KEYS).concat(Object.values(LEGACY_KEYS));
 
-  /**
-   * Normalize configured attachment threshold (MB) to a positive integer.
-   * @param {any} value
-   * @returns {number}
-   */
   function normalizeAttachmentThresholdMb(value){
     const parsed = Number.parseInt(String(value ?? ""), 10);
     if (!Number.isFinite(parsed) || parsed < 1){

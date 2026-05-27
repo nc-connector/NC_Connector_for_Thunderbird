@@ -269,10 +269,6 @@
     };
   }
 
-  /**
-   * Return the latest mirrored debug flag for this UI page.
-   * @returns {boolean}
-   */
   function getMirroredDebugEnabled(){
     return !!mirroredDebugEnabled;
   }
@@ -335,7 +331,6 @@
       });
       pendingDebugSends.add(trackedSend);
       void trackedSend.finally(() => {
-  'use strict';
         pendingDebugSends.delete(trackedSend);
       });
     }catch(error){

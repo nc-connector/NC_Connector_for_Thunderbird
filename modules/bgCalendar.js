@@ -164,12 +164,6 @@ function getRoomMeta(token){
   return ROOM_META[token] || null;
 }
 
-/**
- * Build the storage key for a calendar item mapping.
- * @param {string} calendarId
- * @param {string} itemId
- * @returns {string}
- */
 function makeEventMapKey(calendarId, itemId){
   if (!calendarId || !itemId){
     return "";

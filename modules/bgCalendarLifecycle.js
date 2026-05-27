@@ -144,21 +144,11 @@ function pruneCalendarWizardContexts(){
   }
 }
 
-/**
- * Create a unique id for one calendar wizard context.
- * @returns {string}
- */
 function createCalendarWizardContextId(){
   const rand = Math.random().toString(16).slice(2);
   return `${Date.now()}-${rand}`;
 }
 
-/**
- * Persist one calendar wizard context.
- * @param {string} contextId
- * @param {object} entry
- * @returns {object}
- */
 function setCalendarWizardContext(contextId, entry){
   pruneCalendarWizardContexts();
   const next = Object.assign({}, entry || {}, { created: Date.now() });
@@ -166,21 +156,12 @@ function setCalendarWizardContext(contextId, entry){
   return next;
 }
 
-/**
- * Read one calendar wizard context by id.
- * @param {string} contextId
- * @returns {object|null}
- */
 function getCalendarWizardContext(contextId){
   if (!contextId) return null;
   pruneCalendarWizardContexts();
   return CALENDAR_WIZARD_CONTEXTS.get(contextId) || null;
 }
 
-/**
- * Remove one calendar wizard context.
- * @param {string} contextId
- */
 function deleteCalendarWizardContext(contextId){
   if (!contextId) return;
   CALENDAR_WIZARD_CONTEXTS.delete(contextId);
@@ -219,11 +200,6 @@ function calendarSnapshotHasIcal(snapshot){
   );
 }
 
-/**
- * Check whether a value is a valid unix timestamp.
- * @param {any} value
- * @returns {boolean}
- */
 function isCalendarSnapshotTimestamp(value){
   return typeof value === "number" && Number.isFinite(value);
 }

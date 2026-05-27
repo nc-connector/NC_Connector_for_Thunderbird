@@ -18,10 +18,6 @@ function pruneSharingLaunchContexts(){
   }
 }
 
-/**
- * Create a unique context id for the compose sharing launch flow.
- * @returns {string}
- */
 function createSharingLaunchContextId(){
   const rand = Math.random().toString(16).slice(2);
   return `sharing-${Date.now()}-${rand}`;
@@ -308,11 +304,6 @@ function getAttachmentSizeBytes(attachment){
   return Math.floor(value);
 }
 
-/**
- * Normalize display paths to slash-separated strings.
- * @param {string} value
- * @returns {string}
- */
 function normalizeAttachmentDisplayPath(value){
   const raw = String(value || "").trim();
   if (!raw){
@@ -355,11 +346,6 @@ function resolveAttachmentDisplayPath(attachment, file){
   return fileName;
 }
 
-/**
- * Sum attachment sizes.
- * @param {Array<object>} attachments
- * @returns {number}
- */
 function sumAttachmentBytes(attachments){
   if (!Array.isArray(attachments) || !attachments.length){
     return 0;
@@ -367,10 +353,6 @@ function sumAttachmentBytes(attachments){
   return attachments.reduce((sum, attachment) => sum + getAttachmentSizeBytes(attachment), 0);
 }
 
-/**
- * Create a unique prompt id for the attachment threshold decision popup.
- * @returns {string}
- */
 function createAttachmentPromptId(){
   const rand = Math.random().toString(16).slice(2);
   return `attach-prompt-${Date.now()}-${rand}`;

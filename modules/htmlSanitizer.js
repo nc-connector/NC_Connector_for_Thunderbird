@@ -53,10 +53,6 @@
     "footer"
   ];
 
-  /**
-   * Resolve the standard internal error prefix for this runtime.
-   * @returns {string}
-   */
   function resolveInternalLogPrefix(){
     return global.NCLogContext?.resolveAddonLogPrefix?.("Sanitizer")
       || "[NCBG]";
@@ -195,11 +191,6 @@
     };
   }
 
-  /**
-   * Increment one string counter in a plain object map.
-   * @param {Object<string,number>} counts
-   * @param {string} key
-   */
   function incrementCount(counts, key){
     const normalizedKey = String(key || "").trim().toLowerCase();
     if (!normalizedKey){
@@ -455,11 +446,6 @@
     return report;
   }
 
-  /**
-   * Enforce noopener/noreferrer on target=_blank anchors after sanitization.
-   * @param {string} html
-   * @returns {string}
-   */
   function normalizeAnchorTargets(html){
     return normalizeAnchorTargetsWithReport(html).html;
   }

@@ -75,11 +75,6 @@
   const passwordToggleRow = passwordToggle?.closest(".checkbox-row");
   let i18nLookupErrorLogged = false;
 
-  /**
-   * Log internal UI errors with stable context.
-   * @param {string} scope
-   * @param {any} reportedError
-   */
   function logUiError(scope, reportedError){
     try{
       console.error(LOG_PREFIX, scope, reportedError);
@@ -176,11 +171,6 @@
     policyWarningAdminLink.href = POLICY_ADMIN_URL;
   }
 
-  /**
-   * Toggle one tooltip list between normal and lock-hint entries
-   * @param {HTMLElement|null} tooltipList
-   * @param {boolean} lockActive
-   */
   function applySharedAddressbookTooltipState(tooltipList, lockActive){
     const applyTooltipState = window.NCAddressbookUi?.applySystemAddressbookTooltipState;
     if (typeof applyTooltipState !== "function"){
@@ -189,10 +179,6 @@
     applyTooltipState(tooltipList, lockActive);
   }
 
-  /**
-   * Return the localized admin-control hint.
-   * @returns {string}
-   */
   function getAdminControlledHint(){
     return t("policy_admin_controlled_tooltip", "Admin controlled");
   }
@@ -274,11 +260,6 @@
     return text;
   }
 
-  /**
-   * Normalize one backend event-description type.
-   * @param {any} value
-   * @returns {"html"|"plain_text"}
-   */
   function normalizeEventDescriptionType(value){
     return String(value ?? "").trim().toLowerCase() === "html"
       ? "html"
@@ -674,10 +655,6 @@
     return state.passwordPolicy;
   }
 
-  /**
-   * Read the minimum length from the active policy.
-   * @returns {number|null}
-   */
   function getPolicyMinLength(){
     return NCPasswordPolicyClient.getPolicyMinLength(state.passwordPolicy);
   }
@@ -1224,11 +1201,6 @@
     return true;
   }
 
-  /**
-   * Normalize a timestamp to unix seconds.
-   * @param {number} value
-   * @returns {number|null}
-   */
   function ensureUnixSeconds(value){
     if (typeof value === "number" && Number.isFinite(value)){
       return value > 1e12 ? Math.floor(value / 1000) : Math.floor(value);
@@ -1507,11 +1479,6 @@
     updateDelegateStatus("");
   }
 
-  /**
-   * Update the delegate status hint line.
-   * @param {string} text
-   * @param {boolean} isError
-   */
   function updateDelegateStatus(text = "", isError = false){
     if (!delegateStatus){
       return;
@@ -1907,12 +1874,6 @@
     }
   }
 
-  /**
-   * Build a display label for a delegate entry.
-   * @param {string} label
-   * @param {string} email
-   * @returns {string}
-   */
   function formatDelegateDisplay(label, email){
     if (label && email && label !== email){
       return `${label} <${email}>`;
@@ -1956,10 +1917,6 @@
     return "";
   }
 
-  /**
-   * Store the current delegate label for alerts.
-   * @param {string} value
-   */
   function setDelegateAlertLabel(value){
     state.delegate.alertLabel = normalizeDelegateLabel(value) || "";
   }
@@ -2146,10 +2103,6 @@
             }
           }
         };
-        /**
-         * Close modal when clicking outside the dialog.
-         * @param {MouseEvent} event
-         */
         const overlayHandler = (event) => {
           if (event.target === overlay){
             cleanup("dismiss");
@@ -2180,7 +2133,6 @@
         overlay.addEventListener("click", overlayHandler);
         document.body.appendChild(overlay);
         window.setTimeout(() => {
-  'use strict';
           try{
             const focusTarget = actions.querySelector("button.primary") || actions.querySelector("button");
             focusTarget?.focus();
@@ -2220,11 +2172,6 @@
     return Math.max(MIN_CONTENT_HEIGHT, fallback);
   }
 
-  /**
-   * Show a status message in the dialog.
-   * @param {string} text
-   * @param {boolean} isError
-   */
   function setMessage(text, isError){
     if (!messageBar){
       return;
@@ -2272,11 +2219,6 @@
     window.close();
   }
 
-  /**
-   * Send a debug log to the shared background-backed UI channel.
-   * @param {string} label
-   * @param {any} data
-   */
   function logDebug(label, data){
     emitDebugLog(label, data || "");
   }
