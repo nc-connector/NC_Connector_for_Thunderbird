@@ -25,6 +25,15 @@
     }
   }
 
+  function encodeUtf8Base64(value){
+    const bytes = new TextEncoder().encode(String(value || ""));
+    let binary = "";
+    for (let i = 0; i < bytes.length; i++){
+      binary += String.fromCharCode(bytes[i]);
+    }
+    return btoa(binary);
+  }
+
   /**
    * Build a Basic Authorization header value.
    * @param {string} user
@@ -33,7 +42,7 @@
    */
   function buildAuthHeader(user, password){
     const raw = `${user || ""}:${password || ""}`;
-    const encoded = btoa(unescape(encodeURIComponent(raw)));
+    const encoded = encodeUtf8Base64(raw);
     return "Basic " + encoded;
   }
 
