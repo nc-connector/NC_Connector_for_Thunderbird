@@ -189,6 +189,20 @@ browser.runtime.onMessage.addListener((msg, sender) => {
       return messageError("talk:createRoom", error);
     }
   }
+  if (msg.type === "talk:deleteRoom"){
+    try{
+      const payload = msg.payload || {};
+      const token = msg.token ?? payload.token;
+      if (!token){
+        return { ok:false, error: "token required" };
+      }
+      await NCTalkCore.deleteTalkRoom({ token });
+      await deleteRoomMeta(token);
+      return { ok:true };
+    }catch(error){
+      return messageError("talk:deleteRoom", error);
+    }
+  }
   if (msg.type === "talk:trackRoom"){
     try{
       const payload = msg.payload || {};
@@ -338,6 +352,7 @@ browser.runtime.onMessage.addListener((msg, sender) => {
     if (!token){
       return { ok:false, error: "token required" };
     }
+    const keepContext = !!(msg.keepContext ?? msg?.payload?.keepContext);
     const info = msg.info ?? msg?.payload?.info ?? {};
     try{
       const editorId = typeof context.editorId === "string" ? context.editorId.trim() : "";
@@ -375,11 +390,21 @@ browser.runtime.onMessage.addListener((msg, sender) => {
         return { ok:false, error: bgI18n("talk_error_apply_failed") };
       }
 
-      deleteCalendarWizardContext(contextId);
+      if (!keepContext){
+        deleteCalendarWizardContext(contextId);
+      }
       return { ok:true };
     }catch(error){
       return messageError("talk:registerCleanup", error);
     }
+  }
+  if (msg.type === "talk:releaseContext"){
+    const contextId = readMessageContextId(msg);
+    if (!contextId){
+      return { ok:false, error: bgI18n("talk_error_context_id_missing") };
+    }
+    deleteCalendarWizardContext(contextId);
+    return { ok:true };
   }
   if (msg.type === "options:testConnection"){
     try{

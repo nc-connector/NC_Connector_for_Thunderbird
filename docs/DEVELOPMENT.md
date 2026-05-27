@@ -449,12 +449,16 @@ Background:
 
 After create success, the wizard:
 1. Sends `talk:applyMetadata` → write `X-NCTALK-*` properties into the open editor
-2. Sends `talk:applyEventFields` → write:
+2. Sends `talk:trackRoom` and `talk:registerCleanup` → enable room cleanup before further editor writes
+3. Sends `talk:applyEventFields` → write:
    - title (from wizard)
    - location = Talk URL
    - description = generated block (localized, may include password + help URL)
-3. Sends `talk:trackRoom` → store runtime meta for monitoring
-4. Sends `talk:registerCleanup` → enable orphan-room cleanup if the editor is discarded
+4. Sends `talk:applyMetadata` again so `X-NCTALK-*` properties stay current after field writes
+5. Sends `talk:releaseContext` after successful write-back
+
+If cleanup registration cannot be written after room creation, the wizard sends `talk:deleteRoom`
+for the created token before it reports the write-back error.
 
 Persistence model:
 - The editor is updated immediately (in-memory).
@@ -727,11 +731,13 @@ Talk wizard:
 - `talk:getEventSnapshot`
 - `talk:getSystemAddressbookStatus`
 - `talk:createRoom`
+- `talk:deleteRoom`
 - `talk:searchUsers`
 - `talk:applyMetadata`
 - `talk:applyEventFields`
 - `talk:trackRoom`
 - `talk:registerCleanup`
+- `talk:releaseContext`
 
 Sharing wizard:
 - `sharing:insertRenderedBlock`

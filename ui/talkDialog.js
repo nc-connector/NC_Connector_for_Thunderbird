@@ -1007,77 +1007,96 @@
     if (!result?.token || !result?.url){
       throw new Error(t("ui_create_failed", [t("talk_error_create_missing_data")]));
     }
-    const delegationInfo = await handleDelegationAfterCreate(result, payload);
-    const metadata = {
-      token: result.token,
-      url: result.url,
-      lobbyEnabled: !!payload.enableLobby,
-      startTimestamp: payload.startTimestamp ?? state.metadata?.startTimestamp ?? null,
-      eventConversation: !!payload.eventConversation,
-      addUsers: !!payload.addUsers,
-      addGuests: !!payload.addGuests,
-      objectId: payload.objectId || state.metadata?.objectId || null
-    };
-    if (payload.delegateId){
-      metadata.delegateId = payload.delegateId;
-      metadata.delegateName = payload.delegateName || payload.delegateId;
-      metadata.delegated = delegationInfo.delegated || false;
-      metadata.delegateReady = false;
-    }
-    const applyMetaResponse = await browser.runtime.sendMessage({
-      type: "talk:applyMetadata",
-      contextId: state.contextId,
-      metadata
-    });
-    if (!applyMetaResponse?.ok){
-      throw new Error(applyMetaResponse?.error || t("talk_error_apply_failed"));
-    }
-    const description = await composeDescription(state.event?.description || "", result.url, payload.password);
-    if (!state.contextId){
-      logDebug("missing contextId for talk:applyEventFields", {
-        contextId: state.contextId
-      });
-      throw new Error(t("talk_error_context_reference"));
-    }
-    logDebug("send talk:applyEventFields", {
-      contextId: state.contextId,
-      title: payload.title,
-      hasDescription: !!description?.text,
-      hasDescriptionHtml: !!description?.html
-    });
-    const applyFieldsResponse = await browser.runtime.sendMessage({
-      type: "talk:applyEventFields",
-      contextId: state.contextId,
-      fields: {
-        title: payload.title,
-        location: result.url,
-        description: description?.text || "",
-        ...(description?.html ? { descriptionHtml: description.html } : {})
+    let cleanupRegistered = false;
+    try{
+      const delegationInfo = await handleDelegationAfterCreate(result, payload);
+      const metadata = {
+        token: result.token,
+        url: result.url,
+        lobbyEnabled: !!payload.enableLobby,
+        startTimestamp: payload.startTimestamp ?? state.metadata?.startTimestamp ?? null,
+        eventConversation: !!payload.eventConversation,
+        addUsers: !!payload.addUsers,
+        addGuests: !!payload.addGuests,
+        objectId: payload.objectId || state.metadata?.objectId || null
+      };
+      if (payload.delegateId){
+        metadata.delegateId = payload.delegateId;
+        metadata.delegateName = payload.delegateName || payload.delegateId;
+        metadata.delegated = delegationInfo.delegated || false;
+        metadata.delegateReady = false;
       }
-    });
-    if (!applyFieldsResponse?.ok){
-      throw new Error(applyFieldsResponse?.error || t("talk_error_apply_failed"));
+      const applyMetaResponse = await browser.runtime.sendMessage({
+        type: "talk:applyMetadata",
+        contextId: state.contextId,
+        metadata
+      });
+      if (!applyMetaResponse?.ok){
+        throw new Error(applyMetaResponse?.error || t("talk_error_apply_failed"));
+      }
+      await registerCreatedRoomCleanup(result.token, metadata);
+      cleanupRegistered = true;
+
+      const description = await composeDescription(state.event?.description || "", result.url, payload.password);
+      if (!state.contextId){
+        logDebug("missing contextId for talk:applyEventFields", {
+          contextId: state.contextId
+        });
+        throw new Error(t("talk_error_context_reference"));
+      }
+      logDebug("send talk:applyEventFields", {
+        contextId: state.contextId,
+        title: payload.title,
+        hasDescription: !!description?.text,
+        hasDescriptionHtml: !!description?.html
+      });
+      const applyFieldsResponse = await browser.runtime.sendMessage({
+        type: "talk:applyEventFields",
+        contextId: state.contextId,
+        fields: {
+          title: payload.title,
+          location: result.url,
+          description: description?.text || "",
+          ...(description?.html ? { descriptionHtml: description.html } : {})
+        }
+      });
+      if (!applyFieldsResponse?.ok){
+        throw new Error(applyFieldsResponse?.error || t("talk_error_apply_failed"));
+      }
+      // Re-apply metadata after field writes so X-NCTALK-* properties stay current.
+      const reapplyMetaResponse = await browser.runtime.sendMessage({
+        type: "talk:applyMetadata",
+        contextId: state.contextId,
+        metadata
+      });
+      if (!reapplyMetaResponse?.ok){
+        throw new Error(reapplyMetaResponse?.error || t("talk_error_apply_failed"));
+      }
+      await releaseTalkContextAfterApply();
+    }catch(error){
+      if (!cleanupRegistered){
+        await deleteCreatedRoomAfterApplyFailure(result.token);
+      }
+      throw error;
     }
-    // Re-apply metadata after field writes so X-NCTALK-* properties stay current.
-    const reapplyMetaResponse = await browser.runtime.sendMessage({
-      type: "talk:applyMetadata",
-      contextId: state.contextId,
-      metadata
-    });
-    if (!reapplyMetaResponse?.ok){
-      throw new Error(reapplyMetaResponse?.error || t("talk_error_apply_failed"));
-    }
-    await browser.runtime.sendMessage({
+  }
+
+  async function registerCreatedRoomCleanup(token, metadata){
+    const trackResponse = await browser.runtime.sendMessage({
       type: "talk:trackRoom",
-      token: result.token,
+      token,
       lobbyEnabled: metadata.lobbyEnabled,
       eventConversation: metadata.eventConversation,
       startTimestamp: metadata.startTimestamp ?? null
     });
+    if (!trackResponse?.ok){
+      throw new Error(trackResponse?.error || t("talk_error_apply_failed"));
+    }
     const cleanupResponse = await browser.runtime.sendMessage({
       type: "talk:registerCleanup",
       contextId: state.contextId,
-      token: result.token,
+      token,
+      keepContext: true,
       info: {
         objectId: metadata.objectId || null,
         eventConversation: metadata.eventConversation
@@ -1085,6 +1104,26 @@
     });
     if (!cleanupResponse?.ok){
       throw new Error(cleanupResponse?.error || t("talk_error_apply_failed"));
+    }
+  }
+
+  async function releaseTalkContextAfterApply(){
+    const releaseResponse = await browser.runtime.sendMessage({
+      type: "talk:releaseContext",
+      contextId: state.contextId
+    });
+    if (!releaseResponse?.ok){
+      logUiError("talk context release failed", new Error(releaseResponse?.error || "talk context release failed"));
+    }
+  }
+
+  async function deleteCreatedRoomAfterApplyFailure(token){
+    const deleteResponse = await browser.runtime.sendMessage({
+      type: "talk:deleteRoom",
+      token
+    });
+    if (!deleteResponse?.ok){
+      logUiError("created room rollback failed", new Error(deleteResponse?.error || "talk room delete failed"));
     }
   }
 
