@@ -55,7 +55,7 @@ class EditorContextBridge {
    * @returns {string}
    */
   normalizeEditorId(editorId) {
-    if (typeof editorId != "string") {
+    if (typeof editorId !== "string") {
       return "";
     }
     const value = editorId.trim();
@@ -74,7 +74,7 @@ class EditorContextBridge {
    */
   _register(kind, id, instanceId = 0) {
     if (
-      (kind != "tab" && kind != "dialog") ||
+      (kind !== "tab" && kind !== "dialog") ||
       !Number.isInteger(id) ||
       !Number.isInteger(instanceId)
     ) {
@@ -150,7 +150,7 @@ class EditorContextBridge {
   clear() {
     this.targetToEditorId.clear();
     this.editorIdToTarget.clear();
-    if (this.extension[BRIDGE_SYMBOL] == this) {
+    if (this.extension[BRIDGE_SYMBOL] === this) {
       delete this.extension[BRIDGE_SYMBOL];
     }
   }
@@ -259,8 +259,8 @@ this.ncCalToolbar = class extends ExtensionAPI {
       return null;
     }
     if (
-      typeof extensionSupport.registerWindowListener != "function" ||
-      typeof extensionSupport.unregisterWindowListener != "function" ||
+      typeof extensionSupport.registerWindowListener !== "function" ||
+      typeof extensionSupport.unregisterWindowListener !== "function" ||
       !extensionSupport.openWindows
     ) {
       return null;
@@ -285,7 +285,7 @@ this.ncCalToolbar = class extends ExtensionAPI {
         STARTUP_RETRY_DELAYS_MS.length - 1
       );
       const delayMs = STARTUP_RETRY_DELAYS_MS[delayIndex];
-      if (this._startupRetryCount == 1 || this._startupRetryCount % 10 == 0) {
+      if (this._startupRetryCount === 1 || this._startupRetryCount % 10 === 0) {
         this._logError("startup: ExtensionSupport unavailable, retry scheduled", null, {
           attempt: this._startupRetryCount,
           delayMs,
@@ -337,7 +337,7 @@ this.ncCalToolbar = class extends ExtensionAPI {
    * @param {object} context
    */
   _registerApiContextClose(context) {
-    if (!context || typeof context.callOnClose != "function") {
+    if (!context || typeof context.callOnClose !== "function") {
       return;
     }
     if (!this._apiContextCloseByContext) {
@@ -460,7 +460,7 @@ this.ncCalToolbar = class extends ExtensionAPI {
    */
   _managedTabId(tabInfo) {
     const manager = this.extension?.tabManager;
-    if (!manager || typeof manager.getWrapper != "function") {
+    if (!manager || typeof manager.getWrapper !== "function") {
       return null;
     }
     if (!this._isEditorTab(tabInfo)) {
@@ -468,7 +468,7 @@ this.ncCalToolbar = class extends ExtensionAPI {
     }
     try {
       const id = manager.getWrapper(tabInfo)?.id;
-      return typeof id == "number" ? id : null;
+      return typeof id === "number" ? id : null;
     } catch (error) {
       this._logError("managed tab id resolution failed", error);
       return null;
@@ -482,11 +482,11 @@ this.ncCalToolbar = class extends ExtensionAPI {
    */
   _dialogOuterId(window) {
     const windowType = window?.document?.documentElement?.getAttribute?.("windowtype") || "";
-    if (windowType != "Calendar:EventDialog" && windowType != "Calendar:EventSummaryDialog") {
+    if (windowType !== "Calendar:EventDialog" && windowType !== "Calendar:EventSummaryDialog") {
       return null;
     }
     const outerId = window?.docShell?.outerWindowID ?? window?.windowUtils?.outerWindowID;
-    return typeof outerId == "number" ? outerId : null;
+    return typeof outerId === "number" ? outerId : null;
   }
 
   /**
@@ -496,7 +496,7 @@ this.ncCalToolbar = class extends ExtensionAPI {
    */
   _editorOuterId(window) {
     const outerId = window?.docShell?.outerWindowID ?? window?.windowUtils?.outerWindowID;
-    return typeof outerId == "number" ? outerId : null;
+    return typeof outerId === "number" ? outerId : null;
   }
 
   /**
@@ -524,7 +524,7 @@ this.ncCalToolbar = class extends ExtensionAPI {
       return null;
     }
     const owner = window?.ownerGlobal || null;
-    if (!owner || owner.location?.href != MESSENGER_URL) {
+    if (!owner || owner.location?.href !== MESSENGER_URL) {
       return null;
     }
     const infos = owner.tabmail && Array.isArray(owner.tabmail.tabInfo) ? owner.tabmail.tabInfo : [];
@@ -533,7 +533,7 @@ this.ncCalToolbar = class extends ExtensionAPI {
         continue;
       }
       const tabWindow = tabInfo.iframe?.contentWindow || tabInfo.iframe?.contentDocument?.defaultView || null;
-      if (tabWindow == window) {
+      if (tabWindow === window) {
         return tabInfo;
       }
     }
@@ -552,7 +552,7 @@ this.ncCalToolbar = class extends ExtensionAPI {
    * @returns {string}
    */
   _tabEditorIdFromMessenger(window) {
-    if (window?.location?.href != MESSENGER_URL) {
+    if (window?.location?.href !== MESSENGER_URL) {
       return "";
     }
     const tabInfo = this._selectedTabInfo(window);
@@ -560,12 +560,12 @@ this.ncCalToolbar = class extends ExtensionAPI {
       return "";
     }
     const tabId = this._managedTabId(tabInfo);
-    if (typeof tabId != "number") {
+    if (typeof tabId !== "number") {
       return "";
     }
     const tabWindow = tabInfo?.iframe?.contentWindow || tabInfo?.iframe?.contentDocument?.defaultView || null;
     const outerId = this._editorOuterId(tabWindow);
-    if (typeof outerId != "number") {
+    if (typeof outerId !== "number") {
       return "";
     }
     return this._bridge().registerTabTarget(tabId, outerId);
@@ -582,12 +582,12 @@ this.ncCalToolbar = class extends ExtensionAPI {
       return "";
     }
     const tabId = this._managedTabId(tabInfo);
-    if (typeof tabId != "number") {
+    if (typeof tabId !== "number") {
       return "";
     }
     const tabWindow = tabInfo?.iframe?.contentWindow || tabInfo?.iframe?.contentDocument?.defaultView || null;
     const outerId = this._editorOuterId(tabWindow);
-    if (typeof outerId != "number") {
+    if (typeof outerId !== "number") {
       return "";
     }
     return this._bridge().registerTabTarget(tabId, outerId);
@@ -606,7 +606,7 @@ this.ncCalToolbar = class extends ExtensionAPI {
       this._dialogReleaseByWindow = new WeakMap();
     }
     const previous = this._dialogReleaseByWindow.get(window);
-    if (previous?.editorId == editorId) {
+    if (previous?.editorId === editorId) {
       return;
     }
     if (previous?.onUnload) {
@@ -637,7 +637,7 @@ this.ncCalToolbar = class extends ExtensionAPI {
     if (!target) {
       return null;
     }
-    if (target.kind == "dialog") {
+    if (target.kind === "dialog") {
       try {
         const win = Services.wm.getOuterWindowWithId(target.id);
         if (win && !win.closed && win.location?.href?.startsWith(EVENT_DIALOG_URL)) {
@@ -652,9 +652,9 @@ this.ncCalToolbar = class extends ExtensionAPI {
       bridge.releaseEditorId(normalized);
       return null;
     }
-    if (target.kind == "tab") {
+    if (target.kind === "tab") {
       const manager = this.extension?.tabManager;
-      if (!manager || typeof manager.get != "function") {
+      if (!manager || typeof manager.get !== "function") {
         bridge.releaseEditorId(normalized);
         return null;
       }
@@ -669,7 +669,7 @@ this.ncCalToolbar = class extends ExtensionAPI {
           bridge.releaseEditorId(normalized);
           return null;
         }
-        if (target.instanceId > 0 && this._editorOuterId(win) != target.instanceId) {
+        if (target.instanceId > 0 && this._editorOuterId(win) !== target.instanceId) {
           bridge.releaseEditorId(normalized);
           return null;
         }
@@ -695,17 +695,17 @@ this.ncCalToolbar = class extends ExtensionAPI {
    */
   _clickContext(window) {
     const href = window?.location?.href || "";
-    if (href == MESSENGER_URL) {
+    if (href === MESSENGER_URL) {
       const editorId = this._tabEditorIdFromMessenger(window);
       return editorId ? { editorType: "tab", editorId } : null;
     }
-    if (href == EVENT_DIALOG_URL) {
+    if (href === EVENT_DIALOG_URL) {
       const tabEditorId = this._tabEditorIdFromEditorWindow(window);
       if (tabEditorId) {
         return { editorType: "tab", editorId: tabEditorId };
       }
       const outerId = this._dialogOuterId(window);
-      if (typeof outerId != "number") {
+      if (typeof outerId !== "number") {
         return null;
       }
       const editorId = this._bridge().registerDialogTarget(outerId);
@@ -782,7 +782,7 @@ this.ncCalToolbar = class extends ExtensionAPI {
       if (!host) {
         continue;
       }
-      if (key == "description") {
+      if (key === "description") {
         const inputField = host.inputField || null;
         if (inputField && "value" in inputField) {
           return { kind: "value", element: inputField };
@@ -810,7 +810,7 @@ this.ncCalToolbar = class extends ExtensionAPI {
     if (!target?.element) {
       return { text: "", html: "" };
     }
-    if (target.kind == "value") {
+    if (target.kind === "value") {
       return { text: String(target.element.value ?? ""), html: "" };
     }
     const text = String(target.element.innerText ?? target.element.textContent ?? "");
@@ -825,7 +825,7 @@ this.ncCalToolbar = class extends ExtensionAPI {
    * @returns {string}
    */
   _readItemProperty(item, name) {
-    if (typeof item?.getProperty != "function") {
+    if (typeof item?.getProperty !== "function") {
       return "";
     }
     const value = item.getProperty(name);
@@ -841,14 +841,14 @@ this.ncCalToolbar = class extends ExtensionAPI {
     if (!value) {
       return null;
     }
-    if (typeof value == "number" && Number.isFinite(value)) {
+    if (typeof value === "number" && Number.isFinite(value)) {
       return value > 1e12 ? Math.floor(value / 1000) : Math.floor(value);
     }
     const nativeTime = Number(value.nativeTime);
     if (Number.isFinite(nativeTime) && nativeTime > 0) {
       return Math.floor(nativeTime / 1000000);
     }
-    if (typeof cal?.dtz?.dateTimeToJsDate == "function") {
+    if (typeof cal?.dtz?.dateTimeToJsDate === "function") {
       const date = cal.dtz.dateTimeToJsDate(value);
       const millis = Number(date?.getTime?.());
       if (Number.isFinite(millis)) {
@@ -904,8 +904,8 @@ this.ncCalToolbar = class extends ExtensionAPI {
         live.location ||
         live.description ||
         live.descriptionHtml ||
-        typeof live.startTimestamp == "number" ||
-        typeof live.endTimestamp == "number"
+        typeof live.startTimestamp === "number" ||
+        typeof live.endTimestamp === "number"
       )
     );
   }
@@ -922,7 +922,7 @@ this.ncCalToolbar = class extends ExtensionAPI {
     if (!item) {
       return null;
     }
-    const ical = typeof item.icalString == "string" ? item.icalString : String(item.icalString || "");
+    const ical = typeof item.icalString === "string" ? item.icalString : String(item.icalString || "");
     const live = editorWindow ? this._readLiveEventSnapshot(editorWindow, item) : {};
     const hasLive = this._hasLiveEventSnapshotData(live);
     if (!ical && !hasLive) {
@@ -932,7 +932,7 @@ this.ncCalToolbar = class extends ExtensionAPI {
       editorId,
       calendarId: item.calendar?.id ? String(item.calendar.id) : "",
       id: item.id ? String(item.id) : "",
-      type: typeof item.isTodo == "function" && item.isTodo() ? "task" : "event",
+      type: typeof item.isTodo === "function" && item.isTodo() ? "task" : "event",
       ...live,
       snapshotSource: ical ? (hasLive ? "mixed" : "ical") : "live",
     };
@@ -940,7 +940,7 @@ this.ncCalToolbar = class extends ExtensionAPI {
       snapshot.format = "ical";
       snapshot.item = ical;
     }
-    if (editorType == "tab" || editorType == "dialog") {
+    if (editorType === "tab" || editorType === "dialog") {
       snapshot.editorType = editorType;
     }
     return snapshot;
@@ -965,10 +965,10 @@ this.ncCalToolbar = class extends ExtensionAPI {
    * @param {Window} window
    */
   _ensureMessengerHook(window) {
-    if (window?.location?.href != MESSENGER_URL) {
+    if (window?.location?.href !== MESSENGER_URL) {
       return;
     }
-    if (window._ncCalToolbarOrigOnLoadCalendarItemPanel || typeof window.onLoadCalendarItemPanel != "function") {
+    if (window._ncCalToolbarOrigOnLoadCalendarItemPanel || typeof window.onLoadCalendarItemPanel !== "function") {
       return;
     }
     const original = window.onLoadCalendarItemPanel;
@@ -985,7 +985,7 @@ this.ncCalToolbar = class extends ExtensionAPI {
    * @param {Window} window
    */
   _restoreMessengerHook(window) {
-    if (window?.location?.href != MESSENGER_URL) {
+    if (window?.location?.href !== MESSENGER_URL) {
       return;
     }
     if (window._ncCalToolbarOrigOnLoadCalendarItemPanel) {
@@ -1033,7 +1033,7 @@ this.ncCalToolbar = class extends ExtensionAPI {
       this._commandBindingByWindow = new WeakMap();
     }
     const currentBinding = this._commandBindingByWindow.get(window);
-    if (currentBinding?.button == button) {
+    if (currentBinding?.button === button) {
       return;
     }
     if (currentBinding?.button && currentBinding?.onCommand) {
@@ -1216,7 +1216,7 @@ this.ncCalToolbar = class extends ExtensionAPI {
       this._editorLifecycleByTarget = new WeakMap();
     }
     const previous = this._editorLifecycleByTarget.get(window);
-    if (previous && previous.editorId == normalized) {
+    if (previous && previous.editorId === normalized) {
       return;
     }
     if (previous) {
@@ -1298,7 +1298,7 @@ this.ncCalToolbar = class extends ExtensionAPI {
       if (!host) {
         continue;
       }
-      if (key == "description") {
+      if (key === "description") {
         const inputField = host.inputField || null;
         if (inputField && "value" in inputField) {
           return { kind: "value", element: inputField };
@@ -1327,7 +1327,7 @@ this.ncCalToolbar = class extends ExtensionAPI {
     if (!target?.element) {
       return "";
     }
-    if (target.kind == "value") {
+    if (target.kind === "value") {
       return String(target.element.value ?? "");
     }
     return String(target.element.innerHTML ?? "");
@@ -1451,7 +1451,7 @@ this.ncCalToolbar = class extends ExtensionAPI {
     const html = String(description.html ?? "");
     if (cal?.item?.setItemProperty) {
       cal.item.setItemProperty(item, "DESCRIPTION", text);
-    } else if (typeof item.setProperty == "function") {
+    } else if (typeof item.setProperty === "function") {
       item.setProperty("DESCRIPTION", text);
     }
     item.descriptionHTML = html;
@@ -1467,7 +1467,7 @@ this.ncCalToolbar = class extends ExtensionAPI {
     if (!target?.element) {
       throw new ExtensionError("Resolved editor field is not writable");
     }
-    if (target.kind == "value") {
+    if (target.kind === "value") {
       target.element.focus?.();
       target.element.value = value;
       this._dispatchInputEvent(target.element);
@@ -1520,7 +1520,7 @@ this.ncCalToolbar = class extends ExtensionAPI {
   _snapshotProperties(item, properties) {
     const out = {};
     for (const name of Object.keys(properties || {})) {
-      if (!name || typeof name != "string") {
+      if (!name || typeof name !== "string") {
         throw new ExtensionError("Property names must be non-empty strings");
       }
       try {
@@ -1543,12 +1543,12 @@ this.ncCalToolbar = class extends ExtensionAPI {
   _applyProperties(item, properties) {
     const names = [];
     for (const [name, value] of Object.entries(properties || {})) {
-      if (!name || typeof name != "string") {
+      if (!name || typeof name !== "string") {
         throw new ExtensionError("Property names must be non-empty strings");
       }
       try {
         if (value == null) {
-          if (typeof item.deleteProperty == "function") {
+          if (typeof item.deleteProperty === "function") {
             item.deleteProperty(name);
           } else {
             item.setProperty(name, "");
@@ -1577,7 +1577,7 @@ this.ncCalToolbar = class extends ExtensionAPI {
       const previous = Object.prototype.hasOwnProperty.call(snapshot, name) ? snapshot[name] : null;
       try {
         if (previous == null) {
-          if (typeof item.deleteProperty == "function") {
+          if (typeof item.deleteProperty === "function") {
             item.deleteProperty(name);
           } else {
             item.setProperty(name, "");
@@ -1692,11 +1692,11 @@ this.ncCalToolbar = class extends ExtensionAPI {
           this._ensureLifecycleWatch(window, editorId);
 
           const fields =
-            updateOptions?.fields && typeof updateOptions.fields == "object"
+            updateOptions?.fields && typeof updateOptions.fields === "object"
               ? updateOptions.fields
               : {};
           const properties =
-            updateOptions?.properties && typeof updateOptions.properties == "object"
+            updateOptions?.properties && typeof updateOptions.properties === "object"
               ? updateOptions.properties
               : {};
           if (!Object.keys(fields).length && !Object.keys(properties).length) {
@@ -1707,8 +1707,8 @@ this.ncCalToolbar = class extends ExtensionAPI {
           const targets = {};
           for (const key of ["title", "location", "description"]) {
             if (
-              typeof fields[key] == "string"
-              || (key == "description" && typeof fields.descriptionHtml == "string")
+              typeof fields[key] === "string"
+              || (key === "description" && typeof fields.descriptionHtml === "string")
             ) {
               targets[key] = this._resolveWritableField(window, key);
             }
@@ -1719,7 +1719,7 @@ this.ncCalToolbar = class extends ExtensionAPI {
             description: this._readField(targets.description),
           };
           const beforeDescriptionState =
-            targets.description?.kind == "html-body"
+            targets.description?.kind === "html-body"
               ? {
                   text: String(item.descriptionText ?? ""),
                   html: String(item.descriptionHTML ?? ""),
@@ -1729,18 +1729,18 @@ this.ncCalToolbar = class extends ExtensionAPI {
 
           try {
             for (const key of ["title", "location", "description"]) {
-              if (typeof fields[key] == "string" || (key == "description" && typeof fields.descriptionHtml == "string")) {
+              if (typeof fields[key] === "string" || (key === "description" && typeof fields.descriptionHtml === "string")) {
                 const writeHtml =
-                  key == "description"
-                  && targets[key]?.kind == "html-body"
-                  && typeof fields.descriptionHtml == "string";
+                  key === "description"
+                  && targets[key]?.kind === "html-body"
+                  && typeof fields.descriptionHtml === "string";
                 const value = writeHtml ? fields.descriptionHtml : fields[key];
                 this._writeField(targets[key], value, { html: writeHtml });
-                if (key == "description" && targets[key]?.kind == "html-body") {
+                if (key === "description" && targets[key]?.kind === "html-body") {
                   this._applyDescriptionState(item, {
-                    text: typeof fields.description == "string" ? fields.description : "",
+                    text: typeof fields.description === "string" ? fields.description : "",
                     html: writeHtml
-                      ? (typeof fields.descriptionHtml == "string" ? fields.descriptionHtml : "")
+                      ? (typeof fields.descriptionHtml === "string" ? fields.descriptionHtml : "")
                       : String(targets[key]?.element?.innerHTML ?? ""),
                   });
                 }
@@ -1757,9 +1757,9 @@ this.ncCalToolbar = class extends ExtensionAPI {
               }
               try {
                 this._writeField(targets[key], beforeFields[key] ?? "", {
-                  html: key == "description" && targets[key]?.kind == "html-body",
+                  html: key === "description" && targets[key]?.kind === "html-body",
                 });
-                if (key == "description" && beforeDescriptionState) {
+                if (key === "description" && beforeDescriptionState) {
                   this._applyDescriptionState(item, beforeDescriptionState);
                 }
               } catch (error) {
@@ -1791,9 +1791,9 @@ this.ncCalToolbar = class extends ExtensionAPI {
               for (const key of ["description", "location", "title"]) {
                 if (appliedFields[key]) {
                   this._writeField(targets[key], beforeFields[key] ?? "", {
-                    html: key == "description" && targets[key]?.kind == "html-body",
+                    html: key === "description" && targets[key]?.kind === "html-body",
                   });
-                  if (key == "description" && beforeDescriptionState) {
+                  if (key === "description" && beforeDescriptionState) {
                     this._applyDescriptionState(item, beforeDescriptionState);
                   }
                 }

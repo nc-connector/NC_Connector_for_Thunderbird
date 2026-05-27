@@ -48,6 +48,14 @@ const NCSharingStorage = (() => {
     return parsed;
   }
 
+  function isStorageUnset(value){
+    return value === undefined || value === null;
+  }
+
+  function hasStoredKey(value){
+    return value !== undefined;
+  }
+
   /**
    * Migrate legacy filelink keys to sharing keys and clean up leftovers
    * @returns {Promise<void>}
@@ -58,10 +66,10 @@ const NCSharingStorage = (() => {
     }
     const stored = await browser.storage.local.get(ALL_KEYS);
     const migration = {};
-    if (stored[SHARING_KEYS.basePath] == null && stored[LEGACY_KEYS.basePath]){
+    if (isStorageUnset(stored[SHARING_KEYS.basePath]) && stored[LEGACY_KEYS.basePath]){
       migration[SHARING_KEYS.basePath] = stored[LEGACY_KEYS.basePath];
     }
-    if (stored[SHARING_KEYS.defaultShareName] == null && stored[LEGACY_KEYS.defaultShareName]){
+    if (isStorageUnset(stored[SHARING_KEYS.defaultShareName]) && stored[LEGACY_KEYS.defaultShareName]){
       migration[SHARING_KEYS.defaultShareName] = stored[LEGACY_KEYS.defaultShareName];
     }
     if (typeof stored[SHARING_KEYS.defaultPermCreate] !== "boolean"
@@ -76,23 +84,23 @@ const NCSharingStorage = (() => {
         && typeof stored[LEGACY_KEYS.defaultPermDelete] === "boolean"){
       migration[SHARING_KEYS.defaultPermDelete] = stored[LEGACY_KEYS.defaultPermDelete];
     }
-    if (stored[SHARING_KEYS.defaultPassword] === undefined
-        && stored[LEGACY_KEYS.defaultPassword] !== undefined){
+    if (!hasStoredKey(stored[SHARING_KEYS.defaultPassword])
+        && hasStoredKey(stored[LEGACY_KEYS.defaultPassword])){
       migration[SHARING_KEYS.defaultPassword] = stored[LEGACY_KEYS.defaultPassword];
     }
-    if (stored[SHARING_KEYS.defaultPasswordSeparate] === undefined
-        && stored[LEGACY_KEYS.defaultPasswordSeparate] !== undefined){
+    if (!hasStoredKey(stored[SHARING_KEYS.defaultPasswordSeparate])
+        && hasStoredKey(stored[LEGACY_KEYS.defaultPasswordSeparate])){
       migration[SHARING_KEYS.defaultPasswordSeparate] = stored[LEGACY_KEYS.defaultPasswordSeparate];
     }
-    if (stored[SHARING_KEYS.defaultExpireDays] == null
-        && stored[LEGACY_KEYS.defaultExpireDays] !== undefined){
+    if (isStorageUnset(stored[SHARING_KEYS.defaultExpireDays])
+        && hasStoredKey(stored[LEGACY_KEYS.defaultExpireDays])){
       migration[SHARING_KEYS.defaultExpireDays] = stored[LEGACY_KEYS.defaultExpireDays];
     }
     if (Object.keys(migration).length){
       await browser.storage.local.set(migration);
     }
     const legacyKeys = Object.values(LEGACY_KEYS);
-    if (legacyKeys.some((key) => stored[key] !== undefined)){
+    if (legacyKeys.some((key) => hasStoredKey(stored[key]))){
       await browser.storage.local.remove(legacyKeys);
     }
   }

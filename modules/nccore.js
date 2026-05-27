@@ -17,15 +17,15 @@ const NCCore = (() => {
     || "[NCBG]";
 
   /**
- * Log NCCore internal errors.
- * Errors must stay visible even when debug logging is disabled.
- * @param {string} scope
- * @param {any} error
- * @param {object} details
- */
-function logNCCoreError(scope, error, details = undefined){
-  console.error(resolveLogPrefix(), scope, error, details || "");
-}
+   * Log NCCore internal errors.
+   * Errors must stay visible even when debug logging is disabled.
+   * @param {string} scope
+   * @param {any} error
+   * @param {object} details
+   */
+  function logNCCoreError(scope, error, details = undefined){
+    console.error(resolveLogPrefix(), scope, error, details || "");
+  }
 
   /**
    * Build a localized login-flow error and mark it as fatal.
@@ -355,4 +355,3 @@ function logNCCoreError(scope, error, details = undefined){
     getOpts
   };
 })();
-
