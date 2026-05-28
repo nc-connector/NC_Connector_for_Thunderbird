@@ -721,6 +721,7 @@ Event ↔ token mapping:
 
 Common utility:
 - `debug:log` — structured log forwarding (debug-controlled)
+- `policy:getStatus` — backend seat/policy status for options and wizards
 - `passwordPolicy:fetch` — returns active password policy endpoints + min length
 - `passwordPolicy:generate` — server-side password generation
 
@@ -770,6 +771,8 @@ Always ensure errors are logged (reviewer requirement: no silent failures).
 This add-on uses Nextcloud APIs such as:
 - Core capabilities:
   - `/ocs/v2.php/cloud/capabilities`
+- Backend policy status:
+  - `/apps/ncc_backend_4mc/api/v1/status`
 - Talk capabilities and room operations:
   - `/ocs/v2.php/apps/spreed/api/v4/...`
 - Password policy:
@@ -781,7 +784,7 @@ This add-on uses Nextcloud APIs such as:
 - Addressbook (system addressbook export):
   - `remote.php/dav/addressbooks/.../?export`
 
-All endpoint interaction lives in the shared modules (`modules/ocs.js`, `modules/nccore.js`, `modules/talkcore.js`, `modules/ncSharing.js`).
+All endpoint interaction lives in the shared modules (`modules/ocs.js`, `modules/nccore.js`, `modules/policyRuntime.js`, `modules/talkcore.js`, `modules/ncSharing.js`).
 
 ---
 
