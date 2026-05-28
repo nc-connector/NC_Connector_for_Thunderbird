@@ -111,7 +111,8 @@ Key files you’ll touch most:
 - `modules/bgComposeAttachments.js` — compose attachment automation, threshold prompts, and sharing-launch context handling
 - `modules/bgComposeShareCleanup.js` — compose-tab and wizard-window remote cleanup lifecycle
 - `modules/bgComposeShareInsert.js` — mode-aware share-block insertion (HTML vs plain-text compose)
-- `modules/bgComposePasswordDispatch.js` — separate-password-mail dispatch and password policy fetch/generate
+- `modules/bgComposePasswordDispatch.js` — separate-password-mail dispatch and follow-up compose handling
+- `modules/passwordPolicyRuntime.js` — background password-policy fetch/generate helper for wizard requests
 - `modules/bgCompose.js` — compose/window/tab listener wiring
 - `modules/bgSignature.js` — central backend email-signature policy orchestration for compose windows
 - `ui/signatureCompose.js` — compose-script DOM bridge for managed signature cleanup/insertion
@@ -134,6 +135,7 @@ Key files you’ll touch most:
 - `ui/debugForwarder.js` — shared runtime debug forwarding/helper layer for Talk, Sharing, and attachment prompt UIs
 - `ui/addressbookUi.js` — shared system-addressbook tooltip lock helper used by Talk wizard + options
 - `ui/passwordPolicyClient.js` — shared password-policy fetch/generate helper for both wizards
+- `ui/wizardPolicyUi.js` — shared policy-warning and password-policy UI glue for Talk/Sharing wizards
 - `options.html` + `options.js` — settings UI
 
 ---
@@ -329,7 +331,7 @@ Current implementation:
   - editor-targeted snapshot/write-back (`getCurrent` / `updateCurrent`)
   - tracked close lifecycle (`onTrackedEditorClosed`)
 - `experiments/calendar/**` remains untouched and is used only for persisted item monitoring.
-- Business logic remains in background runtime modules (`modules/bgState.js`, `modules/bgComposeAttachments.js`, `modules/bgComposeShareCleanup.js`, `modules/bgComposeShareInsert.js`, `modules/bgComposePasswordDispatch.js`, `modules/bgCompose.js`, `modules/bgCalendarLifecycle.js`, `modules/bgCalendar.js`, `modules/bgRouter.js`, `modules/talkAddressbook.js`, `modules/talkcore.js`).
+- Business logic remains in background runtime modules (`modules/bgState.js`, `modules/bgComposeAttachments.js`, `modules/bgComposeShareCleanup.js`, `modules/bgComposeShareInsert.js`, `modules/bgComposePasswordDispatch.js`, `modules/passwordPolicyRuntime.js`, `modules/bgCompose.js`, `modules/bgCalendarLifecycle.js`, `modules/bgCalendar.js`, `modules/bgRouter.js`, `modules/talkAddressbook.js`, `modules/talkcore.js`).
 
 ### 7.2 Editor variants: dialog vs tab
 

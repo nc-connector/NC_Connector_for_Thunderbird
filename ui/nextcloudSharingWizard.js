@@ -32,76 +32,33 @@
     globalThis.NCLogContext.safeConsoleError(LOG_PREFIX, scope, reportedError);
   }
 
-  function getAdminControlledHint(){
-    return i18n("policy_admin_controlled_tooltip") || "Admin controlled";
-  }
-
-  function isSeparatePasswordFeatureAvailable(){
-    return NCPolicyState.hasSeatEntitlement(state.policy.status);
-  }
-
-  function getSeparatePasswordUnavailableHint(){
-    const status = state.policy.status?.status;
-    const seatState = String(status?.seatState || "").trim().toLowerCase();
-    if (!NCPolicyState.isEndpointAvailable(state.policy.status)){
-      return i18n("sharing_password_separate_backend_required_tooltip")
-        || "This feature requires the Nextcloud backend.";
-    }
-    if (!status?.seatAssigned){
-      return i18n("sharing_password_separate_no_seat_tooltip")
-        || "Your administrator must assign an NC Connector seat to your account for this feature.";
-    }
-    if (!status?.isValid || seatState !== "active"){
-      return i18n("sharing_password_separate_paused_tooltip")
-        || "Your NC Connector seat is currently paused. Please contact your Nextcloud administrator.";
-    }
-    return "";
-  }
-
-  function applyPolicyWarningUi(){
-    if (!dom.policyWarningRow){
-      return;
-    }
-    const visible = !!state.policy.warningVisible;
-    dom.policyWarningRow.hidden = !visible;
-    if (!visible){
-      return;
-    }
-    let warningText = i18n("policy_warning_license_invalid")
-      || "Your NC Connector license or seat is currently not valid. Local settings are used. Please contact your Nextcloud administrator.";
-    if (state.policy.warningCode === "license_invalid"){
-      warningText = i18n("policy_warning_license_invalid")
-        || "Your NC Connector license or seat is currently not valid. Local settings are used. Please contact your Nextcloud administrator.";
-    }
-    if (dom.policyWarningText){
-      dom.policyWarningText.textContent = warningText;
-    }
-  }
-
   async function refreshPolicyStatus(){
     try{
       const response = await browser.runtime.sendMessage({
         type: "policy:getStatus"
       });
       const status = response?.ok ? (response.status || null) : null;
-      const sharePolicy = status?.policy?.share;
-      const editable = status?.policyEditable?.share;
-      const active = NCPolicyState.isDomainActive(status, "share");
+      const domainState = NCWizardPolicyUi.readPolicyDomain(status, "share");
       state.policy.status = status;
-      state.policy.active = active;
-      state.policy.share = active ? sharePolicy : null;
-      state.policy.editable = active ? editable : null;
-      state.policy.warningVisible = !!status?.warning?.visible;
-      state.policy.warningCode = String(status?.warning?.code || "");
+      state.policy.active = domainState.active;
+      state.policy.share = domainState.policy;
+      state.policy.editable = domainState.editable;
+      state.policy.warningVisible = domainState.warningVisible;
+      state.policy.warningCode = domainState.warningCode;
       log('Policy status', {
-        active,
+        active: state.policy.active,
         warning: state.policy.warningCode || "",
         mode: status?.mode || ""
       });
     }catch(error){
       logUiError("policy status fetch failed", error);
     }
-    applyPolicyWarningUi();
+    NCWizardPolicyUi.applyPolicyWarningUi({
+      row: dom.policyWarningRow,
+      textElement: dom.policyWarningText,
+      warningVisible: state.policy.warningVisible,
+      translate: wizardTranslate
+    });
   }
 
   const state = {
@@ -142,6 +99,7 @@
   };
   const dom = {};
   const i18n = NCI18n.translate;
+  const wizardTranslate = (key, fallback = "") => i18n(key) || fallback || "";
   const DEFAULT_EXPIRE_DAYS = 7;
   const emitDebugLog = typeof NCDebugForwarder?.createUiDebugLogger === 'function'
     ? NCDebugForwarder.createUiDebugLogger({
@@ -153,6 +111,17 @@
       onError: logUiError
     })
     : () => {};
+  const passwordPolicyActions = NCWizardPolicyUi.createPasswordPolicyActions({
+    getPolicy: () => state.passwordPolicy,
+    setPolicy: (policy) => {
+      state.passwordPolicy = policy;
+    },
+    sendMessage: (message) => browser.runtime.sendMessage(message),
+    passwordGenerator: (options) => NCTalkPassword.generatePassword(options),
+    logger: (message, error) => logUiError(message, error),
+    logPrefix: LOG_PREFIX,
+    fallbackLength: 12
+  });
 
   // Register unload guards early so debug forwarding stops even if the window
   // closes while async init is still running.
@@ -189,7 +158,7 @@
         logUiError('defaults', error);
       }
       setDefaultShareName();
-      await loadPasswordPolicy();
+      await passwordPolicyActions.load();
       await applyDefaultSecuritySettings();
       try{
         await loadBasePath();
@@ -319,7 +288,7 @@
       const enabled = dom.passwordToggle.checked;
       applyPasswordToggleState(enabled);
       if (enabled && !dom.passwordInput.value){
-        dom.passwordInput.value = await generatePasswordFromPolicy();
+        dom.passwordInput.value = await passwordPolicyActions.generate();
       }
       invalidateUpload();
       log('password toggle', dom.passwordToggle.checked);
@@ -332,7 +301,7 @@
     dom.passwordGenerate.addEventListener('click', async () => {
       dom.passwordToggle.checked = true;
       applyPasswordToggleState(true);
-      dom.passwordInput.value = await generatePasswordFromPolicy();
+      dom.passwordInput.value = await passwordPolicyActions.generate();
       invalidateUpload();
       log('password generated');
     });
@@ -465,23 +434,10 @@
         state.defaults.expireDays
       );
     }
-    if (!isSeparatePasswordFeatureAvailable()){
+    if (!NCWizardPolicyUi.isSeparatePasswordFeatureAvailable(state.policy.status)){
       state.defaults.passwordSeparate = false;
     }
   }
-  /**
-   * Fetch the live password policy from Nextcloud.
-   * @returns {Promise<object>}
-   */
-  async function loadPasswordPolicy(){
-    state.passwordPolicy = await NCPasswordPolicyClient.loadPolicy({
-      sendMessage: (message) => browser.runtime.sendMessage(message),
-      logger: (message, error) => logUiError(message, error),
-      logPrefix: LOG_PREFIX
-    });
-    return state.passwordPolicy;
-  }
-
   /**
    * Load the configured base path and update the UI.
    * @returns {Promise<string>}
@@ -707,25 +663,6 @@
     await finalizeShare();
   }
 
-  function getPolicyMinLength(){
-    return NCPasswordPolicyClient.getPolicyMinLength(state.passwordPolicy);
-  }
-
-  /**
-   * Generate a password using Nextcloud policy.
-   * @returns {Promise<string>}
-   */
-  async function generatePasswordFromPolicy(){
-    return NCPasswordPolicyClient.generatePassword({
-      policy: state.passwordPolicy,
-      sendMessage: (message) => browser.runtime.sendMessage(message),
-      passwordGenerator: (options) => NCTalkPassword.generatePassword(options),
-      fallbackLength: 12,
-      logger: (message, error) => logUiError(message, error),
-      logPrefix: LOG_PREFIX
-    });
-  }
-
   /**
    * Apply password toggle state to the UI.
    * @param {boolean} enabled
@@ -733,8 +670,8 @@
   function applyPasswordToggleState(enabled){
     const lockPassword = NCPolicyState.isEditableLocked(state.policy.active, state.policy.editable, "share_set_password");
     const lockSeparate = NCPolicyState.isEditableLocked(state.policy.active, state.policy.editable, "share_send_password_separately");
-    const featureUnavailable = !isSeparatePasswordFeatureAvailable();
-    const adminHint = getAdminControlledHint();
+    const featureUnavailable = !NCWizardPolicyUi.isSeparatePasswordFeatureAvailable(state.policy.status);
+    const adminHint = NCWizardPolicyUi.getAdminControlledHint(wizardTranslate);
     if (dom.passwordToggle){
       dom.passwordToggle.disabled = lockPassword;
       dom.passwordToggle.title = lockPassword ? adminHint : "";
@@ -749,7 +686,7 @@
     if (dom.passwordSeparateToggle){
       dom.passwordSeparateToggle.disabled = !enabled || lockSeparate || featureUnavailable;
       dom.passwordSeparateToggle.title = featureUnavailable
-        ? getSeparatePasswordUnavailableHint()
+        ? NCWizardPolicyUi.getSeparatePasswordUnavailableHint(state.policy.status, wizardTranslate)
         : (lockSeparate ? adminHint : "");
       if (!enabled || featureUnavailable){
         dom.passwordSeparateToggle.checked = false;
@@ -758,7 +695,7 @@
     if (dom.passwordSeparateRow){
       dom.passwordSeparateRow.classList.toggle("is-disabled", !enabled || lockSeparate || featureUnavailable);
       dom.passwordSeparateRow.title = featureUnavailable
-        ? getSeparatePasswordUnavailableHint()
+        ? NCWizardPolicyUi.getSeparatePasswordUnavailableHint(state.policy.status, wizardTranslate)
         : (lockSeparate ? adminHint : "");
     }
     if (!enabled){
@@ -788,7 +725,7 @@
       dom.passwordSeparateToggle.checked = enabled && !!state.defaults.passwordSeparate;
     }
     if (enabled && !dom.passwordInput.value){
-      dom.passwordInput.value = await generatePasswordFromPolicy();
+      dom.passwordInput.value = await passwordPolicyActions.generate();
     }
     dom.expireToggle.checked = true;
     dom.expireFields.classList.remove('hidden');
@@ -800,7 +737,7 @@
    * Apply admin lock state from backend policy to editable controls.
    */
   function applyPolicyControlLocks(){
-    const adminHint = getAdminControlledHint();
+    const adminHint = NCWizardPolicyUi.getAdminControlledHint(wizardTranslate);
     const lockShareName = NCPolicyState.isEditableLocked(state.policy.active, state.policy.editable, "share_name_template");
     const lockPermUpload = NCPolicyState.isEditableLocked(state.policy.active, state.policy.editable, "share_permission_upload");
     const lockPermEdit = NCPolicyState.isEditableLocked(state.policy.active, state.policy.editable, "share_permission_edit");
@@ -1456,7 +1393,7 @@
    */
   function isSeparatePasswordMailEnabled(){
     return !!dom.passwordToggle?.checked
-      && isSeparatePasswordFeatureAvailable()
+      && NCWizardPolicyUi.isSeparatePasswordFeatureAvailable(state.policy.status)
       && !!dom.passwordSeparateToggle?.checked
       && !!state.uploadResult?.shareInfo?.password;
   }
@@ -1690,7 +1627,7 @@
     }
     const raw = dom.passwordInput.value || '';
     const pwd = raw.trim();
-    const minLength = getPolicyMinLength();
+    const minLength = passwordPolicyActions.getMinLength();
     if (!pwd){
       setMessage(i18n('sharing_password_policy_error'), 'error');
       return false;

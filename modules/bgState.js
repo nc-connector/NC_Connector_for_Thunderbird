@@ -43,11 +43,6 @@ const ROOM_CLEANUP_BY_TOKEN = new Map();
 const ROOM_CLEANUP_BY_EDITOR = new Map();
 const INVITEE_SYNC_IN_FLIGHT = new Set();
 const DELEGATION_IN_FLIGHT = new Set();
-const FALLBACK_PASSWORD_POLICY = {
-  hasPolicy: false,
-  minLength: null,
-  apiGenerateUrl: null
-};
 const SHARING_KEYS = NCSharingStorage?.SHARING_KEYS || {};
 const bgShortId = NCTalkTextUtils.shortId;
 const normalizeAttachmentThresholdMb = NCSharingStorage.normalizeAttachmentThresholdMb;

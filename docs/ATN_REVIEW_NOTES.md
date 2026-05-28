@@ -29,7 +29,7 @@ is intentionally minimal:
 - tracked lifecycle via `ncCalToolbar.onTrackedEditorClosed`
 
 All business logic stays in the background runtime modules (`modules/bgState.js`,
-`modules/bgComposeAttachments.js`, `modules/bgComposeShareCleanup.js`, `modules/bgComposeShareInsert.js`, `modules/bgComposePasswordDispatch.js`,
+`modules/bgComposeAttachments.js`, `modules/bgComposeShareCleanup.js`, `modules/bgComposeShareInsert.js`, `modules/bgComposePasswordDispatch.js`, `modules/passwordPolicyRuntime.js`,
 `modules/bgCompose.js`, `modules/bgCalendarLifecycle.js`, `modules/bgCalendar.js`, `modules/talkAddressbook.js`,
 `modules/talkcore.js`, `modules/bgRouter.js`) and uses calendar APIs only
 for persisted monitoring (`browser.calendar.items.onCreated/onUpdated/onRemoved`).

@@ -108,6 +108,7 @@
     }
     return fallback || "";
   };
+  const wizardTranslate = (key, fallback = "") => t(key, fallback);
 
   NCTalkDomI18n.translatePage((key, subs) => browser.i18n.getMessage(key, subs), {
     titleKey: "talk_dialog_title"
@@ -157,6 +158,17 @@
       onError: logUiError
     })
     : () => {};
+  const passwordPolicyActions = NCWizardPolicyUi.createPasswordPolicyActions({
+    getPolicy: () => state.passwordPolicy,
+    setPolicy: (policy) => {
+      state.passwordPolicy = policy;
+    },
+    sendMessage: (message) => browser.runtime.sendMessage(message),
+    passwordGenerator: (options) => NCTalkPassword.generatePassword(options),
+    logger: (message, error) => logUiError(message, error),
+    logPrefix: LOG_PREFIX,
+    fallbackLength: 12
+  });
 
   [systemAddressbookAdminLinkDelegateInline].forEach((link) => {
     if (link){
@@ -175,10 +187,6 @@
     applyTooltipState(tooltipList, lockActive);
   }
 
-  function getAdminControlledHint(){
-    return t("policy_admin_controlled_tooltip", "Admin controlled");
-  }
-
   function normalizeDescriptionLanguage(value){
     return NCI18nOverride.normalizeLanguageOverride(value, { allowCustom: true });
   }
@@ -189,55 +197,29 @@
       : "plain_text";
   }
 
-  function applyPolicyWarningUi(){
-    if (!policyWarningRow){
-      return;
-    }
-    const visible = !!state.policy.warningVisible;
-    policyWarningRow.hidden = !visible;
-    if (!visible){
-      return;
-    }
-    let message = t(
-      "policy_warning_license_invalid",
-      "Your NC Connector license or seat is currently not valid. Local settings are used. Please contact your Nextcloud administrator."
-    );
-    if (state.policy.warningCode === "license_invalid"){
-      message = t(
-        "policy_warning_license_invalid",
-        "Your NC Connector license or seat is currently not valid. Local settings are used. Please contact your Nextcloud administrator."
-      );
-    }
-    if (policyWarningText){
-      policyWarningText.textContent = message;
-    }
-  }
-
   async function refreshPolicyStatus(){
     try{
       const response = await browser.runtime.sendMessage({
         type: "policy:getStatus"
       });
       const status = response?.ok ? (response.status || null) : null;
-      const talkPolicy = status?.policy?.talk;
-      const editable = status?.policyEditable?.talk;
-      const active = NCPolicyState.isDomainActive(status, "talk");
+      const domainState = NCWizardPolicyUi.readPolicyDomain(status, "talk");
       state.policy.status = status;
-      state.policy.active = active;
-      state.policy.talk = active ? talkPolicy : null;
-      state.policy.editable = active ? editable : null;
-      state.policy.warningVisible = !!status?.warning?.visible;
-      state.policy.warningCode = String(status?.warning?.code || "");
-      state.policy.generatePassword = active
+      state.policy.active = domainState.active;
+      state.policy.talk = domainState.policy;
+      state.policy.editable = domainState.editable;
+      state.policy.warningVisible = domainState.warningVisible;
+      state.policy.warningCode = domainState.warningCode;
+      state.policy.generatePassword = domainState.active
         ? NCPolicyState.coerceBoolean(NCPolicyState.readDomainValue(state.policy.talk, "talk_generate_password"), true)
         : true;
-      state.policy.descriptionLanguage = active
+      state.policy.descriptionLanguage = domainState.active
         ? normalizeDescriptionLanguage(NCPolicyState.coerceString(NCPolicyState.readDomainValue(state.policy.talk, "language_talk_description"), ""))
         : "";
-      state.policy.descriptionType = active
+      state.policy.descriptionType = domainState.active
         ? normalizeEventDescriptionType(NCPolicyState.readDomainValue(state.policy.talk, "event_description_type"))
         : "plain_text";
-      state.policy.invitationTemplate = active
+      state.policy.invitationTemplate = domainState.active
         ? NCPolicyState.coerceString(NCPolicyState.readDomainValue(state.policy.talk, "talk_invitation_template"), "")
         : "";
       logDebug("policy status", {
@@ -248,7 +230,12 @@
     }catch(error){
       logUiError("policy status fetch failed", error);
     }
-    applyPolicyWarningUi();
+    NCWizardPolicyUi.applyPolicyWarningUi({
+      row: policyWarningRow,
+      textElement: policyWarningText,
+      warningVisible: state.policy.warningVisible,
+      translate: wizardTranslate
+    });
   }
   window.addEventListener("pagehide", cleanupPageResources, true);
   window.addEventListener("beforeunload", cleanupPageResources, true);
@@ -413,7 +400,7 @@
         throw new Error(check?.error || t("talk_error_init_failed"));
       }
       await refreshPolicyStatus();
-      await loadPasswordPolicy();
+      await passwordPolicyActions.load();
       await loadSnapshot();
       await refreshSystemAddressbookAvailability({ forceRefresh: true });
     }catch(error){
@@ -536,23 +523,6 @@
   }
 
   /**
-   * Fetch the live password policy from Nextcloud.
-   * @returns {Promise<object>}
-   */
-  async function loadPasswordPolicy(){
-    state.passwordPolicy = await NCPasswordPolicyClient.loadPolicy({
-      sendMessage: (message) => browser.runtime.sendMessage(message),
-      logger: (message, error) => logUiError(message, error),
-      logPrefix: LOG_PREFIX
-    });
-    return state.passwordPolicy;
-  }
-
-  function getPolicyMinLength(){
-    return NCPasswordPolicyClient.getPolicyMinLength(state.passwordPolicy);
-  }
-
-  /**
    * Apply password toggle state to the UI.
    * @param {boolean} enabled
    */
@@ -560,11 +530,11 @@
     const lockPassword = NCPolicyState.isEditableLocked(state.policy.active, state.policy.editable, "talk_set_password");
     if (passwordToggle){
       passwordToggle.disabled = lockPassword;
-      passwordToggle.title = lockPassword ? getAdminControlledHint() : "";
+      passwordToggle.title = lockPassword ? NCWizardPolicyUi.getAdminControlledHint(wizardTranslate) : "";
     }
     if (passwordToggleRow){
       passwordToggleRow.classList.toggle("is-disabled", lockPassword);
-      passwordToggleRow.title = lockPassword ? getAdminControlledHint() : "";
+      passwordToggleRow.title = lockPassword ? NCWizardPolicyUi.getAdminControlledHint(wizardTranslate) : "";
     }
     if (passwordFields){
       passwordFields.classList.toggle("hidden", !enabled);
@@ -587,23 +557,8 @@
     const enabled = !!passwordToggle?.checked;
     applyPasswordToggleState(enabled);
     if (enabled && passwordInput && !passwordInput.value){
-      passwordInput.value = await generatePasswordFromPolicy();
+      passwordInput.value = await passwordPolicyActions.generate();
     }
-  }
-
-  /**
-   * Generate a password using Nextcloud policy.
-   * @returns {Promise<string>}
-   */
-  async function generatePasswordFromPolicy(){
-    return NCPasswordPolicyClient.generatePassword({
-      policy: state.passwordPolicy,
-      sendMessage: (message) => browser.runtime.sendMessage(message),
-      passwordGenerator: (options) => NCTalkPassword.generatePassword(options),
-      fallbackLength: 12,
-      logger: (message, error) => logUiError(message, error),
-      logPrefix: LOG_PREFIX
-    });
   }
 
   /**
@@ -684,7 +639,7 @@
         passwordToggle.checked = enabled;
         applyPasswordToggleState(enabled);
         if (enabled && passwordInput && !passwordInput.value && state.passwordPolicy){
-          generatePasswordFromPolicy().then((pwd) => {
+          passwordPolicyActions.generate().then((pwd) => {
             if (pwd && passwordInput && !passwordInput.value){
               passwordInput.value = pwd;
             }
@@ -704,7 +659,7 @@
    * Apply static lock-state UI for policy-controlled controls.
    */
   function applyPolicyControlLocks(){
-    const adminHint = getAdminControlledHint();
+    const adminHint = NCWizardPolicyUi.getAdminControlledHint(wizardTranslate);
     const lockTitle = NCPolicyState.isEditableLocked(state.policy.active, state.policy.editable, "talk_title");
     const lockRoomType = NCPolicyState.isEditableLocked(state.policy.active, state.policy.editable, "talk_room_type");
     const lockLobby = NCPolicyState.isEditableLocked(state.policy.active, state.policy.editable, "talk_lobby_active");
@@ -857,7 +812,7 @@
     if (!passwordToggle?.checked){
       return;
     }
-    const generated = await generatePasswordFromPolicy();
+    const generated = await passwordPolicyActions.generate();
     passwordInput.value = generated;
     try{
       passwordInput.setSelectionRange(0, generated.length);
@@ -1038,7 +993,7 @@
     }
     const raw = passwordInput.value || "";
     const trimmed = raw.trim();
-    const minLength = getPolicyMinLength();
+    const minLength = passwordPolicyActions.getMinLength();
     if (!trimmed){
       await showInlineModal({
         title: t("ui_password_error_title"),
@@ -1512,7 +1467,7 @@
     const guestsPolicyLock = NCPolicyState.isEditableLocked(state.policy.active, state.policy.editable, "talk_add_guests");
     const usersLockActive = lockActive || usersPolicyLock;
     const guestsLockActive = lockActive || guestsPolicyLock;
-    const adminHint = getAdminControlledHint();
+    const adminHint = NCWizardPolicyUi.getAdminControlledHint(wizardTranslate);
     state.systemAddressbook.checked = true;
     state.systemAddressbook.available = !!available;
     state.systemAddressbook.error = lockActive

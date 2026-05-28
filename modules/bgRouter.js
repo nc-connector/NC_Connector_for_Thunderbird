@@ -54,11 +54,11 @@ browser.runtime.onMessage.addListener((msg, sender) => {
       return { ok:true };
     }
     if (msg.type === "passwordPolicy:fetch"){
-      const policy = await fetchPasswordPolicy();
+      const policy = await NCPasswordPolicyRuntime.fetchPolicy();
       return { ok:true, policy };
     }
     if (msg.type === "passwordPolicy:generate"){
-      return await generatePasswordViaPolicy(msg?.payload?.policy || {});
+      return await NCPasswordPolicyRuntime.generatePassword(msg?.payload?.policy || {});
     }
     if (msg.type === "policy:getStatus"){
       try{
