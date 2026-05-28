@@ -12,56 +12,19 @@
  */
 const NCPolicyRuntime = (() => {
   const STATUS_ENDPOINT_PATH = "/apps/ncc_backend_4mc/api/v1/status";
-  const POLICY_DOMAINS = ["share", "talk", "email_signature"];
+  const {
+    POLICY_DOMAINS,
+    isObject,
+    isSeatUsable,
+    buildDomainState
+  } = NCPolicyState;
 
   function buildStatusEndpointUrl(baseUrl){
     return String(baseUrl || "").replace(/\/+$/, "") + STATUS_ENDPOINT_PATH;
   }
 
-  function isObject(value){
-    return !!value && typeof value === "object" && !Array.isArray(value);
-  }
-
   function logPolicyRuntimeError(scope, details = {}){
     globalThis.NCLogContext.safeConsoleError("[NCBG]", scope, details);
-  }
-
-  /**
-   * Read one boolean policy-editable flag.
-   * @param {any} payload
-   * @param {"share"|"talk"|"email_signature"} domain
-   * @param {string} key
-   * @returns {boolean|null}
-   */
-  function readEditableFlag(payload, domain, key){
-    const editableDomain = payload?.policyEditable?.[domain];
-    if (!isObject(editableDomain)){
-      return null;
-    }
-    if (editableDomain[key] === true){
-      return true;
-    }
-    if (editableDomain[key] === false){
-      return false;
-    }
-    return null;
-  }
-
-  /**
-   * Read one policy value.
-   * @param {any} payload
-   * @param {"share"|"talk"|"email_signature"} domain
-   * @param {string} key
-   * @returns {any}
-   */
-  function readPolicyValue(payload, domain, key){
-    const policyDomain = payload?.policy?.[domain];
-    if (!isObject(policyDomain)){
-      return null;
-    }
-    return Object.prototype.hasOwnProperty.call(policyDomain, key)
-      ? policyDomain[key]
-      : null;
   }
 
   function buildLocalModeResult(reason, details = {}){
@@ -102,35 +65,6 @@ const NCPolicyRuntime = (() => {
         visible: !!warningCode,
         code: warningCode
       }
-    };
-  }
-
-  /**
-   * Return true when the backend status allows policy use for assigned seats.
-   * @param {object} status
-   * @returns {boolean}
-   */
-  function isSeatUsable(status){
-    return !!(
-      status?.seatAssigned
-      && status?.isValid
-      && status?.seatState === "active"
-      && !status?.overlicensed
-    );
-  }
-
-  /**
-   * Build availability/activation state for one policy domain.
-   * @param {any} policyDomain
-   * @param {any} editableDomain
-   * @param {boolean} seatUsable
-   * @returns {{available:boolean, active:boolean}}
-   */
-  function buildDomainState(policyDomain, editableDomain, seatUsable){
-    const available = isObject(policyDomain) && isObject(editableDomain);
-    return {
-      available,
-      active: !!seatUsable && available
     };
   }
 
@@ -315,54 +249,7 @@ const NCPolicyRuntime = (() => {
     return normalized;
   }
 
-  /**
-   * Return true when a policy setting is locked by admin.
-   * @param {any} status
-   * @param {"share"|"talk"|"email_signature"} domain
-   * @param {string} key
-   * @returns {boolean}
-   */
-  function isLocked(status, domain, key){
-    if (!isDomainActive(status, domain)){
-      return false;
-    }
-    return readEditableFlag(status, domain, key) === false;
-  }
-
-  /**
-   * Return true when a policy domain exists in the backend payload.
-   * @param {any} status
-   * @param {"share"|"talk"|"email_signature"} domain
-   * @returns {boolean}
-   */
-  function isDomainAvailable(status, domain){
-    const domainState = status?.policyDomains?.[domain];
-    if (isObject(domainState) && Object.prototype.hasOwnProperty.call(domainState, "available")){
-      return domainState.available === true;
-    }
-    return isObject(status?.policy?.[domain]) && isObject(status?.policyEditable?.[domain]);
-  }
-
-  /**
-   * Return true when one policy domain exists and the seat may use
-   * @param {any} status
-   * @param {"share"|"talk"|"email_signature"} domain
-   * @returns {boolean}
-   */
-  function isDomainActive(status, domain){
-    const domainState = status?.policyDomains?.[domain];
-    if (isObject(domainState) && Object.prototype.hasOwnProperty.call(domainState, "active")){
-      return domainState.active === true;
-    }
-    return !!status?.policyActive && isDomainAvailable(status, domain);
-  }
-
   return {
-    getPolicyStatus,
-    readPolicyValue,
-    readEditableFlag,
-    isDomainAvailable,
-    isDomainActive,
-    isLocked
+    getPolicyStatus
   };
 })();

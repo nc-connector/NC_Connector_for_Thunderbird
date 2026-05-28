@@ -118,6 +118,7 @@ Key files you’ll touch most:
 - `modules/bgCalendarLifecycle.js` — calendar wizard context and editor-close cleanup lifecycle helpers
 - `modules/bgCalendar.js` — `ncCalToolbar` integration, room metadata mapping, and persisted calendar monitoring sync
 - `modules/bgRouter.js` — `runtime.onMessage` dispatcher for Talk/Sharing/Options/UI bridge contracts
+- `modules/policyState.js` — shared helpers for normalized backend policy status objects
 - `modules/policyRuntime.js` — centralized backend seat/policy status fetch + normalization (`/apps/ncc_backend_4mc/api/v1/status`)
 - `modules/background.js` — thin bootstrap entrypoint
 - `modules/hostPermissions.js` — single host-permission gate used by core/talk/sharing runtime modules

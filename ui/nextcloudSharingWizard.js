@@ -36,64 +36,14 @@
     return i18n("policy_admin_controlled_tooltip") || "Admin controlled";
   }
 
-  function isBackendEndpointAvailable(){
-    return !!state.policy.status?.endpointAvailable;
-  }
-
-  /**
-   * Return true when the current user has an active backend seat.
-   * @returns {boolean}
-   */
-  function hasBackendSeatEntitlement(){
-    const status = state.policy.status?.status;
-    const seatState = String(status?.seatState || "").trim().toLowerCase();
-    return !!(
-      isBackendEndpointAvailable()
-      && status?.seatAssigned
-      && status?.isValid
-      && seatState === "active"
-    );
-  }
-
-  /**
-   * Return true when one backend policy domain is usable for this seat
-   * @param {object|null} status
-   * @param {"share"|"talk"|"email_signature"} domain
-   * @returns {boolean}
-   */
-  function isPolicyDomainActive(status, domain){
-    const domainState = status?.policyDomains?.[domain];
-    if (domainState && typeof domainState === "object"
-      && Object.prototype.hasOwnProperty.call(domainState, "active")){
-      return domainState.active === true;
-    }
-    const policy = status?.policy?.[domain];
-    const editable = status?.policyEditable?.[domain];
-    return !!(
-      status?.policyActive
-      && policy
-      && typeof policy === "object"
-      && editable
-      && typeof editable === "object"
-    );
-  }
-
-  /**
-   * Return true when separate password delivery is available.
-   * @returns {boolean}
-   */
   function isSeparatePasswordFeatureAvailable(){
-    return hasBackendSeatEntitlement();
+    return NCPolicyState.hasSeatEntitlement(state.policy.status);
   }
 
-  /**
-   * Return the tooltip shown when separate password delivery is unavailable.
-   * @returns {string}
-   */
   function getSeparatePasswordUnavailableHint(){
     const status = state.policy.status?.status;
     const seatState = String(status?.seatState || "").trim().toLowerCase();
-    if (!isBackendEndpointAvailable()){
+    if (!NCPolicyState.isEndpointAvailable(state.policy.status)){
       return i18n("sharing_password_separate_backend_required_tooltip")
         || "This feature requires the Nextcloud backend.";
     }
@@ -108,81 +58,6 @@
     return "";
   }
 
-  /**
-   * Read one share policy value from runtime state.
-   * @param {string} key
-   * @returns {any}
-   */
-  function readPolicyShareValue(key){
-    const sharePolicy = state.policy?.share;
-    if (!sharePolicy || typeof sharePolicy !== "object"){
-      return null;
-    }
-    return Object.prototype.hasOwnProperty.call(sharePolicy, key)
-      ? sharePolicy[key]
-      : null;
-  }
-
-  /**
-   * Return true when a share setting is admin-locked.
-   * @param {string} key
-   * @returns {boolean}
-   */
-  function isPolicyLock(key){
-    if (!state.policy?.active){
-      return false;
-    }
-    const editable = state.policy?.editable;
-    if (!editable || typeof editable !== "object"){
-      return false;
-    }
-    return editable[key] === false;
-  }
-
-  /**
-   * Convert policy values to booleans with fallback.
-   * @param {any} value
-   * @param {boolean} fallback
-   * @returns {boolean}
-   */
-  function coercePolicyBoolean(value, fallback){
-    if (value === true){
-      return true;
-    }
-    if (value === false){
-      return false;
-    }
-    return fallback;
-  }
-
-  /**
-   * Convert policy values to integers with fallback.
-   * @param {any} value
-   * @param {number} fallback
-   * @returns {number}
-   */
-  function coercePolicyInt(value, fallback){
-    const parsed = Number.parseInt(String(value ?? ""), 10);
-    if (!Number.isFinite(parsed)){
-      return fallback;
-    }
-    return parsed;
-  }
-
-  /**
-   * Convert policy values to non-empty strings with fallback.
-   * @param {any} value
-   * @param {string} fallback
-   * @returns {string}
-   */
-  function coercePolicyString(value, fallback){
-    const text = String(value ?? "").trim();
-    return text || fallback;
-  }
-
-  /**
-   * Render policy warning visibility in the sharing wizard.
-   */
   function applyPolicyWarningUi(){
     if (!dom.policyWarningRow){
       return;
@@ -203,10 +78,6 @@
     }
   }
 
-  /**
-   * Fetch the backend policy status and cache it in wizard state.
-   * @returns {Promise<void>}
-   */
   async function refreshPolicyStatus(){
     try{
       const response = await browser.runtime.sendMessage({
@@ -215,7 +86,7 @@
       const status = response?.ok ? (response.status || null) : null;
       const sharePolicy = status?.policy?.share;
       const editable = status?.policyEditable?.share;
-      const active = isPolicyDomainActive(status, "share");
+      const active = NCPolicyState.isDomainActive(status, "share");
       state.policy.status = status;
       state.policy.active = active;
       state.policy.share = active ? sharePolicy : null;
@@ -565,32 +436,32 @@
       DEFAULT_EXPIRE_DAYS
     );
     if (state.policy.active){
-      state.defaults.shareName = coercePolicyString(
-        readPolicyShareValue("share_name_template"),
+      state.defaults.shareName = NCPolicyState.coerceString(
+        NCPolicyState.readDomainValue(state.policy.share, "share_name_template"),
         state.defaults.shareName
       );
-      state.defaults.permCreate = coercePolicyBoolean(
-        readPolicyShareValue("share_permission_upload"),
+      state.defaults.permCreate = NCPolicyState.coerceBoolean(
+        NCPolicyState.readDomainValue(state.policy.share, "share_permission_upload"),
         state.defaults.permCreate
       );
-      state.defaults.permWrite = coercePolicyBoolean(
-        readPolicyShareValue("share_permission_edit"),
+      state.defaults.permWrite = NCPolicyState.coerceBoolean(
+        NCPolicyState.readDomainValue(state.policy.share, "share_permission_edit"),
         state.defaults.permWrite
       );
-      state.defaults.permDelete = coercePolicyBoolean(
-        readPolicyShareValue("share_permission_delete"),
+      state.defaults.permDelete = NCPolicyState.coerceBoolean(
+        NCPolicyState.readDomainValue(state.policy.share, "share_permission_delete"),
         state.defaults.permDelete
       );
-      state.defaults.passwordEnabled = coercePolicyBoolean(
-        readPolicyShareValue("share_set_password"),
+      state.defaults.passwordEnabled = NCPolicyState.coerceBoolean(
+        NCPolicyState.readDomainValue(state.policy.share, "share_set_password"),
         state.defaults.passwordEnabled
       );
-      state.defaults.passwordSeparate = coercePolicyBoolean(
-        readPolicyShareValue("share_send_password_separately"),
+      state.defaults.passwordSeparate = NCPolicyState.coerceBoolean(
+        NCPolicyState.readDomainValue(state.policy.share, "share_send_password_separately"),
         state.defaults.passwordSeparate
       );
       state.defaults.expireDays = NCTalkTextUtils.normalizeExpireDays(
-        coercePolicyInt(readPolicyShareValue("share_expire_days"), state.defaults.expireDays),
+        NCPolicyState.coerceInt(NCPolicyState.readDomainValue(state.policy.share, "share_expire_days"), state.defaults.expireDays),
         state.defaults.expireDays
       );
     }
@@ -618,7 +489,7 @@
   async function loadBasePath(){
     try{
       const policyBasePath = state.policy.active
-        ? coercePolicyString(readPolicyShareValue("share_base_directory"), "")
+        ? NCPolicyState.coerceString(NCPolicyState.readDomainValue(state.policy.share, "share_base_directory"), "")
         : "";
       const basePath = policyBasePath || await NCSharing.getFileLinkBasePath();
       state.basePath = basePath || '';
@@ -860,8 +731,8 @@
    * @param {boolean} enabled
    */
   function applyPasswordToggleState(enabled){
-    const lockPassword = isPolicyLock("share_set_password");
-    const lockSeparate = isPolicyLock("share_send_password_separately");
+    const lockPassword = NCPolicyState.isEditableLocked(state.policy.active, state.policy.editable, "share_set_password");
+    const lockSeparate = NCPolicyState.isEditableLocked(state.policy.active, state.policy.editable, "share_send_password_separately");
     const featureUnavailable = !isSeparatePasswordFeatureAvailable();
     const adminHint = getAdminControlledHint();
     if (dom.passwordToggle){
@@ -930,11 +801,11 @@
    */
   function applyPolicyControlLocks(){
     const adminHint = getAdminControlledHint();
-    const lockShareName = isPolicyLock("share_name_template");
-    const lockPermUpload = isPolicyLock("share_permission_upload");
-    const lockPermEdit = isPolicyLock("share_permission_edit");
-    const lockPermDelete = isPolicyLock("share_permission_delete");
-    const lockExpireDays = isPolicyLock("share_expire_days");
+    const lockShareName = NCPolicyState.isEditableLocked(state.policy.active, state.policy.editable, "share_name_template");
+    const lockPermUpload = NCPolicyState.isEditableLocked(state.policy.active, state.policy.editable, "share_permission_upload");
+    const lockPermEdit = NCPolicyState.isEditableLocked(state.policy.active, state.policy.editable, "share_permission_edit");
+    const lockPermDelete = NCPolicyState.isEditableLocked(state.policy.active, state.policy.editable, "share_permission_delete");
+    const lockExpireDays = NCPolicyState.isEditableLocked(state.policy.active, state.policy.editable, "share_expire_days");
 
     if (dom.shareName){
       dom.shareName.disabled = lockShareName;

@@ -41,6 +41,7 @@
       "modules/icalContract.js",
       "modules/bgState.js",
       "modules/nccore.js",
+      "modules/policyState.js",
       "modules/policyRuntime.js",
       "modules/talkAddressbook.js",
       "modules/talkcore.js",

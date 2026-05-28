@@ -902,14 +902,12 @@ async function isSavedEventRoomDeleteEnabled(){
   }
 
   try{
-    if (typeof NCPolicyRuntime !== "undefined" && NCPolicyRuntime?.getPolicyStatus){
-      const status = await NCPolicyRuntime.getPolicyStatus();
-      if (
-        NCPolicyRuntime.isDomainActive(status, "talk")
-        && NCPolicyRuntime.isLocked(status, "talk", "talk_delete_room_on_event_delete")
-      ){
-        return NCPolicyRuntime.readPolicyValue(status, "talk", "talk_delete_room_on_event_delete") === true;
-      }
+    const status = await NCPolicyRuntime.getPolicyStatus();
+    if (
+      NCPolicyState.isDomainActive(status, "talk")
+      && NCPolicyState.isLocked(status, "talk", "talk_delete_room_on_event_delete")
+    ){
+      return NCPolicyState.readPolicyValue(status, "talk", "talk_delete_room_on_event_delete") === true;
     }
   }catch(error){
     console.error("[NCBG] talk delete-room policy check failed", error);

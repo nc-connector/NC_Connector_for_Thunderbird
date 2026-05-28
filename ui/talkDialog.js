@@ -179,81 +179,8 @@
     return t("policy_admin_controlled_tooltip", "Admin controlled");
   }
 
-  /**
-   * Read a Talk policy value.
-   * @param {string} key
-   * @returns {any}
-   */
-  function readPolicyTalkValue(key){
-    const talkPolicy = state.policy?.talk;
-    if (!talkPolicy || typeof talkPolicy !== "object"){
-      return null;
-    }
-    return Object.prototype.hasOwnProperty.call(talkPolicy, key)
-      ? talkPolicy[key]
-      : null;
-  }
-
-  /**
-   * Return true when a Talk setting is admin-locked.
-   * @param {string} key
-   * @returns {boolean}
-   */
-  function isPolicyLock(key){
-    if (!state.policy?.active){
-      return false;
-    }
-    const editable = state.policy?.editable;
-    if (!editable || typeof editable !== "object"){
-      return false;
-    }
-    return editable[key] === false;
-  }
-
-  /**
-   * Convert policy-like values to booleans with fallback.
-   * @param {any} value
-   * @param {boolean} fallback
-   * @returns {boolean}
-   */
-  function coercePolicyBoolean(value, fallback){
-    if (value === true){
-      return true;
-    }
-    if (value === false){
-      return false;
-    }
-    return fallback;
-  }
-
-  /**
-   * Convert policy-like values to strings with fallback.
-   * @param {any} value
-   * @param {string} fallback
-   * @returns {string}
-   */
-  function coercePolicyString(value, fallback){
-    const text = String(value ?? "").trim();
-    return text || fallback;
-  }
-
-  /**
-   * Normalize one language override value from backend policy or local state.
-   * @param {any} value
-   * @returns {string}
-   */
   function normalizeDescriptionLanguage(value){
-    if (typeof NCI18nOverride !== "undefined" && typeof NCI18nOverride.normalizeLanguageOverride === "function"){
-      return NCI18nOverride.normalizeLanguageOverride(value, { allowCustom: true });
-    }
-    const text = String(value ?? "").trim().toLowerCase();
-    if (!text || text === "default"){
-      return "default";
-    }
-    if (text === "custom"){
-      return "custom";
-    }
-    return text;
+    return NCI18nOverride.normalizeLanguageOverride(value, { allowCustom: true });
   }
 
   function normalizeEventDescriptionType(value){
@@ -262,9 +189,6 @@
       : "plain_text";
   }
 
-  /**
-   * Render policy warning visibility in the wizard.
-   */
   function applyPolicyWarningUi(){
     if (!policyWarningRow){
       return;
@@ -289,33 +213,6 @@
     }
   }
 
-  /**
-   * Return true when one backend policy domain is usable for this seat
-   * @param {object|null} status
-   * @param {"share"|"talk"|"email_signature"} domain
-   * @returns {boolean}
-   */
-  function isPolicyDomainActive(status, domain){
-    const domainState = status?.policyDomains?.[domain];
-    if (domainState && typeof domainState === "object"
-      && Object.prototype.hasOwnProperty.call(domainState, "active")){
-      return domainState.active === true;
-    }
-    const policy = status?.policy?.[domain];
-    const editable = status?.policyEditable?.[domain];
-    return !!(
-      status?.policyActive
-      && policy
-      && typeof policy === "object"
-      && editable
-      && typeof editable === "object"
-    );
-  }
-
-  /**
-   * Load current backend policy status for the wizard.
-   * @returns {Promise<void>}
-   */
   async function refreshPolicyStatus(){
     try{
       const response = await browser.runtime.sendMessage({
@@ -324,7 +221,7 @@
       const status = response?.ok ? (response.status || null) : null;
       const talkPolicy = status?.policy?.talk;
       const editable = status?.policyEditable?.talk;
-      const active = isPolicyDomainActive(status, "talk");
+      const active = NCPolicyState.isDomainActive(status, "talk");
       state.policy.status = status;
       state.policy.active = active;
       state.policy.talk = active ? talkPolicy : null;
@@ -332,16 +229,16 @@
       state.policy.warningVisible = !!status?.warning?.visible;
       state.policy.warningCode = String(status?.warning?.code || "");
       state.policy.generatePassword = active
-        ? coercePolicyBoolean(readPolicyTalkValue("talk_generate_password"), true)
+        ? NCPolicyState.coerceBoolean(NCPolicyState.readDomainValue(state.policy.talk, "talk_generate_password"), true)
         : true;
       state.policy.descriptionLanguage = active
-        ? normalizeDescriptionLanguage(coercePolicyString(readPolicyTalkValue("language_talk_description"), ""))
+        ? normalizeDescriptionLanguage(NCPolicyState.coerceString(NCPolicyState.readDomainValue(state.policy.talk, "language_talk_description"), ""))
         : "";
       state.policy.descriptionType = active
-        ? normalizeEventDescriptionType(readPolicyTalkValue("event_description_type"))
+        ? normalizeEventDescriptionType(NCPolicyState.readDomainValue(state.policy.talk, "event_description_type"))
         : "plain_text";
       state.policy.invitationTemplate = active
-        ? coercePolicyString(readPolicyTalkValue("talk_invitation_template"), "")
+        ? NCPolicyState.coerceString(NCPolicyState.readDomainValue(state.policy.talk, "talk_invitation_template"), "")
         : "";
       logDebug("policy status", {
         active: state.policy.active,
@@ -623,13 +520,13 @@
         defaults.roomType = "event";
       }
       if (state.policy.active){
-        defaults.title = coercePolicyString(readPolicyTalkValue("talk_title"), defaults.title);
-        defaults.lobby = coercePolicyBoolean(readPolicyTalkValue("talk_lobby_active"), defaults.lobby);
-        defaults.listable = coercePolicyBoolean(readPolicyTalkValue("talk_show_in_search"), defaults.listable);
-        defaults.addUsersEnabled = coercePolicyBoolean(readPolicyTalkValue("talk_add_users"), defaults.addUsersEnabled);
-        defaults.addGuestsEnabled = coercePolicyBoolean(readPolicyTalkValue("talk_add_guests"), defaults.addGuestsEnabled);
-        defaults.passwordEnabled = coercePolicyBoolean(readPolicyTalkValue("talk_set_password"), defaults.passwordEnabled);
-        const policyRoomType = coercePolicyString(readPolicyTalkValue("talk_room_type"), defaults.roomType);
+        defaults.title = NCPolicyState.coerceString(NCPolicyState.readDomainValue(state.policy.talk, "talk_title"), defaults.title);
+        defaults.lobby = NCPolicyState.coerceBoolean(NCPolicyState.readDomainValue(state.policy.talk, "talk_lobby_active"), defaults.lobby);
+        defaults.listable = NCPolicyState.coerceBoolean(NCPolicyState.readDomainValue(state.policy.talk, "talk_show_in_search"), defaults.listable);
+        defaults.addUsersEnabled = NCPolicyState.coerceBoolean(NCPolicyState.readDomainValue(state.policy.talk, "talk_add_users"), defaults.addUsersEnabled);
+        defaults.addGuestsEnabled = NCPolicyState.coerceBoolean(NCPolicyState.readDomainValue(state.policy.talk, "talk_add_guests"), defaults.addGuestsEnabled);
+        defaults.passwordEnabled = NCPolicyState.coerceBoolean(NCPolicyState.readDomainValue(state.policy.talk, "talk_set_password"), defaults.passwordEnabled);
+        const policyRoomType = NCPolicyState.coerceString(NCPolicyState.readDomainValue(state.policy.talk, "talk_room_type"), defaults.roomType);
         defaults.roomType = policyRoomType === "event" ? "event" : "normal";
       }
     }catch(error){
@@ -660,7 +557,7 @@
    * @param {boolean} enabled
    */
   function applyPasswordToggleState(enabled){
-    const lockPassword = isPolicyLock("talk_set_password");
+    const lockPassword = NCPolicyState.isEditableLocked(state.policy.active, state.policy.editable, "talk_set_password");
     if (passwordToggle){
       passwordToggle.disabled = lockPassword;
       passwordToggle.title = lockPassword ? getAdminControlledHint() : "";
@@ -808,11 +705,11 @@
    */
   function applyPolicyControlLocks(){
     const adminHint = getAdminControlledHint();
-    const lockTitle = isPolicyLock("talk_title");
-    const lockRoomType = isPolicyLock("talk_room_type");
-    const lockLobby = isPolicyLock("talk_lobby_active");
-    const lockListable = isPolicyLock("talk_show_in_search");
-    const lockPassword = isPolicyLock("talk_set_password");
+    const lockTitle = NCPolicyState.isEditableLocked(state.policy.active, state.policy.editable, "talk_title");
+    const lockRoomType = NCPolicyState.isEditableLocked(state.policy.active, state.policy.editable, "talk_room_type");
+    const lockLobby = NCPolicyState.isEditableLocked(state.policy.active, state.policy.editable, "talk_lobby_active");
+    const lockListable = NCPolicyState.isEditableLocked(state.policy.active, state.policy.editable, "talk_show_in_search");
+    const lockPassword = NCPolicyState.isEditableLocked(state.policy.active, state.policy.editable, "talk_set_password");
     if (titleInput){
       titleInput.disabled = lockTitle;
       titleInput.title = lockTitle ? adminHint : "";
@@ -1611,8 +1508,8 @@
    */
   function applySystemAddressbookAvailability(available, detail = ""){
     const lockActive = !available;
-    const usersPolicyLock = isPolicyLock("talk_add_users");
-    const guestsPolicyLock = isPolicyLock("talk_add_guests");
+    const usersPolicyLock = NCPolicyState.isEditableLocked(state.policy.active, state.policy.editable, "talk_add_users");
+    const guestsPolicyLock = NCPolicyState.isEditableLocked(state.policy.active, state.policy.editable, "talk_add_guests");
     const usersLockActive = lockActive || usersPolicyLock;
     const guestsLockActive = lockActive || guestsPolicyLock;
     const adminHint = getAdminControlledHint();

@@ -86,50 +86,22 @@ const NCEmailSignature = (() => {
     return identities.find((identity) => identity.id === id)?.email || "";
   }
 
-  function coerceBoolean(value, fallback){
-    if (value === true || value === false){
-      return value;
-    }
-    return fallback;
-  }
-
   async function readLocalSignatureOptions(){
     return browser.storage.local.get(Object.values(STORAGE_KEYS));
   }
 
-  function readSignaturePolicyValue(status, key){
-    if (typeof NCPolicyRuntime !== "undefined" && typeof NCPolicyRuntime.readPolicyValue === "function"){
-      return NCPolicyRuntime.readPolicyValue(status, "email_signature", key);
-    }
-    const policy = status?.policy?.email_signature;
-    if (!policy || typeof policy !== "object"){
-      return null;
-    }
-    return Object.prototype.hasOwnProperty.call(policy, key) ? policy[key] : null;
-  }
-
-  function isSignaturePolicyLocked(status, key){
-    return typeof NCPolicyRuntime !== "undefined" && typeof NCPolicyRuntime.isLocked === "function"
-      ? NCPolicyRuntime.isLocked(status, "email_signature", key)
-      : false;
-  }
-
   function resolveSignaturePolicy(status, localOptions){
-    if (typeof NCPolicyRuntime !== "undefined"
-      && typeof NCPolicyRuntime.isDomainAvailable === "function"
-      && !NCPolicyRuntime.isDomainAvailable(status, "email_signature")){
+    if (!NCPolicyState.isDomainAvailable(status, "email_signature")){
       return { active: false, reason: "signature_backend_unsupported" };
     }
-    if (typeof NCPolicyRuntime !== "undefined" && typeof NCPolicyRuntime.isDomainActive === "function"
-      ? !NCPolicyRuntime.isDomainActive(status, "email_signature")
-      : !status?.policyActive){
+    if (!NCPolicyState.isDomainActive(status, "email_signature")){
       return { active: false, reason: "policy_inactive" };
     }
-    const backendOnCompose = readSignaturePolicyValue(status, "email_signature_on_compose") === true;
-    const backendOnReply = readSignaturePolicyValue(status, "email_signature_on_reply") === true;
-    const backendOnForward = readSignaturePolicyValue(status, "email_signature_on_forward") === true;
-    const templateHtml = String(readSignaturePolicyValue(status, "email_signature_template") || "").trim();
-    const userEmail = normalizeEmail(readSignaturePolicyValue(status, "user_email"));
+    const backendOnCompose = NCPolicyState.readPolicyValue(status, "email_signature", "email_signature_on_compose") === true;
+    const backendOnReply = NCPolicyState.readPolicyValue(status, "email_signature", "email_signature_on_reply") === true;
+    const backendOnForward = NCPolicyState.readPolicyValue(status, "email_signature", "email_signature_on_forward") === true;
+    const templateHtml = String(NCPolicyState.readPolicyValue(status, "email_signature", "email_signature_template") || "").trim();
+    const userEmail = normalizeEmail(NCPolicyState.readPolicyValue(status, "email_signature", "user_email"));
 
     if (!backendOnCompose){
       return { active: false, reason: "signature_disabled_by_backend" };
@@ -141,18 +113,18 @@ const NCEmailSignature = (() => {
       return { active: false, reason: "signature_user_email_missing" };
     }
 
-    const composeLocked = isSignaturePolicyLocked(status, "email_signature_on_compose");
-    const replyLocked = isSignaturePolicyLocked(status, "email_signature_on_reply");
-    const forwardLocked = isSignaturePolicyLocked(status, "email_signature_on_forward");
+    const composeLocked = NCPolicyState.isLocked(status, "email_signature", "email_signature_on_compose");
+    const replyLocked = NCPolicyState.isLocked(status, "email_signature", "email_signature_on_reply");
+    const forwardLocked = NCPolicyState.isLocked(status, "email_signature", "email_signature_on_forward");
     const onCompose = composeLocked
       ? backendOnCompose
-      : coerceBoolean(localOptions?.[STORAGE_KEYS.onCompose], backendOnCompose);
+      : NCPolicyState.coerceBoolean(localOptions?.[STORAGE_KEYS.onCompose], backendOnCompose);
     const onReply = replyLocked
       ? backendOnReply
-      : coerceBoolean(localOptions?.[STORAGE_KEYS.onReply], backendOnReply);
+      : NCPolicyState.coerceBoolean(localOptions?.[STORAGE_KEYS.onReply], backendOnReply);
     const onForward = forwardLocked
       ? backendOnForward
-      : coerceBoolean(localOptions?.[STORAGE_KEYS.onForward], backendOnForward);
+      : NCPolicyState.coerceBoolean(localOptions?.[STORAGE_KEYS.onForward], backendOnForward);
 
     return {
       active: true,

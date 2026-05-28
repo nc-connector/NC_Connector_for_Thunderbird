@@ -218,17 +218,6 @@ async function assertAttachmentAutomationAllowed(stage, tabId, details = {}){
 }
 
 /**
- * Return true when a backend share policy explicitly contains a key.
- * @param {object} policyStatus
- * @param {string} key
- * @returns {boolean}
- */
-function hasAttachmentAutomationPolicyKey(policyStatus, key){
-  const sharePolicy = policyStatus?.policy?.share;
-  return !!sharePolicy && Object.prototype.hasOwnProperty.call(sharePolicy, key);
-}
-
-/**
  * Read compose attachment automation settings from storage.
  * @returns {Promise<{alwaysConnector:boolean,offerAboveEnabled:boolean,thresholdMb:number,thresholdBytes:number}>}
  */
@@ -245,40 +234,38 @@ async function getComposeAttachmentAutomationSettings(){
     : true;
   let thresholdMb = normalizeAttachmentThresholdMb(stored[keys.attachmentsOfferAboveMb]);
 
-  if (typeof NCPolicyRuntime !== "undefined" && NCPolicyRuntime?.getPolicyStatus){
-    try{
-      const policyStatus = await NCPolicyRuntime.getPolicyStatus();
-      if (NCPolicyRuntime.isDomainActive(policyStatus, "share")){
-        if (NCPolicyRuntime.isLocked(policyStatus, "share", "attachments_always_via_ncconnector")){
-          alwaysConnector = !!NCPolicyRuntime.readPolicyValue(
-            policyStatus,
-            "share",
-            "attachments_always_via_ncconnector"
-          );
-        }
-        if (
-          NCPolicyRuntime.isLocked(policyStatus, "share", "attachments_min_size_mb")
-          && hasAttachmentAutomationPolicyKey(policyStatus, "attachments_min_size_mb")
-        ){
-          const policyThreshold = NCPolicyRuntime.readPolicyValue(
-            policyStatus,
-            "share",
-            "attachments_min_size_mb"
-          );
-          if (policyThreshold == null){
-            offerAboveEnabled = false;
-          }else{
-            thresholdMb = normalizeAttachmentThresholdMb(Number(policyThreshold) || 0);
-            offerAboveEnabled = true;
-          }
+  try{
+    const policyStatus = await NCPolicyRuntime.getPolicyStatus();
+    if (NCPolicyState.isDomainActive(policyStatus, "share")){
+      if (NCPolicyState.isLocked(policyStatus, "share", "attachments_always_via_ncconnector")){
+        alwaysConnector = !!NCPolicyState.readPolicyValue(
+          policyStatus,
+          "share",
+          "attachments_always_via_ncconnector"
+        );
+      }
+      if (
+        NCPolicyState.isLocked(policyStatus, "share", "attachments_min_size_mb")
+        && NCPolicyState.hasPolicyKey(policyStatus, "share", "attachments_min_size_mb")
+      ){
+        const policyThreshold = NCPolicyState.readPolicyValue(
+          policyStatus,
+          "share",
+          "attachments_min_size_mb"
+        );
+        if (policyThreshold == null){
+          offerAboveEnabled = false;
+        }else{
+          thresholdMb = normalizeAttachmentThresholdMb(Number(policyThreshold) || 0);
+          offerAboveEnabled = true;
         }
       }
-    }catch(error){
-      L("compose attachment automation policy status fallback", {
-        reason: "policy_runtime_failed",
-        error: error?.message || String(error)
-      });
     }
+  }catch(error){
+    L("compose attachment automation policy status fallback", {
+      reason: "policy_runtime_failed",
+      error: error?.message || String(error)
+    });
   }
   return {
     alwaysConnector,
