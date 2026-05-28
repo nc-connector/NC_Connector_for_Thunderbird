@@ -31,11 +31,7 @@
   }
 
   function logCallbackFailure(reportedError, callbackError){
-    try{
-      console.error(FORWARDER_LOG_PREFIX, "onError callback failed", reportedError, callbackError);
-    }catch(error){
-      // Runtime teardown can invalidate console while the popup is closing.
-    }
+    global.NCLogContext.safeConsoleError(FORWARDER_LOG_PREFIX, "onError callback failed", reportedError, callbackError);
   }
 
   /**

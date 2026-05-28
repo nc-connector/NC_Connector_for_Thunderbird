@@ -177,7 +177,7 @@ Implementation:
   - `installDebugEnabledMirror()` keeps the page-local flag in sync with `browser.storage.local`
   - `createUiDebugLogger()` forwards structured UI debug lines through `debug:log`
 - Shared helper modules resolve their visible error/debug prefixes through `modules/logContext.js`, so active extension pages stay inside the `[NCUI][…]` family and background stays on `[NCBG]`.
-- Actual error paths must still use `console.error(...)` directly; they are not allowed to disappear just because `debugEnabled` is off.
+- Actual error paths use `NCLogContext.safeConsoleError(...)` or direct `console.error(...)`; they must not disappear just because `debugEnabled` is off.
 - Attachment automation adds debug traces for:
   - threshold evaluation and prompt decisions in `[NCBG]`
   - attachment-mode wizard/prompt flow in `[NCUI][Sharing]`

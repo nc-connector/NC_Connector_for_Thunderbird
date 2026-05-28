@@ -25,11 +25,7 @@ const EMAIL_SIGNATURE_KEYS = {
 };
 
 function logOptionsError(scope, reportedError){
-  try{
-    console.error(OPTIONS_LOG_PREFIX, scope, reportedError);
-  }catch(error){
-    console.error(OPTIONS_LOG_PREFIX, scope, reportedError?.message || String(reportedError), error?.message || String(error));
-  }
+  globalThis.NCLogContext.safeConsoleError(OPTIONS_LOG_PREFIX, scope, reportedError);
 }
 
 NCTalkDomI18n.translatePage(i18n, { titleKey: "options_title" });

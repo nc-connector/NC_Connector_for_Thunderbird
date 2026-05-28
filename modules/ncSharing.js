@@ -79,16 +79,7 @@
    * @param {any} reportedError
    */
   function logInternalError(scope, reportedError){
-    try{
-      console.error(getSharingRuntimePrefix(), scope, reportedError);
-    }catch(error){
-      console.error(
-        getSharingRuntimePrefix(),
-        scope,
-        reportedError?.message || String(reportedError),
-        error?.message || String(error)
-      );
-    }
+    globalThis.NCLogContext.safeConsoleError(getSharingRuntimePrefix(), scope, reportedError);
   }
 
   const sharedTranslator = (typeof NCI18n !== "undefined" && typeof NCI18n.translate === "function")

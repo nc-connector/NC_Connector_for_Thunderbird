@@ -18,11 +18,7 @@
    * @param {any} reportedError
    */
   function logOcsError(scope, reportedError){
-    try{
-      console.error(LOG_PREFIX, scope, reportedError);
-    }catch(error){
-      console.error(LOG_PREFIX, scope, reportedError?.message || String(reportedError), error?.message || String(error));
-    }
+    global.NCLogContext.safeConsoleError(LOG_PREFIX, scope, reportedError);
   }
 
   function encodeUtf8Base64(value){

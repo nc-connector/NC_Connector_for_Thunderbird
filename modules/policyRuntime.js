@@ -23,11 +23,7 @@ const NCPolicyRuntime = (() => {
   }
 
   function logPolicyRuntimeError(scope, details = {}){
-    try{
-      console.error("[NCBG]", scope, details);
-    }catch(error){
-      console.error("[NCBG]", scope, String(error));
-    }
+    globalThis.NCLogContext.safeConsoleError("[NCBG]", scope, details);
   }
 
   /**

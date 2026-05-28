@@ -71,11 +71,38 @@
     return "[NCBG]";
   }
 
+  function writeFallbackConsoleError(prefix, scope, reportedError, loggingErrorMessage){
+    try{
+      console.error(
+        prefix,
+        scope,
+        reportedError?.message || String(reportedError),
+        "logging failed:",
+        loggingErrorMessage
+      );
+    }catch(error){
+      // Runtime teardown can invalidate console while a popup is closing.
+    }
+  }
+
+  function safeConsoleError(prefix, scope, reportedError, details = undefined){
+    try{
+      if (details !== undefined){
+        console.error(prefix, scope, reportedError, details);
+        return;
+      }
+      console.error(prefix, scope, reportedError);
+    }catch(error){
+      writeFallbackConsoleError(prefix, scope, reportedError, error?.message || String(error));
+    }
+  }
+
   global.NCLogContext = {
     getNormalizedPathname,
     resolveUiLogLabel,
     isAddonUiPath,
     isKnownUiRuntime,
-    resolveAddonLogPrefix
+    resolveAddonLogPrefix,
+    safeConsoleError
   };
 })(typeof window !== "undefined" ? window : (typeof globalThis !== "undefined" ? globalThis : this));

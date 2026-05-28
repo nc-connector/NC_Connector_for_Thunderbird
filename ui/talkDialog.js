@@ -76,11 +76,7 @@
   let i18nLookupErrorLogged = false;
 
   function logUiError(scope, reportedError){
-    try{
-      console.error(LOG_PREFIX, scope, reportedError);
-    }catch(error){
-      console.error(LOG_PREFIX, scope, reportedError?.message || String(reportedError), error?.message || String(error));
-    }
+    globalThis.NCLogContext.safeConsoleError(LOG_PREFIX, scope, reportedError);
   }
 
   /**

@@ -88,14 +88,14 @@
   function logError(logger, scope, message, reportedError){
     const prefix = scope || "[NCUI][PasswordPolicy]";
     if (typeof logger === "function"){
-      logger(message, reportedError);
+      try{
+        logger(message, reportedError);
+      }catch(error){
+        global.NCLogContext.safeConsoleError(prefix, "password policy logger failed", error, reportedError);
+      }
       return;
     }
-    try{
-      console.error(prefix, message, reportedError);
-    }catch(error){
-      console.error(prefix, message, reportedError?.message || String(reportedError), error?.message || String(error));
-    }
+    global.NCLogContext.safeConsoleError(prefix, message, reportedError);
   }
 
   /**

@@ -17,7 +17,7 @@ const NCCore = (() => {
     || "[NCBG]";
 
   function logNCCoreError(scope, error, details = undefined){
-    console.error(resolveLogPrefix(), scope, error, details || "");
+    globalThis.NCLogContext.safeConsoleError(resolveLogPrefix(), scope, error, details);
   }
 
   function createLoginFlowError(){

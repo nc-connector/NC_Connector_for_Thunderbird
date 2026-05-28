@@ -32,7 +32,7 @@ function hostPermissionError(){
 }
 
 function logTalkCoreError(scope, error, details = undefined){
-  console.error(resolveTalkCoreLogPrefix(), scope, error, details || "");
+  globalThis.NCLogContext.safeConsoleError(resolveTalkCoreLogPrefix(), scope, error, details);
 }
 
 /**
