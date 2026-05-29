@@ -68,6 +68,116 @@
     }
   }
 
+  function coerceBindingValue(value, fallback, binding = {}){
+    if (typeof binding.coerce === "function"){
+      return binding.coerce(value, fallback);
+    }
+    if (binding.type === "boolean"){
+      return NCPolicyState.coerceBoolean(value, fallback);
+    }
+    if (binding.type === "int"){
+      return NCPolicyState.coerceInt(value, fallback);
+    }
+    if (binding.type === "string"){
+      return NCPolicyState.coerceString(value, fallback);
+    }
+    return value ?? fallback;
+  }
+
+  function normalizeBindingValue(value, fallback, binding = {}){
+    const coerced = coerceBindingValue(value, fallback, binding);
+    return typeof binding.normalize === "function"
+      ? binding.normalize(coerced, fallback)
+      : coerced;
+  }
+
+  function readPolicyBoundDefaults(domainState, bindings, defaults = {}){
+    const next = { ...defaults };
+    if (!domainState?.active || !domainState?.policy){
+      return next;
+    }
+    bindings.forEach((binding) => {
+      if (!binding?.name || !binding.key){
+        return;
+      }
+      const current = Object.prototype.hasOwnProperty.call(next, binding.name)
+        ? next[binding.name]
+        : binding.fallback;
+      const raw = NCPolicyState.readDomainValue(domainState.policy, binding.key);
+      next[binding.name] = normalizeBindingValue(raw, current, binding);
+    });
+    return next;
+  }
+
+  function resolvePolicyBoundValues(status, bindings, values = {}){
+    const next = { ...values };
+    bindings.forEach((binding) => {
+      if (!binding?.name || !binding.domain || !binding.key){
+        return;
+      }
+      const current = Object.prototype.hasOwnProperty.call(next, binding.name)
+        ? next[binding.name]
+        : binding.fallback;
+      next[binding.name] = NCPolicyState.resolveValue(
+        status,
+        binding.domain,
+        binding.key,
+        current,
+        (value, fallback) => normalizeBindingValue(value, fallback, binding)
+      );
+    });
+    return next;
+  }
+
+  function applyDisabledState({ element, row, disabled, title = "" } = {}){
+    const locked = !!disabled;
+    if (element){
+      element.disabled = locked;
+      element.title = title || "";
+    }
+    if (row){
+      row.classList.toggle("is-disabled", locked);
+      row.title = title || "";
+    }
+  }
+
+  function applyEditableLock({ active, editable, key, element, row, translate, onLocked } = {}){
+    const locked = NCPolicyState.isEditableLocked(active, editable, key);
+    applyDisabledState({
+      element,
+      row,
+      disabled: locked,
+      title: locked ? getAdminControlledHint(translate) : ""
+    });
+    if (locked && typeof onLocked === "function"){
+      onLocked();
+    }
+    return locked;
+  }
+
+  function applyPolicyBinding(status, binding, translate){
+    if (!binding?.domain || !binding.key){
+      return false;
+    }
+    const locked = NCPolicyState.isLocked(status, binding.domain, binding.key);
+    const element = binding.element || null;
+    if (locked && element && binding.property){
+      const current = element[binding.property];
+      const fallback = (current === "" || current == null) && binding.fallback !== undefined
+        ? binding.fallback
+        : current;
+      const raw = NCPolicyState.readPolicyValue(status, binding.domain, binding.key);
+      element[binding.property] = normalizeBindingValue(raw, fallback, binding);
+    }
+    applyDisabledState({
+      element,
+      row: binding.row || null,
+      disabled: locked,
+      title: locked ? getAdminControlledHint(translate) : ""
+    });
+    return locked;
+  }
+
   function createPasswordPolicyActions(options = {}){
     const sendMessage = options.sendMessage || ((message) => browser.runtime.sendMessage(message));
     const logger = options.logger || null;
@@ -110,6 +220,11 @@
     isSeparatePasswordFeatureAvailable,
     readPolicyDomain,
     applyPolicyWarningUi,
+    readPolicyBoundDefaults,
+    resolvePolicyBoundValues,
+    applyDisabledState,
+    applyEditableLock,
+    applyPolicyBinding,
     createPasswordPolicyActions
   };
 })(typeof window !== "undefined" ? window : globalThis);

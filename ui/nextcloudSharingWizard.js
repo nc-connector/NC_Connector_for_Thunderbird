@@ -101,6 +101,20 @@
   const i18n = NCI18n.translate;
   const wizardTranslate = (key, fallback = "") => i18n(key) || fallback || "";
   const DEFAULT_EXPIRE_DAYS = 7;
+  const SHARE_DEFAULT_POLICY_BINDINGS = [
+    { name: "shareName", key: "share_name_template", type: "string" },
+    { name: "permCreate", key: "share_permission_upload", type: "boolean" },
+    { name: "permWrite", key: "share_permission_edit", type: "boolean" },
+    { name: "permDelete", key: "share_permission_delete", type: "boolean" },
+    { name: "passwordEnabled", key: "share_set_password", type: "boolean" },
+    { name: "passwordSeparate", key: "share_send_password_separately", type: "boolean" },
+    {
+      name: "expireDays",
+      key: "share_expire_days",
+      type: "int",
+      normalize: (value, fallback) => NCTalkTextUtils.normalizeExpireDays(value, fallback)
+    }
+  ];
   const emitDebugLog = typeof NCDebugForwarder?.createUiDebugLogger === 'function'
     ? NCDebugForwarder.createUiDebugLogger({
       source: LOG_SOURCE,
@@ -404,36 +418,14 @@
       stored[SHARING_KEYS.defaultExpireDays],
       DEFAULT_EXPIRE_DAYS
     );
-    if (state.policy.active){
-      state.defaults.shareName = NCPolicyState.coerceString(
-        NCPolicyState.readDomainValue(state.policy.share, "share_name_template"),
-        state.defaults.shareName
-      );
-      state.defaults.permCreate = NCPolicyState.coerceBoolean(
-        NCPolicyState.readDomainValue(state.policy.share, "share_permission_upload"),
-        state.defaults.permCreate
-      );
-      state.defaults.permWrite = NCPolicyState.coerceBoolean(
-        NCPolicyState.readDomainValue(state.policy.share, "share_permission_edit"),
-        state.defaults.permWrite
-      );
-      state.defaults.permDelete = NCPolicyState.coerceBoolean(
-        NCPolicyState.readDomainValue(state.policy.share, "share_permission_delete"),
-        state.defaults.permDelete
-      );
-      state.defaults.passwordEnabled = NCPolicyState.coerceBoolean(
-        NCPolicyState.readDomainValue(state.policy.share, "share_set_password"),
-        state.defaults.passwordEnabled
-      );
-      state.defaults.passwordSeparate = NCPolicyState.coerceBoolean(
-        NCPolicyState.readDomainValue(state.policy.share, "share_send_password_separately"),
-        state.defaults.passwordSeparate
-      );
-      state.defaults.expireDays = NCTalkTextUtils.normalizeExpireDays(
-        NCPolicyState.coerceInt(NCPolicyState.readDomainValue(state.policy.share, "share_expire_days"), state.defaults.expireDays),
-        state.defaults.expireDays
-      );
-    }
+    state.defaults = NCWizardPolicyUi.readPolicyBoundDefaults(
+      {
+        active: state.policy.active,
+        policy: state.policy.share
+      },
+      SHARE_DEFAULT_POLICY_BINDINGS,
+      state.defaults
+    );
     if (!NCWizardPolicyUi.isSeparatePasswordFeatureAvailable(state.policy.status)){
       state.defaults.passwordSeparate = false;
     }
@@ -668,18 +660,17 @@
    * @param {boolean} enabled
    */
   function applyPasswordToggleState(enabled){
-    const lockPassword = NCPolicyState.isEditableLocked(state.policy.active, state.policy.editable, "share_set_password");
+    const lockPassword = NCWizardPolicyUi.applyEditableLock({
+      active: state.policy.active,
+      editable: state.policy.editable,
+      key: "share_set_password",
+      element: dom.passwordToggle,
+      row: dom.passwordToggleRow,
+      translate: wizardTranslate
+    });
     const lockSeparate = NCPolicyState.isEditableLocked(state.policy.active, state.policy.editable, "share_send_password_separately");
     const featureUnavailable = !NCWizardPolicyUi.isSeparatePasswordFeatureAvailable(state.policy.status);
     const adminHint = NCWizardPolicyUi.getAdminControlledHint(wizardTranslate);
-    if (dom.passwordToggle){
-      dom.passwordToggle.disabled = lockPassword;
-      dom.passwordToggle.title = lockPassword ? adminHint : "";
-    }
-    if (dom.passwordToggleRow){
-      dom.passwordToggleRow.classList.toggle("is-disabled", lockPassword);
-      dom.passwordToggleRow.title = lockPassword ? adminHint : "";
-    }
     dom.passwordFields.classList.toggle('hidden', !enabled);
     dom.passwordInput.disabled = !enabled;
     dom.passwordGenerate.disabled = !enabled;
@@ -737,62 +728,55 @@
    * Apply admin lock state from backend policy to editable controls.
    */
   function applyPolicyControlLocks(){
-    const adminHint = NCWizardPolicyUi.getAdminControlledHint(wizardTranslate);
-    const lockShareName = NCPolicyState.isEditableLocked(state.policy.active, state.policy.editable, "share_name_template");
-    const lockPermUpload = NCPolicyState.isEditableLocked(state.policy.active, state.policy.editable, "share_permission_upload");
-    const lockPermEdit = NCPolicyState.isEditableLocked(state.policy.active, state.policy.editable, "share_permission_edit");
-    const lockPermDelete = NCPolicyState.isEditableLocked(state.policy.active, state.policy.editable, "share_permission_delete");
-    const lockExpireDays = NCPolicyState.isEditableLocked(state.policy.active, state.policy.editable, "share_expire_days");
-
-    if (dom.shareName){
-      dom.shareName.disabled = lockShareName;
-      dom.shareName.title = lockShareName ? adminHint : "";
-    }
-    if (dom.shareNameRow){
-      dom.shareNameRow.classList.toggle("is-disabled", lockShareName);
-      dom.shareNameRow.title = lockShareName ? adminHint : "";
-    }
-
-    if (dom.permCreate){
-      dom.permCreate.disabled = lockPermUpload;
-      dom.permCreate.title = lockPermUpload ? adminHint : "";
-    }
-    if (dom.permWrite){
-      dom.permWrite.disabled = lockPermEdit;
-      dom.permWrite.title = lockPermEdit ? adminHint : "";
-    }
-    if (dom.permDelete){
-      dom.permDelete.disabled = lockPermDelete;
-      dom.permDelete.title = lockPermDelete ? adminHint : "";
-    }
-    if (dom.permCreateRow){
-      dom.permCreateRow.classList.toggle("is-disabled", lockPermUpload);
-      dom.permCreateRow.title = lockPermUpload ? adminHint : "";
-    }
-    if (dom.permWriteRow){
-      dom.permWriteRow.classList.toggle("is-disabled", lockPermEdit);
-      dom.permWriteRow.title = lockPermEdit ? adminHint : "";
-    }
-    if (dom.permDeleteRow){
-      dom.permDeleteRow.classList.toggle("is-disabled", lockPermDelete);
-      dom.permDeleteRow.title = lockPermDelete ? adminHint : "";
-    }
-
-    if (dom.expireToggle){
-      dom.expireToggle.disabled = lockExpireDays;
-      dom.expireToggle.title = lockExpireDays ? adminHint : "";
-      if (lockExpireDays){
+    NCWizardPolicyUi.applyEditableLock({
+      active: state.policy.active,
+      editable: state.policy.editable,
+      key: "share_name_template",
+      element: dom.shareName,
+      row: dom.shareNameRow,
+      translate: wizardTranslate
+    });
+    NCWizardPolicyUi.applyEditableLock({
+      active: state.policy.active,
+      editable: state.policy.editable,
+      key: "share_permission_upload",
+      element: dom.permCreate,
+      row: dom.permCreateRow,
+      translate: wizardTranslate
+    });
+    NCWizardPolicyUi.applyEditableLock({
+      active: state.policy.active,
+      editable: state.policy.editable,
+      key: "share_permission_edit",
+      element: dom.permWrite,
+      row: dom.permWriteRow,
+      translate: wizardTranslate
+    });
+    NCWizardPolicyUi.applyEditableLock({
+      active: state.policy.active,
+      editable: state.policy.editable,
+      key: "share_permission_delete",
+      element: dom.permDelete,
+      row: dom.permDeleteRow,
+      translate: wizardTranslate
+    });
+    const lockExpireDays = NCWizardPolicyUi.applyEditableLock({
+      active: state.policy.active,
+      editable: state.policy.editable,
+      key: "share_expire_days",
+      element: dom.expireToggle,
+      row: dom.expireToggleRow,
+      translate: wizardTranslate,
+      onLocked: () => {
         dom.expireToggle.checked = true;
       }
-    }
+    });
+    const adminHint = NCWizardPolicyUi.getAdminControlledHint(wizardTranslate);
+
     if (dom.expireDate){
       const disableDate = lockExpireDays || !dom.expireToggle.checked;
       dom.expireDate.disabled = disableDate;
       dom.expireDate.title = lockExpireDays ? adminHint : "";
-    }
-    if (dom.expireToggleRow){
-      dom.expireToggleRow.classList.toggle("is-disabled", lockExpireDays);
-      dom.expireToggleRow.title = lockExpireDays ? adminHint : "";
     }
   }
 

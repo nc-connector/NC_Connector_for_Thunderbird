@@ -109,6 +109,35 @@
     return fallback || "";
   };
   const wizardTranslate = (key, fallback = "") => t(key, fallback);
+  const TALK_POLICY_RUNTIME_BINDINGS = [
+    { name: "generatePassword", key: "talk_generate_password", type: "boolean" },
+    {
+      name: "descriptionLanguage",
+      key: "language_talk_description",
+      type: "string",
+      normalize: (value) => normalizeDescriptionLanguage(value)
+    },
+    {
+      name: "descriptionType",
+      key: "event_description_type",
+      normalize: (value) => normalizeEventDescriptionType(value)
+    },
+    { name: "invitationTemplate", key: "talk_invitation_template", type: "string" }
+  ];
+  const TALK_DEFAULT_POLICY_BINDINGS = [
+    { name: "title", key: "talk_title", type: "string" },
+    { name: "lobby", key: "talk_lobby_active", type: "boolean" },
+    { name: "listable", key: "talk_show_in_search", type: "boolean" },
+    { name: "addUsersEnabled", key: "talk_add_users", type: "boolean" },
+    { name: "addGuestsEnabled", key: "talk_add_guests", type: "boolean" },
+    { name: "passwordEnabled", key: "talk_set_password", type: "boolean" },
+    {
+      name: "roomType",
+      key: "talk_room_type",
+      type: "string",
+      normalize: (value) => value === "event" ? "event" : "normal"
+    }
+  ];
 
   NCTalkDomI18n.translatePage((key, subs) => browser.i18n.getMessage(key, subs), {
     titleKey: "talk_dialog_title"
@@ -210,18 +239,16 @@
       state.policy.editable = domainState.editable;
       state.policy.warningVisible = domainState.warningVisible;
       state.policy.warningCode = domainState.warningCode;
-      state.policy.generatePassword = domainState.active
-        ? NCPolicyState.coerceBoolean(NCPolicyState.readDomainValue(state.policy.talk, "talk_generate_password"), true)
-        : true;
-      state.policy.descriptionLanguage = domainState.active
-        ? normalizeDescriptionLanguage(NCPolicyState.coerceString(NCPolicyState.readDomainValue(state.policy.talk, "language_talk_description"), ""))
-        : "";
-      state.policy.descriptionType = domainState.active
-        ? normalizeEventDescriptionType(NCPolicyState.readDomainValue(state.policy.talk, "event_description_type"))
-        : "plain_text";
-      state.policy.invitationTemplate = domainState.active
-        ? NCPolicyState.coerceString(NCPolicyState.readDomainValue(state.policy.talk, "talk_invitation_template"), "")
-        : "";
+      Object.assign(state.policy, NCWizardPolicyUi.readPolicyBoundDefaults(
+        domainState,
+        TALK_POLICY_RUNTIME_BINDINGS,
+        {
+          generatePassword: true,
+          descriptionLanguage: "",
+          descriptionType: "plain_text",
+          invitationTemplate: ""
+        }
+      ));
       logDebug("policy status", {
         active: state.policy.active,
         warning: state.policy.warningCode || "",
@@ -506,16 +533,14 @@
       }else if (stored.talkDefaultRoomType === "event"){
         defaults.roomType = "event";
       }
-      if (state.policy.active){
-        defaults.title = NCPolicyState.coerceString(NCPolicyState.readDomainValue(state.policy.talk, "talk_title"), defaults.title);
-        defaults.lobby = NCPolicyState.coerceBoolean(NCPolicyState.readDomainValue(state.policy.talk, "talk_lobby_active"), defaults.lobby);
-        defaults.listable = NCPolicyState.coerceBoolean(NCPolicyState.readDomainValue(state.policy.talk, "talk_show_in_search"), defaults.listable);
-        defaults.addUsersEnabled = NCPolicyState.coerceBoolean(NCPolicyState.readDomainValue(state.policy.talk, "talk_add_users"), defaults.addUsersEnabled);
-        defaults.addGuestsEnabled = NCPolicyState.coerceBoolean(NCPolicyState.readDomainValue(state.policy.talk, "talk_add_guests"), defaults.addGuestsEnabled);
-        defaults.passwordEnabled = NCPolicyState.coerceBoolean(NCPolicyState.readDomainValue(state.policy.talk, "talk_set_password"), defaults.passwordEnabled);
-        const policyRoomType = NCPolicyState.coerceString(NCPolicyState.readDomainValue(state.policy.talk, "talk_room_type"), defaults.roomType);
-        defaults.roomType = policyRoomType === "event" ? "event" : "normal";
-      }
+      Object.assign(defaults, NCWizardPolicyUi.readPolicyBoundDefaults(
+        {
+          active: state.policy.active,
+          policy: state.policy.talk
+        },
+        TALK_DEFAULT_POLICY_BINDINGS,
+        defaults
+      ));
     }catch(error){
       logUiError("load defaults failed", error);
     }
@@ -527,15 +552,14 @@
    * @param {boolean} enabled
    */
   function applyPasswordToggleState(enabled){
-    const lockPassword = NCPolicyState.isEditableLocked(state.policy.active, state.policy.editable, "talk_set_password");
-    if (passwordToggle){
-      passwordToggle.disabled = lockPassword;
-      passwordToggle.title = lockPassword ? NCWizardPolicyUi.getAdminControlledHint(wizardTranslate) : "";
-    }
-    if (passwordToggleRow){
-      passwordToggleRow.classList.toggle("is-disabled", lockPassword);
-      passwordToggleRow.title = lockPassword ? NCWizardPolicyUi.getAdminControlledHint(wizardTranslate) : "";
-    }
+    NCWizardPolicyUi.applyEditableLock({
+      active: state.policy.active,
+      editable: state.policy.editable,
+      key: "talk_set_password",
+      element: passwordToggle,
+      row: passwordToggleRow,
+      translate: wizardTranslate
+    });
     if (passwordFields){
       passwordFields.classList.toggle("hidden", !enabled);
     }
@@ -659,55 +683,47 @@
    * Apply static lock-state UI for policy-controlled controls.
    */
   function applyPolicyControlLocks(){
-    const adminHint = NCWizardPolicyUi.getAdminControlledHint(wizardTranslate);
-    const lockTitle = NCPolicyState.isEditableLocked(state.policy.active, state.policy.editable, "talk_title");
-    const lockRoomType = NCPolicyState.isEditableLocked(state.policy.active, state.policy.editable, "talk_room_type");
-    const lockLobby = NCPolicyState.isEditableLocked(state.policy.active, state.policy.editable, "talk_lobby_active");
-    const lockListable = NCPolicyState.isEditableLocked(state.policy.active, state.policy.editable, "talk_show_in_search");
-    const lockPassword = NCPolicyState.isEditableLocked(state.policy.active, state.policy.editable, "talk_set_password");
-    if (titleInput){
-      titleInput.disabled = lockTitle;
-      titleInput.title = lockTitle ? adminHint : "";
-    }
-    if (titleSection){
-      titleSection.classList.toggle("is-disabled", lockTitle);
-      titleSection.title = lockTitle ? adminHint : "";
-    }
-    if (roomTypeButton){
-      roomTypeButton.disabled = lockRoomType;
-      roomTypeButton.title = lockRoomType ? adminHint : "";
-      if (lockRoomType){
-        closeRoomTypeDropdown();
-      }
-    }
-    if (roomTypeSection){
-      roomTypeSection.classList.toggle("is-disabled", lockRoomType);
-      roomTypeSection.title = lockRoomType ? adminHint : "";
-    }
-    if (lobbyToggle){
-      lobbyToggle.disabled = lockLobby;
-      lobbyToggle.title = lockLobby ? adminHint : "";
-    }
-    if (lobbyToggleRow){
-      lobbyToggleRow.classList.toggle("is-disabled", lockLobby);
-      lobbyToggleRow.title = lockLobby ? adminHint : "";
-    }
-    if (listableToggle){
-      listableToggle.disabled = lockListable;
-      listableToggle.title = lockListable ? adminHint : "";
-    }
-    if (listableToggleRow){
-      listableToggleRow.classList.toggle("is-disabled", lockListable);
-      listableToggleRow.title = lockListable ? adminHint : "";
-    }
-    if (passwordToggle){
-      passwordToggle.disabled = lockPassword;
-      passwordToggle.title = lockPassword ? adminHint : "";
-    }
-    if (passwordToggleRow){
-      passwordToggleRow.classList.toggle("is-disabled", lockPassword);
-      passwordToggleRow.title = lockPassword ? adminHint : "";
-    }
+    NCWizardPolicyUi.applyEditableLock({
+      active: state.policy.active,
+      editable: state.policy.editable,
+      key: "talk_title",
+      element: titleInput,
+      row: titleSection,
+      translate: wizardTranslate
+    });
+    NCWizardPolicyUi.applyEditableLock({
+      active: state.policy.active,
+      editable: state.policy.editable,
+      key: "talk_room_type",
+      element: roomTypeButton,
+      row: roomTypeSection,
+      translate: wizardTranslate,
+      onLocked: closeRoomTypeDropdown
+    });
+    NCWizardPolicyUi.applyEditableLock({
+      active: state.policy.active,
+      editable: state.policy.editable,
+      key: "talk_lobby_active",
+      element: lobbyToggle,
+      row: lobbyToggleRow,
+      translate: wizardTranslate
+    });
+    NCWizardPolicyUi.applyEditableLock({
+      active: state.policy.active,
+      editable: state.policy.editable,
+      key: "talk_show_in_search",
+      element: listableToggle,
+      row: listableToggleRow,
+      translate: wizardTranslate
+    });
+    NCWizardPolicyUi.applyEditableLock({
+      active: state.policy.active,
+      editable: state.policy.editable,
+      key: "talk_set_password",
+      element: passwordToggle,
+      row: passwordToggleRow,
+      translate: wizardTranslate
+    });
   }
 
   /**

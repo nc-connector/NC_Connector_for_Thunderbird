@@ -135,7 +135,7 @@ Key files you’ll touch most:
 - `ui/debugForwarder.js` — shared runtime debug forwarding/helper layer for Talk, Sharing, and attachment prompt UIs
 - `ui/addressbookUi.js` — shared system-addressbook tooltip lock helper used by Talk wizard + options
 - `ui/passwordPolicyClient.js` — shared password-policy fetch/generate helper for both wizards
-- `ui/wizardPolicyUi.js` — shared policy-warning and password-policy UI glue for Talk/Sharing wizards
+- `ui/wizardPolicyUi.js` — shared policy warning, lock, default, and password-policy UI helpers for Talk/Sharing/options
 - `options.html` + `options.js` — settings UI
 
 ---
