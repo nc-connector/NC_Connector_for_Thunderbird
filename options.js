@@ -280,10 +280,6 @@ if (sharingAttachmentsAdminLink){
   sharingAttachmentsAdminLink.href = ATTACHMENT_AUTOMATION_ADMIN_URL;
 }
 
-/**
- * Read the list of supported locale folders for language override settings.
- * @returns {string[]}
- */
 function getSupportedOverrideLocales(){
   try{
     if (Array.isArray(NCI18nOverride.supportedLocales) && NCI18nOverride.supportedLocales.length){
@@ -295,17 +291,10 @@ function getSupportedOverrideLocales(){
   return ["en", "de", "fr"];
 }
 
-/**
- * Initialize the language override selects in the advanced settings tab.
- */
 function initLanguageOverrideSelects(){
   refreshLanguageOverrideSelects();
 }
 
-/**
- * Get the UI language (BCP47) used for display names.
- * @returns {string}
- */
 function getUiLanguage(){
   try{
     if (typeof browser !== "undefined" && browser?.i18n?.getUILanguage){
@@ -321,11 +310,6 @@ function toBcp47Tag(locale){
   return String(locale || "").replace(/_/g, "-");
 }
 
-/**
- * Create an Intl.DisplayNames instance for language labels.
- * @param {string} uiLang
- * @returns {Intl.DisplayNames|null}
- */
 function makeDisplayNames(uiLang){
   if (typeof Intl === "undefined" || typeof Intl.DisplayNames !== "function"){
     return null;
@@ -338,11 +322,6 @@ function makeDisplayNames(uiLang){
   }
 }
 
-/**
- * Create an Intl.Collator instance for locale-aware sorting.
- * @param {string} uiLang
- * @returns {Intl.Collator|null}
- */
 function makeCollator(uiLang){
   if (typeof Intl === "undefined" || typeof Intl.Collator !== "function"){
     return null;
@@ -355,12 +334,6 @@ function makeCollator(uiLang){
   }
 }
 
-/**
- * Get a localized display label for a locale.
- * @param {string} locale
- * @param {Intl.DisplayNames|null} displayNames
- * @returns {string}
- */
 function getLocaleLabel(locale, displayNames){
   const tag = toBcp47Tag(locale);
   if (displayNames){
@@ -433,13 +406,6 @@ function populateLanguageSelect(selectEl, locales, displayNames, options = {}){
   });
 }
 
-/**
- * Show a transient status message in the options UI.
- * @param {string} message
- * @param {boolean} isError
- * @param {boolean} sticky
- * @param {boolean} isSuccess
- */
 function showStatus(message, isError = false, sticky = false, isSuccess = false){
   if (statusTimer){
     clearTimeout(statusTimer);
@@ -454,20 +420,10 @@ function showStatus(message, isError = false, sticky = false, isSuccess = false)
     }, 2000);
   }
 }
-/**
- * Return the language policy key for one domain.
- * @param {"share"|"talk"|"email_signature"} domain
- * @returns {string}
- */
 function getPolicyLanguageKey(domain){
   return domain === "talk" ? "language_talk_description" : "language_share_html_block";
 }
 
-/**
- * Return the backend template key for one domain.
- * @param {"share"|"talk"|"email_signature"} domain
- * @returns {string}
- */
 function getPolicyTemplateKey(domain){
   return domain === "talk" ? "talk_invitation_template" : "share_html_block_template";
 }
@@ -490,10 +446,6 @@ function isCustomLanguageModeAvailable(domain){
   return language === "custom" && !!template;
 }
 
-/**
- * Return true when separate password delivery is available.
- * @returns {boolean}
- */
 function isSeparatePasswordMailFeatureAvailable(){
   return NCWizardPolicyUi.isSeparatePasswordFeatureAvailable(runtimePolicyStatus);
 }
@@ -659,9 +611,6 @@ function applyEmailSignatureSettingsOverlay(){
   }
 }
 
-/**
- * Show/hide the policy warning in options.
- */
 function applyPolicyWarningUi(){
   const warning = runtimePolicyStatus?.warning || {};
   NCWizardPolicyUi.applyPolicyWarningUi({
@@ -672,10 +621,6 @@ function applyPolicyWarningUi(){
   });
 }
 
-/**
- * Refresh backend policy runtime status.
- * @returns {Promise<void>}
- */
 async function refreshBackendPolicyStatus(){
   try{
     const response = await browser.runtime.sendMessage({
@@ -758,10 +703,6 @@ function applyPolicySettingsOverlay(){
   applyTalkSystemAddressbookLockState(talkAddressbookLockActive, talkAddressbookLockDetail);
 }
 
-/**
- * Load settings from storage and populate the options UI.
- * @returns {Promise<void>}
- */
 async function load(){
   if (NCSharingStorage?.migrateLegacySharingKeys){
     await NCSharingStorage.migrateLegacySharingKeys();
@@ -1340,9 +1281,6 @@ window.addEventListener("focus", async () => {
   }
 });
 
-/**
- * Initialize the tab switcher on the options page.
- */
 function initTabs(){
   const buttons = Array.from(document.querySelectorAll(".tab-btn"));
   const panels = Array.from(document.querySelectorAll(".tab-panel"));
@@ -1434,9 +1372,6 @@ function initTabs(){
   });
 }
 
-/**
- * Fill the About section with version and license link.
- */
 function initAbout(){
   const versionEl = document.getElementById("aboutVersion");
   try{
@@ -1476,10 +1411,6 @@ function getSelectedAuthMode(){
   return checked ? checked.value : "manual";
 }
 
-/**
- * Select an auth mode radio button by value.
- * @param {string} mode
- */
 function setAuthMode(mode){
   const target = authRadios.find((radio) => radio.value === mode);
   if (target){
@@ -1489,9 +1420,6 @@ function setAuthMode(mode){
   }
 }
 
-/**
- * Enable/disable fields based on the selected auth mode.
- */
 function updateAuthModeUI(){
   const mode = getSelectedAuthMode();
   const manual = mode === "manual";
@@ -1502,9 +1430,6 @@ function updateAuthModeUI(){
   }
 }
 
-/**
- * Initialize the Talk room type picker in options (same behavior as wizard).
- */
 function initTalkDefaultRoomTypePicker(){
   if (!talkDefaultRoomTypePicker || !talkDefaultRoomTypeButton || !talkDefaultRoomTypeDropdown || !talkDefaultRoomTypeValueInput){
     return;
@@ -1547,9 +1472,6 @@ function isTalkDefaultRoomTypeDropdownOpen(){
   return !!(talkDefaultRoomTypeDropdown && talkDefaultRoomTypeDropdown.hidden === false);
 }
 
-/**
- * Open the room type dropdown.
- */
 function openTalkDefaultRoomTypeDropdown(){
   if (!talkDefaultRoomTypeDropdown){
     return;
@@ -1558,9 +1480,6 @@ function openTalkDefaultRoomTypeDropdown(){
   talkDefaultRoomTypeButton?.setAttribute("aria-expanded", "true");
 }
 
-/**
- * Close the room type dropdown.
- */
 function closeTalkDefaultRoomTypeDropdown(){
   if (!talkDefaultRoomTypeDropdown){
     return;
@@ -1569,9 +1488,6 @@ function closeTalkDefaultRoomTypeDropdown(){
   talkDefaultRoomTypeButton?.setAttribute("aria-expanded", "false");
 }
 
-/**
- * Toggle room type dropdown visibility.
- */
 function toggleTalkDefaultRoomTypeDropdown(){
   if (isTalkDefaultRoomTypeDropdownOpen()){
     closeTalkDefaultRoomTypeDropdown();
@@ -1580,20 +1496,11 @@ function toggleTalkDefaultRoomTypeDropdown(){
   }
 }
 
-/**
- * Read the selected default Talk room type.
- * @returns {"normal"|"event"}
- */
 function getSelectedTalkDefaultRoomType(){
   const value = talkDefaultRoomTypeValueInput?.value;
   return value === "normal" ? "normal" : "event";
 }
 
-/**
- * Apply the selected default Talk room type to the room type picker.
- * @param {string} value
- * @param {{closeDropdown?:boolean}} options
- */
 function setTalkDefaultRoomType(value, options = {}){
   const closeDropdown = options.closeDropdown !== false;
   const normalized = value === "normal" ? "normal" : "event";
@@ -1623,9 +1530,6 @@ function normalizeLangChoice(value, options = {}){
   return NCI18nOverride.normalizeLanguageOverride(raw, { allowCustom });
 }
 
-/**
- * Enable/disable "password in separate mail" based on password default state.
- */
 function updateSharingPasswordState(){
   if (!sharingDefaultPasswordInput || !sharingDefaultPasswordSeparateInput){
     return;
@@ -1650,9 +1554,6 @@ function updateSharingPasswordState(){
   }
 }
 
-/**
- * Enable or disable the attachment threshold input based on checkbox state.
- */
 function updateAttachmentThresholdState(){
   if (!sharingAttachmentsAlwaysNcInput || !sharingAttachmentsOfferAboveEnabledInput || !sharingAttachmentsOfferAboveMbInput){
     return;

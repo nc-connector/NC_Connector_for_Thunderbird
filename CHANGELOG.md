@@ -47,7 +47,6 @@ This project targets **Thunderbird ESR 140.\***.
 ### Changed
 - Saved-event Talk room deletion now requires both explicit opt-in and trusted NC Connector `X-NCTALK-*` metadata.
 - Legacy calendar token mappings without a trusted source are no longer accepted as room-deletion ownership proof.
-- Release/version references were aligned to `3.0.4` across manifest, reviewer notes, smoke plan, and readmes.
 
 ### Fixed
 - Generic Talk links in calendar `LOCATION` or `URL` fields no longer grant NC Connector ownership over a Talk room.
@@ -63,7 +62,6 @@ This project targets **Thunderbird ESR 140.\***.
   - share plain-text rules coverage was added and documented
 
 ### Changed
-- Release/version references were aligned to `3.0.3` across manifest, reviewer notes, smoke plan, internal checklist, readmes, and the renamed worktree.
 - Share/plain-text rendering was tightened further:
   - legacy share pre-rendering was removed from the upload/create path
 - Sanitizer observability and debug behavior were improved:
@@ -80,7 +78,6 @@ This project targets **Thunderbird ESR 140.\***.
 ## 3.0.2
 
 ### Changed
-- Release/version references were aligned to `3.0.2` across manifest, reviewer notes, smoke plan, and readmes.
 - Sanitizer-dependent backend HTML paths now fail closed instead of falling back to raw HTML:
   - share template rendering throws if the expected share HTML sanitizer is unavailable
   - Talk HTML template rendering throws if the expected Talk HTML sanitizer is unavailable
@@ -89,7 +86,6 @@ This project targets **Thunderbird ESR 140.\***.
 ## 3.0.1
 
 ### Changed
-- Release/version references were aligned to `3.0.1` across manifest, review notes, readmes, and docs.
 - Plain-text Talk invitation templates now persist correctly in Thunderbird rich event-description editors; the editor bridge synchronizes Thunderbird's HTML/text description state for both HTML and plain-text writes.
 - Backend-provided Talk/Share HTML is sanitized client-side with bundled `DOMPurify 3.3.1` before use.
 - `ncCalToolbar` no longer parses inbound description HTML via `innerHTML` in privileged experiment code.

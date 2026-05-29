@@ -275,9 +275,6 @@
     }
   }
 
-  /**
-   * Attach UI event handlers for the dialog.
-   */
   function bindEvents(){
     okBtn?.addEventListener("click", handleOk);
     cancelBtn?.addEventListener("click", () => {
@@ -291,9 +288,6 @@
     initDelegateField();
   }
 
-  /**
-   * Initialize the custom room-type dropdown and its keyboard/mouse handlers.
-   */
   function initRoomTypePicker(){
     if (!roomTypePicker || !roomTypeButton || !roomTypeDropdown || !roomTypeValue){
       return;
@@ -338,17 +332,10 @@
     setRoomTypeValue(roomTypeValue.value || "event", { closeDropdown:false });
   }
 
-  /**
-   * Return whether the room-type dropdown is currently visible.
-   * @returns {boolean}
-   */
   function isRoomTypeDropdownOpen(){
     return !!(roomTypeDropdown && roomTypeDropdown.hidden === false);
   }
 
-  /**
-   * Open the room-type dropdown.
-   */
   function openRoomTypeDropdown(){
     if (!roomTypeDropdown){
       return;
@@ -357,9 +344,6 @@
     roomTypeButton?.setAttribute("aria-expanded", "true");
   }
 
-  /**
-   * Close the room-type dropdown.
-   */
   function closeRoomTypeDropdown(){
     if (!roomTypeDropdown){
       return;
@@ -368,9 +352,6 @@
     roomTypeButton?.setAttribute("aria-expanded", "false");
   }
 
-  /**
-   * Toggle the room-type dropdown.
-   */
   function toggleRoomTypeDropdown(){
     if (isRoomTypeDropdownOpen()){
       closeRoomTypeDropdown();
@@ -539,10 +520,6 @@
     return defaults;
   }
 
-  /**
-   * Apply password toggle state to the UI.
-   * @param {boolean} enabled
-   */
   function applyPasswordToggleState(enabled){
     NCWizardPolicyUi.applyEditableLock({
       active: state.policy.active,
@@ -1579,9 +1556,6 @@
     }
   }
 
-  /**
-   * Render the delegate suggestions dropdown.
-   */
   function renderDelegateDropdown(){
     if (!delegateDropdown || !delegateInput){
       return;
@@ -1640,9 +1614,6 @@
     updateDelegateRowHighlight();
   }
 
-  /**
-   * Update the active highlight row in the dropdown.
-   */
   function updateDelegateRowHighlight(){
     if (!delegateDropdown){
       return;
@@ -1658,10 +1629,6 @@
     });
   }
 
-  /**
-   * Hide the delegate dropdown menu.
-   * @param {boolean} resetActive
-   */
   function hideDelegateDropdown(resetActive){
     if (!delegateDropdown){
       return;
@@ -1673,10 +1640,6 @@
     }
   }
 
-  /**
-   * Handle keyboard navigation for delegate suggestions.
-   * @param {KeyboardEvent} event
-   */
   function handleDelegateKeyDown(event){
     if (!state.delegate.visible || !state.delegate.suggestions.length){
       return;
@@ -1701,10 +1664,6 @@
     }
   }
 
-  /**
-   * Select a delegate suggestion by index.
-   * @param {number} index
-   */
   function selectDelegateSuggestion(index){
     const suggestion = state.delegate.suggestions[index];
     if (!suggestion || !delegateInput){
@@ -1736,11 +1695,6 @@
     return label || email || "";
   }
 
-  /**
-   * Compute initials for a label.
-   * @param {string} source
-   * @returns {string}
-   */
   function computeInitials(source){
     const text = (source || "").trim();
     if (!text){
@@ -1753,11 +1707,6 @@
     return (parts[0].charAt(0) + parts[1].charAt(0)).toUpperCase();
   }
 
-  /**
-   * Normalize a delegate label for display.
-   * @param {string} value
-   * @returns {string}
-   */
   function normalizeDelegateLabel(value){
     if (typeof value === "string"){
       const trimmed = value.trim();
@@ -1801,9 +1750,6 @@
     return fallback;
   }
 
-  /**
-   * Update the selected delegate preview card.
-   */
   function updateDelegateSelectedDisplay(){
     if (!delegateSelected || !delegateAvatarImg || !delegateAvatarInitials || !delegateSelectedName || !delegateSelectedMeta){
       return;
@@ -2007,10 +1953,6 @@
     });
   }
 
-  /**
-   * Measure dialog content height for popup sizing.
-   * @returns {number}
-   */
   function getContentHeight(){
     try{
       const rect = dialogRoot?.getBoundingClientRect?.();
@@ -2035,9 +1977,6 @@
     messageBar.style.color = isError ? "#b00020" : "#1f1f1f";
   }
 
-  /**
-   * Cleanup listeners/resources when the popup page is closed.
-   */
   function cleanupPageResources(){
     if (isPageUnloading){
       return;

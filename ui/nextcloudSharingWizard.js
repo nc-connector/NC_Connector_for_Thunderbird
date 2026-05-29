@@ -145,10 +145,6 @@
 
   document.addEventListener('DOMContentLoaded', init);
 
-  /**
-   * Initialize the sharing wizard UI and state.
-   * @returns {Promise<void>}
-   */
   async function init(){
     cacheElements();
     if (dom.policyWarningAdminLink){
@@ -206,9 +202,6 @@
     dom.content.setAttribute('data-wizard-ready', ready ? 'true' : 'false');
   }
 
-  /**
-   * Cache DOM elements used by the wizard.
-   */
   function cacheElements(){
     dom.content = document.querySelector('.nc-dialog-content');
     dom.policyWarningRow = document.getElementById('policyWarningRow');
@@ -286,9 +279,6 @@
     }
   }
 
-  /**
-   * Attach UI event handlers for the wizard.
-   */
   function attachEvents(){
     dom.shareName.addEventListener('input', () => {
       resetShareContext();
@@ -368,10 +358,6 @@
     log('Event handlers registered');
   }
 
-  /**
-   * Load default settings from storage into state.
-   * @returns {Promise<void>}
-   */
   async function loadDefaultSettings(){
     state.defaults.shareName = getDefaultShareName();
     state.defaults.permCreate = false;
@@ -569,9 +555,6 @@
     });
   }
 
-  /**
-   * Update the explanatory message for attachment-mode launches.
-   */
   function updateAttachmentModeInfo(){
     if (!dom.attachmentModeInfo){
       return;
@@ -655,10 +638,6 @@
     await finalizeShare();
   }
 
-  /**
-   * Apply password toggle state to the UI.
-   * @param {boolean} enabled
-   */
   function applyPasswordToggleState(enabled){
     const lockPassword = NCWizardPolicyUi.applyEditableLock({
       active: state.policy.active,
@@ -693,9 +672,6 @@
       dom.passwordInput.value = '';
     }
   }
-  /**
-   * Apply the default share name to the input if empty.
-   */
   function setDefaultShareName(){
     if (!dom.shareName.value){
       dom.shareName.value = state.defaults.shareName || getDefaultShareName();
@@ -780,10 +756,6 @@
     }
   }
 
-  /**
-   * Switch the wizard to the given step.
-   * @param {number} target
-   */
   function updateStep(target){
     const previousStep = state.currentStep;
     state.currentStep = Math.max(1, Math.min(TOTAL_STEPS, target));
@@ -803,9 +775,6 @@
     updateButtons();
   }
 
-  /**
-   * Update navigation and action button states.
-   */
   function updateButtons(){
     if (state.mode === "attachments"){
       dom.backBtn.style.visibility = 'hidden';
@@ -828,10 +797,6 @@
     dom.removeFileBtn.disabled = !state.selectedFileId || state.uploadInProgress;
   }
 
-  /**
-   * Handle the Next button and advance the wizard.
-   * @returns {Promise<void>}
-   */
   async function handleNext(){
     if (state.mode === "attachments"){
       return;
@@ -968,9 +933,6 @@
     invalidateUpload();
   }
 
-  /**
-   * Remove the currently selected file entry.
-   */
   function removeSelectedEntry(){
     if (!state.selectedFileId || state.uploadInProgress){
       return;
@@ -982,9 +944,6 @@
     log('Entry removed', removed?.displayPath || '');
   }
 
-  /**
-   * Render the current file list table.
-   */
   function renderFileTable(){
     dom.fileTableBody.replaceChildren();
     if (!state.files.length){
@@ -1122,9 +1081,6 @@
     return text;
   }
 
-  /**
-   * Reset upload state after changing inputs.
-   */
   function invalidateUpload(){
     state.uploadCompleted = false;
     state.uploadResult = null;
@@ -1371,10 +1327,6 @@
     }
   }
 
-  /**
-   * Determine whether password dispatch in a separate mail is enabled.
-   * @returns {boolean}
-   */
   function isSeparatePasswordMailEnabled(){
     return !!dom.passwordToggle?.checked
       && NCWizardPolicyUi.isSeparatePasswordFeatureAvailable(state.policy.status)
@@ -1548,10 +1500,6 @@
     });
   }
 
-  /**
-   * Collect permission flags from the UI.
-   * @returns {{read:boolean,create:boolean,write:boolean,delete:boolean}}
-   */
   function getPermissions(){
     if (state.mode === "attachments"){
       return {
@@ -1693,18 +1641,10 @@
     await closeWizardWindow();
   }
 
-  /**
-   * Read the raw share name from the input.
-   * @returns {string}
-   */
   function getRawShareName(){
     return (dom.shareName?.value || '').trim();
   }
 
-  /**
-   * Return the sanitized share name and update share context.
-   * @returns {string}
-   */
   function getSanitizedShareName(){
     const raw = getRawShareName();
     if (!raw){
@@ -1771,26 +1711,15 @@
     return base.toISOString().slice(0, 10);
   }
 
-  /**
-   * Resolve the default share name label.
-   * @returns {string}
-   */
   function getDefaultShareName(){
     return i18n('sharing_share_default') || 'Share name';
   }
 
-  /**
-   * Send a debug log message when enabled.
-   */
   function log(){
     const args = Array.from(arguments);
     const list = Array.isArray(args) ? args : [];
     emitDebugLog(list[0], ...list.slice(1));
   }
-  /**
-   * Create a fresh share context snapshot.
-   * @returns {{sanitizedName:string,folderInfo:object|null,shareDate:Date,verified:boolean}}
-   */
   function createShareContext(){
     return {
       sanitizedName: '',
@@ -1800,9 +1729,6 @@
     };
   }
 
-  /**
-   * Reset the current share context.
-   */
   function resetShareContext(){
     state.shareContext = createShareContext();
   }
@@ -1932,10 +1858,6 @@
     return normalized.slice(0, idx);
   }
 
-  /**
-   * Calculate the shared horizontal scroll limit for all visible path cells.
-   * @returns {number}
-   */
   function getMaxPathColumnScrollLeft(){
     const nodes = dom.fileTableBody?.querySelectorAll('.path-scroll');
     if (!nodes?.length){
@@ -1951,10 +1873,6 @@
     return max;
   }
 
-  /**
-   * Apply one shared horizontal scroll position to the whole path column.
-   * @param {number} nextScrollLeft
-   */
   function applySharedPathColumnScroll(nextScrollLeft){
     const maxScrollLeft = getMaxPathColumnScrollLeft();
     const clamped = Math.min(maxScrollLeft, Math.max(0, Number(nextScrollLeft) || 0));
@@ -2008,9 +1926,6 @@
     applyEntryRename(entry, renamed);
     return true;
   }
-  /**
-   * Setup popup resizing based on content height.
-   */
   function setupWindowSizing(){
     if (!popupSizer){
       return;
@@ -2024,9 +1939,6 @@
     }
   }
 
-  /**
-   * Cleanup listeners/resources when the popup page is closed.
-   */
   function cleanupPageResources(){
     if (isPageUnloading){
       return;
