@@ -610,13 +610,15 @@ Attachment mode specifics:
   - This toggle is only active when password protection is enabled.
   - Main compose block omits the inline password and shows a dedicated hint when enabled.
   - Background tracks live sender switches on `compose.onIdentityChanged`, captures the final main-mail envelope on `compose.onBeforeSend`, and dispatches password-only mail on `compose.onAfterSend`.
+  - If Thunderbird closes the compose tab while send is still pending, the password-dispatch queue stays alive for the same grace timer as share cleanup. A later successful `onAfterSend` still sends the follow-up; without send confirmation the queue is cleared after the timer.
   - The primary-mail sender is resolved via Thunderbird compose details plus `accountsRead` identity lookup; the password follow-up must use the same Thunderbird identity as the main mail.
   - The password follow-up itself targets only the primary mail `To` recipients; `Cc`/`Bcc` are still captured as part of the primary main-mail envelope.
   - Backend custom password templates (`language_share_html_block=custom` + `share_password_template`) are sanitized in the render path before follow-up registration; rich HTML uses `NCSharing.buildHtmlBlock(...)`, plain text uses `NCSharing.buildPlainTextBlock(...)`, and missing sanitizer or empty sanitized output aborts finalize (fail-closed).
   - Follow-up mail delivery mode mirrors the source compose mode (`isPlainText` / `deliveryFormat`) captured from compose details and refreshed on `compose.onBeforeSend`.
   - Follow-up registration now requires both pre-rendered HTML and pre-rendered plain text; when follow-up is plain text, background uses the provided plain-text block and frames it with a fixed 50-character `#` border.
-  - Dispatch path: first warm the freshly created password compose tab until Thunderbird exposes the expected sender/recipient envelope, then try `compose.sendMessage(..., { mode: "sendNow" })` with a timeout guard for stuck send attempts.
+  - Dispatch path: first warm the freshly created password compose tab until Thunderbird exposes the expected sender/recipient envelope, then send with the same `sendNow`/`sendLater` mode as the confirmed primary mail.
   - If sender identity cannot be resolved cleanly, or if immediate send fails (or times out), background opens a prefilled compose draft as explicit manual fallback.
+  - After confirmed primary send, unexpected password-dispatch errors also open manual fallback drafts from the queued payload instead of only notifying.
   - If a manual fallback draft was opened, a dedicated desktop notification tells the user to send the password mail manually.
   - Once the primary mail was sent, password-follow-up problems must never delete the committed remote share.
 - If Thunderbird's own big-attachment upload setting is enabled, add-on attachment automation settings are locked and a guidance block is shown in options.

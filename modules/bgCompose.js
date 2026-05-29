@@ -143,7 +143,7 @@ browser.compose.onAfterSend.addListener((tab, details) => {
         mode,
         messageId: headerMessageId
       });
-      await sendSeparatePasswordMail(tabId, dispatchQueue);
+      await sendSeparatePasswordMail(tabId, dispatchQueue, mode);
     }catch(error){
       const recipientCount = countUniquePasswordDispatchRecipients(dispatchQueue);
       console.error("[NCBG] compose.onAfterSend password dispatch failed", error);
@@ -151,6 +151,10 @@ browser.compose.onAfterSend.addListener((tab, details) => {
         tabId,
         error: error?.message || String(error),
         recipients: recipientCount
+      });
+      await openManualPasswordFallbackQueue(tabId, dispatchQueue, 0, "dispatch_failed_after_primary_send");
+      await showPasswordMailManualRequiredNotification(recipientCount || dispatchQueue.length, {
+        requireSenderSelection: true
       });
       await showPasswordMailFailureNotification(recipientCount);
     }
@@ -187,11 +191,17 @@ browser.windows.onRemoved.addListener((windowId) => {
 browser.tabs.onRemoved.addListener((tabId) => {
   L("compose tab removed", { tabId });
   cleanupComposeAttachmentTabState(tabId, "tab_removed");
-  clearSeparatePasswordDispatch(tabId, "tab_removed");
   const cleanupEntry = COMPOSE_SHARE_CLEANUP_BY_TAB.get(tabId);
+  const sendPending = !!cleanupEntry?.sendPending;
+  if (sendPending){
+    // TB 153 Daily can remove the compose tab before the final successful onAfterSend arrives.
+    scheduleSeparatePasswordDispatchClear(tabId, "tab_removed_send_pending", COMPOSE_SHARE_CLEANUP_SEND_GRACE_MS);
+  }else{
+    clearSeparatePasswordDispatch(tabId, "tab_removed");
+  }
   if (cleanupEntry){
-    const delayMs = cleanupEntry.sendPending ? COMPOSE_SHARE_CLEANUP_SEND_GRACE_MS : 0;
-    const reason = cleanupEntry.sendPending
+    const delayMs = sendPending ? COMPOSE_SHARE_CLEANUP_SEND_GRACE_MS : 0;
+    const reason = sendPending
       ? "tab_removed_send_pending"
       : "tab_removed_without_send";
     scheduleComposeShareCleanupDelete(tabId, reason, delayMs);

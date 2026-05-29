@@ -149,6 +149,12 @@ Run all cases at least once on M2, except cases marked `3.1.2 only`.
   - Pass: follow-up draft/auto-send payload uses plain text (not HTML) and is framed with fixed 50 `#` at top/bottom.
 - [ ] `P-07` `3.1.2 only`: sanitizer fail-closed behavior for backend follow-up template.
   - Pass: when backend custom password template is active, registration/send aborts deterministically with explicit debug/error log if sanitization cannot be completed.
+- [ ] `P-08` `3.1.2 only`: compose tab closes before final successful `onAfterSend`.
+  - Pass: password dispatch is not cleared on early tab removal; the follow-up is sent or opens its manual fallback after confirmed primary send.
+- [ ] `P-09` `3.1.2 only`: unexpected password-dispatch error after confirmed primary send.
+  - Pass: prefilled manual password draft opens; committed share is retained.
+- [ ] `P-10` `3.1.2 only`: primary mail is sent later.
+  - Pass: password follow-up uses `sendLater` as well; no password mail is sent immediately while the primary mail waits in outbox.
 
 ### H. Central Email Signature
 
