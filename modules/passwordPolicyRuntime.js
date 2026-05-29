@@ -16,10 +16,6 @@ const NCPasswordPolicyRuntime = (() => {
     return { ...FALLBACK_POLICY };
   }
 
-  function logPasswordPolicyRuntimeError(scope, details = {}){
-    globalThis.NCLogContext.safeConsoleError("[NCBG]", scope, details);
-  }
-
   function resolvePolicyUrl(value, baseUrl){
     const raw = typeof value === "string" ? value.trim() : "";
     if (!raw){
@@ -31,7 +27,7 @@ const NCPasswordPolicyRuntime = (() => {
       }
       return new URL(raw).toString();
     }catch(error){
-      logPasswordPolicyRuntimeError("normalize URL failed", {
+      globalThis.NCLogContext.safeConsoleError("[NCBG]", "normalize URL failed", {
         raw: String(raw || ""),
         baseUrl: String(baseUrl || ""),
         error: error?.message || String(error)
@@ -61,7 +57,7 @@ const NCPasswordPolicyRuntime = (() => {
     try{
       const { baseUrl, user, appPass } = await NCCore.getOpts();
       if (!baseUrl || !user || !appPass){
-        logPasswordPolicyRuntimeError("password policy missing credentials", {
+        globalThis.NCLogContext.safeConsoleError("[NCBG]", "password policy missing credentials", {
           hasBaseUrl: !!baseUrl,
           hasUser: !!user,
           hasAppPass: !!appPass
@@ -71,7 +67,7 @@ const NCPasswordPolicyRuntime = (() => {
       if (typeof NCHostPermissions !== "undefined" && NCHostPermissions?.hasOriginPermission){
         const ok = await NCHostPermissions.hasOriginPermission(baseUrl);
         if (!ok){
-          logPasswordPolicyRuntimeError("password policy host permission missing", { baseUrl });
+          globalThis.NCLogContext.safeConsoleError("[NCBG]", "password policy host permission missing", { baseUrl });
           return fallbackPolicy();
         }
       }
@@ -83,7 +79,7 @@ const NCPasswordPolicyRuntime = (() => {
       };
       const response = await NCOcs.ocsRequest({ url, method: "GET", headers, acceptJson: true });
       if (!response.ok){
-        logPasswordPolicyRuntimeError("password policy fetch failed", {
+        globalThis.NCLogContext.safeConsoleError("[NCBG]", "password policy fetch failed", {
           error: response.errorMessage || "",
           status: response.status || 0
         });
@@ -103,7 +99,7 @@ const NCPasswordPolicyRuntime = (() => {
       });
       return normalized;
     }catch(error){
-      logPasswordPolicyRuntimeError("password policy fetch error", {
+      globalThis.NCLogContext.safeConsoleError("[NCBG]", "password policy fetch error", {
         error: error?.message || String(error)
       });
       return fallbackPolicy();
@@ -114,7 +110,7 @@ const NCPasswordPolicyRuntime = (() => {
     try{
       const { baseUrl, user, appPass } = await NCCore.getOpts();
       if (!baseUrl || !user || !appPass){
-        logPasswordPolicyRuntimeError("password generate missing credentials", {
+        globalThis.NCLogContext.safeConsoleError("[NCBG]", "password generate missing credentials", {
           hasBaseUrl: !!baseUrl,
           hasUser: !!user,
           hasAppPass: !!appPass
@@ -124,7 +120,7 @@ const NCPasswordPolicyRuntime = (() => {
       if (typeof NCHostPermissions !== "undefined" && NCHostPermissions?.hasOriginPermission){
         const ok = await NCHostPermissions.hasOriginPermission(baseUrl);
         if (!ok){
-          logPasswordPolicyRuntimeError("password generate host permission missing", { baseUrl });
+          globalThis.NCLogContext.safeConsoleError("[NCBG]", "password generate host permission missing", { baseUrl });
           return { ok: false, error: "permission_missing" };
         }
       }
@@ -140,7 +136,7 @@ const NCPasswordPolicyRuntime = (() => {
       };
       const response = await NCOcs.ocsRequest({ url: apiUrl, method: "GET", headers, acceptJson: true });
       if (!response.ok){
-        logPasswordPolicyRuntimeError("password generate failed", {
+        globalThis.NCLogContext.safeConsoleError("[NCBG]", "password generate failed", {
           error: response.errorMessage || "",
           status: response.status || 0
         });
@@ -148,14 +144,14 @@ const NCPasswordPolicyRuntime = (() => {
       }
       const password = response.data?.ocs?.data?.password;
       if (!password){
-        logPasswordPolicyRuntimeError("password generate missing password field");
+        globalThis.NCLogContext.safeConsoleError("[NCBG]", "password generate missing password field");
         return { ok: false, error: "password_missing" };
       }
       const generated = String(password);
       L("password generate success", { length: generated.length });
       return { ok: true, password: generated };
     }catch(error){
-      logPasswordPolicyRuntimeError("password generate error", {
+      globalThis.NCLogContext.safeConsoleError("[NCBG]", "password generate error", {
         error: error?.message || String(error)
       });
       return { ok: false, error: error?.message || String(error) };

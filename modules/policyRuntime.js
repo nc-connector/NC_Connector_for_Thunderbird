@@ -23,10 +23,6 @@ const NCPolicyRuntime = (() => {
     return String(baseUrl || "").replace(/\/+$/, "") + STATUS_ENDPOINT_PATH;
   }
 
-  function logPolicyRuntimeError(scope, details = {}){
-    globalThis.NCLogContext.safeConsoleError("[NCBG]", scope, details);
-  }
-
   function buildLocalModeResult(reason, details = {}){
     const seatState = String(details?.seatState || "none");
     const seatAssigned = !!details?.seatAssigned;
@@ -161,7 +157,7 @@ const NCPolicyRuntime = (() => {
       const localResult = buildLocalModeResult("permission_missing", {
         endpointChecked: false
       });
-      logPolicyRuntimeError("policy status fallback", {
+      globalThis.NCLogContext.safeConsoleError("[NCBG]", "policy status fallback", {
         reason: localResult.reason,
         error: error?.message || String(error)
       });
@@ -182,7 +178,7 @@ const NCPolicyRuntime = (() => {
         endpointChecked: true,
         endpointUrl
       });
-      logPolicyRuntimeError("policy status fallback", {
+      globalThis.NCLogContext.safeConsoleError("[NCBG]", "policy status fallback", {
         reason: localResult.reason,
         endpointUrl,
         error: error?.message || String(error)
@@ -197,7 +193,7 @@ const NCPolicyRuntime = (() => {
         endpointChecked: true,
         endpointUrl
       });
-      logPolicyRuntimeError("policy status endpoint missing", { endpointUrl });
+      globalThis.NCLogContext.safeConsoleError("[NCBG]", "policy status endpoint missing", { endpointUrl });
       return localResult;
     }
     if (!response.ok){
@@ -206,7 +202,7 @@ const NCPolicyRuntime = (() => {
         endpointChecked: true,
         endpointUrl
       });
-      logPolicyRuntimeError("policy status fallback", {
+      globalThis.NCLogContext.safeConsoleError("[NCBG]", "policy status fallback", {
         reason: localResult.reason,
         status: response.status,
         endpointUrl
@@ -223,7 +219,7 @@ const NCPolicyRuntime = (() => {
         endpointChecked: true,
         endpointUrl
       });
-      logPolicyRuntimeError("policy status fallback", {
+      globalThis.NCLogContext.safeConsoleError("[NCBG]", "policy status fallback", {
         reason: localResult.reason,
         endpointUrl,
         error: error?.message || String(error)

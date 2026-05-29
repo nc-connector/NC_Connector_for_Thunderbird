@@ -24,10 +24,6 @@ const EMAIL_SIGNATURE_KEYS = {
   onForward: "emailSignatureOnForward"
 };
 
-function logOptionsError(scope, reportedError){
-  globalThis.NCLogContext.safeConsoleError(OPTIONS_LOG_PREFIX, scope, reportedError);
-}
-
 NCTalkDomI18n.translatePage(i18n, { titleKey: "options_title" });
 initTabs();
 initAbout();
@@ -145,7 +141,7 @@ function getSupportedOverrideLocales(){
       return Array.from(new Set(NCI18nOverride.supportedLocales));
     }
   }catch(error){
-    logOptionsError("supported locales detection failed", error);
+    globalThis.NCLogContext.safeConsoleError(OPTIONS_LOG_PREFIX, "supported locales detection failed", error);
   }
   return ["en", "de", "fr"];
 }
@@ -167,7 +163,7 @@ function getUiLanguage(){
       return browser.i18n.getUILanguage() || "en";
     }
   }catch(error){
-    logOptionsError("ui language detection failed", error);
+    globalThis.NCLogContext.safeConsoleError(OPTIONS_LOG_PREFIX, "ui language detection failed", error);
   }
   return "en";
 }
@@ -188,7 +184,7 @@ function makeDisplayNames(uiLang){
   try{
     return new Intl.DisplayNames([uiLang], { type: "language" });
   }catch(error){
-    logOptionsError("Intl.DisplayNames init failed", error);
+    globalThis.NCLogContext.safeConsoleError(OPTIONS_LOG_PREFIX, "Intl.DisplayNames init failed", error);
     return null;
   }
 }
@@ -205,7 +201,7 @@ function makeCollator(uiLang){
   try{
     return new Intl.Collator([uiLang], { sensitivity: "base", numeric: true });
   }catch(error){
-    logOptionsError("Intl.Collator init failed", error);
+    globalThis.NCLogContext.safeConsoleError(OPTIONS_LOG_PREFIX, "Intl.Collator init failed", error);
     return null;
   }
 }
@@ -225,7 +221,7 @@ function getLocaleLabel(locale, displayNames){
         return label;
       }
     }catch(error){
-      logOptionsError("locale label lookup failed", error);
+      globalThis.NCLogContext.safeConsoleError(OPTIONS_LOG_PREFIX, "locale label lookup failed", error);
     }
   }
   return tag || String(locale || "");
@@ -570,7 +566,7 @@ async function refreshBackendPolicyStatus(){
       runtimePolicyStatus = response.status;
     }
   }catch(error){
-    logOptionsError("policy status check failed", error);
+    globalThis.NCLogContext.safeConsoleError(OPTIONS_LOG_PREFIX, "policy status check failed", error);
   }
   refreshLanguageOverrideSelects();
   applyPolicyWarningUi();
@@ -997,11 +993,11 @@ async function refreshTalkSystemAddressbookState(options = {}){
       ? i18n("talk_system_addressbook_required_message")
       : "";
     if (locked && (status.error || response?.error)){
-      logOptionsError("system addressbook unavailable", status.error || response.error);
+      globalThis.NCLogContext.safeConsoleError(OPTIONS_LOG_PREFIX, "system addressbook unavailable", status.error || response.error);
     }
     applyTalkSystemAddressbookLockState(locked, detail);
   }catch(error){
-    logOptionsError("system addressbook status check failed", error);
+    globalThis.NCLogContext.safeConsoleError(OPTIONS_LOG_PREFIX, "system addressbook status check failed", error);
     applyTalkSystemAddressbookLockState(true, i18n("talk_system_addressbook_required_message"));
   }
   applyPolicySettingsOverlay();
@@ -1079,7 +1075,7 @@ async function openLoginUrl(url){
       await browser.windows.openDefaultBrowser(url);
       return true;
     }catch(error){
-      logOptionsError("openDefaultBrowser failed", error);
+      globalThis.NCLogContext.safeConsoleError(OPTIONS_LOG_PREFIX, "openDefaultBrowser failed", error);
     }
   }
   try{
@@ -1099,7 +1095,7 @@ async function openLoginUrl(url){
       return true;
     }
   }catch(error){
-    logOptionsError("open login url fallback failed", error);
+    globalThis.NCLogContext.safeConsoleError(OPTIONS_LOG_PREFIX, "open login url fallback failed", error);
   }
   return false;
 }
@@ -1266,7 +1262,7 @@ document.getElementById("save").addEventListener("click", async () => {
   try{
     await save();
   }catch(error){
-    logOptionsError("save failed", error);
+    globalThis.NCLogContext.safeConsoleError(OPTIONS_LOG_PREFIX, "save failed", error);
     showStatus(error?.message || i18n("options_status_save_failed"), true);
   }
 });
@@ -1314,7 +1310,7 @@ if (testButton){
     try{
       await runConnectionTest({ showMissing: true });
     }catch(error){
-      logOptionsError("test connection failed", error);
+      globalThis.NCLogContext.safeConsoleError(OPTIONS_LOG_PREFIX, "test connection failed", error);
       showStatus(error?.message || i18n("options_test_failed"), true);
     }finally{
       button.disabled = false;
@@ -1324,8 +1320,8 @@ if (testButton){
 }
 
 load().catch((error) => {
-  logOptionsError("options load failed", e);
-  showStatus(e?.message || i18n("options_status_load_failed"), true);
+  globalThis.NCLogContext.safeConsoleError(OPTIONS_LOG_PREFIX, "options load failed", error);
+  showStatus(error?.message || i18n("options_status_load_failed"), true);
 });
 
 window.addEventListener("focus", async () => {
@@ -1337,7 +1333,7 @@ window.addEventListener("focus", async () => {
     // repeated forced network probes while switching windows.
     await refreshTalkSystemAddressbookState({ forceRefresh: false });
   }catch(error){
-    logOptionsError("options focus refresh failed", error);
+    globalThis.NCLogContext.safeConsoleError(OPTIONS_LOG_PREFIX, "options focus refresh failed", error);
   }
 });
 
@@ -1406,7 +1402,7 @@ function initTabs(){
     if (id === "talk"){
       // Talk tab opens should always refresh addressbook availability once.
       void refreshTalkSystemAddressbookState({ forceRefresh: true }).catch((error) => {
-        logOptionsError("talk tab system addressbook refresh failed", error);
+        globalThis.NCLogContext.safeConsoleError(OPTIONS_LOG_PREFIX, "talk tab system addressbook refresh failed", error);
       });
     }
   };
@@ -1446,7 +1442,7 @@ function initAbout(){
       versionEl.textContent = manifest.version;
     }
   }catch(error){
-    logOptionsError("about version lookup failed", error);
+    globalThis.NCLogContext.safeConsoleError(OPTIONS_LOG_PREFIX, "about version lookup failed", error);
   }
   const licenseLink = document.getElementById("licenseLink");
   if (licenseLink && browser?.runtime?.getURL){
@@ -1734,7 +1730,7 @@ function updateAttachmentThresholdState(){
         showStatus(response?.error || i18n("options_loginflow_failed"), true);
       }
     }catch(error){
-      logOptionsError("login flow failed", error);
+      globalThis.NCLogContext.safeConsoleError(OPTIONS_LOG_PREFIX, "login flow failed", error);
       showStatus(error?.message || i18n("options_loginflow_failed"), true);
     }finally{
       loginFlowInProgress = false;
@@ -1777,7 +1773,7 @@ async function runConnectionTest({ showMissing = true } = {}){
     }
     return response;
   }catch(error){
-    logOptionsError("testConnection runtime failed", error);
+    globalThis.NCLogContext.safeConsoleError(OPTIONS_LOG_PREFIX, "testConnection runtime failed", error);
     showStatus(error?.message || i18n("options_test_failed"), true);
     return { ok:false, error: error?.message || String(error) };
   }

@@ -16,15 +16,6 @@
   };
 
   /**
-   * Log internal host-permission errors.
-   * @param {string} scope
-   * @param {any} reportedError
-   */
-  function logHostPermissionError(scope, reportedError){
-    global.NCLogContext.safeConsoleError(LOG_PREFIX, scope, reportedError);
-  }
-
-  /**
    * Normalize a user-provided base URL into an origin pattern for optional permissions.
    * @param {string} baseUrl
    * @returns {string} Origin pattern like "https://cloud.example.com/*" or empty string.
@@ -38,7 +29,7 @@
       }
       return url.origin + "/*";
     }catch(error){
-      logHostPermissionError("normalize origin pattern failed", error);
+      global.NCLogContext.safeConsoleError(LOG_PREFIX, "normalize origin pattern failed", error);
       return "";
     }
   }
@@ -59,7 +50,7 @@
     try{
       return await global.browser.permissions.contains({ origins: [pattern] });
     }catch(error){
-      logHostPermissionError("permissions.contains failed", error);
+      global.NCLogContext.safeConsoleError(LOG_PREFIX, "permissions.contains failed", error);
       return false;
     }
   }
@@ -94,7 +85,7 @@
       error = new Error(String(error || fallbackMessage));
     }
     if (logMissing){
-      logHostPermissionError(scope, {
+      global.NCLogContext.safeConsoleError(LOG_PREFIX, scope, {
         baseUrl: String(baseUrl || ""),
         message: error.message || fallbackMessage
       });
@@ -131,7 +122,7 @@
       }
       return false;
     }catch(error){
-      logHostPermissionError("permissions.request failed", error);
+      global.NCLogContext.safeConsoleError(LOG_PREFIX, "permissions.request failed", error);
       return await hasPermissionAfterRequestFailure(pattern);
     }
   }
@@ -142,7 +133,7 @@
         return await global.browser.permissions.contains({ origins: [pattern] });
       }
     }catch(error){
-      logHostPermissionError("permissions.contains fallback failed", error);
+      global.NCLogContext.safeConsoleError(LOG_PREFIX, "permissions.contains fallback failed", error);
     }
     return false;
   }

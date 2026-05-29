@@ -12,15 +12,6 @@
     global.NCLogContext?.resolveAddonLogPrefix?.("OCS")
     || "[NCBG]";
 
-  /**
-   * Log internal OCS helper errors.
-   * @param {string} scope
-   * @param {any} reportedError
-   */
-  function logOcsError(scope, reportedError){
-    global.NCLogContext.safeConsoleError(LOG_PREFIX, scope, reportedError);
-  }
-
   function encodeUtf8Base64(value){
     const bytes = new TextEncoder().encode(String(value || ""));
     let binary = "";
@@ -52,7 +43,7 @@
     const status = res.status;
     const statusText = res.statusText || "";
     const raw = await res.text().catch((error) => {
-      logOcsError("response read failed", error);
+      global.NCLogContext.safeConsoleError(LOG_PREFIX, "response read failed", error);
       return "";
     });
     let data = null;
@@ -60,7 +51,7 @@
       try{
         data = raw ? JSON.parse(raw) : null;
       }catch(error){
-        logOcsError("json parse failed", error);
+        global.NCLogContext.safeConsoleError(LOG_PREFIX, "json parse failed", error);
         data = null;
       }
     }

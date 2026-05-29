@@ -18,10 +18,6 @@
     return;
   }
 
-  function logPopupSizingError(scope, reportedError){
-    globalScope.NCLogContext.safeConsoleError(LOG_PREFIX, scope, reportedError);
-  }
-
   function createPopupSizer(options = {}){
     const fixedWidth = Number(options.fixedWidth) || 0;
     const minHeight = Number(options.minHeight) || 0;
@@ -77,7 +73,7 @@
           window.resizeTo(targetOuter, outerHeight);
         }
       }catch(error){
-        logPopupSizingError("enforceFixedWidth failed", error);
+        globalScope.NCLogContext.safeConsoleError(LOG_PREFIX, "enforceFixedWidth failed", error);
       }
     }
 
@@ -101,7 +97,7 @@
           window.resizeTo(width, targetOuter);
         }
       }catch(error){
-        logPopupSizingError("enforceMinHeight failed", error);
+        globalScope.NCLogContext.safeConsoleError(LOG_PREFIX, "enforceMinHeight failed", error);
       }
     }
 
@@ -157,7 +153,7 @@
             await browser.windows.update(win.id, updates);
           }
         }catch(error){
-          logPopupSizingError("enforceWindowBoundsAsync failed", error);
+          globalScope.NCLogContext.safeConsoleError(LOG_PREFIX, "enforceWindowBoundsAsync failed", error);
         }
         boundsPromise = null;
       })();
