@@ -16,7 +16,7 @@
     try{
       return browser.i18n.getMessage(key, subs);
     }catch(error){
-      console.error("[NCUI][OpenUrlFallback] i18n lookup failed", { key, error });
+      globalThis.NCLogContext.safeConsoleError("[NCUI][OpenUrlFallback]", "i18n lookup failed", { key, error });
       return "";
     }
   };
@@ -62,7 +62,7 @@
         return;
       }
     }catch(error){
-      console.error("[NCUI][OpenUrlFallback] clipboard.writeText failed", error);
+      globalThis.NCLogContext.safeConsoleError("[NCUI][OpenUrlFallback]", "clipboard.writeText failed", error);
     }
     try{
       if (urlInput){
@@ -71,7 +71,7 @@
       }
       setStatus("open_url_copy_failed", true);
     }catch(error){
-      console.error("[NCUI][OpenUrlFallback] manual copy selection failed", error);
+      globalThis.NCLogContext.safeConsoleError("[NCUI][OpenUrlFallback]", "manual copy selection failed", error);
       setStatus("open_url_copy_failed", true);
     }
   }

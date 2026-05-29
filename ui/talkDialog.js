@@ -517,7 +517,7 @@
         defaults.roomType = policyRoomType === "event" ? "event" : "normal";
       }
     }catch(error){
-      console.error(LOG_PREFIX, "load defaults failed", error);
+      logUiError("load defaults failed", error);
     }
     return defaults;
   }
@@ -1175,7 +1175,7 @@
         .split("{MEETING_URL}").join(safeUrl)
         .split("{PASSWORD}").join(safePassword);
       if (typeof window.NCHtmlSanitizer?.sanitizeTalkTemplateHtml !== "function"){
-        console.error("[NCUI][Talk] talk template sanitizer unavailable");
+        logUiError("talk template sanitizer unavailable", "talk_template_sanitizer_unavailable");
         throw new Error("talk_template_sanitizer_unavailable");
       }
       const html = window.NCHtmlSanitizer.sanitizeTalkTemplateHtml(rawHtml);
@@ -1443,10 +1443,9 @@
       renderDelegateDropdown();
     }catch(error){
       if (seq !== state.delegate.searchSeq){
-        console.error("[NCUI][Talk] delegate search failed (stale request)", error);
+        logUiError("delegate search failed (stale request)", error);
         return;
       }
-      console.error("[NCUI][Talk] delegate search failed", error);
       const detail = t("talk_system_addressbook_required_message");
       logUiError("delegate search unavailable", error);
       applySystemAddressbookAvailability(false, detail);
