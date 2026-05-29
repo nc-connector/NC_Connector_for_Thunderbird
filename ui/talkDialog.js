@@ -208,14 +208,6 @@
     policyWarningAdminLink.href = POLICY_ADMIN_URL;
   }
 
-  function applySharedAddressbookTooltipState(tooltipList, lockActive){
-    const applyTooltipState = window.NCAddressbookUi?.applySystemAddressbookTooltipState;
-    if (typeof applyTooltipState !== "function"){
-      return;
-    }
-    applyTooltipState(tooltipList, lockActive);
-  }
-
   function normalizeDescriptionLanguage(value){
     return NCI18nOverride.normalizeLanguageOverride(value, { allowCustom: true });
   }
@@ -1522,9 +1514,9 @@
     if (delegateAddressbookLockHint){
       delegateAddressbookLockHint.textContent = state.systemAddressbook.error || t("talk_system_addressbook_required_message");
     }
-    applySharedAddressbookTooltipState(addUsersTooltipList, lockActive);
-    applySharedAddressbookTooltipState(addGuestsTooltipList, lockActive);
-    applySharedAddressbookTooltipState(delegateTooltipList, lockActive);
+    window.NCAddressbookUi?.applySystemAddressbookTooltipState(addUsersTooltipList, lockActive);
+    window.NCAddressbookUi?.applySystemAddressbookTooltipState(addGuestsTooltipList, lockActive);
+    window.NCAddressbookUi?.applySystemAddressbookTooltipState(delegateTooltipList, lockActive);
     if (delegateAddressbookHelp){
       delegateAddressbookHelp.hidden = !lockActive;
     }

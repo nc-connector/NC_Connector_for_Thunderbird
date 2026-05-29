@@ -280,14 +280,6 @@ if (sharingAttachmentsAdminLink){
   sharingAttachmentsAdminLink.href = ATTACHMENT_AUTOMATION_ADMIN_URL;
 }
 
-function applySharedAddressbookTooltipState(tooltipList, lockActive){
-  const applyTooltipState = window.NCAddressbookUi?.applySystemAddressbookTooltipState;
-  if (typeof applyTooltipState !== "function"){
-    return;
-  }
-  applyTooltipState(tooltipList, lockActive);
-}
-
 /**
  * Read the list of supported locale folders for language override settings.
  * @returns {string[]}
@@ -968,8 +960,8 @@ function applyTalkSystemAddressbookLockState(locked, detail = ""){
   if (optionsAddGuestsAddressbookLockHint){
     optionsAddGuestsAddressbookLockHint.textContent = talkAddressbookLockDetail || i18n("talk_system_addressbook_required_message");
   }
-  applySharedAddressbookTooltipState(optionsAddUsersTooltipList, talkAddressbookLockActive);
-  applySharedAddressbookTooltipState(optionsAddGuestsTooltipList, talkAddressbookLockActive);
+  window.NCAddressbookUi?.applySystemAddressbookTooltipState(optionsAddUsersTooltipList, talkAddressbookLockActive);
+  window.NCAddressbookUi?.applySystemAddressbookTooltipState(optionsAddGuestsTooltipList, talkAddressbookLockActive);
   if (talkAddressbookWarningRow){
     talkAddressbookWarningRow.hidden = !talkAddressbookLockActive;
   }
