@@ -435,7 +435,7 @@
     "message": "Přihlásit se do Nextcloud (získat heslo aplikace automaticky)"
   },
   "options_loginflow_button": {
-    "message": "Přihlásit se do Nextcloud..."
+    "message": "Přihlásit se do Nextcloud"
   },
   "options_loginflow_starting": {
     "message": "Spouští se přihlášení..."

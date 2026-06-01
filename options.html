@@ -84,6 +84,10 @@ input[type="url"], input[type="text"], input[type="password"], input[type="numbe
   color:var(--tb-text);
   font:inherit;
 }
+input.needs-attention{
+  border-color:var(--brand-blue);
+  box-shadow:0 0 0 3px rgba(0,130,201,0.14);
+}
 input[type="checkbox"],
 input[type="radio"]{
   accent-color:var(--tb-accent);
@@ -122,6 +126,7 @@ footer{
 }
 .tabs h2{margin-top:0;}
 .auth-block{border:1px solid var(--tb-border); border-radius:var(--tb-radius); padding:14px; margin:14px 0; background:var(--tb-surface);}
+.auth-block.is-disabled{opacity:.55;}
 .auth-block legend{font-weight:600; padding:0 4px;}
 .radio-option{display:flex; align-items:center; gap:8px; margin:6px 0;}
 .button-row{display:flex; flex-wrap:wrap; gap:10px; margin-top:12px;}
@@ -133,6 +138,10 @@ footer{
   background:var(--tb-surface);
   color:var(--tb-text);
 }
+#testConnection:disabled,#loginFlowButton:disabled{
+  opacity:.55;
+  cursor:not-allowed;
+}
 #save{
   height:var(--control-height);
   padding:0 16px;
@@ -140,6 +149,10 @@ footer{
   border:1px solid var(--brand-blue);
   color:#fff;
   border-radius:var(--control-radius);
+}
+#save:disabled{
+  opacity:.55;
+  cursor:not-allowed;
 }
 .checklist{display:flex; flex-direction:column; gap:6px;}
 .checklist label{display:flex; align-items:center; gap:8px; font-weight:400;}
@@ -401,7 +414,7 @@ footer{
   </div>
   <section id="tab-general" class="tab-panel active">
     <div class="row"><label for="baseUrl" data-i18n="options_base_url_label">Nextcloud URL</label><input id="baseUrl" type="url" data-i18n-placeholder="options_base_url_placeholder" placeholder="https://cloud.example.com"></div>
-    <fieldset class="auth-block">
+    <fieldset id="authBlock" class="auth-block">
       <legend data-i18n="options_auth_heading">Authentication</legend>
       <label class="radio-option">
         <input type="radio" name="authMode" id="authModeManual" value="manual" checked>
@@ -412,8 +425,8 @@ footer{
         <span data-i18n="options_auth_login">Login with Nextcloud (fetch app password automatically)</span>
       </label>
       <div class="button-row">
-        <button id="loginFlowButton" type="button" data-i18n="options_loginflow_button">Login with Nextcloud...</button>
-        <button id="testConnection" type="button" data-i18n="options_test_button">Test connection</button>
+        <button id="loginFlowButton" type="button" data-i18n="options_loginflow_button" disabled>Login with Nextcloud</button>
+        <button id="testConnection" type="button" data-i18n="options_test_button" disabled>Test connection</button>
       </div>
     </fieldset>
     <div class="row"><label for="user" data-i18n="options_user_label">Username</label><input id="user" type="text"></div>
@@ -733,7 +746,7 @@ footer{
 </div>
 <footer>
   <span id="status"></span>
-  <button id="save" data-i18n="options_save_button">Save</button>
+  <button id="save" data-i18n="options_save_button" disabled>Save</button>
 </footer>
 <!-- Script order is intentional while the options page still uses global helpers. -->
 <script src="modules/logContext.js"></script>

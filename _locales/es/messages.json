@@ -435,7 +435,7 @@
     "message": "Iniciar sesión con Nextcloud (obtener contraseña de aplicación automáticamente)"
   },
   "options_loginflow_button": {
-    "message": "Iniciar sesión con Nextcloud..."
+    "message": "Iniciar sesión con Nextcloud"
   },
   "options_loginflow_starting": {
     "message": "Iniciando flujo de inicio de sesión..."

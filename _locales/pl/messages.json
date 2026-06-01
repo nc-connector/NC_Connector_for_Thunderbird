@@ -435,7 +435,7 @@
     "message": "Zaloguj się do Nextcloud (pobierz hasło aplikacji automatycznie)"
   },
   "options_loginflow_button": {
-    "message": "Zaloguj się do Nextcloud..."
+    "message": "Zaloguj się do Nextcloud"
   },
   "options_loginflow_starting": {
     "message": "Rozpoczynanie logowania..."

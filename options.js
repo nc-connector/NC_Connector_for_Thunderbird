@@ -30,8 +30,10 @@ initAbout();
 
 const statusEl = document.getElementById("status");
 const baseUrlInput = document.getElementById("baseUrl");
+const authBlock = document.getElementById("authBlock");
 const userInput = document.getElementById("user");
 const appPassInput = document.getElementById("appPass");
+const saveButton = document.getElementById("save");
 const policyWarningRow = document.getElementById("policyWarningRow");
 const policyWarningText = document.getElementById("policyWarningText");
 const policyWarningAdminLink = document.getElementById("policyWarningAdminLink");
@@ -1204,14 +1206,18 @@ async function save(){
   showStatus(i18n("options_status_saved"));
 }
 
-document.getElementById("save").addEventListener("click", async () => {
-  try{
-    await save();
-  }catch(error){
-    globalThis.NCLogContext.safeConsoleError(OPTIONS_LOG_PREFIX, "save failed", error);
-    showStatus(error?.message || i18n("options_status_save_failed"), true);
-  }
-});
+if (saveButton){
+  saveButton.addEventListener("click", async () => {
+    try{
+      await save();
+    }catch(error){
+      globalThis.NCLogContext.safeConsoleError(OPTIONS_LOG_PREFIX, "save failed", error);
+      showStatus(error?.message || i18n("options_status_save_failed"), true);
+    }finally{
+      updateAuthModeUI();
+    }
+  });
+}
 
 if (sharingAttachmentsOfferAboveEnabledInput){
   sharingAttachmentsOfferAboveEnabledInput.addEventListener("change", () => {
@@ -1259,10 +1265,19 @@ if (testButton){
       globalThis.NCLogContext.safeConsoleError(OPTIONS_LOG_PREFIX, "test connection failed", error);
       showStatus(error?.message || i18n("options_test_failed"), true);
     }finally{
-      button.disabled = false;
       button.textContent = originalLabel || i18n("options_test_button");
+      updateAuthModeUI();
     }
   });
+}
+if (appPassInput){
+  appPassInput.addEventListener("input", updateAuthModeUI);
+}
+if (baseUrlInput){
+  baseUrlInput.addEventListener("input", updateAuthModeUI);
+}
+if (userInput){
+  userInput.addEventListener("input", updateAuthModeUI);
 }
 
 load().catch((error) => {
@@ -1425,10 +1440,30 @@ function setAuthMode(mode){
 function updateAuthModeUI(){
   const mode = getSelectedAuthMode();
   const manual = mode === "manual";
-  if (userInput) userInput.disabled = !manual;
-  if (appPassInput) appPassInput.disabled = !manual;
+  const hasBaseUrl = !!String(baseUrlInput?.value || "").trim();
+  const hasUser = !!String(userInput?.value || "").trim();
+  const hasAppPass = !!String(appPassInput?.value || "").trim();
+  const hasConnectionSettings = hasBaseUrl && hasUser && hasAppPass;
+  if (baseUrlInput){
+    baseUrlInput.classList.toggle("needs-attention", !hasBaseUrl);
+  }
+  if (authBlock){
+    authBlock.disabled = !hasBaseUrl || loginFlowInProgress;
+    authBlock.classList.toggle("is-disabled", !hasBaseUrl);
+  }
+  authRadios.forEach((radio) => {
+    radio.disabled = !hasBaseUrl || loginFlowInProgress;
+  });
+  if (userInput) userInput.disabled = !hasBaseUrl || !manual || loginFlowInProgress;
+  if (appPassInput) appPassInput.disabled = !hasBaseUrl || !manual || loginFlowInProgress;
   if (loginFlowButton){
-    loginFlowButton.disabled = loginFlowInProgress || mode !== "loginFlow";
+    loginFlowButton.disabled = loginFlowInProgress || !hasBaseUrl || mode !== "loginFlow";
+  }
+  if (testButton){
+    testButton.disabled = loginFlowInProgress || !hasConnectionSettings;
+  }
+  if (saveButton){
+    saveButton.disabled = loginFlowInProgress || !hasConnectionSettings;
   }
 }
 
@@ -1595,8 +1630,8 @@ function updateAttachmentThresholdState(){
   sharingAttachmentsOfferAboveMbInput.title = policyLockSharingAttachmentsThreshold ? adminHint : "";
 }
 
-  if (loginFlowButton){
-    loginFlowButton.addEventListener("click", async () => {
+if (loginFlowButton){
+  loginFlowButton.addEventListener("click", async () => {
     if (loginFlowButton.disabled || loginFlowInProgress) return;
     const baseUrl = baseUrlInput.value.trim();
     if (!baseUrl){

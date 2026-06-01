@@ -435,7 +435,7 @@
     "message": "使用 Nextcloud 登录（自动获取应用密码）"
   },
   "options_loginflow_button": {
-    "message": "使用 Nextcloud 登录..."
+    "message": "使用 Nextcloud 登录"
   },
   "options_loginflow_starting": {
     "message": "正在启动登录流程..."

@@ -435,7 +435,7 @@
     "message": "Connexion avec Nextcloud (mot de passe d’application récupéré automatiquement)"
   },
   "options_loginflow_button": {
-    "message": "Connexion avec Nextcloud..."
+    "message": "Connexion avec Nextcloud"
   },
   "options_loginflow_starting": {
     "message": "Démarrage du flux de connexion..."

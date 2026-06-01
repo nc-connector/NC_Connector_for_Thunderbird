@@ -435,7 +435,7 @@
     "message": "Bejelentkezés Nextclouddal (alkalmazásjelszó automatikus lekérése)"
   },
   "options_loginflow_button": {
-    "message": "Bejelentkezés Nextclouddal..."
+    "message": "Bejelentkezés Nextclouddal"
   },
   "options_loginflow_starting": {
     "message": "Bejelentkezési folyamat indítása..."

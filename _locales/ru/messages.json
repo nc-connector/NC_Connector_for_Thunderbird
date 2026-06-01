@@ -435,7 +435,7 @@
     "message": "Войти через Nextcloud (автоматически получить пароль приложения)"
   },
   "options_loginflow_button": {
-    "message": "Войти через Nextcloud..."
+    "message": "Войти через Nextcloud"
   },
   "options_loginflow_starting": {
     "message": "Запуск процесса входа..."

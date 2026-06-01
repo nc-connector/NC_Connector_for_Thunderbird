@@ -435,7 +435,7 @@
     "message": "Nextcloud でログイン（アプリパスワードを自動取得）"
   },
   "options_loginflow_button": {
-    "message": "Nextcloud でログイン..."
+    "message": "Nextcloud でログイン"
   },
   "options_loginflow_starting": {
     "message": "ログインフローを開始中..."

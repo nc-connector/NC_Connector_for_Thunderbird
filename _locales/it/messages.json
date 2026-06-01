@@ -435,7 +435,7 @@
     "message": "Accesso con Nextcloud (recupera automaticamente la password app)"
   },
   "options_loginflow_button": {
-    "message": "Accedi con Nextcloud..."
+    "message": "Accedi con Nextcloud"
   },
   "options_loginflow_starting": {
     "message": "Avvio del flusso di accesso..."

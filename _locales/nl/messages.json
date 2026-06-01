@@ -435,7 +435,7 @@
     "message": "Inloggen met Nextcloud (app-wachtwoord automatisch ophalen)"
   },
   "options_loginflow_button": {
-    "message": "Inloggen met Nextcloud..."
+    "message": "Inloggen met Nextcloud"
   },
   "options_loginflow_starting": {
     "message": "Inlogproces starten..."
