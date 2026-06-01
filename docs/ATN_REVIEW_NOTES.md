@@ -1,8 +1,8 @@
-# Reviewer Notes - 3.1.2
+# Reviewer Notes - 3.1.3
 NC Connector for Thunderbird (`{4a35421f-0906-439c-bff2-8eef39e2baee}`)
 
 This document summarizes the currently implemented reviewer-relevant behavior
-for add-on version 3.1.2.
+for add-on version 3.1.3.
 
 ---
 
@@ -50,7 +50,7 @@ for persisted monitoring (`browser.calendar.items.onCreated/onUpdated/onRemoved`
 
 ---
 
-## Reviewer Alignment Notes (3.1.2)
+## Reviewer Alignment Notes (3.1.3)
 
 - Core rules are explicit; fallback behavior is bounded and logged instead of relying on silent heuristics.
 - Active runtime paths touched in this release log failures explicitly; silent failure is not intended behavior.
@@ -92,7 +92,7 @@ for persisted monitoring (`browser.calendar.items.onCreated/onUpdated/onRemoved`
   - Talk HTML policy template (`talk_invitation_template`)
   - Share HTML policy templates (`share_html_block_template`, `share_password_template`)
   - Email signature HTML policy template (`email_signature_template`)
-  - bundled sanitizer: `DOMPurify 3.4.2` documented in `VENDOR.md`
+  - bundled sanitizer: `DOMPurify 3.4.7` documented in `VENDOR.md`
 - Backend policy availability is evaluated per policy domain. Older backend
   payloads without `policy.email_signature` disable only central email
   signatures with an update hint; Share/Talk policy domains remain active when
