@@ -1198,6 +1198,8 @@ async function save(){
     hasOnReply: true,
     hasOnForward: true
   };
+  // First setup stores credentials only here; reload policy so backend locks/defaults show immediately.
+  await refreshBackendPolicyStatus();
   await refreshTalkSystemAddressbookState({ forceRefresh: true });
   showStatus(i18n("options_status_saved"));
 }
