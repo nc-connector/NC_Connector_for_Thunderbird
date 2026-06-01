@@ -58,10 +58,6 @@
       || "[NCBG]";
   }
 
-  /**
-   * Resolve the DOMPurify global.
-   * @returns {any|null}
-   */
   function resolvePurify(){
     if (global.DOMPurify && typeof global.DOMPurify.sanitize === "function"){
       return global.DOMPurify;
@@ -177,10 +173,6 @@
     }
   }
 
-  /**
-   * Create one empty HTML-structure stats object.
-   * @returns {{available:boolean,elementCount:number,attributeCount:number,tagCounts:Object<string,number>,attributeCounts:Object<string,number>}}
-   */
   function createStructureStats(){
     return {
       available: false,

@@ -21,12 +21,6 @@
     return btoa(binary);
   }
 
-  /**
-   * Build a Basic Authorization header value.
-   * @param {string} user
-   * @param {string} password
-   * @returns {string}
-   */
   function buildAuthHeader(user, password){
     const raw = `${user || ""}:${password || ""}`;
     const encoded = encodeUtf8Base64(raw);

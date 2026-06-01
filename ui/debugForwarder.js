@@ -13,12 +13,6 @@
     global.NCLogContext?.resolveAddonLogPrefix?.("DebugForwarder")
     || "[NCUI][DebugForwarder]";
 
-  /**
-   * Report one internal helper failure without throwing.
-   * @param {(scope:string,error:any)=>void} onError
-   * @param {string} scope
-   * @param {any} reportedError
-   */
   function reportHelperError(onError, scope, reportedError){
     if (typeof onError !== "function"){
       return;
@@ -85,12 +79,6 @@
     });
   }
 
-  /**
-   * Convert debug payload values into transport-safe strings.
-   * @param {any} value
-   * @param {(scope:string,error:any)=>void} onError
-   * @returns {string}
-   */
   function formatLogArg(value, reportError){
     if (value == null){
       return String(value);

@@ -34,11 +34,6 @@
     }
   }
 
-  /**
-   * Check whether the extension already has host permission for one base URL
-   * @param {string} baseUrl
-   * @returns {Promise<boolean>}
-   */
   async function hasOriginPermission(baseUrl){
     const pattern = normalizeOriginPattern(baseUrl);
     if (!pattern){
@@ -93,12 +88,6 @@
     throw error;
   }
 
-  /**
-   * Request optional host permission for the given base URL (interactive by default).
-   * @param {string} baseUrl
-   * @param {{prompt?:boolean}} options
-   * @returns {Promise<boolean>}
-   */
   async function ensureOriginPermissionInteractive(baseUrl, options = {}){
     const pattern = normalizeOriginPattern(baseUrl);
     if (!pattern){

@@ -303,6 +303,8 @@ const NCEmailSignature = (() => {
 
     const identityEmail = await resolveIdentityEmail(details?.identityId);
     if (identityEmail !== policy.userEmail){
+      // Only the matching Nextcloud identity owns the managed signature slot.
+      // Other Thunderbird identities may use local or Signature Switch signatures.
       if (reason === "identity_changed" && TAB_STATE.get(tabId)?.matched){
         await clearOwnSignatureIfUnchanged(tabId, "identity_mismatch");
       }else{

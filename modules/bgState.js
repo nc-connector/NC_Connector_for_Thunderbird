@@ -113,11 +113,6 @@ function isBackgroundDebugEnabled(){
   return !!DEBUG_ENABLED;
 }
 
-/**
- * Wait helper used by popup focus retries.
- * @param {number} delayMs
- * @returns {Promise<void>}
- */
 function waitMs(delayMs){
   const delay = Math.max(0, Number(delayMs) || 0);
   if (!delay){
@@ -198,12 +193,6 @@ async function focusPopupWindowBestEffort(windowInfo, options = {}){
   return false;
 }
 
-/**
- * Shorten a token for log output.
- * @param {string} token
- * @param {{keepStart?:number, keepEnd?:number}} options
- * @returns {string}
- */
 function shortToken(token, { keepStart = 4, keepEnd = 3 } = {}){
   if (!token) return "";
   const str = String(token);

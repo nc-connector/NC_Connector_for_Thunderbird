@@ -11,22 +11,12 @@
 const RIGHTS_SEGMENT_START = NCShareTemplateContract.RIGHTS_SEGMENT_START;
 const RIGHTS_SEGMENT_END = NCShareTemplateContract.RIGHTS_SEGMENT_END;
 
-/**
- * Normalize permission markers for plain-text rendering.
- * @param {string} value
- * @returns {string}
- */
 function normalizeSharingPermissionMarkers(value){
   return String(value || "")
     .replace(/[✓✔✅☑]/g, "[x]")
     .replace(/[✗✘✕✖❌☒]/g, "[ ]");
 }
 
-/**
- * Normalize text for case-insensitive permission matching.
- * @param {string} value
- * @returns {string}
- */
 function normalizeSharingPermissionTerm(value){
   return String(value || "")
     .trim()
@@ -40,10 +30,6 @@ function isSharingPermissionMarker(line){
   return normalized === "[x]" || normalized === "[ ]";
 }
 
-/**
- * Build localized permission action terms.
- * @returns {Set<string>}
- */
 function getSharingPermissionActionTerms(){
   const terms = new Set([
     "read",
@@ -121,11 +107,6 @@ function getNextNonEmptySharingLineIndex(lines, fromIndex){
   return -1;
 }
 
-/**
- * @param {string[]} lines
- * @param {Set<string>} actionTerms
- * @returns {{start:number,end:number,entries:string[]}|null}
- */
 function findSharingPermissionBlock(lines, actionTerms){
   for (let i = 0; i < lines.length; i += 1){
     const marker = String(lines[i] || "").trim();
@@ -196,12 +177,6 @@ function isLikelySharingPermissionHeadingLine(line){
   return true;
 }
 
-/**
- * Find the nearest heading line before a permission marker block.
- * @param {string[]} lines
- * @param {number} markerStart
- * @returns {number}
- */
 function findSharingPermissionHeadingIndex(lines, markerStart){
   let index = markerStart - 1;
   while (index >= 0 && !String(lines[index] || "").trim()){
@@ -301,6 +276,8 @@ function frameSharingPlainTextBlock(plainText){
  */
 function finalizeSharingInsertPlainText(plainText){
   const rawPlainText = String(plainText || "").trim();
+  // Prefer our explicit rights markers; quoted mail text can contain similar
+  // words and must not be compacted as if it were an NC Connector block.
   const scopedPlainText = finalizeSharingRightsSegments(rawPlainText);
   const compactPlainText = scopedPlainText !== null
     ? scopedPlainText.trim()
@@ -311,11 +288,6 @@ function finalizeSharingInsertPlainText(plainText){
   return frameSharingPlainTextBlock(compactPlainText);
 }
 
-/**
- * Convert plain text to lightweight HTML for HTML compose editors.
- * @param {string} plainText
- * @returns {string}
- */
 function buildSharingInsertPlainHtml(plainText){
   if (typeof NCHtmlSanitizer?.plainTextToHtml !== "function"){
     throw new Error("sharing_template_plainhtml_converter_unavailable");
@@ -361,12 +333,6 @@ function resolveSharingInsertMode(details = {}){
   };
 }
 
-/**
- * Insert one HTML block segment near compose body start.
- * @param {string} currentBody
- * @param {string} blockHtml
- * @returns {string}
- */
 function insertSharingBlockSegment(currentBody, blockHtml){
   const body = String(currentBody || "");
   const segment = `<br>${blockHtml}<br><br>`;

@@ -19,10 +19,6 @@
     apiValidateUrl: null
   });
 
-  /**
-   * Build a mutable empty policy object.
-   * @returns {{hasPolicy:boolean,minLength:number|null,apiGenerateUrl:string|null,apiValidateUrl:string|null}}
-   */
   function createEmptyPolicy(){
     return {
       hasPolicy: false,
@@ -50,11 +46,6 @@
     };
   }
 
-  /**
-   * Read minimum password length from policy.
-   * @param {any} policy
-   * @returns {number|null}
-   */
   function getPolicyMinLength(policy){
     const normalized = normalizePolicy(policy);
     const minLength = Number(normalized.minLength);
@@ -98,11 +89,6 @@
     global.NCLogContext.safeConsoleError(prefix, message, reportedError);
   }
 
-  /**
-   * Fetch password policy from background.
-   * @param {{sendMessage?:(message:any)=>Promise<any>,logger?:(message:string,error:any)=>void,logPrefix?:string}} options
-   * @returns {Promise<{hasPolicy:boolean,minLength:number|null,apiGenerateUrl:string|null,apiValidateUrl:string|null}>}
-   */
   async function loadPolicy(options = {}){
     const sendMessage = options.sendMessage || ((message) => browser.runtime.sendMessage(message));
     const logger = options.logger || null;

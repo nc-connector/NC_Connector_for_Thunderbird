@@ -6,12 +6,6 @@
 (() => {
   'use strict';
 
-  /**
-   * Translate a message key using the WebExtension API.
-   * @param {string} key
-   * @param {string[]|string} subs
-   * @returns {string}
-   */
   const i18n = (key, subs) => {
     try{
       return browser.i18n.getMessage(key, subs);
@@ -34,11 +28,6 @@
     urlInput.value = url;
   }
 
-  /**
-   * Update the status line in the fallback dialog.
-   * @param {string} key
-   * @param {boolean} isError
-   */
   function setStatus(key, isError = false){
     if (!statusEl){
       return;
@@ -47,10 +36,6 @@
     statusEl.style.color = isError ? "#b00020" : "#1f1f1f";
   }
 
-  /**
-   * Copy the URL to the clipboard.
-   * @returns {Promise<void>}
-   */
   async function copyUrl(){
     if (!url){
       return;

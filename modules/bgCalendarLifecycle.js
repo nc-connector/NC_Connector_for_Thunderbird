@@ -10,11 +10,6 @@
  * main calendar synchronization flow.
  */
 
-/**
- * Normalize and validate an editor id for room-cleanup tracking.
- * @param {string} editorId
- * @returns {string}
- */
 function makeRoomCleanupEditorKey(editorId){
   if (typeof editorId !== "string"){
     return "";
@@ -26,11 +21,6 @@ function makeRoomCleanupEditorKey(editorId){
   return /^ed-[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/.test(value) ? value : "";
 }
 
-/**
- * Remove one pending room cleanup entry and clear its timer.
- * @param {string} token
- * @param {string} reason
- */
 function removeRoomCleanupEntry(token, reason = ""){
   if (!token) return;
   const entry = ROOM_CLEANUP_BY_TOKEN.get(token);
@@ -132,9 +122,6 @@ function handleCalendarItemsEditorClosed(event){
   }
 }
 
-/**
- * Drop stale calendar wizard contexts.
- */
 function pruneCalendarWizardContexts(){
   const cutoff = Date.now() - CALENDAR_WIZARD_CONTEXT_TTL_MS;
   for (const [contextId, entry] of CALENDAR_WIZARD_CONTEXTS.entries()){
@@ -167,10 +154,6 @@ function deleteCalendarWizardContext(contextId){
   CALENDAR_WIZARD_CONTEXTS.delete(contextId);
 }
 
-/**
- * Resolve the shared iCal parser API used by lifecycle snapshots.
- * @returns {object|null}
- */
 function getLifecycleIcalContract(){
   const api = globalThis?.NCIcalContract || null;
   if (!api){
@@ -186,11 +169,6 @@ function getLifecycleIcalContract(){
   return api;
 }
 
-/**
- * Check whether a ncCalToolbar snapshot contains serialized iCal.
- * @param {object} snapshot
- * @returns {boolean}
- */
 function calendarSnapshotHasIcal(snapshot){
   return !!(
     snapshot &&
@@ -204,11 +182,6 @@ function isCalendarSnapshotTimestamp(value){
   return typeof value === "number" && Number.isFinite(value);
 }
 
-/**
- * Extract live editor fields from a ncCalToolbar snapshot.
- * @param {object} snapshot
- * @returns {object}
- */
 function readCalendarSnapshotLiveEvent(snapshot){
   const event = {};
   for (const key of ["title", "location", "description", "descriptionHtml"]){
@@ -247,11 +220,6 @@ function mergeCalendarEventFields(base, update){
   return merged;
 }
 
-/**
- * Check whether a ncCalToolbar snapshot contains useful iCal or live editor data.
- * @param {object} snapshot
- * @returns {boolean}
- */
 function calendarSnapshotHasContent(snapshot){
   if (calendarSnapshotHasIcal(snapshot)){
     return true;

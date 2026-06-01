@@ -9,11 +9,6 @@
  * Owns compose-tab and sharing-wizard remote cleanup lifecycle.
  */
 
-/**
- * Normalize share-folder info payload for compose cleanup handling.
- * @param {object} folderInfo
- * @returns {{relativeFolder:string,relativeBase?:string,folderName?:string}|null}
- */
 function normalizeComposeShareCleanupFolderInfo(folderInfo){
   if (!folderInfo || typeof folderInfo !== "object"){
     return null;
@@ -40,12 +35,6 @@ function normalizeComposeShareCleanupFolderInfo(folderInfo){
   return normalized;
 }
 
-/**
- * Clear one sharing-wizard remote cleanup entry.
- * @param {number} windowId
- * @param {string} reason
- * @returns {boolean}
- */
 function clearSharingWizardRemoteCleanup(windowId, reason = ""){
   const entry = SHARING_WIZARD_CLEANUP_BY_WINDOW.get(windowId);
   if (!entry){
@@ -95,11 +84,6 @@ async function armSharingWizardRemoteCleanup(windowId, payload = {}){
   });
 }
 
-/**
- * Delete one armed sharing-wizard remote folder on server and clear state.
- * @param {number} windowId
- * @param {string} reason
- */
 async function deleteSharingWizardRemoteCleanupNow(windowId, reason = ""){
   const entry = SHARING_WIZARD_CLEANUP_BY_WINDOW.get(windowId);
   if (!entry){
@@ -124,12 +108,6 @@ async function deleteSharingWizardRemoteCleanupNow(windowId, reason = ""){
   }
 }
 
-/**
- * Clear one compose-share cleanup entry and cancel pending timers.
- * @param {number} tabId
- * @param {string} reason
- * @returns {boolean}
- */
 function clearComposeShareCleanup(tabId, reason = ""){
   const entry = COMPOSE_SHARE_CLEANUP_BY_TAB.get(tabId);
   if (!entry){
@@ -190,13 +168,6 @@ async function armComposeShareCleanup(tabId, payload = {}){
   });
 }
 
-/**
- * Update send state for one compose-share cleanup entry.
- * @param {number} tabId
- * @param {boolean} pending
- * @param {string} reason
- * @returns {boolean}
- */
 function setComposeShareCleanupSendPending(tabId, pending, reason = ""){
   const entry = COMPOSE_SHARE_CLEANUP_BY_TAB.get(tabId);
   if (!entry){
@@ -224,12 +195,6 @@ function setComposeShareCleanupSendPending(tabId, pending, reason = ""){
   return true;
 }
 
-/**
- * Delete one compose-share folder on the server and clear cleanup state.
- * @param {number} tabId
- * @param {string} reason
- * @returns {Promise<void>}
- */
 async function deleteComposeShareCleanupNow(tabId, reason = ""){
   const entry = COMPOSE_SHARE_CLEANUP_BY_TAB.get(tabId);
   if (!entry){
@@ -254,12 +219,6 @@ async function deleteComposeShareCleanupNow(tabId, reason = ""){
   }
 }
 
-/**
- * Schedule compose-share cleanup deletion.
- * @param {number} tabId
- * @param {string} reason
- * @param {number} delayMs
- */
 function scheduleComposeShareCleanupDelete(tabId, reason = "", delayMs = 0){
   const entry = COMPOSE_SHARE_CLEANUP_BY_TAB.get(tabId);
   if (!entry){
@@ -290,6 +249,8 @@ function scheduleComposeShareCleanupDelete(tabId, reason = "", delayMs = 0){
     executeDelete();
     return;
   }
+  // TB can remove the compose tab before onAfterSend reports success.
+  // Delay avoids deleting a share from a message that just left the outbox.
   entry.timerId = setTimeout(() => {
     const current = COMPOSE_SHARE_CLEANUP_BY_TAB.get(tabId);
     if (current){

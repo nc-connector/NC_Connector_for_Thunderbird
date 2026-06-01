@@ -67,11 +67,6 @@ const ALLOWED_IDENTICAL_KEYS_BY_LOCALE = {
 
 const PLACEHOLDER_MARKER = /(^|[^A-Z])(TODO|TBD|TRANSLATE_ME|PLACEHOLDER|FIXME)([^A-Z]|$)/;
 
-/**
- * Read and parse a locale catalog.
- * @param {string} filePath
- * @returns {Record<string, {message?: string}>}
- */
 function readJson(filePath){
   return JSON.parse(fs.readFileSync(filePath, "utf8"));
 }

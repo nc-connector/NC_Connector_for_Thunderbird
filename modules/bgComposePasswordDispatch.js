@@ -52,11 +52,6 @@ function normalizeComposeRecipientList(value){
   return out;
 }
 
-/**
- * Build a stable key for one compose recipient entry.
- * @param {string|{type?:string,id?:string,nodeId?:string}} recipient
- * @returns {string}
- */
 function composeRecipientKey(recipient){
   if (typeof recipient === "string"){
     const value = recipient.trim().toLowerCase();
@@ -77,11 +72,6 @@ function composeRecipientKey(recipient){
   return "";
 }
 
-/**
- * Count unique recipients in one password-dispatch queue.
- * @param {Array<object>} queue
- * @returns {number}
- */
 function countUniquePasswordDispatchRecipients(queue){
   const keys = new Set();
   for (const dispatch of queue){
@@ -133,12 +123,6 @@ async function extractComposeMailboxEmail(value){
   return "";
 }
 
-/**
- * Normalize one Thunderbird identity object.
- * @param {object} identity
- * @param {string} accountId
- * @returns {{id:string,email:string,accountId:string,name:string,label:string}|null}
- */
 function normalizeComposeIdentityRecord(identity, accountId = ""){
   if (!identity || typeof identity !== "object"){
     return null;
@@ -157,10 +141,6 @@ function normalizeComposeIdentityRecord(identity, accountId = ""){
   };
 }
 
-/**
- * List all readable Thunderbird sender identities for sender resolution.
- * @returns {Promise<Array<{id:string,email:string,accountId:string,name:string,label:string}>>}
- */
 async function listComposeSenderIdentityRecords(){
   const identityApi = browser?.identities;
   if (identityApi && typeof identityApi.list === "function"){
@@ -255,11 +235,6 @@ async function ensureSeparatePasswordDispatchIdentity(dispatch){
   };
 }
 
-/**
- * Build a localized subject for password-only follow-up mails.
- * @param {object} dispatch
- * @returns {string}
- */
 function buildSeparatePasswordMailSubject(dispatch){
   const shareLabel = String(dispatch?.shareLabel || "").trim();
   if (shareLabel){
@@ -282,11 +257,6 @@ function framePasswordDispatchPlainTextBlock(plainText){
   return [border, ...lines, border].join("\n");
 }
 
-/**
- * Finalize one password-dispatch plain-text block.
- * @param {string} plainText
- * @returns {string}
- */
 function finalizePasswordDispatchPlainText(plainText){
   const normalized = String(plainText || "").trim();
   if (!normalized){
@@ -295,11 +265,6 @@ function finalizePasswordDispatchPlainText(plainText){
   return framePasswordDispatchPlainTextBlock(normalized);
 }
 
-/**
- * Resolve whether follow-up password mail should use plain text or HTML.
- * @param {object} details
- * @returns {{isPlainText:boolean,reason:string,deliveryFormat:string}}
- */
 function resolvePasswordDispatchComposeMode(details = {}){
   const editorIsPlainText = details?.isPlainText === true;
   const deliveryFormat = typeof details?.deliveryFormat === "string"
@@ -612,12 +577,6 @@ async function enrichSeparatePasswordDispatchSourceIdentity(tabId, queue){
   }
 }
 
-/**
- * Cancel a delayed password-dispatch clear for one compose tab.
- * @param {number} tabId
- * @param {string} reason
- * @returns {boolean}
- */
 function cancelSeparatePasswordDispatchClear(tabId, reason = ""){
   const timerId = PASSWORD_MAIL_DISPATCH_CLEAR_TIMER_BY_TAB.get(tabId);
   if (!timerId){
@@ -640,11 +599,6 @@ function cancelSeparatePasswordDispatchClear(tabId, reason = ""){
   return true;
 }
 
-/**
- * Clear pending password dispatch state for one compose tab.
- * @param {number} tabId
- * @param {string} reason
- */
 function clearSeparatePasswordDispatch(tabId, reason = ""){
   cancelSeparatePasswordDispatchClear(tabId, reason || "clear");
   if (!PASSWORD_MAIL_DISPATCH_BY_TAB.has(tabId)){
@@ -657,12 +611,6 @@ function clearSeparatePasswordDispatch(tabId, reason = ""){
   });
 }
 
-/**
- * Take and clear pending password dispatch queue for one compose tab.
- * @param {number} tabId
- * @param {string} reason
- * @returns {Array<object>}
- */
 function takeSeparatePasswordDispatch(tabId, reason = ""){
   cancelSeparatePasswordDispatchClear(tabId, reason || "take");
   const queue = PASSWORD_MAIL_DISPATCH_BY_TAB.get(tabId);
@@ -710,11 +658,6 @@ function scheduleSeparatePasswordDispatchClear(tabId, reason = "", delayMs = 0){
   return true;
 }
 
-/**
- * Show a desktop notification after password-only follow-up mail delivery.
- * @param {number} recipientCount
- * @returns {Promise<void>}
- */
 async function showPasswordMailSuccessNotification(recipientCount){
   const count = Math.max(0, Number(recipientCount) || 0);
   if (count <= 0){
@@ -747,12 +690,6 @@ async function showPasswordMailSuccessNotification(recipientCount){
   }
 }
 
-/**
- * Show a desktop notification that manual password-mail send is required.
- * @param {number} recipientCount
- * @param {{requireSenderSelection?:boolean}} options
- * @returns {Promise<void>}
- */
 async function showPasswordMailManualRequiredNotification(recipientCount, options = {}){
   const count = Math.max(0, Number(recipientCount) || 0);
   const requireSenderSelection = !!options?.requireSenderSelection;
@@ -791,11 +728,6 @@ async function showPasswordMailManualRequiredNotification(recipientCount, option
   }
 }
 
-/**
- * Show a desktop notification that automatic password-mail delivery failed.
- * @param {number} recipientCount
- * @returns {Promise<void>}
- */
 async function showPasswordMailFailureNotification(recipientCount){
   const count = Math.max(0, Number(recipientCount) || 0);
   if (count <= 0){
@@ -937,6 +869,8 @@ async function waitForComposeAutoSendReady(composeTabId, expected = {}){
         toCount: actualTo.length
       };
       if (readyIdentity && readySubject && readyRecipients){
+        // getComposeDetails can expose the envelope before send commands settle.
+        // One short tick avoids intermittent empty-recipient sends on newer TB builds.
         await waitMs(250);
         L("sharing separate password compose ready", {
           composeTabId,
@@ -997,16 +931,15 @@ async function armManualPasswordFallbackCleanup(sourceTabId, manualComposeTabId,
 }
 
 /**
- * Keep the share when password-only dispatch fails after the primary mail
- * The sent message already contains the link, so post-send password-dispatch
- * problems must never delete the share.
+ * Log why the share stays after a password-only dispatch failure.
+ * The sent message already contains the link.
  * @param {number} sourceTabId
  * @param {object} dispatch
  * @param {string} reason
  * @returns {Promise<void>}
  */
-async function deleteShareAfterPasswordDispatchFailure(sourceTabId, dispatch, reason = ""){
-  L("sharing separate password failure cleanup skipped", {
+async function logPasswordDispatchShareRetention(sourceTabId, dispatch, reason = ""){
+  L("sharing separate password share kept after dispatch failure", {
     sourceTabId,
     reason: reason || "",
     relativeFolder: String(dispatch?.folderInfo?.relativeFolder || "").trim(),
@@ -1043,7 +976,7 @@ async function openManualPasswordFallbackQueue(sourceTabId, queue, failedCompose
         reason: reason || "",
         error: error?.message || String(error)
       });
-      await deleteShareAfterPasswordDispatchFailure(sourceTabId, dispatch, `${reason || "manual_fallback"}_open_failed`);
+      await logPasswordDispatchShareRetention(sourceTabId, dispatch, `${reason || "manual_fallback"}_open_failed`);
     }
   }
   L("sharing separate password manual fallback queue handled", {
@@ -1057,13 +990,6 @@ async function openManualPasswordFallbackQueue(sourceTabId, queue, failedCompose
   return { opened, failed, needsSender };
 }
 
-/**
- * Send the password-only follow-up mail after main compose send.
- * @param {number} tabId
- * @param {Array<object>} queue
- * @param {string} sendMode
- * @returns {Promise<void>}
- */
 async function sendSeparatePasswordMail(tabId, queue, sendMode = "sendNow"){
   if (!Array.isArray(queue) || !queue.length){
     return;

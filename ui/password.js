@@ -14,11 +14,6 @@
   const DIGITS = "23456789";
   const DEFAULT_SYMBOLS = "!@#$%^&*()-_=+?";
 
-  /**
-   * Return a random integer in the range [0, max).
-   * @param {number} max
-   * @returns {number}
-   */
   function getRandomInt(max){
     if (max <= 0){
       return 0;

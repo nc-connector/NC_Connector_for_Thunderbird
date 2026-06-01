@@ -26,11 +26,6 @@
     return typeof L === "function" ? "[NCBG]" : "[NCUI][Sharing]";
   }
 
-  /**
-   * Debug logger scoped to the sharing module.
-   * @param {object} opts
-   * @param {...any} args
-   */
   function logDebug(opts, ...args){
     if (typeof L === "function"){
       try{
@@ -73,11 +68,6 @@
     }
   }
 
-  /**
-   * Log internal sharing module errors.
-   * @param {string} scope
-   * @param {any} reportedError
-   */
   function logInternalError(scope, reportedError){
     globalThis.NCLogContext.safeConsoleError(getSharingRuntimePrefix(), scope, reportedError);
   }
@@ -87,12 +77,6 @@
     : null;
   const escapeHtml = NCTalkTextUtils.escapeHtml;
 
-  /**
-   * Translate a key with fallback to browser.i18n.
-   * @param {string} key
-   * @param {string[]|string} substitutions
-   * @returns {string}
-   */
   function i18n(key, substitutions = []){
     if (sharedTranslator){
       try{
@@ -120,10 +104,6 @@
     return key || "";
   }
 
-  /**
-   * Create a host-permission error with a localized message.
-   * @returns {Error}
-   */
   function hostPermissionError(){
     return new Error(i18n("error_host_permission_missing"));
   }
@@ -169,11 +149,6 @@
     return i18n(key, substitutions);
   }
 
-  /**
-   * Sanitize and normalize a share name for use in folder names.
-   * @param {string} value
-   * @returns {string}
-   */
   function sanitizeShareName(value){
     const fallback = i18n("sharing_share_default") || "Share";
     if (!value) return fallback;
@@ -181,12 +156,6 @@
     return normalized || fallback;
   }
 
-  /**
-   * Sanitize file names to avoid invalid path characters.
-   * @param {string} value
-   * @param {string} fallback
-   * @returns {string}
-   */
   function sanitizeFileName(value, fallback = "File"){
     if (!value && value !== 0) return fallback;
     const normalized = String(value).normalize("NFKC").replace(INVALID_PATH_CHARS, "_").trim();
@@ -233,11 +202,6 @@
     };
   }
 
-  /**
-   * Normalize and sanitize a relative directory for upload.
-   * @param {string} dir
-   * @returns {string}
-   */
   function sanitizeRelativeDir(dir){
     if (!dir) return "";
     return String(dir)
@@ -247,11 +211,6 @@
       .join("/");
   }
 
-  /**
-   * Check if a DAV path exists.
-   * @param {{davRoot:string,relativePath:string,authHeader:string}} options
-   * @returns {Promise<boolean>}
-   */
   async function pathExists({ davRoot, relativePath, authHeader }){
     const cleanPath = normalizeRelativePath(relativePath || "");
     if (!cleanPath){
@@ -359,19 +318,10 @@
     return true;
   }
 
-  /**
-   * Encode each path segment for DAV requests.
-   * @param {string} path
-   * @returns {string}
-   */
   function encodePath(path){
     return path.split("/").map((segment) => encodeURIComponent(segment)).join("/");
   }
 
-  /**
-   * Build a temporary upload folder name for Nextcloud chunked upload v2.
-   * @returns {string}
-   */
   function buildChunkUploadId(){
     if (globalThis.crypto && typeof globalThis.crypto.randomUUID === "function"){
       return `ncconnector-${globalThis.crypto.randomUUID()}`;
@@ -380,21 +330,11 @@
     return `ncconnector-${Date.now().toString(36)}-${random}`;
   }
 
-  /**
-   * Decide whether a file should use Nextcloud chunked upload v2.
-   * @param {File|Blob} file
-   * @returns {boolean}
-   */
   function shouldUseChunkedUpload(file){
     const size = Number(file?.size) || 0;
     return size > DIRECT_UPLOAD_LIMIT_BYTES;
   }
 
-  /**
-   * Calculate a chunk size that stays inside Nextcloud chunk-count limits.
-   * @param {number} fileSize
-   * @returns {number}
-   */
   function getChunkSize(fileSize){
     const minimumForChunkLimit = Math.ceil((Number(fileSize) || 0) / CHUNK_UPLOAD_MAX_CHUNKS);
     return Math.max(CHUNK_UPLOAD_CHUNK_SIZE_BYTES, CHUNK_UPLOAD_MIN_CHUNK_BYTES, minimumForChunkLimit);
@@ -662,11 +602,6 @@
     });
   }
 
-  /**
-   * Convert permission flags into a Nextcloud permission mask.
-   * @param {{read?:boolean,write?:boolean,create?:boolean,delete?:boolean}} perms
-   * @returns {number}
-   */
   function buildPermissionMask(perms){
     let mask = 0;
     if (perms?.read) mask |= PERMISSION_FLAGS.read;
@@ -782,11 +717,6 @@
     return btoa(binary);
   }
 
-  /**
-   * Load a packaged asset and return a base64 payload.
-   * @param {string} assetPath
-   * @returns {Promise<string>}
-   */
   async function loadAssetBase64(assetPath){
     if (typeof browser === "undefined" || !browser?.runtime?.getURL){
       return "";
@@ -938,12 +868,6 @@
     return normalizePlainTextBlock(NCHtmlSanitizer.htmlToPlainText(String(html || "")));
   }
 
-  /**
-   * Build one plain-text key/value line.
-   * @param {string} label
-   * @param {string} value
-   * @returns {string}
-   */
   function buildPlainTextField(label, value){
     const normalizedValue = String(value || "").trim();
     if (!normalizedValue){
@@ -1019,12 +943,6 @@
     }, String(template || ""));
   }
 
-  /**
-   * Replace all placeholders in a template string.
-   * @param {string} template
-   * @param {Record<string,string>} replacements
-   * @returns {string}
-   */
   function applyTemplateReplacements(template, replacements){
     let output = String(template || "");
     Object.keys(replacements || {}).forEach((key) => {
@@ -1307,12 +1225,6 @@
     return plainText;
   }
 
-  /**
-   * Build a two-column HTML row for the share block.
-   * @param {string} label
-   * @param {string} valueHtml
-   * @returns {string}
-   */
   function buildTableRow(label, valueHtml){
     if (!valueHtml){
       return "";
@@ -1349,11 +1261,6 @@
     return `<table style="border-collapse:collapse;"><tr>${cells}</tr></table>`;
   }
 
-  /**
-   * Build the public ZIP download URL from a Nextcloud public share URL.
-   * @param {string} shareUrl
-   * @returns {string}
-   */
   function buildZipDownloadUrl(shareUrl){
     const base = String(shareUrl || "").trim();
     if (!base){
@@ -1535,11 +1442,6 @@
     logDebug(opts, "share:updateMeta:done", { shareId: shareInfo.shareId });
   }
 
-  /**
-   * Delete the share folder on the server.
-   * @param {{folderInfo:Object}} options
-   * @returns {Promise<boolean>}
-   */
   async function deleteShareFolder({ folderInfo } = {}){
     if (!folderInfo?.relativeFolder){
       return false;

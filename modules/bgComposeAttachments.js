@@ -23,11 +23,6 @@ function createSharingLaunchContextId(){
   return `sharing-${Date.now()}-${rand}`;
 }
 
-/**
- * Store a one-time launch context for the compose sharing wizard.
- * @param {object} entry
- * @returns {string}
- */
 function setSharingLaunchContext(entry){
   pruneSharingLaunchContexts();
   const contextId = createSharingLaunchContextId();
@@ -41,11 +36,6 @@ function setSharingLaunchContext(entry){
   return contextId;
 }
 
-/**
- * Read and consume a one-time launch context.
- * @param {string} contextId
- * @returns {object|null}
- */
 function takeSharingLaunchContext(contextId){
   if (!contextId) return null;
   pruneSharingLaunchContexts();
@@ -58,10 +48,6 @@ function takeSharingLaunchContext(contextId){
   return entry;
 }
 
-/**
- * Clear pending threshold-evaluation timer for one compose tab.
- * @param {number} tabId
- */
 function clearComposeAttachmentEvalTimer(tabId){
   const timerId = ATTACHMENT_EVAL_TIMER_BY_TAB.get(tabId);
   if (!timerId){
@@ -75,10 +61,6 @@ function clearComposeAttachmentEvalTimer(tabId){
   ATTACHMENT_EVAL_TIMER_BY_TAB.delete(tabId);
 }
 
-/**
- * Debounce threshold-evaluation after attachment changes.
- * @param {number} tabId
- */
 function scheduleComposeAttachmentEvaluation(tabId){
   if (!Number.isInteger(tabId) || tabId <= 0){
     return;
@@ -97,11 +79,6 @@ function scheduleComposeAttachmentEvaluation(tabId){
   });
 }
 
-/**
- * Queue one added attachment for threshold batch handling.
- * @param {number} tabId
- * @param {object} attachment
- */
 function queueComposeAddedAttachment(tabId, attachment){
   if (!Number.isInteger(tabId) || tabId <= 0){
     return;
@@ -119,11 +96,6 @@ function queueComposeAddedAttachment(tabId, attachment){
   ATTACHMENT_PENDING_ADDED_BY_TAB.set(tabId, [entry]);
 }
 
-/**
- * Read and clear one tab's pending added-attachment batch.
- * @param {number} tabId
- * @returns {Array<{id:number,name:string,sizeBytes:number}>}
- */
 function takeComposeAddedAttachmentBatch(tabId){
   const list = ATTACHMENT_PENDING_ADDED_BY_TAB.get(tabId);
   ATTACHMENT_PENDING_ADDED_BY_TAB.delete(tabId);
@@ -217,10 +189,6 @@ async function assertAttachmentAutomationAllowed(stage, tabId, details = {}){
   return { ok:false, thresholdMb: settings.thresholdMb };
 }
 
-/**
- * Read compose attachment automation settings from storage.
- * @returns {Promise<{alwaysConnector:boolean,offerAboveEnabled:boolean,thresholdMb:number,thresholdBytes:number}>}
- */
 async function getComposeAttachmentAutomationSettings(){
   const keys = SHARING_KEYS || {};
   const stored = await browser.storage.local.get([
@@ -275,11 +243,6 @@ async function getComposeAttachmentAutomationSettings(){
   };
 }
 
-/**
- * Return attachment size in bytes.
- * @param {object} attachment
- * @returns {number}
- */
 function getAttachmentSizeBytes(attachment){
   if (!attachment){
     return 0;
@@ -345,13 +308,6 @@ function createAttachmentPromptId(){
   return `attach-prompt-${Date.now()}-${rand}`;
 }
 
-/**
- * Resolve an open attachment threshold prompt.
- * @param {string} promptId
- * @param {"share"|"remove_last"|"dismiss"} decision
- * @param {string} source
- * @returns {boolean}
- */
 function resolveAttachmentPrompt(promptId, decision = "dismiss", source = ""){
   const entry = ATTACHMENT_PROMPT_BY_ID.get(promptId);
   if (!entry){
@@ -414,11 +370,6 @@ async function openSharingWizardWindow(tabId, launchContext = null){
   return windowInfo;
 }
 
-/**
- * List attachments currently present in one compose tab.
- * @param {number} tabId
- * @returns {Promise<Array<object>>}
- */
 async function listComposeAttachments(tabId){
   const attachments = await browser.compose.listAttachments(tabId);
   if (!Array.isArray(attachments)){
@@ -462,12 +413,6 @@ async function collectComposeAttachmentFiles(tabId, attachments){
   return out;
 }
 
-/**
- * Remove selected attachments from compose tab.
- * @param {number} tabId
- * @param {Array<number|string>} attachmentIds
- * @returns {Promise<void>}
- */
 async function removeComposeAttachments(tabId, attachmentIds){
   const ids = Array.isArray(attachmentIds) ? attachmentIds : [];
   L("compose attachments remove requested", { tabId, count: ids.length });
@@ -484,11 +429,6 @@ async function removeComposeAttachments(tabId, attachmentIds){
   }
 }
 
-/**
- * Build reason payload for attachment-mode sharing wizard launches.
- * @param {{trigger?:string,totalBytes?:number,thresholdMb?:number,lastAdded?:object}} options
- * @returns {object}
- */
 function buildAttachmentLaunchReason({ trigger, totalBytes, thresholdMb, lastAdded } = {}){
   if (trigger === "threshold"){
     return {
@@ -728,12 +668,6 @@ async function evaluateComposeAttachmentThreshold(tabId){
   L("compose attachment threshold decision", { tabId, decision: "dismiss" });
 }
 
-/**
- * Listener callback for compose.onAttachmentAdded.
- * @param {object} tab
- * @param {object} attachment
- * @returns {Promise<void>}
- */
 async function handleComposeAttachmentAdded(tab, attachment){
   const tabId = Number(tab?.id);
   if (!Number.isInteger(tabId) || tabId <= 0){
@@ -749,11 +683,6 @@ async function handleComposeAttachmentAdded(tab, attachment){
   scheduleComposeAttachmentEvaluation(tabId);
 }
 
-/**
- * Cleanup attachment automation runtime state for one compose tab.
- * @param {number} tabId
- * @param {string} reason
- */
 function cleanupComposeAttachmentTabState(tabId, reason = ""){
   if (!Number.isInteger(tabId) || tabId <= 0){
     return;

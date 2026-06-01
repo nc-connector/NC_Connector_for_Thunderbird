@@ -75,11 +75,6 @@ function readVcardTextProperty(card, propertyName, contract){
   return String(contract.stringifyValue(prop.getFirstValue()) || "").trim();
 }
 
-/**
- * Build label from N property payload when FN is missing.
- * @param {any} value
- * @returns {string}
- */
 function buildLabelFromVcardName(value){
   if (Array.isArray(value)){
     const family = String(value[0] || "").trim();
@@ -186,11 +181,6 @@ function extractMimeFromDataUrl(dataUrl){
   return match && match[1] ? match[1].toLowerCase() : "";
 }
 
-/**
- * Build a photo data URL from a card photo payload.
- * @param {{data?:string, value?:string, mime?:string}|string} photo
- * @returns {{dataUrl:string,mime:string}|null}
- */
 function createPhotoDataUrl(photo){
   if (!photo) return null;
   const raw = String(photo.raw || "").trim();
@@ -283,11 +273,6 @@ async function getSystemAddressbookContacts(force = false){
   return contacts;
 }
 
-/**
- * Filter system addressbook contacts by term and limit.
- * @param {{searchTerm?:string, limit?:number, forceRefresh?:boolean}} param0
- * @returns {Promise<Array<{id:string,label:string,email:string,avatarDataUrl:string|null}>>}
- */
 async function searchSystemAddressbook({ searchTerm = "", limit = 200, forceRefresh = false } = {}){
   const contacts = await getSystemAddressbookContacts(forceRefresh);
   const term = String(searchTerm || "").trim().toLowerCase();
@@ -314,11 +299,6 @@ async function searchSystemAddressbook({ searchTerm = "", limit = 200, forceRefr
   }));
 }
 
-/**
- * Check whether the system addressbook is currently reachable.
- * @param {{forceRefresh?:boolean}} param0
- * @returns {Promise<{available:boolean,count:number,error:string}>}
- */
 async function getSystemAddressbookStatus({ forceRefresh = false } = {}){
   try{
     const contacts = await getSystemAddressbookContacts(!!forceRefresh);

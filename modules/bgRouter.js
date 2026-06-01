@@ -154,6 +154,8 @@ browser.runtime.onMessage.addListener((msg, sender) => {
       if (typeof fields.descriptionHtml === "string"){
         if (typeof NCHtmlSanitizer === "undefined"
           || typeof NCHtmlSanitizer.sanitizeTalkTemplateHtml !== "function"){
+          // This bridge writes into the privileged calendar editor.
+          // Raw backend HTML must not cross it.
           console.error("[NCBG] talk:applyEventFields sanitizer unavailable");
           throw localizedError("talk_error_apply_failed");
         }

@@ -139,11 +139,6 @@ async function setRoomMeta(token, data = {}){
   }
 }
 
-/**
- * Remove cached room metadata for a token.
- * @param {string} token
- * @returns {Promise<void>}
- */
 async function deleteRoomMeta(token){
   if (!token || !ROOM_META[token]) return;
   delete ROOM_META[token];
@@ -154,11 +149,6 @@ async function deleteRoomMeta(token){
   }
 }
 
-/**
- * Read cached room metadata for a token.
- * @param {string} token
- * @returns {object|null}
- */
 function getRoomMeta(token){
   if (!token) return null;
   return ROOM_META[token] || null;
@@ -222,12 +212,6 @@ async function setEventTokenEntry(calendarId, itemId, entry){
   }
 }
 
-/**
- * Remove the token mapping for a calendar item.
- * @param {string} calendarId
- * @param {string} itemId
- * @returns {Promise<void>}
- */
 async function removeEventTokenEntry(calendarId, itemId){
   const key = makeEventMapKey(calendarId, itemId);
   if (!key || !EVENT_TOKEN_MAP[key]){
@@ -349,10 +333,6 @@ async function applyCalendarDelegation(payload = {}){
   return { ok:true, result };
 }
 
-/**
- * Resolve shared iCal parser API.
- * @returns {object|null}
- */
 function getIcalContractApi(){
   if (
     typeof NCIcalContract === "undefined" ||
@@ -538,11 +518,6 @@ async function addInviteesToTalkRoom({ token, ical, addUsers = true, addGuests =
   return { ok: failed === 0, total: attendees.length, added, failed };
 }
 
-/**
- * Parse a boolean-like property value.
- * @param {string|boolean|number} value
- * @returns {boolean|null}
- */
 function parseBooleanProp(value){
   if (typeof value === "boolean") return value;
   if (typeof value === "string"){
@@ -553,11 +528,6 @@ function parseBooleanProp(value){
   return null;
 }
 
-/**
- * Parse a numeric property value.
- * @param {string|number} value
- * @returns {number|null}
- */
 function parseNumberProp(value){
   if (typeof value === "number" && Number.isFinite(value)){
     return value;
@@ -571,11 +541,6 @@ function parseNumberProp(value){
   return null;
 }
 
-/**
- * Extract event properties and start/end fields from VEVENT.
- * @param {string} ical
- * @returns {{props:Object,dtStart:{value:string,tzid:string}|null,dtEnd:{value:string,tzid:string}|null}}
- */
 function parseIcalEventData(ical){
   const contract = getIcalContractApi();
   if (!contract){
@@ -672,12 +637,6 @@ function applyIcalPropertyUpdates(ical, updates){
   return contract.applyEventPropertyUpdates(ical, updates);
 }
 
-/**
- * Persist metadata updates back to the calendar item.
- * @param {{calendarId:string,id:string,format:string,item:string}} item
- * @param {Object<string,string|null>} updates
- * @returns {Promise<boolean>}
- */
 async function updateCalendarItemProps(item, updates){
   if (!item || item.format !== "ical" || !item.item){
     return false;
@@ -820,6 +779,8 @@ async function handleCalendarItemUpsert(item){
           const currentUser = (currentUserRaw || "").trim().toLowerCase();
           const delegateId = delegateIdRaw.toLowerCase();
           if (currentUser && delegateId && currentUser !== delegateId){
+            // After delegation the current user may no longer moderate the room.
+            // Skip participant sync instead of touching another moderator's room.
             canSync = false;
             L("invitee sync skipped (delegate mismatch)", {
               token: shortToken(meta.token),

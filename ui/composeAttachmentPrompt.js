@@ -57,11 +57,6 @@
   window.addEventListener("beforeunload", cleanupPromptResources, true);
   window.addEventListener("unload", cleanupPromptResources, true);
 
-  /**
-   * Resolve prompt decision and close popup window.
-   * @param {"share"|"remove_last"|"dismiss"} decision
-   * @returns {Promise<void>}
-   */
   async function resolvePrompt(decision){
     if (resolved){
       return;
@@ -93,10 +88,6 @@
     await closePromptWindow();
   }
 
-  /**
-   * Initialize debug logging before enabling prompt actions.
-   * @returns {Promise<void>}
-   */
   async function bootstrapPrompt(){
     await initDebugLogging();
     shareBtn.disabled = false;
@@ -111,10 +102,6 @@
     });
   }
 
-  /**
-   * Load and live-mirror the debug flag for this prompt.
-   * @returns {Promise<void>}
-   */
   async function initDebugLogging(){
     disposeDebugFlagMirror?.();
     disposeDebugFlagMirror = null;

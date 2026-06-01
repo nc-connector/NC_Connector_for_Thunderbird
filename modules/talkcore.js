@@ -5,10 +5,6 @@
  */
 'use strict';
 
-/**
- * Return stored add-on credentials via NCCore.getOpts().
- * @returns {Promise<{baseUrl:string,user:string,appPass:string,debugEnabled:boolean,authMode:string}>}
- */
 async function getOpts(){
   return NCCore.getOpts();
 }
@@ -17,10 +13,6 @@ const resolveTalkCoreLogPrefix = () =>
   globalThis.NCLogContext?.resolveAddonLogPrefix?.("TalkCore")
   || "[NCBG]";
 
-/**
- * Build a standard host-permission error.
- * @returns {Error}
- */
 function hostPermissionError(){
   if (typeof localizedError === "function"){
     return localizedError("error_host_permission_missing");
@@ -118,11 +110,6 @@ function parseEventSupportFlag(data){
   return { status:null, hint:"" };
 }
 
-/**
- * Extract a major version from various field formats.
- * @param {*} value - Version field in string/number/object form
- * @returns {number|null} - Major version or null
- */
 function parseMajorVersion(value){
   if (value == null) return null;
   if (typeof value === "number"){
@@ -325,9 +312,6 @@ async function getEventConversationSupport(){
   L("event support indeterminate", { reason: aggregatedReason });
   return { supported:null, reason: aggregatedReason };
 }
-/**
- * Trim and normalize room descriptions.
- */
 function sanitizeDescription(desc){
   if (!desc) return "";
   return String(desc).trim();
@@ -348,10 +332,6 @@ async function buildRoomDescription(baseDescription, url, password){
   return parts.join("\n\n").trim();
 }
 
-/**
- * Resolve the configured language override for event description blocks.
- * @returns {Promise<string>}
- */
 async function getEventDescriptionLang(){
   if (!browser?.storage?.local){
     return "default";
@@ -365,13 +345,6 @@ async function getEventDescriptionLang(){
   }
 }
 
-/**
- * Translate event description strings for the given language.
- * @param {string} lang
- * @param {string} key
- * @param {string[]|string} substitutions
- * @returns {Promise<string>}
- */
 async function descriptionI18n(lang, key, substitutions = []){
   if (typeof NCI18nOverride !== "undefined" && typeof NCI18nOverride.tInLang === "function"){
     const msg = await NCI18nOverride.tInLang(lang, key, substitutions);

@@ -29,11 +29,6 @@ const NCCore = (() => {
     return error;
   }
 
-  /**
-   * Normalize a base URL and enforce HTTPS.
-   * @param {string} input - User input from settings.
-   * @returns {string} - Normalized base URL or empty string.
-   */
   function normalizeBaseUrl(input){
     if (!input) return "";
     const raw = String(input).trim();
@@ -297,19 +292,10 @@ const NCCore = (() => {
     throw createLoginFlowError();
   }
 
-  /**
-   * Return a promise that resolves after the given milliseconds.
-   * @param {number} ms - Delay in milliseconds.
-   * @returns {Promise<void>}
-   */
   function delay(ms){
     return new Promise((resolve) => setTimeout(resolve, Math.max(ms || 0, 50)));
   }
 
-  /**
-   * Return stored credentials with a normalized base URL.
-   * @returns {Promise<{baseUrl:string,user:string,appPass:string,debugEnabled:boolean,authMode:string}>}
-   */
   async function getOpts(){
     if (typeof browser === "undefined" || !browser?.storage?.local){
       return {
