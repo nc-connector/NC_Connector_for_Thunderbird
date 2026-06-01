@@ -2,7 +2,28 @@
 
 All notable changes to **NC Connector for Thunderbird** will be documented in this file.
 
-This project targets **Thunderbird ESR 140.\***.
+This project targets **Thunderbird ESR 140.\*** through **153.\***.
+
+## 3.1.3
+
+### Added
+- First-run setup now guides the user more clearly before a Nextcloud URL and app password are available.
+
+### Changed
+- Options refresh backend policy after saving connection settings.
+- Policy handling in options and wizards now uses shared UI bindings.
+- Password-policy and backend-policy helper code was moved into shared modules.
+- UI error logging now goes through the shared safe logger where teardown races can happen.
+- Runtime comments, helper docs, and old changelog wording were trimmed.
+- Bundled DOMPurify was updated to 3.4.7.
+- Generated share password HTML no longer contains inline JavaScript handlers.
+
+### Fixed
+- Separate password follow-up mails are kept until Thunderbird reports the send result, which fixes send races on newer Thunderbird builds.
+- Talk rooms are deleted again when lobby setup fails after room creation.
+- Talk rooms are cleaned up when writing the event data back to Thunderbird fails.
+- Basic-auth header encoding no longer uses deprecated `unescape()`.
+- Error fallback logging keeps the original error and the logging error separate.
 
 ## 3.1.2
 

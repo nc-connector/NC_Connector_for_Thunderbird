@@ -23,7 +23,7 @@ This is a community project and is not an official Nextcloud GmbH product.
 - **Direct Nextcloud integration**
   Login Flow V2, automatic room tracking, and debug logs in [NCBG], [NCUI][Talk], [NCUI][Sharing], [NCUI][Options], [NCUI][OpenUrlFallback], and [ncCalToolbar] help with troubleshooting.
 - **ESR-ready**
-  Optimized and tested for Thunderbird ESR 140.X with a minimal experiment footprint.
+  Optimized and tested for Thunderbird ESR 140.X through 153.X with a minimal experiment footprint.
 
 ## Changelog
 
@@ -81,13 +81,13 @@ See [`CHANGELOG.md`](https://github.com/nc-connector/NC_Connector_for_Thunderbir
 - Full internationalization (see [`Translations.md`](https://github.com/nc-connector/NC_Connector_for_Thunderbird/blob/main/Translations.md)) and structured debug logs for support cases, including attachment automation traces in `[NCBG]` and `[NCUI][Sharing]`.
 
 ## System requirements
-- Thunderbird ESR 140.X (Windows/macOS/Linux)
+- Thunderbird ESR 140.X through 153.X (Windows/macOS/Linux)
 - Nextcloud with Talk & Sharing (DAV) enabled
 - Active Nextcloud system address book access (required for moderator/user search and participant toggles "Add users" / "Add guests")
 - App password or Login Flow V2
 
 ## Installation
-1. Install the current XPI release (for example `nc4tb-3.1.2.xpi`) in Thunderbird (Add-ons > Gear > Install Add-on From File).
+1. Install the current XPI release (for example `nc4tb-3.1.3.xpi`) in Thunderbird (Add-ons > Gear > Install Add-on From File).
 2. Restart Thunderbird.
 3. In the add-on options, enter base URL, user, and app password or start the login flow.
 

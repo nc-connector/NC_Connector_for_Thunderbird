@@ -25,7 +25,7 @@ Ist das optionale NC-Connector-Backend installiert, koennen Talk- und Sharing-De
 - **Nahtlose Nextcloud-Integration** 
 Login-Flow V2, automatische Raumverfolgung sowie Debug-Logs in [NCBG], [NCUI][Talk], [NCUI][Sharing], [NCUI][Options], [NCUI][OpenUrlFallback] und [ncCalToolbar] helfen beim Troubleshooting.
 - **ESR-ready** 
-Optimiert und getestet für Thunderbird ESR 140.X mit minimalem Experiment-Anteil.
+Optimiert und getestet für Thunderbird ESR 140.X bis 153.X mit minimalem Experiment-Anteil.
 
 ## Changelog
 
@@ -83,14 +83,14 @@ Siehe [`CHANGELOG.md`](https://github.com/nc-connector/NC_Connector_for_Thunderb
 - Vollständige Internationalisierung (siehe [`Translations.md`](https://github.com/nc-connector/NC_Connector_for_Thunderbird/blob/main/Translations.md)) und strukturierte Debug-Logs für Support-Fälle, inklusive Attachment-Flow in `[NCBG]` und `[NCUI][Sharing]`.
 
 ## Systemvoraussetzungen
-- Thunderbird ESR 140.X (Windows/macOS/Linux)
+- Thunderbird ESR 140.X bis 153.X (Windows/macOS/Linux)
 - Nextcloud mit Talk & Freigabe (DAV) aktiviert
 - Aktivierter Zugriff auf das Nextcloud-Systemadressbuch (erforderlich für Moderator-/Benutzersuche und die Teilnehmer-Toggles "Benutzer hinzufügen" / "Gäste hinzufügen")
 - App-Passwort oder Login Flow V2
 
 ## Installation
 1. Aktuelle XPI 
-`nc4tb-3.1.2.xpi` (oder aktuelles Release-Artefakt) in Thunderbird installieren (`Add-ons -> Zahnrad -> Add-on aus Datei installieren`).
+`nc4tb-3.1.3.xpi` (oder aktuelles Release-Artefakt) in Thunderbird installieren (`Add-ons -> Zahnrad -> Add-on aus Datei installieren`).
 2. Thunderbird neu starten.
 3. In den Add-on-Optionen Basis-URL, Benutzer und App-Passwort hinterlegen oder den Login Flow starten.
 

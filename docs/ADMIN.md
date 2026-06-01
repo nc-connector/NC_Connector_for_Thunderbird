@@ -44,8 +44,8 @@ Related docs:
 ## 1. Supported versions & requirements
 
 Thunderbird:
-- Target: **Thunderbird ESR 140.\***  
-  Enforced by `manifest.json` (`strict_min_version: 140.0`, `strict_max_version: 140.*`).
+- Target: **Thunderbird ESR 140.x through 153.x**
+  Enforced by `manifest.json` (`strict_min_version: 140.0`, `strict_max_version: 153.*`).
 
 Nextcloud:
 - A Nextcloud instance with:
