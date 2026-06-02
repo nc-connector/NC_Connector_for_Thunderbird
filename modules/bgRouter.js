@@ -406,7 +406,20 @@ browser.runtime.onMessage.addListener((msg, sender) => {
     try{
       const result = await NCCore.testCredentials(msg.payload || {});
       if (result.ok){
-        return { ok:true, message: result.message || "", version: result.version || "" };
+        let policyStatus = null;
+        try{
+          if (typeof NCPolicyRuntime !== "undefined" && NCPolicyRuntime?.probePolicyStatus){
+            policyStatus = await NCPolicyRuntime.probePolicyStatus({
+              ...(msg.payload || {}),
+              source: "options_test"
+            });
+          }else{
+            L("options test connection policy probe skipped", { reason: "policy_runtime_unavailable" });
+          }
+        }catch(error){
+          console.error("[NCBG] options:testConnection policy probe failed", error);
+        }
+        return { ok:true, message: result.message || "", version: result.version || "", policyStatus };
       }
       return { ok:false, error: result.message || bgI18n("error_credentials_missing"), code: result.code || "" };
     }catch(error){

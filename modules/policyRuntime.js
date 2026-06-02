@@ -64,6 +64,50 @@ const NCPolicyRuntime = (() => {
     };
   }
 
+  function buildPolicyResponseDebug(response, endpointUrl, raw = ""){
+    const details = {
+      status: Number(response?.status) || 0,
+      statusText: String(response?.statusText || ""),
+      endpointUrl: String(endpointUrl || ""),
+      responseUrl: String(response?.url || ""),
+      contentType: "",
+      rawLength: String(raw || "").length
+    };
+    try{
+      details.contentType = String(response?.headers?.get?.("content-type") || "");
+    }catch(error){
+      details.headerReadError = error?.message || String(error);
+    }
+    return details;
+  }
+
+  function buildPolicyStatusDebug(result, source = ""){
+    return {
+      source: String(source || ""),
+      reason: String(result?.reason || ""),
+      endpointAvailable: !!result?.endpointAvailable,
+      endpointChecked: !!result?.endpointChecked,
+      endpointUrl: String(result?.endpointUrl || ""),
+      policyActive: !!result?.policyActive,
+      seatAssigned: !!result?.status?.seatAssigned,
+      seatState: String(result?.status?.seatState || ""),
+      isValid: result?.status?.isValid === true,
+      domains: {
+        share: result?.policyDomains?.share?.active === true,
+        talk: result?.policyDomains?.talk?.active === true,
+        emailSignature: result?.policyDomains?.email_signature?.active === true
+      }
+    };
+  }
+
+  function logPolicyFallback(scope, details, optionalProbe){
+    if (optionalProbe){
+      L(scope, details);
+      return;
+    }
+    globalThis.NCLogContext.safeConsoleError("[NCBG]", scope, details);
+  }
+
   /**
    * Normalize server payload into internal runtime status shape.
    * @param {any} payload
@@ -129,25 +173,33 @@ const NCPolicyRuntime = (() => {
     };
   }
 
-  /**
-   * Read backend status live from the backend endpoint.
-   * @returns {Promise<object>}
-   */
-  async function getPolicyStatus(){
-    const opts = await NCCore.getOpts();
-    const baseUrl = String(opts?.baseUrl || "").trim();
-    const user = String(opts?.user || "").trim();
-    const appPass = String(opts?.appPass || "");
-    if (!baseUrl || !user || !appPass){
+  async function readPolicyStatusFromCredentials({
+    baseUrl,
+    user,
+    appPass,
+    source = "runtime",
+    optionalProbe = false
+  } = {}){
+    const normalizedBaseUrl = NCCore.normalizeBaseUrl(String(baseUrl || "").trim());
+    const trimmedUser = String(user || "").trim();
+    const password = String(appPass || "");
+    if (!normalizedBaseUrl || !trimmedUser || !password){
+      L("policy status skipped", {
+        source,
+        reason: "credentials_missing",
+        hasBaseUrl: !!normalizedBaseUrl,
+        hasUser: !!trimmedUser,
+        hasAppPass: !!password
+      });
       return buildLocalModeResult("credentials_missing", {
         endpointChecked: false
       });
     }
 
-    const endpointUrl = buildStatusEndpointUrl(baseUrl);
+    const endpointUrl = buildStatusEndpointUrl(normalizedBaseUrl);
     try{
       if (typeof NCHostPermissions !== "undefined" && NCHostPermissions?.requireOriginPermission){
-        await NCHostPermissions.requireOriginPermission(baseUrl, {
+        await NCHostPermissions.requireOriginPermission(normalizedBaseUrl, {
           message: bgI18n("error_host_permission_missing"),
           scope: "policy status host permission missing",
           logMissing: true
@@ -155,12 +207,15 @@ const NCPolicyRuntime = (() => {
       }
     }catch(error){
       const localResult = buildLocalModeResult("permission_missing", {
-        endpointChecked: false
+        endpointChecked: false,
+        endpointUrl
       });
-      globalThis.NCLogContext.safeConsoleError("[NCBG]", "policy status fallback", {
+      logPolicyFallback("policy status fallback", {
+        source,
         reason: localResult.reason,
+        endpointUrl,
         error: error?.message || String(error)
-      });
+      }, optionalProbe);
       return localResult;
     }
 
@@ -169,7 +224,7 @@ const NCPolicyRuntime = (() => {
       response = await fetch(endpointUrl, {
         method: "GET",
         headers: {
-          "Authorization": NCOcs.buildAuthHeader(user, appPass),
+          "Authorization": NCOcs.buildAuthHeader(trimmedUser, password),
           "Accept": "application/json"
         }
       });
@@ -178,11 +233,12 @@ const NCPolicyRuntime = (() => {
         endpointChecked: true,
         endpointUrl
       });
-      globalThis.NCLogContext.safeConsoleError("[NCBG]", "policy status fallback", {
+      logPolicyFallback("policy status fallback", {
+        source,
         reason: localResult.reason,
         endpointUrl,
         error: error?.message || String(error)
-      });
+      }, optionalProbe);
       return localResult;
     }
 
@@ -193,7 +249,10 @@ const NCPolicyRuntime = (() => {
         endpointChecked: true,
         endpointUrl
       });
-      globalThis.NCLogContext.safeConsoleError("[NCBG]", "policy status endpoint missing", { endpointUrl });
+      L("policy status endpoint missing", {
+        source,
+        ...buildPolicyResponseDebug(response, endpointUrl, raw)
+      });
       return localResult;
     }
     if (!response.ok){
@@ -202,11 +261,11 @@ const NCPolicyRuntime = (() => {
         endpointChecked: true,
         endpointUrl
       });
-      globalThis.NCLogContext.safeConsoleError("[NCBG]", "policy status fallback", {
+      logPolicyFallback("policy status fallback", {
+        source,
         reason: localResult.reason,
-        status: response.status,
-        endpointUrl
-      });
+        ...buildPolicyResponseDebug(response, endpointUrl, raw)
+      }, optionalProbe);
       return localResult;
     }
 
@@ -219,17 +278,19 @@ const NCPolicyRuntime = (() => {
         endpointChecked: true,
         endpointUrl
       });
-      globalThis.NCLogContext.safeConsoleError("[NCBG]", "policy status fallback", {
+      logPolicyFallback("policy status fallback", {
+        source,
         reason: localResult.reason,
-        endpointUrl,
+        ...buildPolicyResponseDebug(response, endpointUrl, raw),
         error: error?.message || String(error)
-      });
+      }, optionalProbe);
       return localResult;
     }
 
     const normalized = normalizeStatusPayload(parsed);
     normalized.endpointUrl = endpointUrl;
     L("policy status fetched", {
+      source,
       mode: normalized.mode,
       policyActive: normalized.policyActive,
       domains: {
@@ -245,7 +306,35 @@ const NCPolicyRuntime = (() => {
     return normalized;
   }
 
+  /**
+   * Read backend status live from the backend endpoint.
+   * @returns {Promise<object>}
+   */
+  async function getPolicyStatus(){
+    const opts = await NCCore.getOpts();
+    return readPolicyStatusFromCredentials({
+      baseUrl: opts?.baseUrl,
+      user: opts?.user,
+      appPass: opts?.appPass,
+      source: "runtime",
+      optionalProbe: false
+    });
+  }
+
+  async function probePolicyStatus(params = {}){
+    const result = await readPolicyStatusFromCredentials({
+      baseUrl: params?.baseUrl,
+      user: params?.user,
+      appPass: params?.appPass,
+      source: params?.source || "options_test",
+      optionalProbe: true
+    });
+    L("policy status probe result", buildPolicyStatusDebug(result, params?.source || "options_test"));
+    return result;
+  }
+
   return {
-    getPolicyStatus
+    getPolicyStatus,
+    probePolicyStatus
   };
 })();
