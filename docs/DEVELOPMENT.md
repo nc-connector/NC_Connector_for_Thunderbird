@@ -776,6 +776,7 @@ This add-on uses Nextcloud APIs such as:
   - `/ocs/v2.php/cloud/capabilities`
 - Backend policy status:
   - `/apps/ncc_backend_4mc/api/v1/status`
+  - fallback: `/index.php/apps/ncc_backend_4mc/api/v1/status` when a server has broken pretty URL rewrites
 - Talk capabilities and room operations:
   - `/ocs/v2.php/apps/spreed/api/v4/...`
 - Password policy:

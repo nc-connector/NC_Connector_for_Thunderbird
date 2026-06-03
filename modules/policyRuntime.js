@@ -12,6 +12,7 @@
  */
 const NCPolicyRuntime = (() => {
   const STATUS_ENDPOINT_PATH = "/apps/ncc_backend_4mc/api/v1/status";
+  const STATUS_ENDPOINT_INDEX_PATH = "/index.php/apps/ncc_backend_4mc/api/v1/status";
   const {
     POLICY_DOMAINS,
     isObject,
@@ -19,8 +20,19 @@ const NCPolicyRuntime = (() => {
     buildDomainState
   } = NCPolicyState;
 
-  function buildStatusEndpointUrl(baseUrl){
-    return String(baseUrl || "").replace(/\/+$/, "") + STATUS_ENDPOINT_PATH;
+  function buildStatusEndpointUrl(baseUrl, endpointPath = STATUS_ENDPOINT_PATH){
+    return String(baseUrl || "").replace(/\/+$/, "") + endpointPath;
+  }
+
+  function hasOwn(object, key){
+    return isObject(object) && Object.prototype.hasOwnProperty.call(object, key);
+  }
+
+  function isBackendStatusPayload(payload){
+    return isObject(payload?.status)
+      && hasOwn(payload.status, "seat_assigned")
+      && hasOwn(payload.status, "seat_state")
+      && (isObject(payload?.policy) || isObject(payload?.policy_editable));
   }
 
   function buildLocalModeResult(reason, details = {}){
@@ -106,6 +118,58 @@ const NCPolicyRuntime = (() => {
       return;
     }
     globalThis.NCLogContext.safeConsoleError("[NCBG]", scope, details);
+  }
+
+  async function fetchStatusEndpoint(endpointUrl, trimmedUser, password){
+    const response = await fetch(endpointUrl, {
+      method: "GET",
+      headers: {
+        "Authorization": NCOcs.buildAuthHeader(trimmedUser, password),
+        "Accept": "application/json"
+      }
+    });
+    const raw = await response.text().catch(() => "");
+    return { response, raw };
+  }
+
+  function parseStatusPayload(raw){
+    try{
+      return {
+        ok: true,
+        payload: raw ? JSON.parse(raw) : null,
+        error: null
+      };
+    }catch(error){
+      return {
+        ok: false,
+        payload: null,
+        error
+      };
+    }
+  }
+
+  function logNormalizedStatus(source, normalized){
+    L("policy status fetched", {
+      source,
+      mode: normalized.mode,
+      policyActive: normalized.policyActive,
+      domains: {
+        share: normalized.policyDomains?.share?.active === true,
+        talk: normalized.policyDomains?.talk?.active === true,
+        emailSignature: normalized.policyDomains?.email_signature?.active === true
+      },
+      seatAssigned: normalized.status.seatAssigned,
+      seatState: normalized.status.seatState,
+      isValid: normalized.status.isValid,
+      warning: normalized.warning.code || ""
+    });
+  }
+
+  function normalizeAndLogStatusPayload(payload, endpointUrl, source){
+    const normalized = normalizeStatusPayload(payload);
+    normalized.endpointUrl = endpointUrl;
+    logNormalizedStatus(source, normalized);
+    return normalized;
   }
 
   /**
@@ -197,6 +261,7 @@ const NCPolicyRuntime = (() => {
     }
 
     const endpointUrl = buildStatusEndpointUrl(normalizedBaseUrl);
+    let activeEndpointUrl = endpointUrl;
     try{
       if (typeof NCHostPermissions !== "undefined" && NCHostPermissions?.requireOriginPermission){
         await NCHostPermissions.requireOriginPermission(normalizedBaseUrl, {
@@ -220,14 +285,11 @@ const NCPolicyRuntime = (() => {
     }
 
     let response;
+    let raw = "";
     try{
-      response = await fetch(endpointUrl, {
-        method: "GET",
-        headers: {
-          "Authorization": NCOcs.buildAuthHeader(trimmedUser, password),
-          "Accept": "application/json"
-        }
-      });
+      const result = await fetchStatusEndpoint(endpointUrl, trimmedUser, password);
+      response = result.response;
+      raw = result.raw;
     }catch(error){
       const localResult = buildLocalModeResult("network_error", {
         endpointChecked: true,
@@ -242,68 +304,98 @@ const NCPolicyRuntime = (() => {
       return localResult;
     }
 
-    const raw = await response.text().catch(() => "");
     if (response.status === 404){
-      const localResult = buildLocalModeResult("endpoint_missing", {
-        endpointAvailable: false,
-        endpointChecked: true,
-        endpointUrl
-      });
-      L("policy status endpoint missing", {
+      // Broken pretty URL rewrites can return the real Nextcloud app body with HTTP 404.
+      const parsedPretty = parseStatusPayload(raw);
+      if (parsedPretty.ok && isBackendStatusPayload(parsedPretty.payload)){
+        L("policy status pretty url returned valid payload with http 404", {
+          source,
+          hint: "Backend reachable, but server returned unexpected HTTP status. Check Nextcloud rewrite / pretty URL configuration.",
+          ...buildPolicyResponseDebug(response, endpointUrl, raw)
+        });
+        return normalizeAndLogStatusPayload(parsedPretty.payload, endpointUrl, source);
+      }
+
+      const fallbackEndpointUrl = buildStatusEndpointUrl(normalizedBaseUrl, STATUS_ENDPOINT_INDEX_PATH);
+      L("policy status trying index.php fallback", {
         source,
-        ...buildPolicyResponseDebug(response, endpointUrl, raw)
+        reason: "pretty_url_404",
+        prettyUrl: endpointUrl,
+        fallbackUrl: fallbackEndpointUrl
       });
-      return localResult;
+
+      try{
+        activeEndpointUrl = fallbackEndpointUrl;
+        const fallbackResult = await fetchStatusEndpoint(fallbackEndpointUrl, trimmedUser, password);
+        response = fallbackResult.response;
+        raw = fallbackResult.raw;
+      }catch(error){
+        const localResult = buildLocalModeResult("endpoint_missing", {
+          endpointAvailable: false,
+          endpointChecked: true,
+          endpointUrl
+        });
+        logPolicyFallback("policy status fallback", {
+          source,
+          reason: localResult.reason,
+          prettyUrl: endpointUrl,
+          fallbackUrl: fallbackEndpointUrl,
+          error: error?.message || String(error)
+        }, optionalProbe);
+        return localResult;
+      }
+
+      if (response.ok){
+        L("policy status index.php fallback responded", {
+          source,
+          hint: "Backend policy endpoint reached via index.php fallback. Pretty URL rewrite may be misconfigured.",
+          ...buildPolicyResponseDebug(response, fallbackEndpointUrl, raw)
+        });
+      }else if (response.status === 404){
+        const localResult = buildLocalModeResult("endpoint_missing", {
+          endpointAvailable: false,
+          endpointChecked: true,
+          endpointUrl: fallbackEndpointUrl
+        });
+        L("policy status endpoint missing", {
+          source,
+          prettyUrl: endpointUrl,
+          ...buildPolicyResponseDebug(response, fallbackEndpointUrl, raw)
+        });
+        return localResult;
+      }
     }
     if (!response.ok){
       const localResult = buildLocalModeResult("http_error", {
         endpointAvailable: true,
         endpointChecked: true,
-        endpointUrl
+        endpointUrl: activeEndpointUrl
       });
       logPolicyFallback("policy status fallback", {
         source,
         reason: localResult.reason,
-        ...buildPolicyResponseDebug(response, endpointUrl, raw)
+        ...buildPolicyResponseDebug(response, activeEndpointUrl, raw)
       }, optionalProbe);
       return localResult;
     }
 
-    let parsed = null;
-    try{
-      parsed = raw ? JSON.parse(raw) : null;
-    }catch(error){
+    const parsed = parseStatusPayload(raw);
+    if (!parsed.ok || !isBackendStatusPayload(parsed.payload)){
       const localResult = buildLocalModeResult("invalid_payload", {
         endpointAvailable: true,
         endpointChecked: true,
-        endpointUrl
+        endpointUrl: activeEndpointUrl
       });
       logPolicyFallback("policy status fallback", {
         source,
         reason: localResult.reason,
-        ...buildPolicyResponseDebug(response, endpointUrl, raw),
-        error: error?.message || String(error)
+        ...buildPolicyResponseDebug(response, activeEndpointUrl, raw),
+        error: parsed.error?.message || "Unexpected backend status payload"
       }, optionalProbe);
       return localResult;
     }
 
-    const normalized = normalizeStatusPayload(parsed);
-    normalized.endpointUrl = endpointUrl;
-    L("policy status fetched", {
-      source,
-      mode: normalized.mode,
-      policyActive: normalized.policyActive,
-      domains: {
-        share: normalized.policyDomains?.share?.active === true,
-        talk: normalized.policyDomains?.talk?.active === true,
-        emailSignature: normalized.policyDomains?.email_signature?.active === true
-      },
-      seatAssigned: normalized.status.seatAssigned,
-      seatState: normalized.status.seatState,
-      isValid: normalized.status.isValid,
-      warning: normalized.warning.code || ""
-    });
-    return normalized;
+    return normalizeAndLogStatusPayload(parsed.payload, activeEndpointUrl, source);
   }
 
   /**
