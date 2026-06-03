@@ -333,7 +333,8 @@ const NCEmailSignature = (() => {
       requireExistingOwnUnchanged,
       html: sanitizedHtml,
       plainText,
-      plainTextMode
+      plainTextMode,
+      placeCursorAtStart: reason === "compose_open" && details?.isModified !== true
     });
     if (!result?.ok){
       throw new Error(result?.error || "email_signature_apply_failed");
