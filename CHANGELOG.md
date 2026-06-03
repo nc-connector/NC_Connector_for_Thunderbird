@@ -4,6 +4,15 @@ All notable changes to **NC Connector for Thunderbird** will be documented in th
 
 This project targets **Thunderbird ESR 140.\*** through **153.\***.
 
+## 3.1.4
+
+### Changed
+- Backend policy checks now log clearer setup diagnostics.
+
+### Fixed
+- Backend policy detection now works when a Nextcloud server requires the `index.php` app route because pretty URLs are not configured correctly.
+- Reply and forward signatures stay in the author area, with quoted sender signatures left untouched.
+
 ## 3.1.3
 
 ### Added

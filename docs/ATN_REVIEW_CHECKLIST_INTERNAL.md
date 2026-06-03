@@ -153,5 +153,5 @@ It is intended to guide ongoing and future maintenance.
 - Experiments should look **planned**, not experimental.
 - Avoid legacy or obsolete references (e.g. XUL in Thunderbird ≥ 128).
 
-_Last updated for 3.1.3 worktree._
+_Last updated for 3.1.4 worktree._
 
