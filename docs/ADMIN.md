@@ -34,6 +34,7 @@ Related docs:
   - [4.3 Rollout option A: ATN (recommended, signed, “always latest”)](#43-rollout-option-a-atn-recommended-signed-always-latest)
   - [4.4 Rollout option B: GitHub Releases (“always latest”)](#44-rollout-option-b-github-releases-always-latest)
   - [4.5 Example policies.json](#45-example-policiesjson)
+  - [4.5.1 Managed Nextcloud URL](#451-managed-nextcloud-url)
   - [4.6 Example Ansible task (Linux)](#46-example-ansible-task-linux)
   - [4.7 Attachment automation prerequisite: disable competing Thunderbird compose features](#47-attachment-automation-prerequisite-disable-competing-thunderbird-compose-features)
   - [4.8 Verifying policies & troubleshooting](#48-verifying-policies--troubleshooting)
@@ -81,6 +82,7 @@ Add-ons Manager → NC Connector for Thunderbird → **Preferences / Options**
 Operational notes:
 - If you use Login Flow v2, the add-on obtains an app password from Nextcloud automatically.
 - If the add-on cannot reach your Nextcloud origin, you will typically see permission errors or HTTP errors in the debug logs.
+- Administrators can prefill or lock the Nextcloud URL through Thunderbird Enterprise Policy; user credentials still remain per user/profile.
 
 ### 2.2 Sharing defaults
 
@@ -345,6 +347,74 @@ Example policy that force-installs NC Connector and keeps updates enabled:
 }
 ```
 
+### 4.5.1 Managed Nextcloud URL
+
+Thunderbird exposes extension-specific enterprise policy through `storage.managed`.
+NC Connector reads these values:
+
+- `NextcloudUrl` (`string`): full Nextcloud URL, for example `https://cloud.example.com`
+- `NextcloudUrlLocked` (`boolean` / `1` / `true`, optional): locks the URL field in the add-on settings
+
+Compatibility aliases are also accepted:
+
+- `nextcloudUrl`
+- `nextcloudUrlLocked`
+- `baseUrl`
+- `baseUrlLocked`
+
+If your enterprise policy stores extension settings inside an `adminSettings` object, NC Connector reads the same keys from there as well.
+
+Behavior:
+
+- if a managed URL exists and the local URL is empty, the add-on pre-fills the managed URL
+- if `NextcloudUrlLocked` is true, the add-on always uses the managed URL and disables the URL field
+- username and app password are still stored locally per Thunderbird profile
+- Thunderbird does not expose platform-specific registry backends directly to extensions; use the `3rdparty.Extensions` policy block shown below, also when deploying via Windows GPO/ADMX
+
+Example `policies.json` snippet:
+
+```json
+{
+  "policies": {
+    "3rdparty": {
+      "Extensions": {
+        "{4a35421f-0906-439c-bff2-8eef39e2baee}": {
+          "NextcloudUrl": "https://cloud.example.com",
+          "NextcloudUrlLocked": true
+        }
+      }
+    }
+  }
+}
+```
+
+Merged example with force-install:
+
+```json
+{
+  "policies": {
+    "ExtensionSettings": {
+      "*": {
+        "installation_mode": "allowed"
+      },
+      "{4a35421f-0906-439c-bff2-8eef39e2baee}": {
+        "installation_mode": "force_installed",
+        "install_url": "https://services.addons.thunderbird.net/thunderbird/downloads/latest/nc4tb/addon-989342-latest.xpi",
+        "updates_disabled": false
+      }
+    },
+    "3rdparty": {
+      "Extensions": {
+        "{4a35421f-0906-439c-bff2-8eef39e2baee}": {
+          "NextcloudUrl": "https://cloud.example.com",
+          "NextcloudUrlLocked": true
+        }
+      }
+    }
+  }
+}
+```
+
 ### 4.6 Example Ansible task (Linux)
 
 Your snippet is structurally correct, but remove the stray trailing quote (`"`) after the JSON.
@@ -541,24 +611,25 @@ Verification checklist:
 3. Restart Thunderbird and check:
    - Add-on is installed automatically
    - Updates are enabled (unless you intentionally disabled them)
+   - managed `NextcloudUrl` is visible in the add-on settings
+   - the URL field is disabled when `NextcloudUrlLocked` is true
    - Thunderbird’s own compose options for missing attachments / large-attachment upload are no longer user-changeable if you locked them
 
 Common issues:
 - **Wrong path:** policy file is not read → `about:policies` shows nothing.
 - **JSON syntax error:** extension won’t install; `about:policies` shows parse errors.
 - **Install URL unreachable:** network/proxy/firewall issue.
+- **Managed URL not visible:** ensure the values are below `policies.3rdparty.Extensions.{4a35421f-0906-439c-bff2-8eef39e2baee}` and restart Thunderbird.
 
 ---
 
 ## 5. Notes about “system-wide configuration”
 
-Enterprise Policies can reliably handle **system-wide installation**.
+Enterprise Policies can reliably handle **system-wide installation** and the managed Nextcloud URL.
 
-However, the add-on’s functional configuration (Nextcloud URL, credentials, defaults) currently lives in:
+The add-on’s user-specific functional configuration still lives in:
 - `browser.storage.local` (per profile)
 
-If you need “preseeded” settings for many users, typical approaches are:
+If you need more preseeded settings for many users, typical approaches are:
 - distribute a pre-configured Thunderbird profile
 - use a central onboarding guide and require users to complete Login Flow v2
-
-(A future enhancement could use `browser.storage.managed` to read admin-provided settings, but this is not implemented currently.)

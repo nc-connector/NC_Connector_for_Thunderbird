@@ -264,6 +264,9 @@ let policyLockSharingAttachmentsAlways = false;
 let policyLockSharingAttachmentsThreshold = false;
 let talkAddressbookLockActive = false;
 let talkAddressbookLockDetail = "";
+let managedSetupPolicy = typeof NCManagedSetup !== "undefined" && NCManagedSetup?.emptyPolicy
+  ? NCManagedSetup.emptyPolicy()
+  : null;
 let emailSignatureStoredState = {
   hasOnCompose: false,
   hasOnReply: false,
@@ -489,6 +492,31 @@ function refreshLanguageOverrideSelects(){
 
 function getAdminControlledHint(){
   return NCWizardPolicyUi.getAdminControlledHint(i18n);
+}
+
+async function refreshManagedSetupPolicy(){
+  if (typeof NCManagedSetup === "undefined" || !NCManagedSetup?.read){
+    managedSetupPolicy = null;
+    return managedSetupPolicy;
+  }
+  try{
+    managedSetupPolicy = await NCManagedSetup.read();
+  }catch(error){
+    globalThis.NCLogContext.safeConsoleError(OPTIONS_LOG_PREFIX, "managed setup policy read failed", error);
+    managedSetupPolicy = NCManagedSetup.emptyPolicy();
+  }
+  return managedSetupPolicy;
+}
+
+function getEffectiveBaseUrl(localBaseUrl){
+  if (typeof NCManagedSetup === "undefined" || !NCManagedSetup?.resolveBaseUrl){
+    return String(localBaseUrl || "").trim();
+  }
+  return NCManagedSetup.resolveBaseUrl(localBaseUrl, managedSetupPolicy);
+}
+
+function isManagedBaseUrlLocked(){
+  return !!(managedSetupPolicy?.hasNextcloudUrl && managedSetupPolicy?.nextcloudUrlLocked);
 }
 
 /**
@@ -741,7 +769,9 @@ async function load(){
     EMAIL_SIGNATURE_KEYS.onReply,
     EMAIL_SIGNATURE_KEYS.onForward
   ]);
-  if (stored.baseUrl) baseUrlInput.value = stored.baseUrl;
+  await refreshManagedSetupPolicy();
+  const effectiveBaseUrl = getEffectiveBaseUrl(stored.baseUrl || "");
+  if (effectiveBaseUrl) baseUrlInput.value = effectiveBaseUrl;
   if (stored.user) userInput.value = stored.user;
   if (stored.appPass) appPassInput.value = stored.appPass;
   document.getElementById("debugEnabled").checked = !!stored.debugEnabled;
@@ -1040,7 +1070,10 @@ async function openLoginUrl(url){
  * @returns {Promise<void>}
  */
 async function save(){
-  const baseUrl = baseUrlInput.value.trim();
+  const baseUrl = getEffectiveBaseUrl(baseUrlInput.value.trim());
+  if (baseUrlInput && isManagedBaseUrlLocked()){
+    baseUrlInput.value = baseUrl;
+  }
   const user = userInput.value.trim();
   const appPass = appPassInput.value;
   const debugEnabled = document.getElementById("debugEnabled").checked;
@@ -1440,12 +1473,15 @@ function setAuthMode(mode){
 function updateAuthModeUI(){
   const mode = getSelectedAuthMode();
   const manual = mode === "manual";
-  const hasBaseUrl = !!String(baseUrlInput?.value || "").trim();
+  const managedBaseUrlLocked = isManagedBaseUrlLocked();
+  const hasBaseUrl = !!getEffectiveBaseUrl(baseUrlInput?.value || "");
   const hasUser = !!String(userInput?.value || "").trim();
   const hasAppPass = !!String(appPassInput?.value || "").trim();
   const hasConnectionSettings = hasBaseUrl && hasUser && hasAppPass;
   if (baseUrlInput){
     baseUrlInput.classList.toggle("needs-attention", !hasBaseUrl);
+    baseUrlInput.disabled = managedBaseUrlLocked;
+    baseUrlInput.title = managedBaseUrlLocked ? getAdminControlledHint() : "";
   }
   if (authBlock){
     authBlock.disabled = !hasBaseUrl || loginFlowInProgress;

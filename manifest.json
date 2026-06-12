@@ -34,6 +34,7 @@
       "modules/i18nOverride.js",
       "modules/sharingStorage.js",
       "modules/textUtils.js",
+      "modules/managedSetup.js",
       "modules/shareTemplateContract.js",
       "vendor/ical.js",
       "vendor/purify.js",

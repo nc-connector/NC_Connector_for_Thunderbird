@@ -30,6 +30,23 @@
     return 0;
   }
 
+  function normalizeBaseUrl(value){
+    const raw = String(value || "").trim();
+    if (!raw){
+      return "";
+    }
+    try{
+      const parsed = new URL(raw);
+      if (parsed.protocol !== "https:"){
+        return "";
+      }
+      const normalizedPath = String(parsed.pathname || "").replace(/\/+$/, "");
+      return parsed.origin + normalizedPath;
+    }catch(error){
+      return "";
+    }
+  }
+
   function formatSizeMb(value, options = {}){
     const bytes = Math.max(0, Number(value) || 0);
     const minimumFractionDigits = Number.isInteger(options?.minimumFractionDigits)
@@ -56,5 +73,5 @@
     return str.slice(0, max) + "...";
   }
 
-  global.NCTalkTextUtils = { escapeHtml, normalizeExpireDays, formatSizeMb, shortId };
+  global.NCTalkTextUtils = { escapeHtml, normalizeExpireDays, normalizeBaseUrl, formatSizeMb, shortId };
 })(typeof window !== "undefined" ? window : (typeof globalThis !== "undefined" ? globalThis : this));

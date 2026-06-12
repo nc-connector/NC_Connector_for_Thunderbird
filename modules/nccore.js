@@ -30,24 +30,7 @@ const NCCore = (() => {
   }
 
   function normalizeBaseUrl(input){
-    if (!input) return "";
-    const raw = String(input).trim();
-    if (!raw){
-      return "";
-    }
-    try{
-      const parsed = new URL(raw);
-      if (parsed.protocol !== "https:"){
-        return "";
-      }
-      const normalizedPath = String(parsed.pathname || "").replace(/\/+$/, "");
-      return parsed.origin + normalizedPath;
-    }catch(error){
-      logNCCoreError("normalize base URL failed", error, {
-        inputSample: raw.slice(0, 160)
-      });
-      return "";
-    }
+    return NCTalkTextUtils.normalizeBaseUrl(input);
   }
 
   /**
@@ -313,12 +296,26 @@ const NCCore = (() => {
       "debugEnabled",
       "authMode"
     ]);
+    let managedSetup = typeof NCManagedSetup !== "undefined" && NCManagedSetup?.emptyPolicy
+      ? NCManagedSetup.emptyPolicy()
+      : null;
+    if (typeof NCManagedSetup !== "undefined" && NCManagedSetup?.read){
+      try{
+        managedSetup = await NCManagedSetup.read();
+      }catch(error){
+        logNCCoreError("managed setup policy read failed", error);
+      }
+    }
+    const baseUrl = typeof NCManagedSetup !== "undefined" && NCManagedSetup?.resolveBaseUrl
+      ? NCManagedSetup.resolveBaseUrl(stored.baseUrl || "", managedSetup)
+      : (stored.baseUrl || "");
     return {
-      baseUrl: normalizeBaseUrl(stored.baseUrl || ""),
+      baseUrl: normalizeBaseUrl(baseUrl),
       user: typeof stored.user === "string" ? stored.user.trim() : "",
       appPass: typeof stored.appPass === "string" ? stored.appPass : "",
       debugEnabled: !!stored.debugEnabled,
-      authMode: stored.authMode || "manual"
+      authMode: stored.authMode || "manual",
+      managedSetup
     };
   }
 

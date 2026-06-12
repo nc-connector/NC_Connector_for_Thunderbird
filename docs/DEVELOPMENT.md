@@ -123,6 +123,7 @@ Key files you’ll touch most:
 - `modules/policyRuntime.js` — centralized backend seat/policy status fetch + normalization (`/apps/ncc_backend_4mc/api/v1/status`)
 - `modules/background.js` — thin bootstrap entrypoint
 - `modules/hostPermissions.js` — single host-permission gate used by core/talk/sharing runtime modules
+- `modules/managedSetup.js` — reads managed Nextcloud URL values from Thunderbird Enterprise Policy (`storage.managed`)
 - `modules/shareTemplateContract.js` — shared share-template marker rules used by render + insert modules
 - `modules/nccore.js` — Nextcloud auth/login-flow helpers
 - `modules/talkAddressbook.js` — system-addressbook CardDAV fetch/cache/search/status helpers
@@ -263,8 +264,14 @@ Options UI:
 
 Storage backend:
 - `browser.storage.local`
+- `browser.storage.managed` for read-only administrator-provided setup values
 
 ### 6.2 Storage schema (key list)
+
+Managed setup:
+- `NextcloudUrl` — optional administrator-provided Nextcloud base URL via Enterprise Policy
+- `NextcloudUrlLocked` — locks the URL field and forces the managed URL
+- aliases: `nextcloudUrl`, `nextcloudUrlLocked`, `baseUrl`, `baseUrlLocked`
 
 Core:
 - `baseUrl` — Nextcloud base URL
