@@ -30,6 +30,8 @@ initAbout();
 
 const statusEl = document.getElementById("status");
 const baseUrlInput = document.getElementById("baseUrl");
+const baseUrlManagedPolicyMarker = document.getElementById("baseUrlManagedPolicyMarker");
+const baseUrlManagedPolicyTooltip = document.getElementById("baseUrlManagedPolicyTooltip");
 const authBlock = document.getElementById("authBlock");
 const userInput = document.getElementById("user");
 const appPassInput = document.getElementById("appPass");
@@ -1479,9 +1481,18 @@ function updateAuthModeUI(){
   const hasAppPass = !!String(appPassInput?.value || "").trim();
   const hasConnectionSettings = hasBaseUrl && hasUser && hasAppPass;
   if (baseUrlInput){
+    const managedHint = managedBaseUrlLocked ? getAdminControlledHint() : "";
     baseUrlInput.classList.toggle("needs-attention", !hasBaseUrl);
     baseUrlInput.disabled = managedBaseUrlLocked;
-    baseUrlInput.title = managedBaseUrlLocked ? getAdminControlledHint() : "";
+    baseUrlInput.title = managedHint;
+    if (baseUrlManagedPolicyMarker){
+      baseUrlManagedPolicyMarker.hidden = !managedBaseUrlLocked;
+      baseUrlManagedPolicyMarker.title = managedHint;
+      baseUrlManagedPolicyMarker.setAttribute("aria-label", managedHint || "");
+    }
+    if (baseUrlManagedPolicyTooltip){
+      baseUrlManagedPolicyTooltip.hidden = !managedBaseUrlLocked;
+    }
   }
   if (authBlock){
     authBlock.disabled = !hasBaseUrl || loginFlowInProgress;

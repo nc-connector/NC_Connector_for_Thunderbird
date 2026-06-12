@@ -308,6 +308,20 @@ footer{
 .option-tooltip-list li:last-child{margin-bottom:0;}
 .option-tooltip a{color:var(--brand-blue); text-decoration:underline;}
 .option-tooltip-wrap.is-disabled > span{color:var(--tb-muted);}
+.managed-policy-marker{
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
+  width:16px;
+  height:16px;
+  margin-left:6px;
+  border:1px solid var(--tb-border);
+  border-radius:50%;
+  color:var(--brand-blue);
+  font-size:11px;
+  font-weight:700;
+  line-height:1;
+}
 .hint{margin:6px 0 0 0; font-size:12px; color:var(--tb-muted);}
 .attachments-lock{
   margin:10px 0 0 0;
@@ -413,7 +427,16 @@ footer{
     </div>
   </div>
   <section id="tab-general" class="tab-panel active">
-    <div class="row"><label for="baseUrl" data-i18n="options_base_url_label">Nextcloud URL</label><input id="baseUrl" type="url" data-i18n-placeholder="options_base_url_placeholder" placeholder="https://cloud.example.com"></div>
+    <div class="row">
+      <label for="baseUrl" class="option-tooltip-wrap">
+        <span data-i18n="options_base_url_label">Nextcloud URL</span>
+        <span id="baseUrlManagedPolicyMarker" class="managed-policy-marker" tabindex="0" hidden>?</span>
+        <div id="baseUrlManagedPolicyTooltip" class="option-tooltip" role="tooltip" hidden>
+          <div class="option-tooltip-title" data-i18n="policy_admin_controlled_tooltip">Admin controlled</div>
+        </div>
+      </label>
+      <input id="baseUrl" type="url" data-i18n-placeholder="options_base_url_placeholder" placeholder="https://cloud.example.com">
+    </div>
     <fieldset id="authBlock" class="auth-block">
       <legend data-i18n="options_auth_heading">Authentication</legend>
       <label class="radio-option">
