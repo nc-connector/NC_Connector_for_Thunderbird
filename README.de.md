@@ -1,144 +1,118 @@
+<div align="center" style="background:#0082C9; padding:1px 0;"><img src="ui/assets/header-solid-blue-1920x480.png" alt="Add-on" height="80"></div>
+
 [English](https://github.com/nc-connector/NC_Connector_for_Thunderbird/blob/main/README.md) | [Deutsch](https://github.com/nc-connector/NC_Connector_for_Thunderbird/blob/main/README.de.md)
-[Admin](https://github.com/nc-connector/NC_Connector_for_Thunderbird/blob/main/docs/ADMIN.md) | [Development](https://github.com/nc-connector/NC_Connector_for_Thunderbird/blob/main/docs/DEVELOPMENT.md)
+[Admin](https://github.com/nc-connector/NC_Connector_for_Thunderbird/blob/main/docs/ADMIN.md) | [Development](https://github.com/nc-connector/NC_Connector_for_Thunderbird/blob/main/docs/DEVELOPMENT.md) | [Translations](https://github.com/nc-connector/NC_Connector_for_Thunderbird/blob/main/Translations.md) | [VENDOR](https://github.com/nc-connector/NC_Connector_for_Thunderbird/blob/main/VENDOR.md)
 
-<div align="center" style="background:#0082C9; padding:1px 0;"><img src="ui/assets/header-solid-blue-1920x480.png" alt="Addon" height="80"></div>
+# NC Connector for Thunderbird
 
-##
-NC Connector for Thunderbird verbindet Ihr Thunderbird direkt mit Nextcloud Talk und der sicheren Nextcloud-Freigabe. Ein einziger Klick öffnet einen modernen Wizard, erstellt automatisch Talk-Räume inklusive Lobby und Moderatoren Delegation und fügt den Meeting-Link mitsamt Passwort sauber in den Termin ein. Aus dem Verfassen-Fenster heraus erzeugen Sie auf Wunsch sofort eine Nextcloud-Freigabe inklusive Upload-Ordner, Ablaufdatum, Passwort und personalisierter Nachricht. Keine Copy-&-Paste-Orgien mehr, keine offenen Links in Mails: alles läuft in Thunderbird, alles wird sauber in Ihrer Nextcloud abgelegt.
+NC Connector ist die Thunderbird-native Nextcloud-Integration für Organisationen, die Thunderbird ernst nehmen. Das Add-on bringt Freigaben, Talk-Meetings, zentrale Signaturen und Anhangsregeln direkt in Mail und Kalender.
 
-Dies ist ein Community-Projekt und kein offizielles Produkt der Nextcloud GmbH.
+## Was das Add-on macht
 
-## Highlights
+- Nextcloud-Freigaben direkt aus neuen Mails, Antworten und Weiterleitungen erstellen
+- große Dateien per Nextcloud Chunked WebDAV Upload v2 hochladen und als Link senden
+- Passwort, Ablaufdatum, Berechtigungen und separate Passwortzustellung steuern
+- Passwörter wahlweise als Klartext-Mail oder als Nextcloud Secret-Link senden
+- Talk-Räume direkt aus Thunderbird-Terminen erstellen und aktualisieren
+- eingeladene Benutzer und Gäste optional in Talk-Räume übernehmen
+- zentrale E-Mail-Signaturen aus dem optionalen Backend anwenden
+- Anhangsautomatisierung mit klaren Regeln statt manueller Einzelschritte nutzen
+- Debug-Logs für Supportfälle in der Thunderbird-Entwicklerkonsole schreiben
 
-- **Ein Klick zu Nextcloud Talk** 
-Termin öffnen, Nextcloud Talk wählen, Raum konfigurieren, Moderator definieren. Optional können eingeladene Teilnehmer direkt in den Raum übernommen werden (getrennt nach internen Nextcloud-Benutzern und externen E-Mail-Gästen). Der Wizard schreibt Titel/Ort/Beschreibung inklusive Hilfe-Link automatisch in den Termin.
-- **Sharing deluxe** 
-Compose-Button Nextcloud Freigabe hinzufügen startet den Freigabe-Assistenten mit Upload-Queue, Passwortgenerator, Ablaufdatum und Notizfeld. Die fertige Freigabe landet als formatiertes HTML direkt in der E-Mail.
-- **Passwort separat versenden**
-  Optional kann das Freigabe-Passwort in einer separaten Follow-up-Mail versendet werden; im Hauptblock bleibt das Inline-Passwort dann verborgen.
-- **Anhang-Automatisierung**
-Optional lassen sich Anhänge direkt über NC Connector leiten (immer oder ab einer konfigurierbaren Gesamtgröße). Bei Grenzwertüberschreitung kann der Nutzer zwischen Teilen über NC Connector und Entfernen der zuletzt ausgewählten Anhangsgruppe wählen.
-- **Enterprise-Sicherheit** 
-Lobby bis Startzeit, Moderator-Delegation, automatisches Aufräumen nicht gespeicherter Termine, Pflicht-Passwörter und Ablauffristen schützen sensible Meetings und Dateien.
-- **Zentrale Backend-Policies (optional)**
-Ist das optionale NC-Connector-Backend installiert, koennen Talk- und Sharing-Defaults zentral gesteuert werden. Beim Oeffnen von Wizard und Add-on-Settings sowie erneut beim Speichern der Add-on-Settings prueft das Add-on den Backend-Status, uebernimmt bei gueltigem Seat die Policy-Werte und sperrt admin-kontrollierte Optionen sichtbar im UI.
-- **Nahtlose Nextcloud-Integration** 
-Login-Flow V2, automatische Raumverfolgung sowie Debug-Logs in [NCBG], [NCUI][Talk], [NCUI][Sharing], [NCUI][Options], [NCUI][OpenUrlFallback] und [ncCalToolbar] helfen beim Troubleshooting.
-- **ESR-ready** 
-Optimiert und getestet für Thunderbird ESR 140.X bis 153.X mit minimalem Experiment-Anteil.
+## Optionales Backend
 
-## Changelog
+Ohne Backend funktionieren Freigaben und Talk lokal in Thunderbird. Mit NC Connector Backend kommen zentrale Steuerung und Team-Funktionen hinzu:
 
-Siehe [`CHANGELOG.md`](https://github.com/nc-connector/NC_Connector_for_Thunderbird/blob/main/CHANGELOG.md).
+- Seat-Zuteilung und Richtlinien
+- Vorgaben für Freigaben, Talk und Signaturen
+- eigene HTML-Vorlagen für Freigaben, Passwortmails und Talk-Einladungen
+- separate Passwortzustellung und optional Nextcloud Secret-Links
+- Sperren einzelner Optionen durch Administratoren
 
-## Funktionsüberblick
+## Freigaben
 
-### Nextcloud Talk direkt aus dem Termin
-- Der Talk-Button in Termin-Editoren wird über Thunderbirds Standard-`calendar_item_action` bereitgestellt.
-- Talk-Popup mit Lobby, Passwort, Listbarkeit, Raumtyp und Moderatorensuche.
-- Automatische Einträge von Titel, Ort, Beschreibung (inkl. Hilfe-Link und Passwort) in das Terminfenster.
-- Die Lobby-Zeitsynchronisierung verwendet `X-NCTALK-START` (UTC-Epoch-Sekunden) als autoritativen Wert.
-- Room-Tracking, Lobby-Updates, Delegations-Workflow und Cleanup, falls der Termin verworfen oder verschoben wird.
-- Kalender-Änderungen (Drag-and-drop oder Dialog-Edit) halten Lobby/Startzeit des Talk-Raums synchron.
-- Optionales Teilnehmer-Sync nach dem Speichern des Termins:
-  - **Benutzer:** interne Nextcloud-Benutzer werden direkt dem Raum hinzugefügt (benötigt aktiven Zugriff auf das Nextcloud-Systemadressbuch).
-  - **Gäste:** externe E-Mail-Adressen werden als Gäste eingeladen (ggf. zusätzliche Einladung per E-Mail durch Nextcloud).
+Der Freigabe-Assistent lädt Dateien und Ordner nach Nextcloud hoch und fügt den fertigen Freigabeblock in die Mail ein. HTML-Mails bekommen einen formatierten Block, Plaintext-Mails einen klaren Textblock.
 
-### Nextcloud Sharing im Compose-Fenster
-- Vier Schritte (Freigabe, Ablaufdatum, Dateien, Notiz) mit passwortgeschütztem Upload-Ordner.
-- Upload-Queue mit Duplikatprüfung, Fortschrittsanzeige und optionaler Freigabe.
-- Automatische HTML-Bausteine mit Link, Passwort, Ablaufdatum und optionaler Notiz.
-- Wenn eine Freigabe eingefügt wurde, die Mail aber ohne erfolgreichen Versand geschlossen wird, wird der Freigabe-Ordner serverseitig automatisch aufgeräumt.
-- Optionaler separater Passwortversand:
-  - Default + Wizard-Toggle: "Passwort separat senden"
-  - nur verfuegbar mit optionalem NC-Connector-Backend und aktivem, dem aktuellen Benutzer zugewiesenem Seat
-  - nur aktiv, wenn Passwortschutz aktiv ist
-  - Hauptmail blendet Inline-Passwort aus und zeigt einen Hinweis auf die separate Passwortmail
-  - Passwortmail geht nur an die `To`-Empfänger der Hauptmail
-  - der automatische Versand nutzt dieselbe Thunderbird-Absender-Identity wie die Hauptmail
-  - wenn die Absender-Identity nicht eindeutig auflösbar ist oder der automatische Versand fehlschlägt, öffnet Thunderbird einen vorausgefüllten manuellen Fallback-Entwurf
-  - Probleme im Passwort-Follow-up löschen die bereits versendete Freigabe nicht mehr
-  - bei erfolgreichem Passwortversand wird eine Desktop-Erfolgsmeldung angezeigt
-- Optionale Anhang-Automatisierung:
-  - "Anhänge immer über NC Connector"
-  - "Hochladen für Dateien größer als X MB anbieten" auf Basis der Gesamtgröße
-  - Grenzwert-Dialog mit klarer Entscheidung ("Mit NC Connector teilen" oder "Zuletzt ausgewählte Anhänge entfernen"); die Entfernen-Aktion löscht die zuletzt ausgewählte Anhangsgruppe
-  - Attachment-Mode startet direkt in Schritt 3 und erzeugt ZIP-Links (`/s/<token>/download`)
-  - Empfängerrechte im Anhangsmodus sind immer auf Nur-Lesen begrenzt (unabhängig von Freigabe-Defaults)
-  - automatische Sperre + Hinweisblock in den Add-on-Einstellungen, wenn die Thunderbird-Option "Hochladen für Dateien größer als" aktiv ist
+Weitere Punkte:
 
-### Administration & Compliance
-- Login Flow V2 (App-Passwort wird automatisch angelegt) und zentrale Optionen (Basis-URL, Debug-Modus, Freigabe-Pfade, Defaultwerte für Freigabe/Talk).
-- Optionaler NC-Connector-Backend-Status/Policy-Modus:
-  - Pruefung beim Oeffnen von Talk-Wizard, Sharing-Wizard, Add-on-Settings und erneut beim Speichern der Add-on-Settings
-  - gueltiger aktiver Seat aktiviert Backend-Policy-Werte und Admin-Locks
-  - fehlendes Backend / kein Seat / ungueltiger Seat faellt auf lokale Add-on-Settings zurueck
-  - ungueltige Seat-Zustaende werden sichtbar im UI angezeigt, damit sich Benutzer an den Administrator wenden koennen
-- zentral verwaltete E-Mail-Signaturen greifen nur bei Thunderbird-Absenderidentitaeten, die zur Nextcloud-Seat-E-Mail-Adresse passen
-- Signatur-Optionen bleiben deaktiviert, bis der Backend-Endpunkt erreichbar ist, der aktuelle Benutzer einen aktiven Seat hat und das Backend die Policy-Domain `email_signature` ausliefert
-- aeltere Backends ohne `email_signature`-Policy-Domain deaktivieren nur zentrale E-Mail-Signaturen; Freigabe-/Talk-Backend-Policies bleiben aktiv, wenn ihre eigenen Policy-Domains vorhanden sind
-- Backend-Templates fuer Freigabe- und Talk-Texte werden nur aktiv, wenn in den Sprach-Overrides `Benutzerdefiniert` gewaehlt ist
-- `Benutzerdefiniert` wird nur angezeigt, wenn der NC-Connector-Backend-Endpunkt existiert, und bleibt deaktiviert, solange die effektive Backend-Policy fuer diesen Bereich nicht wirklich `custom` ist oder keine Vorlage liefert
-- ist `Benutzerdefiniert` aktiv, aber die Backend-Vorlage leer oder nicht verfuegbar, faellt Thunderbird auf den lokalen UI-Default-Text zurueck
-- Vollständige Internationalisierung (siehe [`Translations.md`](https://github.com/nc-connector/NC_Connector_for_Thunderbird/blob/main/Translations.md)) und strukturierte Debug-Logs für Support-Fälle, inklusive Attachment-Flow in `[NCBG]` und `[NCUI][Sharing]`.
+- verfügbar in Compose-Fenstern, Antworten und Weiterleitungen
+- optionales Ablaufdatum und eigene Berechtigungen pro Freigabe
+- Anhangsautomatisierung für große Anhänge oder immer über NC Connector
+- separate Passwortmails werden erst nach erfolgreichem Versand der Hauptmail verschickt
+- bei Auto-Send-Fehlern öffnet sich eine vorbereitete manuelle Passwortmail
+- geschlossene Entwürfe ohne erfolgreichen Versand räumen angelegte Freigaben wieder auf
 
-## Systemvoraussetzungen
-- Thunderbird ESR 140.X bis 153.X (Windows/macOS/Linux)
-- Nextcloud mit Talk & Freigabe (DAV) aktiviert
-- Aktivierter Zugriff auf das Nextcloud-Systemadressbuch (erforderlich für Moderator-/Benutzersuche und die Teilnehmer-Toggles "Benutzer hinzufügen" / "Gäste hinzufügen")
-- App-Passwort oder Login Flow V2
+## Talk
+
+Aus einem Thunderbird-Termin kann direkt ein Nextcloud Talk-Raum erstellt werden. Der Dialog unterstützt Lobby, Passwort, Raumtyp, Listbarkeit und Moderation.
+
+NC Connector kann Terminänderungen mit dem Raum abgleichen und eingeladene Teilnehmer übernehmen. Verworfene, nicht gespeicherte Termine räumen ihre Talk-Räume wieder auf. Das Löschen gespeicherter Termine entfernt Räume nur nach ausdrücklicher Aktivierung.
+
+## Signaturen
+
+Mit Backend kann Thunderbird zentral verwaltete E-Mail-Signaturen einfügen oder lokale Signaturen entfernen, wenn die Policy das vorgibt. NC Connector greift nur die Signatur der passenden Absenderidentität an. Signaturen anderer Konten bleiben unberührt.
 
 ## Installation
-1. Aktuelle XPI 
-`nc4tb-3.1.4.xpi` (oder aktuelles Release-Artefakt) in Thunderbird installieren (`Add-ons -> Zahnrad -> Add-on aus Datei installieren`).
+
+1. Aktuelle XPI aus den [GitHub Releases](https://github.com/nc-connector/NC_Connector_for_Thunderbird/releases) oder über ATN installieren.
 2. Thunderbird neu starten.
-3. In den Add-on-Optionen Basis-URL, Benutzer und App-Passwort hinterlegen oder den Login Flow starten.
+3. Add-on-Optionen öffnen.
+4. Nextcloud-URL eintragen.
+5. Login mit Nextcloud oder manuelles App-Passwort nutzen.
+6. Verbindung testen und speichern.
 
-## Support & Feedback
-- **Fehleranalyse:** Debug-Modus in den Optionen für ausführliche Traces aktivieren; relevante Logs erscheinen als [NCBG], [NCUI][Talk], [NCUI][Sharing], [NCUI][Options], [NCUI][OpenUrlFallback] und [ncCalToolbar] in der Entwickler-Konsole von Thunderbird. Laufzeitfehler nutzen weiterhin `console.error(...)`, auch wenn der Debug-Modus aus ist.
-- **Systemadressbuch-Mismatch (im Admin-UI aktiv, faktisch aber nicht erreichbar):** siehe Admin-Guide Abschnitt
-  ["System address book required for user search and moderator selection"](https://github.com/nc-connector/NC_Connector_for_Thunderbird/blob/main/docs/ADMIN.md#system-address-book-required-for-user-search-and-moderator-selection)
-  für die `occ`-Reparatursequenz und die DAV-Export-Prüf-URL.
+## Voraussetzungen
 
-Viel Erfolg beim sicheren, professionellen Arbeiten mit NC Connector for Thunderbird!
+- Thunderbird ESR 140 bis 153
+- Windows, macOS oder Linux
+- Nextcloud mit Files Sharing
+- für Talk-Funktionen: Nextcloud Talk
+- für Benutzer-/Moderatorensuche: Nextcloud-Systemadressbuch
+- für Secret-Link-Passwortzustellung: Nextcloud Secrets und NC Connector Backend
+
+## Sprache
+
+Die UI ist lokalisiert. Unterstützte Sprachen sind in [`Translations.md`](https://github.com/nc-connector/NC_Connector_for_Thunderbird/blob/main/Translations.md) dokumentiert. Fallback ist Deutsch, danach Englisch.
+
+Textbausteine für Freigaben und Talk können in den Einstellungen unabhängig von der UI-Sprache gesetzt werden. Backend-Vorlagen werden nur genutzt, wenn das Backend vorhanden ist und die Policy sie freigibt.
+
+## Fehleranalyse
+
+Der Debug-Modus lässt sich in den Optionen aktivieren. Relevante Logs erscheinen in der Thunderbird-Entwicklerkonsole mit Prefixen wie `[NCBG]`, `[NCUI][Talk]`, `[NCUI][Sharing]`, `[NCUI][Options]` und `[ncCalToolbar]`.
+
+Für typische Setup-, Systemadressbuch- und Backend-Policy-Probleme siehe den [Admin Guide](https://github.com/nc-connector/NC_Connector_for_Thunderbird/blob/main/docs/ADMIN.md).
+
+## Weitere Dokumentation
+
+- [Changelog](https://github.com/nc-connector/NC_Connector_for_Thunderbird/blob/main/CHANGELOG.md)
+- [Admin Guide](https://github.com/nc-connector/NC_Connector_for_Thunderbird/blob/main/docs/ADMIN.md)
+- [Development Guide](https://github.com/nc-connector/NC_Connector_for_Thunderbird/blob/main/docs/DEVELOPMENT.md)
+- [Drittanbieter-Lizenzen](https://github.com/nc-connector/NC_Connector_for_Thunderbird/blob/main/VENDOR.md)
 
 ## Screenshots
 
 <details>
-<summary><strong>Settings-Menü</strong></summary>
+<summary><strong>Einstellungen</strong></summary>
 
-| <a href="screenshots/Settings.png"><img src="screenshots/Settings.png" alt="Settings-Menü" width="230"></a> |
+| <a href="screenshots/Settings.png"><img src="screenshots/Settings.png" alt="Einstellungen" width="230"></a> |
 | --- |
 
 </details>
 
 <details>
-<summary><strong>Talk Wizard</strong></summary>
+<summary><strong>Talk-Wizard</strong></summary>
 
-| <a href="screenshots/talk_wizzard1.png"><img src="screenshots/talk_wizzard1.png" alt="Talk Wizard" width="230"></a> | <a href="screenshots/talk_wizzard2.png"><img src="screenshots/talk_wizzard2.png" alt="Talk Wizard Schritt 2" width="230"></a> |
+| <a href="screenshots/talk_wizzard1.png"><img src="screenshots/talk_wizzard1.png" alt="Talk-Wizard" width="230"></a> | <a href="screenshots/talk_wizzard2.png"><img src="screenshots/talk_wizzard2.png" alt="Talk-Wizard Schritt 2" width="230"></a> |
 | --- | --- |
 
 </details>
 
-<details>
-<summary><strong>Sharing Wizard</strong></summary>
+<details open>
+<summary><strong>Freigabe-Assistent</strong></summary>
 
-| <a href="screenshots/filelink_wizzard1.png"><img src="screenshots/filelink_wizzard1.png" alt="Sharing Wizard Schritt 1" width="230"></a> | <a href="screenshots/filelink_wizzard2.png"><img src="screenshots/filelink_wizzard2.png" alt="Sharing Wizard Schritt 2" width="230"></a> |
+| <a href="screenshots/filelink_wizzard1.png"><img src="screenshots/filelink_wizzard1.png" alt="Freigabe Schritt 1" width="230"></a> | <a href="screenshots/filelink_wizzard2.png"><img src="screenshots/filelink_wizzard2.png" alt="Freigabe Schritt 2" width="230"></a> |
 | --- | --- |
-| <a href="screenshots/filelink_wizzard3.png"><img src="screenshots/filelink_wizzard3.png" alt="Sharing Wizard Schritt 3" width="230"></a> | <a href="screenshots/filelink_wizzard4.png"><img src="screenshots/filelink_wizzard4.png" alt="Sharing Wizard Schritt 4" width="230"></a> |
-| --- | --- |
-| <a href="screenshots/filelink_wizzard5.png"><img src="screenshots/filelink_wizzard5.png" alt="Sharing Wizard Schritt 5" width="230"></a> |  |
-| --- | --- |
+| <a href="screenshots/filelink_wizzard3.png"><img src="screenshots/filelink_wizzard3.png" alt="Freigabe Schritt 3" width="230"></a> | <a href="screenshots/filelink_wizzard4.png"><img src="screenshots/filelink_wizzard4.png" alt="Freigabe Schritt 4" width="230"></a> |
+| <a href="screenshots/filelink_wizzard5.png"><img src="screenshots/filelink_wizzard5.png" alt="Freigabe Schritt 5" width="230"></a> | |
 
 </details>
-
-
-
-
-
-
-
-
-
-
-
