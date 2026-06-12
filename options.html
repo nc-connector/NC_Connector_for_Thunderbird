@@ -303,6 +303,7 @@ footer{
 .option-tooltip-wrap:hover .option-tooltip,
 .option-tooltip-wrap:focus-within .option-tooltip{display:block;}
 .option-tooltip-title{font-weight:800; font-size:12px; margin:0 0 6px 0;}
+.option-tooltip-text{margin:0; font-size:12px; color:var(--tb-text);}
 .option-tooltip-list{margin:0; padding-left:18px;}
 .option-tooltip-list li{margin:0 0 4px 0; font-size:12px; color:var(--tb-text);}
 .option-tooltip-list li:last-child{margin-bottom:0;}
@@ -433,6 +434,7 @@ footer{
         <span id="baseUrlManagedPolicyMarker" class="managed-policy-marker" tabindex="0" hidden>?</span>
         <div id="baseUrlManagedPolicyTooltip" class="option-tooltip" role="tooltip" hidden>
           <div class="option-tooltip-title" data-i18n="policy_admin_controlled_tooltip">Admin controlled</div>
+          <p class="option-tooltip-text" data-i18n="options_managed_nextcloud_url_tooltip">This Nextcloud URL is managed by your administrator.</p>
         </div>
       </label>
       <input id="baseUrl" type="url" data-i18n-placeholder="options_base_url_placeholder" placeholder="https://cloud.example.com">

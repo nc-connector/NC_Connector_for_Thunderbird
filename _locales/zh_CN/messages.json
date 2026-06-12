@@ -872,6 +872,9 @@
   "policy_admin_controlled_tooltip": {
     "message": "由管理员控制"
   },
+  "options_managed_nextcloud_url_tooltip": {
+    "message": "此 Nextcloud URL 由管理员管理。"
+  },
   "options_lang_custom": {
     "message": "自定义（后端模板）"
   },

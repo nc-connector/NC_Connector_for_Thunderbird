@@ -872,6 +872,9 @@
   "policy_admin_controlled_tooltip": {
     "message": "Řízeno správcem"
   },
+  "options_managed_nextcloud_url_tooltip": {
+    "message": "Tuto adresu URL služby Nextcloud spravuje váš správce."
+  },
   "options_lang_custom": {
     "message": "Vlastni (backendova sablona)"
   },

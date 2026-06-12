@@ -1481,7 +1481,9 @@ function updateAuthModeUI(){
   const hasAppPass = !!String(appPassInput?.value || "").trim();
   const hasConnectionSettings = hasBaseUrl && hasUser && hasAppPass;
   if (baseUrlInput){
-    const managedHint = managedBaseUrlLocked ? getAdminControlledHint() : "";
+    const managedHint = managedBaseUrlLocked
+      ? (i18n("options_managed_nextcloud_url_tooltip") || getAdminControlledHint())
+      : "";
     baseUrlInput.classList.toggle("needs-attention", !hasBaseUrl);
     baseUrlInput.disabled = managedBaseUrlLocked;
     baseUrlInput.title = managedHint;

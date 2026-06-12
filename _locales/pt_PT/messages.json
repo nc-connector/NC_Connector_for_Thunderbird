@@ -872,6 +872,9 @@
   "policy_admin_controlled_tooltip": {
     "message": "Controlado pelo administrador"
   },
+  "options_managed_nextcloud_url_tooltip": {
+    "message": "Este URL do Nextcloud é gerido pelo administrador."
+  },
   "options_lang_custom": {
     "message": "Personalizado (modelo do backend)"
   },

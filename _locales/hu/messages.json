@@ -872,6 +872,9 @@
   "policy_admin_controlled_tooltip": {
     "message": "Rendszergazda által vezérelt"
   },
+  "options_managed_nextcloud_url_tooltip": {
+    "message": "Ezt a Nextcloud URL-t a rendszergazda kezeli."
+  },
   "options_lang_custom": {
     "message": "Egyeni (backend sablon)"
   },

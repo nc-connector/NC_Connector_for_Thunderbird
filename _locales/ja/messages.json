@@ -872,6 +872,9 @@
   "policy_admin_controlled_tooltip": {
     "message": "管理者により制御"
   },
+  "options_managed_nextcloud_url_tooltip": {
+    "message": "この Nextcloud URL は管理者によって管理されています。"
+  },
   "options_lang_custom": {
     "message": "カスタム（バックエンドテンプレート）"
   },

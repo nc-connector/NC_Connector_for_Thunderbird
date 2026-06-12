@@ -872,6 +872,9 @@
   "policy_admin_controlled_tooltip": {
     "message": "Door beheerder beheerd"
   },
+  "options_managed_nextcloud_url_tooltip": {
+    "message": "Deze Nextcloud-URL wordt beheerd door uw beheerder."
+  },
   "options_lang_custom": {
     "message": "Aangepast (backendsjabloon)"
   },
