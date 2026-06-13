@@ -53,11 +53,13 @@ Nextcloud:
   - Talk installed
   - OCS endpoints reachable
   - Files sharing + DAV enabled
+  - Nextcloud Secrets installed if you want Secrets-link password delivery
 
 Network:
 - The add-on needs host access to your Nextcloud origin for:
   - Talk OCS calls
   - Files sharing OCS calls
+  - Secrets OCS calls when Secrets-link password delivery is enabled
   - DAV operations (uploads / folder creation)
   - Capabilities (password policy)
 
@@ -97,6 +99,7 @@ These defaults are used by the **Sharing Wizard** (compose window).
 | Default permissions: Delete | `sharingDefaultPermDelete` | Enables delete for the share |
 | Default: set password | `sharingDefaultPassword` | Pre-enables the password toggle in the wizard |
 | Default: send password in separate mail | `sharingDefaultPasswordSeparate` | Pre-enables the separate-password toggle in the wizard (only effective when password is enabled) |
+| Default: password delivery | `sharingDefaultPasswordDeliveryMode` | `plain` sends the password as text; `secrets` sends a Nextcloud Secrets link when backend policy allows it |
 | Expiration (days) | `sharingDefaultExpireDays` | Default expiration time for new shares |
 | Always handle attachments via NC Connector | `sharingAttachmentsAlwaysConnector` | Immediately moves compose attachments into NC Connector share flow |
 | Offer upload for files larger than | `sharingAttachmentsOfferAboveEnabled` | Enables threshold-based decision popup in compose |
@@ -147,7 +150,9 @@ Runtime behavior:
 - if the backend is reachable but the license/seat state is no longer usable, Thunderbird also falls back to the locally saved add-on settings for Share/Talk defaults
 - invalid seat states remain visible in the UI so users can contact their administrator
 - separate password delivery is only available when the backend endpoint exists and the current user has an active assigned seat
-- separate password follow-up mails target only the primary mail `To` recipients
+- plain separate-password follow-up mails use the captured primary-mail `To`/`Cc`/`Bcc` envelope
+- Secrets-link delivery creates one one-time Secrets link per recipient and preserves `Bcc` separation
+- if Secrets is unavailable or link creation fails, Thunderbird falls back to plain delivery and warns the user
 - automatic password follow-up send reuses the same Thunderbird sender identity as the primary mail
 - if Thunderbird cannot resolve the sender identity cleanly, or if automatic send fails, the add-on opens a prefilled manual fallback draft instead of attempting an unsafe partial send
 - once the primary mail was sent, password-follow-up problems never delete the committed share

@@ -49,6 +49,8 @@ Data flow:
 - Optional separate password delivery for shares:
   - default + wizard toggle: "send password in separate email"
   - active only when password protection is enabled
+  - delivery mode can be plain text or a Nextcloud Secrets link when backend policy enables it
+  - Secrets mode creates one one-time link per recipient and falls back to plain text with a warning if Secrets is unavailable
   - main share block hides inline password and shows a separate-password notice
   - password-only follow-up mail is sent after the main compose message is sent (auto-send with timeout guard + manual fallback draft on send failure)
   - successful password-mail delivery triggers a desktop success notification

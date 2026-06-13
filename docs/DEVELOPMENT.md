@@ -298,6 +298,7 @@ Sharing defaults (managed by `modules/sharingStorage.js`):
 - `sharingDefaultPermDelete`
 - `sharingDefaultPassword`
 - `sharingDefaultPasswordSeparate`
+- `sharingDefaultPasswordDeliveryMode` (`"plain"` or `"secrets"`)
 - `sharingDefaultExpireDays`
 - `sharingAttachmentsAlwaysConnector`
 - `sharingAttachmentsOfferAboveEnabled`
@@ -613,13 +614,18 @@ Attachment mode specifics:
   - wizard-side cleanup is armed by window id in background; if the sharing wizard closes before finalize, background deletes the remote folder on `windows.onRemoved`
   - finalize explicitly clears the wizard cleanup entry before closing the popup
 - Password separation:
-  - Option + wizard toggle can send password in a dedicated follow-up mail.
+  - Option + wizard toggle can send the password in a dedicated follow-up mail.
   - This toggle is only active when password protection is enabled.
+  - Password delivery defaults to plain text. With backend policy, `share_send_password_mode=secrets` switches follow-up mails to Nextcloud Secrets links.
+  - If the backend reports Secrets as unavailable (`share_send_password_mode=null`) or link creation fails, the add-on falls back to plain text and warns the user.
   - Main compose block omits the inline password and shows a dedicated hint when enabled.
   - Background tracks live sender switches on `compose.onIdentityChanged`, captures the final main-mail envelope on `compose.onBeforeSend`, and dispatches password-only mail on `compose.onAfterSend`.
   - If Thunderbird closes the compose tab while send is still pending, the password-dispatch queue stays alive for the same grace timer as share cleanup. A later successful `onAfterSend` still sends the follow-up; without send confirmation the queue is cleared after the timer.
   - The primary-mail sender is resolved via Thunderbird compose details plus `accountsRead` identity lookup; the password follow-up must use the same Thunderbird identity as the main mail.
-  - The password follow-up itself targets only the primary mail `To` recipients; `Cc`/`Bcc` are still captured as part of the primary main-mail envelope.
+  - Plain-text follow-up mails use the captured `To`/`Cc`/`Bcc` envelope from the primary mail.
+  - Secrets mode creates one one-time Secrets link per recipient and preserves `Bcc` separation.
+  - Secrets are titled `NCC <share label>` when a label exists, otherwise `NCC share password`.
+  - HTML follow-up mails render Secrets URLs as localized link text; plain-text follow-up mails keep the full URL visible.
   - Backend custom password templates (`language_share_html_block=custom` + `share_password_template`) are sanitized in the render path before follow-up registration; rich HTML uses `NCSharing.buildHtmlBlock(...)`, plain text uses `NCSharing.buildPlainTextBlock(...)`, and missing sanitizer or empty sanitized output aborts finalize (fail-closed).
   - Follow-up mail delivery mode mirrors the source compose mode (`isPlainText` / `deliveryFormat`) captured from compose details and refreshed on `compose.onBeforeSend`.
   - Follow-up registration now requires both pre-rendered HTML and pre-rendered plain text; when follow-up is plain text, background uses the provided plain-text block and frames it with a fixed 50-character `#` border.
@@ -792,12 +798,14 @@ This add-on uses Nextcloud APIs such as:
   - `/ocs/v2.php/apps/password_policy/api/v1/generate`
 - Files sharing:
   - `/ocs/v2.php/apps/files_sharing/api/v1/shares`
+- Secrets:
+  - `/ocs/v2.php/apps/secrets/api/v1/secrets`
 - DAV:
   - `remote.php/dav/...`
 - Addressbook (system addressbook export):
   - `remote.php/dav/addressbooks/.../?export`
 
-All endpoint interaction lives in the shared modules (`modules/ocs.js`, `modules/nccore.js`, `modules/policyRuntime.js`, `modules/talkcore.js`, `modules/ncSharing.js`).
+All endpoint interaction lives in the shared modules (`modules/ocs.js`, `modules/nccore.js`, `modules/policyRuntime.js`, `modules/talkcore.js`, `modules/ncSharing.js`, `modules/ncSecrets.js`).
 
 ---
 
