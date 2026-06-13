@@ -91,13 +91,18 @@
       : coerced;
   }
 
-  function readPolicyBoundDefaults(domainState, bindings, defaults = {}){
+  function readPolicyBoundDefaults(domainState, bindings, defaults = {}, options = {}){
     const next = { ...defaults };
     if (!domainState?.active || !domainState?.policy){
       return next;
     }
+    const localNames = typeof options?.localNames?.has === "function" ? options.localNames : null;
     bindings.forEach((binding) => {
       if (!binding?.name || !binding.key){
+        return;
+      }
+      if (localNames?.has(binding.name)
+        && !NCPolicyState.isEditableLocked(domainState.active, domainState.editable, binding.key)){
         return;
       }
       const current = Object.prototype.hasOwnProperty.call(next, binding.name)

@@ -51,6 +51,8 @@ const sharingDefaultPermDeleteInput = document.getElementById("sharingDefaultPer
 const sharingDefaultPasswordInput = document.getElementById("sharingDefaultPassword");
 const sharingDefaultPasswordSeparateRow = document.getElementById("sharingDefaultPasswordSeparateRow");
 const sharingDefaultPasswordSeparateInput = document.getElementById("sharingDefaultPasswordSeparate");
+const sharingDefaultPasswordDeliveryModeRow = document.getElementById("sharingDefaultPasswordDeliveryModeRow");
+const sharingDefaultPasswordDeliveryModeSelect = document.getElementById("sharingDefaultPasswordDeliveryMode");
 const sharingDefaultExpireDaysRow = document.getElementById("sharingDefaultExpireDaysRow");
 const sharingDefaultExpireDaysInput = document.getElementById("sharingDefaultExpireDays");
 const sharingAttachmentsAlwaysNcInput = document.getElementById("sharingAttachmentsAlwaysNc");
@@ -161,6 +163,17 @@ const OPTION_SHARE_POLICY_BINDINGS = [
     element: sharingDefaultPasswordSeparateInput,
     property: "checked",
     type: "boolean"
+  },
+  {
+    name: "sharingDefaultPasswordDeliveryMode",
+    domain: "share",
+    key: "share_send_password_mode",
+    element: sharingDefaultPasswordDeliveryModeSelect,
+    row: sharingDefaultPasswordDeliveryModeRow,
+    property: "value",
+    type: "string",
+    fallback: NCSharePasswordDelivery.MODE_PLAIN,
+    normalize: (value, fallback) => NCSharePasswordDelivery.coerceMode(value, fallback)
   },
   {
     name: "sharingDefaultExpireDays",
@@ -752,6 +765,7 @@ async function load(){
     SHARING_KEYS.defaultPermDelete,
     SHARING_KEYS.defaultPassword,
     SHARING_KEYS.defaultPasswordSeparate,
+    SHARING_KEYS.defaultPasswordDeliveryMode,
     SHARING_KEYS.defaultExpireDays,
     SHARING_KEYS.attachmentsAlwaysConnector,
     SHARING_KEYS.attachmentsOfferAboveEnabled,
@@ -806,6 +820,12 @@ async function load(){
   }
   if (sharingDefaultPasswordSeparateInput){
     sharingDefaultPasswordSeparateInput.checked = !!stored[SHARING_KEYS.defaultPasswordSeparate];
+  }
+  if (sharingDefaultPasswordDeliveryModeSelect){
+    sharingDefaultPasswordDeliveryModeSelect.value = NCSharePasswordDelivery.coerceMode(
+      stored[SHARING_KEYS.defaultPasswordDeliveryMode],
+      NCSharePasswordDelivery.MODE_PLAIN
+    );
   }
   updateSharingPasswordState();
   if (sharingDefaultExpireDaysInput){
@@ -1091,6 +1111,10 @@ async function save(){
   let sharingDefaultPasswordSeparate = sharingDefaultPassword
     ? !!sharingDefaultPasswordSeparateInput?.checked
     : false;
+  let sharingDefaultPasswordDeliveryMode = NCSharePasswordDelivery.coerceMode(
+    sharingDefaultPasswordDeliveryModeSelect?.value,
+    NCSharePasswordDelivery.MODE_PLAIN
+  );
   let sharingDefaultExpireDays = NCTalkTextUtils.normalizeExpireDays(sharingDefaultExpireDaysInput?.value, DEFAULT_SHARING_EXPIRE_DAYS);
   let sharingAttachmentsAlwaysConnector = !!sharingAttachmentsAlwaysNcInput?.checked;
   let sharingAttachmentsOfferAboveEnabled = !!sharingAttachmentsOfferAboveEnabledInput?.checked;
@@ -1125,6 +1149,7 @@ async function save(){
       sharingDefaultPermDelete,
       sharingDefaultPassword,
       sharingDefaultPasswordSeparate,
+      sharingDefaultPasswordDeliveryMode,
       sharingDefaultExpireDays,
       shareBlockLang,
       talkDefaultTitle,
@@ -1145,6 +1170,7 @@ async function save(){
     sharingDefaultPermDelete,
     sharingDefaultPassword,
     sharingDefaultPasswordSeparate,
+    sharingDefaultPasswordDeliveryMode,
     sharingDefaultExpireDays,
     shareBlockLang,
     talkDefaultTitle,
@@ -1198,6 +1224,9 @@ async function save(){
   if (!isSeparatePasswordMailFeatureAvailable()){
     sharingDefaultPasswordSeparate = false;
   }
+  if (!sharingDefaultPasswordSeparate || NCSharePasswordDelivery.isSecretsUnavailable(runtimePolicyStatus)){
+    sharingDefaultPasswordDeliveryMode = NCSharePasswordDelivery.MODE_PLAIN;
+  }
   await browser.storage.local.set({
     baseUrl,
     user,
@@ -1211,6 +1240,7 @@ async function save(){
     [SHARING_KEYS.defaultPermDelete]: sharingDefaultPermDelete,
     [SHARING_KEYS.defaultPassword]: sharingDefaultPassword,
     [SHARING_KEYS.defaultPasswordSeparate]: sharingDefaultPasswordSeparate,
+    [SHARING_KEYS.defaultPasswordDeliveryMode]: sharingDefaultPasswordDeliveryMode,
     [SHARING_KEYS.defaultExpireDays]: sharingDefaultExpireDays,
     [SHARING_KEYS.attachmentsAlwaysConnector]: sharingAttachmentsAlwaysConnector,
     [SHARING_KEYS.attachmentsOfferAboveEnabled]: sharingAttachmentsOfferAboveEnabled,
@@ -1282,6 +1312,11 @@ if (sharingAttachmentsAlwaysNcInput){
 }
 if (sharingDefaultPasswordInput){
   sharingDefaultPasswordInput.addEventListener("change", () => {
+    updateSharingPasswordState();
+  });
+}
+if (sharingDefaultPasswordSeparateInput){
+  sharingDefaultPasswordSeparateInput.addEventListener("change", () => {
     updateSharingPasswordState();
   });
 }
@@ -1622,8 +1657,18 @@ function updateSharingPasswordState(){
   }
   const lockPassword = NCPolicyState.isLocked(runtimePolicyStatus, "share", "share_set_password");
   const lockSeparate = NCPolicyState.isLocked(runtimePolicyStatus, "share", "share_send_password_separately");
+  const lockDeliveryMode = NCPolicyState.isLocked(runtimePolicyStatus, "share", "share_send_password_mode");
   const featureUnavailable = !isSeparatePasswordMailFeatureAvailable();
+  const secretsUnavailable = NCSharePasswordDelivery.isSecretsUnavailable(runtimePolicyStatus);
   const passwordEnabled = !!sharingDefaultPasswordInput.checked;
+  const separateEnabled = passwordEnabled && !featureUnavailable && !!sharingDefaultPasswordSeparateInput.checked;
+  const deliveryHint = featureUnavailable
+    ? getSeparatePasswordUnavailableHint()
+    : (!separateEnabled
+      ? (i18n("sharing_password_delivery_enable_separate_tooltip") || "")
+      : (secretsUnavailable
+        ? (i18n("sharing_password_delivery_unavailable_tooltip") || "")
+        : (lockDeliveryMode ? getAdminControlledHint() : "")));
   sharingDefaultPasswordInput.disabled = lockPassword;
   sharingDefaultPasswordSeparateInput.disabled = !passwordEnabled || lockSeparate || featureUnavailable;
   sharingDefaultPasswordSeparateInput.title = featureUnavailable
@@ -1637,6 +1682,17 @@ function updateSharingPasswordState(){
   }
   if (!passwordEnabled || featureUnavailable){
     sharingDefaultPasswordSeparateInput.checked = false;
+  }
+  if (sharingDefaultPasswordDeliveryModeSelect){
+    if (secretsUnavailable){
+      sharingDefaultPasswordDeliveryModeSelect.value = NCSharePasswordDelivery.MODE_PLAIN;
+    }
+    sharingDefaultPasswordDeliveryModeSelect.disabled = !separateEnabled || lockDeliveryMode || secretsUnavailable;
+    sharingDefaultPasswordDeliveryModeSelect.title = deliveryHint;
+  }
+  if (sharingDefaultPasswordDeliveryModeRow){
+    sharingDefaultPasswordDeliveryModeRow.classList.toggle("is-disabled", !separateEnabled || lockDeliveryMode || secretsUnavailable);
+    sharingDefaultPasswordDeliveryModeRow.title = deliveryHint;
   }
 }
 

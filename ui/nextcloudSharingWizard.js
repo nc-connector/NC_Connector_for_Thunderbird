@@ -74,6 +74,7 @@
       permDelete: false,
       passwordEnabled: true,
       passwordSeparate: false,
+      passwordDeliveryMode: NCSharePasswordDelivery.MODE_PLAIN,
       expireDays: 7
     },
     passwordPolicy: null,
@@ -108,6 +109,13 @@
     { name: "permDelete", key: "share_permission_delete", type: "boolean" },
     { name: "passwordEnabled", key: "share_set_password", type: "boolean" },
     { name: "passwordSeparate", key: "share_send_password_separately", type: "boolean" },
+    {
+      name: "passwordDeliveryMode",
+      key: "share_send_password_mode",
+      type: "string",
+      fallback: NCSharePasswordDelivery.MODE_PLAIN,
+      normalize: (value, fallback) => NCSharePasswordDelivery.coerceMode(value, fallback)
+    },
     {
       name: "expireDays",
       key: "share_expire_days",
@@ -221,6 +229,8 @@
     dom.passwordToggle = document.getElementById('passwordToggle');
     dom.passwordSeparateRow = document.getElementById('passwordSeparateRow');
     dom.passwordSeparateToggle = document.getElementById('passwordSeparateToggle');
+    dom.passwordDeliveryModeRow = document.getElementById('passwordDeliveryModeRow');
+    dom.passwordDeliveryMode = document.getElementById('passwordDeliveryMode');
     dom.passwordFields = document.getElementById('passwordFields');
     dom.passwordInput = document.getElementById('passwordInput');
     dom.passwordGenerate = document.getElementById('passwordGenerate');
@@ -298,8 +308,13 @@
       log('password toggle', dom.passwordToggle.checked);
     });
     dom.passwordSeparateToggle?.addEventListener('change', () => {
+      applyPasswordToggleState(dom.passwordToggle.checked);
       invalidateUpload();
       log('separate password toggle', dom.passwordSeparateToggle.checked);
+    });
+    dom.passwordDeliveryMode?.addEventListener('change', () => {
+      invalidateUpload();
+      log('password delivery mode changed', dom.passwordDeliveryMode.value);
     });
     dom.passwordInput.addEventListener('input', invalidateUpload);
     dom.passwordGenerate.addEventListener('click', async () => {
@@ -365,6 +380,7 @@
     state.defaults.permDelete = false;
     state.defaults.passwordEnabled = true;
     state.defaults.passwordSeparate = false;
+    state.defaults.passwordDeliveryMode = NCSharePasswordDelivery.MODE_PLAIN;
     state.defaults.expireDays = DEFAULT_EXPIRE_DAYS;
     if (!browser?.storage?.local){
       return;
@@ -376,45 +392,77 @@
       SHARING_KEYS.defaultPermDelete,
       SHARING_KEYS.defaultPassword,
       SHARING_KEYS.defaultPasswordSeparate,
+      SHARING_KEYS.defaultPasswordDeliveryMode,
       SHARING_KEYS.defaultExpireDays
     ]);
+    const localDefaultNames = new Set();
     const storedShareName = stored[SHARING_KEYS.defaultShareName];
     if (storedShareName){
       const trimmed = String(storedShareName).trim();
       if (trimmed){
         state.defaults.shareName = trimmed;
+        localDefaultNames.add("shareName");
       }
     }
     if (typeof stored[SHARING_KEYS.defaultPermCreate] === 'boolean'){
       state.defaults.permCreate = stored[SHARING_KEYS.defaultPermCreate];
+      localDefaultNames.add("permCreate");
     }
     if (typeof stored[SHARING_KEYS.defaultPermWrite] === 'boolean'){
       state.defaults.permWrite = stored[SHARING_KEYS.defaultPermWrite];
+      localDefaultNames.add("permWrite");
     }
     if (typeof stored[SHARING_KEYS.defaultPermDelete] === 'boolean'){
       state.defaults.permDelete = stored[SHARING_KEYS.defaultPermDelete];
+      localDefaultNames.add("permDelete");
     }
     if (stored[SHARING_KEYS.defaultPassword] !== undefined){
       state.defaults.passwordEnabled = !!stored[SHARING_KEYS.defaultPassword];
+      localDefaultNames.add("passwordEnabled");
     }
     if (stored[SHARING_KEYS.defaultPasswordSeparate] !== undefined){
       state.defaults.passwordSeparate = !!stored[SHARING_KEYS.defaultPasswordSeparate];
+      localDefaultNames.add("passwordSeparate");
+    }
+    if (stored[SHARING_KEYS.defaultPasswordDeliveryMode] !== undefined){
+      state.defaults.passwordDeliveryMode = NCSharePasswordDelivery.coerceMode(
+        stored[SHARING_KEYS.defaultPasswordDeliveryMode],
+        NCSharePasswordDelivery.MODE_PLAIN
+      );
+      localDefaultNames.add("passwordDeliveryMode");
     }
     state.defaults.expireDays = NCTalkTextUtils.normalizeExpireDays(
       stored[SHARING_KEYS.defaultExpireDays],
       DEFAULT_EXPIRE_DAYS
     );
+    if (stored[SHARING_KEYS.defaultExpireDays] !== undefined){
+      localDefaultNames.add("expireDays");
+    }
     state.defaults = NCWizardPolicyUi.readPolicyBoundDefaults(
       {
         active: state.policy.active,
-        policy: state.policy.share
+        policy: state.policy.share,
+        editable: state.policy.editable
       },
       SHARE_DEFAULT_POLICY_BINDINGS,
-      state.defaults
+      state.defaults,
+      { localNames: localDefaultNames }
     );
     if (!NCWizardPolicyUi.isSeparatePasswordFeatureAvailable(state.policy.status)){
       state.defaults.passwordSeparate = false;
     }
+    if (!state.defaults.passwordSeparate || NCSharePasswordDelivery.isSecretsUnavailable(state.policy.status)){
+      state.defaults.passwordDeliveryMode = NCSharePasswordDelivery.MODE_PLAIN;
+    }
+    log('Password delivery defaults resolved', {
+      storedMode: stored[SHARING_KEYS.defaultPasswordDeliveryMode] ?? "",
+      defaultMode: state.defaults.passwordDeliveryMode,
+      localDefault: localDefaultNames.has("passwordDeliveryMode"),
+      policyMode: NCPolicyState.readDomainValue(state.policy.share, "share_send_password_mode"),
+      policyEditable: state.policy.editable?.share_send_password_mode,
+      secretsUnavailable: NCSharePasswordDelivery.isSecretsUnavailable(state.policy.status),
+      separateDefault: !!state.defaults.passwordSeparate
+    });
   }
   /**
    * Load the configured base path and update the UI.
@@ -648,8 +696,18 @@
       translate: wizardTranslate
     });
     const lockSeparate = NCPolicyState.isEditableLocked(state.policy.active, state.policy.editable, "share_send_password_separately");
+    const lockDeliveryMode = NCPolicyState.isEditableLocked(state.policy.active, state.policy.editable, "share_send_password_mode");
     const featureUnavailable = !NCWizardPolicyUi.isSeparatePasswordFeatureAvailable(state.policy.status);
+    const secretsUnavailable = NCSharePasswordDelivery.isSecretsUnavailable(state.policy.status);
     const adminHint = NCWizardPolicyUi.getAdminControlledHint(wizardTranslate);
+    const separateEnabled = enabled && !featureUnavailable && !!dom.passwordSeparateToggle?.checked;
+    const deliveryHint = featureUnavailable
+      ? NCWizardPolicyUi.getSeparatePasswordUnavailableHint(state.policy.status, wizardTranslate)
+      : (!separateEnabled
+        ? (i18n("sharing_password_delivery_enable_separate_tooltip") || "")
+        : (secretsUnavailable
+          ? (i18n("sharing_password_delivery_unavailable_tooltip") || "")
+          : (lockDeliveryMode ? adminHint : "")));
     dom.passwordFields.classList.toggle('hidden', !enabled);
     dom.passwordInput.disabled = !enabled;
     dom.passwordGenerate.disabled = !enabled;
@@ -667,6 +725,17 @@
       dom.passwordSeparateRow.title = featureUnavailable
         ? NCWizardPolicyUi.getSeparatePasswordUnavailableHint(state.policy.status, wizardTranslate)
         : (lockSeparate ? adminHint : "");
+    }
+    if (dom.passwordDeliveryMode){
+      if (secretsUnavailable){
+        dom.passwordDeliveryMode.value = NCSharePasswordDelivery.MODE_PLAIN;
+      }
+      dom.passwordDeliveryMode.disabled = !separateEnabled || lockDeliveryMode || secretsUnavailable;
+      dom.passwordDeliveryMode.title = deliveryHint;
+    }
+    if (dom.passwordDeliveryModeRow){
+      dom.passwordDeliveryModeRow.classList.toggle("is-disabled", !separateEnabled || lockDeliveryMode || secretsUnavailable);
+      dom.passwordDeliveryModeRow.title = deliveryHint;
     }
     if (!enabled){
       dom.passwordInput.value = '';
@@ -691,6 +760,12 @@
     if (dom.passwordSeparateToggle){
       dom.passwordSeparateToggle.checked = enabled && !!state.defaults.passwordSeparate;
     }
+    if (dom.passwordDeliveryMode){
+      dom.passwordDeliveryMode.value = NCSharePasswordDelivery.coerceMode(
+        state.defaults.passwordDeliveryMode,
+        NCSharePasswordDelivery.MODE_PLAIN
+      );
+    }
     if (enabled && !dom.passwordInput.value){
       dom.passwordInput.value = await passwordPolicyActions.generate();
     }
@@ -698,6 +773,7 @@
     dom.expireFields.classList.remove('hidden');
     dom.expireDate.value = getDefaultExpireDate();
     applyPolicyControlLocks();
+    applyPasswordToggleState(enabled);
   }
 
   /**
@@ -1313,6 +1389,10 @@
           shareId: state.uploadResult.shareInfo?.shareId || "",
           folderInfo: state.uploadResult.shareInfo?.folderInfo || null,
           password: state.uploadResult.shareInfo?.password || "",
+          deliveryMode: getSelectedPasswordDeliveryMode(),
+          secretsExpireDays: NCSharePasswordDelivery.resolveSecretsExpireDays(state.policy.status),
+          renderShareInfo: state.uploadResult.shareInfo,
+          policyShare: state.policy.active ? state.policy.share : null,
           html: passwordMailHtml,
           plainText: passwordMailPlainText
         });
@@ -1332,6 +1412,38 @@
       && NCWizardPolicyUi.isSeparatePasswordFeatureAvailable(state.policy.status)
       && !!dom.passwordSeparateToggle?.checked
       && !!state.uploadResult?.shareInfo?.password;
+  }
+
+  function getSelectedPasswordDeliveryMode(){
+    if (!isSeparatePasswordMailEnabled()){
+      log('Password delivery mode resolved', {
+        mode: NCSharePasswordDelivery.MODE_PLAIN,
+        reason: "separate_password_disabled",
+        passwordEnabled: !!dom.passwordToggle?.checked,
+        separateFeatureAvailable: NCWizardPolicyUi.isSeparatePasswordFeatureAvailable(state.policy.status),
+        separateChecked: !!dom.passwordSeparateToggle?.checked,
+        hasPassword: !!state.uploadResult?.shareInfo?.password
+      });
+      return NCSharePasswordDelivery.MODE_PLAIN;
+    }
+    if (NCSharePasswordDelivery.isSecretsUnavailable(state.policy.status)){
+      log('Password delivery mode resolved', {
+        mode: NCSharePasswordDelivery.MODE_PLAIN,
+        reason: "secrets_unavailable",
+        uiMode: dom.passwordDeliveryMode?.value || ""
+      });
+      return NCSharePasswordDelivery.MODE_PLAIN;
+    }
+    const mode = NCSharePasswordDelivery.coerceMode(
+      dom.passwordDeliveryMode?.value,
+      NCSharePasswordDelivery.MODE_PLAIN
+    );
+    log('Password delivery mode resolved', {
+      mode,
+      reason: "ui_selection",
+      uiMode: dom.passwordDeliveryMode?.value || ""
+    });
+    return mode;
   }
 
   /**
@@ -1458,7 +1570,7 @@
   /**
    * Register a password-only follow-up mail dispatch in the background.
    * The background captures final recipients when the main message is sent.
-   * @param {{tabId:number,shareLabel:string,shareUrl:string,shareId?:string,folderInfo?:object,password:string,html:string,plainText?:string}} payload
+   * @param {{tabId:number,shareLabel:string,shareUrl:string,shareId?:string,folderInfo?:object,password:string,deliveryMode?:string,secretsExpireDays?:number,renderShareInfo?:object,policyShare?:object,html:string,plainText?:string}} payload
    * @returns {Promise<void>}
    */
   async function registerSeparatePasswordDispatch(payload = {}){
@@ -1487,6 +1599,14 @@
           }
           : null,
         password,
+        deliveryMode: NCSharePasswordDelivery.coerceMode(payload.deliveryMode, NCSharePasswordDelivery.MODE_PLAIN),
+        secretsExpireDays: NCSharePasswordDelivery.clampSecretsExpireDays(payload.secretsExpireDays),
+        renderShareInfo: payload?.renderShareInfo && typeof payload.renderShareInfo === "object"
+          ? payload.renderShareInfo
+          : null,
+        policyShare: payload?.policyShare && typeof payload.policyShare === "object"
+          ? payload.policyShare
+          : null,
         html,
         plainText
       }
@@ -1496,7 +1616,8 @@
     }
     log('Password dispatch registered', {
       tabId,
-      shareLabel: String(payload.shareLabel || "")
+      shareLabel: String(payload.shareLabel || ""),
+      deliveryMode: NCSharePasswordDelivery.coerceMode(payload.deliveryMode, NCSharePasswordDelivery.MODE_PLAIN)
     });
   }
 

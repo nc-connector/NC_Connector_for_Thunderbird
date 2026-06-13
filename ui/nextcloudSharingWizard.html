@@ -513,6 +513,13 @@ tbody tr.uploading .status-speed{
           <input type="checkbox" id="passwordSeparateToggle">
           <span data-i18n="sharing_password_separate_toggle">Send password in separate email</span>
         </label>
+        <div class="form-row" id="passwordDeliveryModeRow">
+          <label for="passwordDeliveryMode" data-i18n="sharing_password_delivery_mode_label">Password delivery</label>
+          <select id="passwordDeliveryMode">
+            <option value="plain" data-i18n="sharing_password_delivery_plain">Plaintext</option>
+            <option value="secrets" data-i18n="sharing_password_delivery_secrets">Nextcloud Secret Link</option>
+          </select>
+        </div>
         <div class="inline-field" id="passwordFields">
           <input id="passwordInput" type="text" autocomplete="new-password" placeholder="********">
           <button type="button" id="passwordGenerate" data-i18n="sharing_password_generate">Generate</button>
@@ -595,6 +602,7 @@ tbody tr.uploading .status-speed{
   <script src="../modules/i18n.js"></script>
   <script src="../modules/i18nOverride.js"></script>
   <script src="../modules/sharingStorage.js"></script>
+  <script src="../modules/sharePasswordDelivery.js"></script>
   <script src="../modules/ocs.js"></script>
   <script src="../modules/textUtils.js"></script>
   <script src="../modules/shareTemplateContract.js"></script>
@@ -611,8 +619,6 @@ tbody tr.uploading .status-speed{
   <script src="debugForwarder.js"></script>
   <script src="nextcloudSharingWizard.js"></script>
 </body>
-
-
 
 
 

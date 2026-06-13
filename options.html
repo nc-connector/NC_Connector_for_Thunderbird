@@ -505,6 +505,13 @@ footer{
           <input id="sharingDefaultPasswordSeparate" type="checkbox">
         </div>
       </div>
+      <div class="row" id="sharingDefaultPasswordDeliveryModeRow">
+        <label for="sharingDefaultPasswordDeliveryMode" data-i18n="sharing_password_delivery_mode_label">Password delivery</label>
+        <select id="sharingDefaultPasswordDeliveryMode">
+          <option value="plain" data-i18n="sharing_password_delivery_plain">Plaintext</option>
+          <option value="secrets" data-i18n="sharing_password_delivery_secrets">Nextcloud Secret Link</option>
+        </select>
+      </div>
       <div class="row" id="sharingDefaultExpireDaysRow">
         <label for="sharingDefaultExpireDays" data-i18n="options_sharing_default_expire_days_label">Expiration (days)</label>
         <input id="sharingDefaultExpireDays" type="number" min="1" step="1">
@@ -779,6 +786,7 @@ footer{
 <script src="modules/i18n.js"></script>
 <script src="modules/i18nOverride.js"></script>
 <script src="modules/sharingStorage.js"></script>
+<script src="modules/sharePasswordDelivery.js"></script>
 <script src="modules/hostPermissions.js"></script>
 <script src="modules/ocs.js"></script>
 <script src="modules/textUtils.js"></script>
