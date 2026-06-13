@@ -764,11 +764,32 @@
   "sharing_password_separate_toggle": {
     "message": "Enviar palavra-passe num e-mail separado"
   },
+  "sharing_password_delivery_mode_label": {
+    "message": "Entrega da palavra-passe"
+  },
+  "sharing_password_delivery_plain": {
+    "message": "Texto simples"
+  },
+  "sharing_password_delivery_secrets": {
+    "message": "Ligação secreta do Nextcloud"
+  },
+  "sharing_password_delivery_enable_separate_tooltip": {
+    "message": "Ative primeiro o e-mail separado da palavra-passe."
+  },
+  "sharing_password_delivery_unavailable_tooltip": {
+    "message": "O Nextcloud Secrets não está disponível. A palavra-passe será enviada num e-mail separado em texto simples."
+  },
   "sharing_html_password_separate_hint": {
     "message": "A palavra-passe será enviada num e-mail separado."
   },
   "sharing_html_password_mail_intro": {
     "message": "Aqui está a sua palavra-passe para a ligação partilhada enviada."
+  },
+  "sharing_html_secret_mail_intro": {
+    "message": "Aqui está a ligação do Nextcloud Secrets para a palavra-passe da partilha enviada."
+  },
+  "sharing_html_secret_link_label": {
+    "message": "Ligação secreta"
   },
   "sharing_password_mail_subject": {
     "message": "Palavra-passe da ligação partilhada"
@@ -847,6 +868,9 @@
   },
   "sharing_password_mail_notify_manual_required_select_sender": {
     "message": "O envio automatico do e-mail da palavra-passe falhou. Se necessario, selecione um remetente no rascunho aberto e envie manualmente o e-mail da palavra-passe."
+  },
+  "sharing_password_secrets_fallback_warning": {
+    "message": "O Nextcloud Secrets não está disponível. A palavra-passe será enviada num e-mail separado em texto simples."
   },
   "options_about_homepage_link": {
     "message": "https://nc-connector.de"

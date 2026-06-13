@@ -764,11 +764,32 @@
   "sharing_password_separate_toggle": {
     "message": "以獨立郵件傳送密碼"
   },
+  "sharing_password_delivery_mode_label": {
+    "message": "密碼傳送方式"
+  },
+  "sharing_password_delivery_plain": {
+    "message": "純文字"
+  },
+  "sharing_password_delivery_secrets": {
+    "message": "Nextcloud 秘密連結"
+  },
+  "sharing_password_delivery_enable_separate_tooltip": {
+    "message": "請先啟用單獨傳送密碼郵件。"
+  },
+  "sharing_password_delivery_unavailable_tooltip": {
+    "message": "Nextcloud Secrets 無法使用。密碼將以純文字形式透過單獨郵件傳送。"
+  },
   "sharing_html_password_separate_hint": {
     "message": "密碼將以獨立郵件傳送。"
   },
   "sharing_html_password_mail_intro": {
     "message": "這是您已傳送共享連結的密碼。"
+  },
+  "sharing_html_secret_mail_intro": {
+    "message": "這是已傳送分享密碼的 Nextcloud Secrets 連結。"
+  },
+  "sharing_html_secret_link_label": {
+    "message": "密鑰連結"
   },
   "sharing_password_mail_subject": {
     "message": "共享連結密碼"
@@ -847,6 +868,9 @@
   },
   "sharing_password_mail_notify_manual_required_select_sender": {
     "message": "密碼郵件自動傳送失敗。如有需要，請在已開啟的草稿中選擇寄件者，再手動傳送密碼郵件。"
+  },
+  "sharing_password_secrets_fallback_warning": {
+    "message": "Nextcloud Secrets 無法使用。密碼將以純文字形式透過單獨郵件傳送。"
   },
   "options_about_homepage_link": {
     "message": "https://nc-connector.de"

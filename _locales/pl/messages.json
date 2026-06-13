@@ -764,11 +764,32 @@
   "sharing_password_separate_toggle": {
     "message": "Wyślij hasło w osobnym e-mailu"
   },
+  "sharing_password_delivery_mode_label": {
+    "message": "Dostarczenie hasła"
+  },
+  "sharing_password_delivery_plain": {
+    "message": "Zwykły tekst"
+  },
+  "sharing_password_delivery_secrets": {
+    "message": "Tajny link Nextcloud"
+  },
+  "sharing_password_delivery_enable_separate_tooltip": {
+    "message": "Najpierw włącz osobny e-mail z hasłem."
+  },
+  "sharing_password_delivery_unavailable_tooltip": {
+    "message": "Nextcloud Secrets jest niedostępny. Hasło zostanie wysłane jako osobny e-mail zwykłym tekstem."
+  },
   "sharing_html_password_separate_hint": {
     "message": "Hasło zostanie wysłane w osobnym e-mailu."
   },
   "sharing_html_password_mail_intro": {
     "message": "Oto hasło do wysłanego linku udostępniania."
+  },
+  "sharing_html_secret_mail_intro": {
+    "message": "Oto link Nextcloud Secrets do hasła wysłanego udostępnienia."
+  },
+  "sharing_html_secret_link_label": {
+    "message": "Tajny link"
   },
   "sharing_password_mail_subject": {
     "message": "Hasło do udostępnionego linku"
@@ -847,6 +868,9 @@
   },
   "sharing_password_mail_notify_manual_required_select_sender": {
     "message": "Automatyczne wysylanie maila z haslem nie powiodlo sie. W razie potrzeby wybierz nadawce w otwartym szkicu i wyslij mail z haslem recznie."
+  },
+  "sharing_password_secrets_fallback_warning": {
+    "message": "Nextcloud Secrets jest niedostępny. Hasło zostanie wysłane jako osobny e-mail zwykłym tekstem."
   },
   "options_about_homepage_link": {
     "message": "https://nc-connector.de"

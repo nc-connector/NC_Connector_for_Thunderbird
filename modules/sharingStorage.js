@@ -18,6 +18,7 @@ const NCSharingStorage = (() => {
     defaultPermDelete: "sharingDefaultPermDelete",
     defaultPassword: "sharingDefaultPassword",
     defaultPasswordSeparate: "sharingDefaultPasswordSeparate",
+    defaultPasswordDeliveryMode: "sharingDefaultPasswordDeliveryMode",
     defaultExpireDays: "sharingDefaultExpireDays",
     attachmentsAlwaysConnector: "sharingAttachmentsAlwaysConnector",
     attachmentsOfferAboveEnabled: "sharingAttachmentsOfferAboveEnabled",
@@ -31,6 +32,7 @@ const NCSharingStorage = (() => {
     defaultPermDelete: "filelinkDefaultPermDelete",
     defaultPassword: "filelinkDefaultPassword",
     defaultPasswordSeparate: "filelinkDefaultPasswordSeparate",
+    defaultPasswordDeliveryMode: "filelinkDefaultPasswordDeliveryMode",
     defaultExpireDays: "filelinkDefaultExpireDays"
   };
   const ALL_KEYS = Object.values(SHARING_KEYS).concat(Object.values(LEGACY_KEYS));
@@ -86,6 +88,10 @@ const NCSharingStorage = (() => {
     if (!hasStoredKey(stored[SHARING_KEYS.defaultPasswordSeparate])
         && hasStoredKey(stored[LEGACY_KEYS.defaultPasswordSeparate])){
       migration[SHARING_KEYS.defaultPasswordSeparate] = stored[LEGACY_KEYS.defaultPasswordSeparate];
+    }
+    if (!hasStoredKey(stored[SHARING_KEYS.defaultPasswordDeliveryMode])
+        && hasStoredKey(stored[LEGACY_KEYS.defaultPasswordDeliveryMode])){
+      migration[SHARING_KEYS.defaultPasswordDeliveryMode] = stored[LEGACY_KEYS.defaultPasswordDeliveryMode];
     }
     if (isStorageUnset(stored[SHARING_KEYS.defaultExpireDays])
         && hasStoredKey(stored[LEGACY_KEYS.defaultExpireDays])){

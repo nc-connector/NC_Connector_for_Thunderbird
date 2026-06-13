@@ -764,11 +764,32 @@
   "sharing_password_separate_toggle": {
     "message": "Send password in separate email"
   },
+  "sharing_password_delivery_mode_label": {
+    "message": "Password delivery"
+  },
+  "sharing_password_delivery_plain": {
+    "message": "Plaintext"
+  },
+  "sharing_password_delivery_secrets": {
+    "message": "Nextcloud Secret Link"
+  },
+  "sharing_password_delivery_enable_separate_tooltip": {
+    "message": "Enable separate password email first."
+  },
+  "sharing_password_delivery_unavailable_tooltip": {
+    "message": "Nextcloud Secrets is unavailable. The password will be sent as a separate plaintext email."
+  },
   "sharing_html_password_separate_hint": {
     "message": "The password will be sent in a separate email."
   },
   "sharing_html_password_mail_intro": {
     "message": "Here is your password for the shared link."
+  },
+  "sharing_html_secret_mail_intro": {
+    "message": "Here is the Nextcloud Secrets link for the password of the shared link."
+  },
+  "sharing_html_secret_link_label": {
+    "message": "Secret link"
   },
   "sharing_password_mail_subject": {
     "message": "Password for shared link"
@@ -847,6 +868,9 @@
   },
   "sharing_password_mail_notify_manual_required_select_sender": {
     "message": "Automatic password email failed. Please select a sender in the opened draft if needed, then send the password email manually."
+  },
+  "sharing_password_secrets_fallback_warning": {
+    "message": "Nextcloud Secrets is unavailable. The password will be sent as a separate plaintext email."
   },
   "options_about_homepage_link": {
     "message": "https://nc-connector.de"

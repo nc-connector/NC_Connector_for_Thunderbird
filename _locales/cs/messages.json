@@ -764,11 +764,32 @@
   "sharing_password_separate_toggle": {
     "message": "Odeslat heslo v samostatném e-mailu"
   },
+  "sharing_password_delivery_mode_label": {
+    "message": "Doručení hesla"
+  },
+  "sharing_password_delivery_plain": {
+    "message": "Prostý text"
+  },
+  "sharing_password_delivery_secrets": {
+    "message": "Odkaz Nextcloud Secrets"
+  },
+  "sharing_password_delivery_enable_separate_tooltip": {
+    "message": "Nejprve zapněte samostatné odesílání hesla."
+  },
+  "sharing_password_delivery_unavailable_tooltip": {
+    "message": "Nextcloud Secrets není k dispozici. Heslo se odešle jako samostatný e-mail v prostém textu."
+  },
   "sharing_html_password_separate_hint": {
     "message": "Heslo bude odesláno v samostatném e-mailu."
   },
   "sharing_html_password_mail_intro": {
     "message": "Zde je vaše heslo k odeslanému sdílenému odkazu."
+  },
+  "sharing_html_secret_mail_intro": {
+    "message": "Zde je odkaz Nextcloud Secrets pro heslo ke sdílení."
+  },
+  "sharing_html_secret_link_label": {
+    "message": "Tajný odkaz"
   },
   "sharing_password_mail_subject": {
     "message": "Heslo ke sdílenému odkazu"
@@ -847,6 +868,9 @@
   },
   "sharing_password_mail_notify_manual_required_select_sender": {
     "message": "Automaticke odeslani hesla selhalo. Pokud je to potreba, vyberte v otevrenem konceptu odesilatele a odeslete e-mail s heslem rucne."
+  },
+  "sharing_password_secrets_fallback_warning": {
+    "message": "Nextcloud Secrets není k dispozici. Heslo se odešle jako samostatný e-mail v prostém textu."
   },
   "options_about_homepage_link": {
     "message": "https://nc-connector.de"

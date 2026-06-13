@@ -75,7 +75,7 @@ function composeRecipientKey(recipient){
 function countUniquePasswordDispatchRecipients(queue){
   const keys = new Set();
   for (const dispatch of queue){
-    const groups = [dispatch?.to];
+    const groups = [dispatch?.to, dispatch?.cc, dispatch?.bcc];
     for (const group of groups){
       if (!Array.isArray(group)){
         continue;
@@ -322,7 +322,7 @@ function normalizePasswordMailSendMode(value){
  * Recipients are captured from compose.onBeforeSend for the final send action.
  * Initial compose details are captured immediately to preserve identity context.
  * @param {number} tabId
- * @param {{shareLabel?:string,shareUrl?:string,shareId?:string,folderInfo?:object,password?:string,html?:string,plainText?:string}} payload
+ * @param {{shareLabel?:string,shareUrl?:string,shareId?:string,folderInfo?:object,password?:string,deliveryMode?:string,secretsExpireDays?:number,renderShareInfo?:object,policyShare?:object,html?:string,plainText?:string}} payload
  */
 async function registerSeparatePasswordMailDispatch(tabId, payload = {}){
   if (!Number.isInteger(tabId) || tabId <= 0){
@@ -332,6 +332,7 @@ async function registerSeparatePasswordMailDispatch(tabId, payload = {}){
   const password = String(payload.password || "").trim();
   const rawHtml = String(payload.html || "").trim();
   const rawPlainText = String(payload.plainText || "").trim();
+  const deliveryMode = NCSharePasswordDelivery.coerceMode(payload.deliveryMode, NCSharePasswordDelivery.MODE_PLAIN);
   if (!password || !rawHtml || !rawPlainText){
     throw new Error("password_or_html_or_plaintext_missing");
   }
@@ -344,6 +345,14 @@ async function registerSeparatePasswordMailDispatch(tabId, payload = {}){
     shareId: String(payload.shareId || "").trim(),
     folderInfo: normalizeComposeShareCleanupFolderInfo(payload.folderInfo) || null,
     password,
+    deliveryMode,
+    secretsExpireDays: NCSharePasswordDelivery.clampSecretsExpireDays(payload.secretsExpireDays),
+    renderShareInfo: payload?.renderShareInfo && typeof payload.renderShareInfo === "object"
+      ? payload.renderShareInfo
+      : null,
+    policyShare: payload?.policyShare && typeof payload.policyShare === "object"
+      ? payload.policyShare
+      : null,
     html,
     plainText,
     isPlainText: false,
@@ -399,6 +408,8 @@ async function registerSeparatePasswordMailDispatch(tabId, payload = {}){
     hasIdentityId: !!dispatch.identityId,
     hasFrom: !!dispatch.from,
     hasFromEmail: !!dispatch.fromEmail,
+    deliveryMode: dispatch.deliveryMode,
+    secretsExpireDays: dispatch.secretsExpireDays,
     composeMode: dispatch.isPlainText ? "plain" : "html",
     composeModeReason: dispatch.composeModeReason || "",
     deliveryFormat: dispatch.deliveryFormat || "",
@@ -774,6 +785,8 @@ async function openManualPasswordComposeFallback(sourceTabId, dispatch, failedCo
   const bodyFields = buildSeparatePasswordMailBodyFields(dispatch);
   const manualComposeDetails = {
     to: dispatch.to,
+    cc: dispatch.cc,
+    bcc: dispatch.bcc,
     subject: buildSeparatePasswordMailSubject(dispatch),
     ...bodyFields
   };
@@ -990,15 +1003,194 @@ async function openManualPasswordFallbackQueue(sourceTabId, queue, failedCompose
   return { opened, failed, needsSender };
 }
 
+function clonePasswordDispatch(dispatch){
+  if (!dispatch || typeof dispatch !== "object"){
+    return null;
+  }
+  return {
+    ...dispatch,
+    to: Array.isArray(dispatch.to) ? dispatch.to.slice() : [],
+    cc: Array.isArray(dispatch.cc) ? dispatch.cc.slice() : [],
+    bcc: Array.isArray(dispatch.bcc) ? dispatch.bcc.slice() : [],
+    folderInfo: dispatch.folderInfo && typeof dispatch.folderInfo === "object" ? { ...dispatch.folderInfo } : null,
+    renderShareInfo: dispatch.renderShareInfo && typeof dispatch.renderShareInfo === "object" ? { ...dispatch.renderShareInfo } : null,
+    policyShare: dispatch.policyShare && typeof dispatch.policyShare === "object" ? { ...dispatch.policyShare } : null
+  };
+}
+
+function isSecretsPasswordDispatch(dispatch){
+  return NCSharePasswordDelivery.coerceMode(dispatch?.deliveryMode, NCSharePasswordDelivery.MODE_PLAIN)
+    === NCSharePasswordDelivery.MODE_SECRETS;
+}
+
+function addPerRecipientPasswordDispatches(target, source, recipients, field){
+  if (!Array.isArray(target) || !source || !Array.isArray(recipients) || !recipients.length){
+    return 0;
+  }
+  let added = 0;
+  for (const recipient of recipients){
+    const key = composeRecipientKey(recipient);
+    if (!key){
+      continue;
+    }
+    const clone = clonePasswordDispatch(source);
+    clone.to = field === "to" ? [recipient] : [];
+    clone.cc = field === "cc" ? [recipient] : [];
+    clone.bcc = field === "bcc" ? [recipient] : [];
+    target.push(clone);
+    added++;
+  }
+  return added;
+}
+
+function expandSeparatePasswordDispatchQueue(queue){
+  const expanded = [];
+  for (const dispatch of Array.isArray(queue) ? queue : []){
+    if (!isSecretsPasswordDispatch(dispatch)){
+      expanded.push(dispatch);
+      continue;
+    }
+    let added = 0;
+    added += addPerRecipientPasswordDispatches(expanded, dispatch, dispatch.to, "to");
+    added += addPerRecipientPasswordDispatches(expanded, dispatch, dispatch.cc, "cc");
+    added += addPerRecipientPasswordDispatches(expanded, dispatch, dispatch.bcc, "bcc");
+    if (added === 0){
+      expanded.push(dispatch);
+    }
+  }
+  return expanded;
+}
+
+function countSecretsPasswordDispatches(queue){
+  return (Array.isArray(queue) ? queue : []).reduce((count, dispatch) => {
+    return count + (isSecretsPasswordDispatch(dispatch) ? 1 : 0);
+  }, 0);
+}
+
+function buildSecretsTitle(dispatch){
+  const folderName = String(dispatch?.folderInfo?.folderName || "").trim();
+  if (!folderName){
+    throw new Error("Secrets title folder name is missing.");
+  }
+  return `NCC ${folderName}`;
+}
+
+function buildPasswordDeliveryShareInfo(dispatch, deliveryValue){
+  const base = dispatch?.renderShareInfo && typeof dispatch.renderShareInfo === "object"
+    ? dispatch.renderShareInfo
+    : {};
+  return {
+    ...base,
+    shareUrl: String(base.shareUrl || dispatch?.shareUrl || ""),
+    shareId: String(base.shareId || dispatch?.shareId || ""),
+    folderInfo: base.folderInfo || dispatch?.folderInfo || null,
+    label: String(base.label || dispatch?.shareLabel || ""),
+    password: String(deliveryValue || "")
+  };
+}
+
+async function renderPasswordDispatchBodies(dispatch, deliveryValue, secretLink){
+  const shareInfo = buildPasswordDeliveryShareInfo(dispatch, deliveryValue);
+  const renderOptions = {
+    policyShare: dispatch?.policyShare || null,
+    passwordOnly: true,
+    secretLink: !!secretLink
+  };
+  const html = dispatch?.isPlainText === true
+    ? ""
+    : await NCSharing.buildHtmlBlock(shareInfo, renderOptions);
+  const plainText = dispatch?.isPlainText === true
+    ? finalizePasswordDispatchPlainText(await NCSharing.buildPlainTextBlock(shareInfo, renderOptions))
+    : "";
+  return { html, plainText };
+}
+
+async function prepareSecretsPasswordDispatch(dispatch, sourceTabId){
+  if (!isSecretsPasswordDispatch(dispatch)){
+    return { dispatch, fellBack: false };
+  }
+  try{
+    L("sharing separate password secrets link create start", {
+      sourceTabId,
+      to: Array.isArray(dispatch.to) ? dispatch.to.length : 0,
+      cc: Array.isArray(dispatch.cc) ? dispatch.cc.length : 0,
+      bcc: Array.isArray(dispatch.bcc) ? dispatch.bcc.length : 0,
+      expireDays: dispatch.secretsExpireDays,
+      composeMode: dispatch.isPlainText ? "plain" : "html"
+    });
+    const secret = await NCSecrets.createSecretLink({
+      plainText: dispatch.password,
+      title: buildSecretsTitle(dispatch),
+      expireDays: dispatch.secretsExpireDays
+    });
+    const prepared = clonePasswordDispatch(dispatch);
+    const bodies = await renderPasswordDispatchBodies(prepared, secret.shareUrl, true);
+    prepared.password = secret.shareUrl;
+    prepared.deliveryMode = NCSharePasswordDelivery.MODE_SECRETS;
+    prepared.html = bodies.html || prepared.html;
+    prepared.plainText = bodies.plainText || prepared.plainText;
+    L("sharing separate password secrets link created", {
+      sourceTabId,
+      hasUuid: !!secret.uuid,
+      hasExpires: !!secret.expires,
+      hasHtml: !!prepared.html,
+      hasPlainText: !!prepared.plainText
+    });
+    return { dispatch: prepared, fellBack: false };
+  }catch(error){
+    console.error("[NCBG] sharing separate password secrets link creation failed, falling back to plain mail", {
+      sourceTabId,
+      error: error?.message || String(error)
+    });
+    const fallback = clonePasswordDispatch(dispatch);
+    fallback.deliveryMode = NCSharePasswordDelivery.MODE_PLAIN;
+    return { dispatch: fallback, fellBack: true };
+  }
+}
+
+async function showPasswordSecretsFallbackNotification(){
+  if (typeof browser?.notifications?.create !== "function"){
+    L("sharing separate password secrets fallback notification skipped", {
+      reason: "notifications_api_missing"
+    });
+    return;
+  }
+  try{
+    const notificationId = `nc-password-secrets-fallback-${Date.now()}-${Math.floor(Math.random() * 100000)}`;
+    await browser.notifications.create(notificationId, {
+      type: "basic",
+      title: bgI18n("sharing_password_mail_notify_title"),
+      message: bgI18n("sharing_password_secrets_fallback_warning"),
+      iconUrl: browser.runtime.getURL("icons/app-32.png")
+    });
+    L("sharing separate password secrets fallback notification shown", { notificationId });
+  }catch(error){
+    console.error("[NCBG] sharing separate password secrets fallback notification failed", {
+      error: error?.message || String(error)
+    });
+  }
+}
+
 async function sendSeparatePasswordMail(tabId, queue, sendMode = "sendNow"){
   if (!Array.isArray(queue) || !queue.length){
     return;
   }
   const passwordSendMode = normalizePasswordMailSendMode(sendMode);
-  const recipientCount = countUniquePasswordDispatchRecipients(queue);
+  const dispatchQueue = expandSeparatePasswordDispatchQueue(queue);
+  const queuedSecrets = countSecretsPasswordDispatches(queue);
+  if (queuedSecrets > 0){
+    L("sharing separate password dispatch queue prepared", {
+      sourceTabId: tabId,
+      queued: queue.length,
+      expanded: dispatchQueue.length,
+      secretsQueued: queuedSecrets,
+      secretsExpanded: countSecretsPasswordDispatches(dispatchQueue)
+    });
+  }
+  const recipientCount = countUniquePasswordDispatchRecipients(dispatchQueue);
   if (!recipientCount){
-    await openManualPasswordFallbackQueue(tabId, queue, 0, "no_recipients_for_password_mail");
-    await showPasswordMailManualRequiredNotification(queue.length, { requireSenderSelection: true });
+    await openManualPasswordFallbackQueue(tabId, dispatchQueue, 0, "no_recipients_for_password_mail");
+    await showPasswordMailManualRequiredNotification(dispatchQueue.length, { requireSenderSelection: true });
     return;
   }
   let autoSendFailedCount = 0;
@@ -1006,11 +1198,19 @@ async function sendSeparatePasswordMail(tabId, queue, sendMode = "sendNow"){
   let manualFallbackOpenedCount = 0;
   let manualFallbackFailedCount = 0;
   let manualFallbackNeedsSenderCount = 0;
-  for (const dispatch of queue){
+  let secretsFallbackCount = 0;
+  for (const queuedDispatch of dispatchQueue){
+    const prepared = await prepareSecretsPasswordDispatch(queuedDispatch, tabId);
+    const dispatch = prepared.dispatch;
+    if (prepared.fellBack){
+      secretsFallbackCount++;
+    }
     const identityResolution = await ensureSeparatePasswordDispatchIdentity(dispatch);
     const bodyFields = buildSeparatePasswordMailBodyFields(dispatch);
     const autoComposeDetails = {
       to: dispatch.to,
+      cc: dispatch.cc,
+      bcc: dispatch.bcc,
       subject: buildSeparatePasswordMailSubject(dispatch),
       ...bodyFields
     };
@@ -1026,6 +1226,7 @@ async function sendSeparatePasswordMail(tabId, queue, sendMode = "sendNow"){
       composeMode: bodyFields.isPlainText ? "plain" : "html",
       composeModeReason: String(dispatch?.composeModeReason || ""),
       deliveryFormat: String(dispatch?.deliveryFormat || ""),
+      deliveryMode: String(dispatch?.deliveryMode || NCSharePasswordDelivery.MODE_PLAIN),
       sendMode: passwordSendMode
     });
     if (!identityResolution.identityId){
@@ -1112,23 +1313,30 @@ async function sendSeparatePasswordMail(tabId, queue, sendMode = "sendNow"){
   if (autoSendFailedCount === 0 && autoSendSkippedIdentityCount === 0){
     L("sharing separate password mail sent", {
       sourceTabId: tabId,
-      dispatchCount: queue.length,
+      dispatchCount: dispatchQueue.length,
       recipients: recipientCount,
       sendMode: passwordSendMode
     });
+    if (secretsFallbackCount > 0){
+      await showPasswordSecretsFallbackNotification();
+    }
     await showPasswordMailSuccessNotification(recipientCount);
     return;
   }
   L("sharing separate password mail partially sent (manual fallback required)", {
     sourceTabId: tabId,
-    dispatchCount: queue.length,
+    dispatchCount: dispatchQueue.length,
     recipients: recipientCount,
     autoSendFailedCount,
     autoSendSkippedIdentityCount,
+    secretsFallbackCount,
     manualFallbackOpenedCount,
     manualFallbackFailedCount,
     manualFallbackNeedsSenderCount
   });
+  if (secretsFallbackCount > 0){
+    await showPasswordSecretsFallbackNotification();
+  }
   if (autoSendFailedCount > 0){
     await showPasswordMailFailureNotification(recipientCount);
   }

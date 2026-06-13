@@ -976,6 +976,7 @@
     const shareLang = await resolveShareBlockLanguage(request);
     const headerImage = await getHeaderBase64();
     const passwordOnly = !!request?.passwordOnly;
+    const secretLink = !!request?.secretLink;
     const hidePassword = !!request?.hidePassword;
     const showPasswordSeparateHint = !!request?.showPasswordSeparateHint;
     const customTemplate = getPolicyTemplate(request, passwordOnly, shareLang);
@@ -1000,7 +1001,9 @@
       : "";
     let passwordText = "";
     if (passwordOnly){
-      passwordText = escapeHtml(result.password || "");
+      passwordText = secretLink
+        ? buildSecretLinkHtml(result.password || "", await tShare(effectiveLang, "sharing_html_secret_link_label"))
+        : escapeHtml(result.password || "");
     }else if (hidePassword && showPasswordSeparateHint && result.password){
       passwordText = escapeHtml(await tShare(effectiveLang, "sharing_html_password_separate_hint"));
     }else if (!hidePassword){
@@ -1038,7 +1041,7 @@
       paragraphs.push(`<p style="margin:0 0 14px 0;line-height:1.4;">${noteText}</p>`);
     }
     const introLine = passwordOnly
-      ? await tShare(effectiveLang, "sharing_html_password_mail_intro")
+      ? await tShare(effectiveLang, secretLink ? "sharing_html_secret_mail_intro" : "sharing_html_password_mail_intro")
       : await tShare(effectiveLang, "sharing_html_intro_line");
     if (introLine){
       paragraphs.push(`<p style="margin:0 0 14px 0;line-height:1.4;">${escapeHtml(introLine)}<br /></p>`);
@@ -1046,8 +1049,10 @@
     const downloadLink = `<a href="${escapeHtml(downloadUrl)}" style="color:#0082C9;text-decoration:none;">${escapeHtml(downloadUrl)}</a>`;
     const rows = [];
     if (passwordOnly){
-      const badge = buildPasswordBadge(result.password || "");
-      rows.push(buildTableRow(await tShare(effectiveLang, "sharing_html_password_label"), badge));
+      const valueHtml = secretLink
+        ? buildSecretLinkHtml(result.password || "", await tShare(effectiveLang, "sharing_html_secret_link_label"))
+        : buildPasswordBadge(result.password || "");
+      rows.push(buildTableRow(await tShare(effectiveLang, "sharing_html_password_label"), valueHtml));
     }else{
       rows.push(buildTableRow(await tShare(effectiveLang, "sharing_html_download_label"), downloadLink));
       if (result.password && !hidePassword){
@@ -1111,6 +1116,7 @@
   async function buildPlainTextBlock(result, request){
     const shareLang = await resolveShareBlockLanguage(request);
     const passwordOnly = !!request?.passwordOnly;
+    const secretLink = !!request?.secretLink;
     const hidePassword = !!request?.hidePassword;
     const showPasswordSeparateHint = !!request?.showPasswordSeparateHint;
     const customTemplate = getPolicyTemplate(request, passwordOnly, shareLang);
@@ -1179,7 +1185,7 @@
       sections.push(noteText);
     }
     const introLine = passwordOnly
-      ? await tShare(effectiveLang, "sharing_html_password_mail_intro")
+      ? await tShare(effectiveLang, secretLink ? "sharing_html_secret_mail_intro" : "sharing_html_password_mail_intro")
       : await tShare(effectiveLang, "sharing_html_intro_line");
     if (introLine){
       sections.push(normalizePlainTextBlock(introLine));
@@ -1237,6 +1243,11 @@
 
   function buildPasswordBadge(password){
     return `<span class="nc-share-password" style="display:inline-block;font-family:'Consolas','Courier New',monospace;padding:2px 6px;border:1px solid #c7c7c7;border-radius:3px;-ms-user-select:all;user-select:all;">${escapeHtml(password || "")}</span>`;
+  }
+
+  function buildSecretLinkHtml(secretUrl, linkText){
+    const label = String(linkText || "").trim() || "Secret link";
+    return `<a href="${escapeHtml(secretUrl || "")}" style="color:#0082C9;font-weight:bold;text-decoration:underline;word-break:normal;" target="_blank" rel="noopener">${escapeHtml(label)}</a>`;
   }
 
   function buildPermissionsBadges(perms, labels = {}){

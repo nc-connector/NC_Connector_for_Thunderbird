@@ -764,11 +764,32 @@
   "sharing_password_separate_toggle": {
     "message": "Jelszó küldése külön e-mailben"
   },
+  "sharing_password_delivery_mode_label": {
+    "message": "Jelszó kézbesítése"
+  },
+  "sharing_password_delivery_plain": {
+    "message": "Egyszerű szöveg"
+  },
+  "sharing_password_delivery_secrets": {
+    "message": "Nextcloud titkos hivatkozás"
+  },
+  "sharing_password_delivery_enable_separate_tooltip": {
+    "message": "Először engedélyezze a külön jelszó-e-mailt."
+  },
+  "sharing_password_delivery_unavailable_tooltip": {
+    "message": "A Nextcloud Secrets nem érhető el. A jelszó külön, egyszerű szövegű e-mailben lesz elküldve."
+  },
   "sharing_html_password_separate_hint": {
     "message": "A jelszót külön e-mailben küldjük el."
   },
   "sharing_html_password_mail_intro": {
     "message": "Itt találja a jelszót az elküldött megosztási hivatkozáshoz."
+  },
+  "sharing_html_secret_mail_intro": {
+    "message": "Itt található a Nextcloud Secrets hivatkozás a megosztás jelszavához."
+  },
+  "sharing_html_secret_link_label": {
+    "message": "Titkos hivatkozás"
   },
   "sharing_password_mail_subject": {
     "message": "Jelszó a megosztott hivatkozáshoz"
@@ -847,6 +868,9 @@
   },
   "sharing_password_mail_notify_manual_required_select_sender": {
     "message": "Az automatikus jelszo-e-mail kuldes sikertelen volt. Szukseg eseten valasszon feladot a megnyitott piszkozatban, majd kuldje el kezzel a jelszo e-mailt."
+  },
+  "sharing_password_secrets_fallback_warning": {
+    "message": "A Nextcloud Secrets nem érhető el. A jelszó külön, egyszerű szövegű e-mailben lesz elküldve."
   },
   "options_about_homepage_link": {
     "message": "https://nc-connector.de"

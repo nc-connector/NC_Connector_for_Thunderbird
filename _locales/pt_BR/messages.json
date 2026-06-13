@@ -764,11 +764,32 @@
   "sharing_password_separate_toggle": {
     "message": "Enviar senha em e-mail separado"
   },
+  "sharing_password_delivery_mode_label": {
+    "message": "Entrega da senha"
+  },
+  "sharing_password_delivery_plain": {
+    "message": "Texto simples"
+  },
+  "sharing_password_delivery_secrets": {
+    "message": "Link secreto do Nextcloud"
+  },
+  "sharing_password_delivery_enable_separate_tooltip": {
+    "message": "Ative primeiro o e-mail separado da senha."
+  },
+  "sharing_password_delivery_unavailable_tooltip": {
+    "message": "O Nextcloud Secrets não está disponível. A senha será enviada em um e-mail separado em texto simples."
+  },
   "sharing_html_password_separate_hint": {
     "message": "A senha será enviada em um e-mail separado."
   },
   "sharing_html_password_mail_intro": {
     "message": "Aqui está sua senha para o link compartilhado enviado."
+  },
+  "sharing_html_secret_mail_intro": {
+    "message": "Aqui está o link do Nextcloud Secrets para a senha do compartilhamento enviado."
+  },
+  "sharing_html_secret_link_label": {
+    "message": "Link secreto"
   },
   "sharing_password_mail_subject": {
     "message": "Senha do link compartilhado"
@@ -847,6 +868,9 @@
   },
   "sharing_password_mail_notify_manual_required_select_sender": {
     "message": "O envio automatico do e-mail de senha falhou. Se necessario, selecione um remetente no rascunho aberto e envie manualmente o e-mail de senha."
+  },
+  "sharing_password_secrets_fallback_warning": {
+    "message": "O Nextcloud Secrets não está disponível. A senha será enviada em um e-mail separado em texto simples."
   },
   "options_about_homepage_link": {
     "message": "https://nc-connector.de"

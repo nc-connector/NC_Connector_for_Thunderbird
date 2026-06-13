@@ -764,11 +764,32 @@
   "sharing_password_separate_toggle": {
     "message": "Wachtwoord in aparte e-mail versturen"
   },
+  "sharing_password_delivery_mode_label": {
+    "message": "Wachtwoordbezorging"
+  },
+  "sharing_password_delivery_plain": {
+    "message": "Platte tekst"
+  },
+  "sharing_password_delivery_secrets": {
+    "message": "Nextcloud-geheimlink"
+  },
+  "sharing_password_delivery_enable_separate_tooltip": {
+    "message": "Schakel eerst de aparte wachtwoordmail in."
+  },
+  "sharing_password_delivery_unavailable_tooltip": {
+    "message": "Nextcloud Secrets is niet beschikbaar. Het wachtwoord wordt als aparte e-mail in platte tekst verzonden."
+  },
   "sharing_html_password_separate_hint": {
     "message": "Het wachtwoord wordt in een aparte e-mail verzonden."
   },
   "sharing_html_password_mail_intro": {
     "message": "Hier is uw wachtwoord voor de verzonden deellink."
+  },
+  "sharing_html_secret_mail_intro": {
+    "message": "Hier is de Nextcloud Secrets-link voor het wachtwoord van de verzonden share."
+  },
+  "sharing_html_secret_link_label": {
+    "message": "Geheime link"
   },
   "sharing_password_mail_subject": {
     "message": "Wachtwoord voor de deellink"
@@ -847,6 +868,9 @@
   },
   "sharing_password_mail_notify_manual_required_select_sender": {
     "message": "Automatisch verzenden van de wachtwoordmail is mislukt. Selecteer indien nodig een afzender in het geopende concept en verzend de wachtwoordmail handmatig."
+  },
+  "sharing_password_secrets_fallback_warning": {
+    "message": "Nextcloud Secrets is niet beschikbaar. Het wachtwoord wordt als aparte e-mail in platte tekst verzonden."
   },
   "options_about_homepage_link": {
     "message": "https://nc-connector.de"

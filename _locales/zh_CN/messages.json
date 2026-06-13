@@ -764,11 +764,32 @@
   "sharing_password_separate_toggle": {
     "message": "通过单独邮件发送密码"
   },
+  "sharing_password_delivery_mode_label": {
+    "message": "密码发送方式"
+  },
+  "sharing_password_delivery_plain": {
+    "message": "纯文本"
+  },
+  "sharing_password_delivery_secrets": {
+    "message": "Nextcloud 密钥链接"
+  },
+  "sharing_password_delivery_enable_separate_tooltip": {
+    "message": "请先启用单独发送密码邮件。"
+  },
+  "sharing_password_delivery_unavailable_tooltip": {
+    "message": "Nextcloud Secrets 不可用。密码将以纯文本形式通过单独邮件发送。"
+  },
   "sharing_html_password_separate_hint": {
     "message": "密码将通过单独邮件发送。"
   },
   "sharing_html_password_mail_intro": {
     "message": "这是您已发送共享链接的密码。"
+  },
+  "sharing_html_secret_mail_intro": {
+    "message": "这是已发送共享密码的 Nextcloud Secrets 链接。"
+  },
+  "sharing_html_secret_link_label": {
+    "message": "密钥链接"
   },
   "sharing_password_mail_subject": {
     "message": "共享链接密码"
@@ -847,6 +868,9 @@
   },
   "sharing_password_mail_notify_manual_required_select_sender": {
     "message": "密码邮件自动发送失败。如有需要，请在已打开的草稿中选择发件人，然后手动发送密码邮件。"
+  },
+  "sharing_password_secrets_fallback_warning": {
+    "message": "Nextcloud Secrets 不可用。密码将以纯文本形式通过单独邮件发送。"
   },
   "options_about_homepage_link": {
     "message": "https://nc-connector.de"

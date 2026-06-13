@@ -764,11 +764,32 @@
   "sharing_password_separate_toggle": {
     "message": "Отправить пароль отдельным письмом"
   },
+  "sharing_password_delivery_mode_label": {
+    "message": "Доставка пароля"
+  },
+  "sharing_password_delivery_plain": {
+    "message": "Обычный текст"
+  },
+  "sharing_password_delivery_secrets": {
+    "message": "Секретная ссылка Nextcloud"
+  },
+  "sharing_password_delivery_enable_separate_tooltip": {
+    "message": "Сначала включите отдельное письмо с паролем."
+  },
+  "sharing_password_delivery_unavailable_tooltip": {
+    "message": "Nextcloud Secrets недоступен. Пароль будет отправлен отдельным письмом в виде обычного текста."
+  },
   "sharing_html_password_separate_hint": {
     "message": "Пароль будет отправлен отдельным письмом."
   },
   "sharing_html_password_mail_intro": {
     "message": "Вот пароль к отправленной ссылке общего доступа."
+  },
+  "sharing_html_secret_mail_intro": {
+    "message": "Вот ссылка Nextcloud Secrets для пароля к отправленной общей папке."
+  },
+  "sharing_html_secret_link_label": {
+    "message": "Секретная ссылка"
   },
   "sharing_password_mail_subject": {
     "message": "Пароль к ссылке общего доступа"
@@ -847,6 +868,9 @@
   },
   "sharing_password_mail_notify_manual_required_select_sender": {
     "message": "Ne udalos avtomaticheski otpravit pismo s parolem. Pri neobkhodimosti vyberite otpravitelya v otkrytom chernovike i otpravte pismo s parolem vruchnuyu."
+  },
+  "sharing_password_secrets_fallback_warning": {
+    "message": "Nextcloud Secrets недоступен. Пароль будет отправлен отдельным письмом в виде обычного текста."
   },
   "options_about_homepage_link": {
     "message": "https://nc-connector.de"

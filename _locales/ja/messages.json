@@ -764,11 +764,32 @@
   "sharing_password_separate_toggle": {
     "message": "パスワードを別メールで送信する"
   },
+  "sharing_password_delivery_mode_label": {
+    "message": "パスワードの送信方法"
+  },
+  "sharing_password_delivery_plain": {
+    "message": "プレーンテキスト"
+  },
+  "sharing_password_delivery_secrets": {
+    "message": "Nextcloud シークレットリンク"
+  },
+  "sharing_password_delivery_enable_separate_tooltip": {
+    "message": "先にパスワードの別メール送信を有効にしてください。"
+  },
+  "sharing_password_delivery_unavailable_tooltip": {
+    "message": "Nextcloud Secrets を利用できません。パスワードはプレーンテキストの別メールで送信されます。"
+  },
   "sharing_html_password_separate_hint": {
     "message": "パスワードは別メールで送信されます。"
   },
   "sharing_html_password_mail_intro": {
     "message": "送信済み共有リンクのパスワードはこちらです。"
+  },
+  "sharing_html_secret_mail_intro": {
+    "message": "送信した共有パスワード用の Nextcloud Secrets リンクです。"
+  },
+  "sharing_html_secret_link_label": {
+    "message": "シークレットリンク"
   },
   "sharing_password_mail_subject": {
     "message": "共有リンクのパスワード"
@@ -847,6 +868,9 @@
   },
   "sharing_password_mail_notify_manual_required_select_sender": {
     "message": "パスワードメールの自動送信に失敗しました。必要に応じて開いた下書きで送信者を選択し、手動でパスワードメールを送信してください。"
+  },
+  "sharing_password_secrets_fallback_warning": {
+    "message": "Nextcloud Secrets を利用できません。パスワードはプレーンテキストの別メールで送信されます。"
   },
   "options_about_homepage_link": {
     "message": "https://nc-connector.de"

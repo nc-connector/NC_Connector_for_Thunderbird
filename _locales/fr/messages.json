@@ -764,11 +764,32 @@
   "sharing_password_separate_toggle": {
     "message": "Envoyer le mot de passe dans un e-mail séparé"
   },
+  "sharing_password_delivery_mode_label": {
+    "message": "Envoi du mot de passe"
+  },
+  "sharing_password_delivery_plain": {
+    "message": "Texte brut"
+  },
+  "sharing_password_delivery_secrets": {
+    "message": "Lien secret Nextcloud"
+  },
+  "sharing_password_delivery_enable_separate_tooltip": {
+    "message": "Activez d’abord l’e-mail séparé pour le mot de passe."
+  },
+  "sharing_password_delivery_unavailable_tooltip": {
+    "message": "Nextcloud Secrets n’est pas disponible. Le mot de passe sera envoyé dans un e-mail séparé en texte brut."
+  },
   "sharing_html_password_separate_hint": {
     "message": "Le mot de passe sera envoyé dans un e-mail séparé."
   },
   "sharing_html_password_mail_intro": {
     "message": "Voici votre mot de passe pour le lien de partage envoyé."
+  },
+  "sharing_html_secret_mail_intro": {
+    "message": "Voici le lien Nextcloud Secrets pour le mot de passe du partage envoyé."
+  },
+  "sharing_html_secret_link_label": {
+    "message": "Lien secret"
   },
   "sharing_password_mail_subject": {
     "message": "Mot de passe du lien de partage"
@@ -847,6 +868,9 @@
   },
   "sharing_password_mail_notify_manual_required_select_sender": {
     "message": "Lenvoi automatique du mot de passe a echoue. Si necessaire, selectionnez un expediteur dans le brouillon ouvert puis envoyez manuellement le-mail de mot de passe."
+  },
+  "sharing_password_secrets_fallback_warning": {
+    "message": "Nextcloud Secrets n’est pas disponible. Le mot de passe sera envoyé dans un e-mail séparé en texte brut."
   },
   "options_about_homepage_link": {
     "message": "https://nc-connector.de"

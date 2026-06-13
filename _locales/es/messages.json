@@ -764,11 +764,32 @@
   "sharing_password_separate_toggle": {
     "message": "Enviar contraseña en un correo separado"
   },
+  "sharing_password_delivery_mode_label": {
+    "message": "Entrega de contraseña"
+  },
+  "sharing_password_delivery_plain": {
+    "message": "Texto sin formato"
+  },
+  "sharing_password_delivery_secrets": {
+    "message": "Enlace secreto de Nextcloud"
+  },
+  "sharing_password_delivery_enable_separate_tooltip": {
+    "message": "Activa primero el correo separado para la contraseña."
+  },
+  "sharing_password_delivery_unavailable_tooltip": {
+    "message": "Nextcloud Secrets no está disponible. La contraseña se enviará en un correo separado en texto sin formato."
+  },
   "sharing_html_password_separate_hint": {
     "message": "La contraseña se enviará en un correo separado."
   },
   "sharing_html_password_mail_intro": {
     "message": "Aquí está su contraseña para el enlace compartido enviado."
+  },
+  "sharing_html_secret_mail_intro": {
+    "message": "Aquí está el enlace de Nextcloud Secrets para la contraseña del recurso compartido."
+  },
+  "sharing_html_secret_link_label": {
+    "message": "Enlace secreto"
   },
   "sharing_password_mail_subject": {
     "message": "Contraseña del enlace compartido"
@@ -847,6 +868,9 @@
   },
   "sharing_password_mail_notify_manual_required_select_sender": {
     "message": "El envio automatico del correo de contrasena fallo. Si es necesario, seleccione un remitente en el borrador abierto y envie el correo de contrasena manualmente."
+  },
+  "sharing_password_secrets_fallback_warning": {
+    "message": "Nextcloud Secrets no está disponible. La contraseña se enviará en un correo separado en texto sin formato."
   },
   "options_about_homepage_link": {
     "message": "https://nc-connector.de"
