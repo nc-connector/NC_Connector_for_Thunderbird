@@ -4,6 +4,19 @@ All notable changes to **NC Connector for Thunderbird** will be documented in th
 
 This project targets **Thunderbird ESR 140.\*** through **153.\***.
 
+## 3.2.0
+
+### Added
+- Managed Nextcloud URL setup can be provided through Thunderbird Enterprise Policy.
+- Separate password delivery can use Nextcloud Secrets links when the backend and Secrets app are available.
+- Sharing settings and the sharing wizard now include password delivery controls for plain mail or Secrets links.
+
+### Changed
+- README and admin/developer documentation now describe managed setup and Secrets password delivery.
+
+### Fixed
+- Managed URL lock hints are shown in Thunderbird options and localized across shipped languages.
+
 ## 3.1.4
 
 ### Changed
