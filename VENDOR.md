@@ -17,8 +17,8 @@
 ## DOMPurify
 
 - Package: `dompurify`
-- Version: `3.4.7`
-- Source: https://registry.npmjs.org/dompurify/-/dompurify-3.4.7.tgz
+- Version: `3.4.11`
+- Source: https://registry.npmjs.org/dompurify/-/dompurify-3.4.11.tgz
 - Upstream repository: https://github.com/cure53/DOMPurify
 - Included file: `vendor/purify.js` (browser distribution from `dist/purify.js`)
 - License: Apache-2.0 OR MPL-2.0
