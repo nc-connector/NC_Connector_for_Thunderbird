@@ -84,6 +84,14 @@ browser.runtime.onMessage.addListener((msg, sender) => {
       return messageError("talk:getSystemAddressbookStatus", error);
     }
   }
+  if (msg.type === "talk:claimPopupContext"){
+    const contextId = consumeLatestCalendarWizardPopupContext();
+    if (!contextId){
+      return { ok:false, error: bgI18n("talk_error_context_id_missing") };
+    }
+    L("talk popup context claimed", { contextId });
+    return { ok:true, contextId };
+  }
   if (msg.type === "talk:initDialog"){
     const contextId = readMessageContextId(msg);
     if (!contextId){
