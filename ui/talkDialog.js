@@ -9,6 +9,7 @@
   const POPUP_CONTENT_WIDTH = 520;
   const MIN_CONTENT_HEIGHT = 0;
   const CONTENT_MARGIN = 0;
+  const POPUP_CONTEXT_RETRY_DELAYS_MS = [0, 40, 80, 160, 320, 640];
   let layoutObserver = null;
   let isPageUnloading = false;
   let disposeDebugFlagMirror = null;
@@ -77,6 +78,38 @@
 
   function logUiError(scope, reportedError){
     globalThis.NCLogContext.safeConsoleError(LOG_PREFIX, scope, reportedError);
+  }
+
+  function waitForPopupContextRetry(delayMs){
+    const delay = Math.max(0, Number(delayMs) || 0);
+    if (!delay){
+      return Promise.resolve();
+    }
+    return new Promise(resolve => window.setTimeout(resolve, delay));
+  }
+
+  async function claimNativePopupContext(){
+    if (state.contextId){
+      return true;
+    }
+    for (const delayMs of POPUP_CONTEXT_RETRY_DELAYS_MS){
+      await waitForPopupContextRetry(delayMs);
+      try{
+        const response = await browser.runtime.sendMessage({
+          type: "talk:claimPopupContext"
+        });
+        if (response?.ok && typeof response.contextId === "string" && response.contextId.trim()){
+          state.contextId = response.contextId.trim();
+          logDebug("popup context claimed", {
+            contextId: state.contextId
+          });
+          return true;
+        }
+      }catch(error){
+        logUiError("claim popup context failed", error);
+      }
+    }
+    return false;
   }
 
   /**
@@ -416,7 +449,7 @@
   async function bootstrapDialog(){
     await initDebugLogging();
     bindEvents();
-    if (!state.contextId){
+    if (!state.contextId && !(await claimNativePopupContext())){
       setMessage(t("talk_error_context_id_missing"), true);
       return;
     }

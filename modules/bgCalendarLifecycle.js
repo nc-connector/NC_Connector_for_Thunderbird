@@ -136,6 +136,8 @@ function createCalendarWizardContextId(){
   return `${Date.now()}-${rand}`;
 }
 
+let latestCalendarWizardPopupContextId = "";
+
 function setCalendarWizardContext(contextId, entry){
   pruneCalendarWizardContexts();
   const next = Object.assign({}, entry || {}, { created: Date.now() });
@@ -149,8 +151,21 @@ function getCalendarWizardContext(contextId){
   return CALENDAR_WIZARD_CONTEXTS.get(contextId) || null;
 }
 
+function setLatestCalendarWizardPopupContext(contextId){
+  latestCalendarWizardPopupContextId = getCalendarWizardContext(contextId) ? contextId : "";
+}
+
+function consumeLatestCalendarWizardPopupContext(){
+  const contextId = latestCalendarWizardPopupContextId;
+  latestCalendarWizardPopupContextId = "";
+  return getCalendarWizardContext(contextId) ? contextId : "";
+}
+
 function deleteCalendarWizardContext(contextId){
   if (!contextId) return;
+  if (latestCalendarWizardPopupContextId === contextId){
+    latestCalendarWizardPopupContextId = "";
+  }
   CALENDAR_WIZARD_CONTEXTS.delete(contextId);
 }
 

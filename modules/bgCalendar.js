@@ -10,6 +10,27 @@
  * calendar item monitoring/synchronization.
  */
 
+const TALK_DIALOG_POPUP_PATH = "ui/talkDialog.html";
+
+void configureTalkCalendarItemPopup();
+
+async function configureTalkCalendarItemPopup(){
+  try{
+    if (typeof browser.calendarItemAction?.setPopup !== "function"){
+      console.error("[NCBG] calendarItemAction.setPopup missing");
+      return;
+    }
+    // Runtime popup assignment avoids the current upstream experiment bug where
+    // manifest default_popup can be resolved twice into a broken nested
+    // moz-extension://.../moz-extension://... URL. Move this back to the
+    // manifest once upstream handles already expanded popup URLs correctly.
+    await browser.calendarItemAction.setPopup({ popup: TALK_DIALOG_POPUP_PATH });
+    L("calendar item action popup configured", { popup: TALK_DIALOG_POPUP_PATH });
+  }catch(error){
+    console.error("[NCBG] calendar item action popup configure failed", error);
+  }
+}
+
 /**
  * Entry point from the official calendar_item_action button.
  * Click context/snapshot is provided by the ncCalToolbar bridge API.
@@ -37,76 +58,79 @@ browser.ncCalToolbar?.onClicked?.addListener((snapshot) => {
           console.error("[NCBG] system addressbook check on talk click failed", error);
         });
 
-      const getCurrentApi = browser.ncCalToolbar?.getCurrent;
-      if (typeof getCurrentApi !== "function"){
-        console.error("[NCBG] ncCalToolbar.getCurrent missing");
-        return;
-      }
-      const snapshotOptions = { returnFormat: "ical" };
-      snapshotOptions.editorId = requestedEditorId;
-      const currentSnapshot = await getCurrentApi(snapshotOptions);
-      const resolvedEditorId = requestedEditorId;
-      L("ncCalToolbar.onClicked", {
-        hasEditorId: !!resolvedEditorId,
-        hasIcal:
-          currentSnapshot?.format === "ical" &&
-          typeof currentSnapshot?.item === "string" &&
-          !!currentSnapshot.item
-      });
-      if (
-        !currentSnapshot ||
-        currentSnapshot.format !== "ical" ||
-        typeof currentSnapshot.item !== "string" ||
-        !currentSnapshot.item
-      ){
-        console.error("[NCBG] ncCalToolbar.onClicked missing snapshot");
-        return;
-      }
-
       const contextId = createCalendarWizardContextId();
       const context = setCalendarWizardContext(contextId, {
         source: "ncCalToolbar",
-        editorId: resolvedEditorId,
+        editorId: requestedEditorId,
         item: {
-          id: currentSnapshot.id || "",
-          calendarId: currentSnapshot.calendarId || "",
-          type: currentSnapshot.type || "event",
-          format: "ical",
-          item: currentSnapshot.item
+          id: "",
+          calendarId: "",
+          type: "event"
         },
         event: {},
         metadata: {}
       });
+      mergeCalendarSnapshotIntoWizardContext(context, snapshot);
       refreshCalendarWizardContextSnapshot(context);
-
-      const url = new URL(browser.runtime.getURL("ui/talkDialog.html"));
-      url.searchParams.set("contextId", contextId);
-      L("talk wizard open", {
+      setLatestCalendarWizardPopupContext(contextId);
+      L("ncCalToolbar.onClicked", {
+        hasEditorId: true,
+        hasIcal:
+          context.item?.format === "ical" &&
+          typeof context.item?.item === "string" &&
+          !!context.item.item,
+        snapshotSource: context.snapshotSource || "",
+        hasLiveStart: typeof context.event?.startTimestamp === "number"
+      });
+      L("talk wizard popup context prepared", {
         source: "ncCalToolbar",
         contextId,
         editorId: context.editorId || "",
         calendarId: context.item?.calendarId || "",
         itemId: context.item?.id || ""
       });
-      const popupWindow = await browser.windows.create({
-        type: "popup",
-        url: url.toString(),
-        width: TALK_POPUP_WIDTH,
-        height: TALK_POPUP_HEIGHT
-      });
-      const focusApplied = await focusPopupWindowBestEffort(popupWindow, {
-        label: "talk wizard popup"
-      });
-      L("talk wizard popup focus", {
-        contextId,
-        windowId: Number(popupWindow?.id) || 0,
-        focusApplied
-      });
+      void hydrateTalkWizardContextFromEditor(requestedEditorId, contextId);
     }catch(error){
       console.error("[NCBG] ncCalToolbar.onClicked error", error);
     }
   })();
 });
+
+async function hydrateTalkWizardContextFromEditor(editorId, contextId){
+  try{
+    const getCurrentApi = browser.ncCalToolbar?.getCurrent;
+    if (typeof getCurrentApi !== "function"){
+      console.error("[NCBG] ncCalToolbar.getCurrent missing");
+      return;
+    }
+    const context = getCalendarWizardContext(contextId);
+    if (!context){
+      return;
+    }
+    const currentSnapshot = await getCurrentApi({
+      returnFormat: "ical",
+      editorId
+    });
+    if (!currentSnapshot){
+      console.error("[NCBG] ncCalToolbar.onClicked missing snapshot");
+      return;
+    }
+    mergeCalendarSnapshotIntoWizardContext(context, currentSnapshot);
+    refreshCalendarWizardContextSnapshot(context);
+    L("ncCalToolbar.onClicked snapshot hydrated", {
+      contextId,
+      hasIcal:
+        context.item?.format === "ical" &&
+        typeof context.item?.item === "string" &&
+        !!context.item.item,
+      snapshotSource: context.snapshotSource || "",
+      calendarId: context.item?.calendarId || "",
+      itemId: context.item?.id || ""
+    });
+  }catch(error){
+    console.error("[NCBG] ncCalToolbar snapshot hydration failed", error);
+  }
+}
 
 /**
  * Lifecycle callback for tracked editor close events from ncCalToolbar.

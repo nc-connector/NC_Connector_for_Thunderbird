@@ -28,6 +28,7 @@ It complements:
   - [6.3 Migration notes](#63-migration-notes)
 - [7. Calendar integration (Talk button in event editor)](#7-calendar-integration-talk-button-in-event-editor)
   - [7.1 Why a custom toolbar experiment exists](#71-why-a-custom-toolbar-experiment-exists)
+  - [7.1.1 Why the Talk popup is assigned with `setPopup()`](#711-why-the-talk-popup-is-assigned-with-setpopup)
   - [7.2 Editor variants: dialog vs tab](#72-editor-variants-dialog-vs-tab)
   - [7.2.1 Why manual tab/window correlation exists today](#721-why-manual-tabwindow-correlation-exists-today)
   - [7.3 `ncCalToolbar` API surface (editor-targeted)](#73-nccaltoolbar-api-surface-editor-targeted)
@@ -341,6 +342,21 @@ Current implementation:
   - tracked close lifecycle (`onTrackedEditorClosed`)
 - `experiments/calendar/**` remains untouched and is used only for persisted item monitoring.
 - Business logic remains in background runtime modules (`modules/bgState.js`, `modules/bgComposeAttachments.js`, `modules/bgComposeShareCleanup.js`, `modules/bgComposeShareInsert.js`, `modules/bgComposePasswordDispatch.js`, `modules/passwordPolicyRuntime.js`, `modules/bgCompose.js`, `modules/bgCalendarLifecycle.js`, `modules/bgCalendar.js`, `modules/bgRouter.js`, `modules/talkAddressbook.js`, `modules/talkcore.js`).
+
+### 7.1.1 Why the Talk popup is assigned with `setPopup()`
+
+The Talk wizard uses the native `calendar_item_action` popup so Thunderbird owns the foreground popup behavior in event editors.
+
+The popup is assigned at runtime with `browser.calendarItemAction.setPopup({ popup: "ui/talkDialog.html" })` instead of `calendar_item_action.default_popup` in `manifest.json`.
+
+Reason:
+- The bundled upstream calendar experiment processes manifest popup paths itself.
+- In packaged Thunderbird builds, the manifest value can already be expanded to a `moz-extension://...` URL before that code runs.
+- Resolving that value again can produce a broken nested URL like `moz-extension://.../moz-extension://.../ui/talkDialog.html`.
+
+This is a compatibility workaround, not the preferred long-term shape. If upstream fixes the popup path handling so already expanded URLs are not resolved again, move the Talk popup back to `calendar_item_action.default_popup` in `manifest.json` and remove the runtime `setPopup()` setup.
+
+The Talk context is prepared by `ncCalToolbar.onClicked` and claimed by the popup through `talk:claimPopupContext`.
 
 ### 7.2 Editor variants: dialog vs tab
 
