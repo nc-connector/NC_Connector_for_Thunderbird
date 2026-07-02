@@ -1,8 +1,8 @@
-# Reviewer Notes - 3.2.0
+# Reviewer Notes - 3.2.1
 NC Connector for Thunderbird (`{4a35421f-0906-439c-bff2-8eef39e2baee}`)
 
 This document summarizes the currently implemented reviewer-relevant behavior
-for add-on version 3.2.0.
+for add-on version 3.2.1.
 
 ---
 
@@ -39,7 +39,7 @@ for persisted monitoring (`browser.calendar.items.onCreated/onUpdated/onRemoved`
 ## Behavior Guarantees
 
 1) Talk button is present in dialog and tab editors.
-2) Button click opens Talk wizard as popup window.
+2) Button click opens the Talk wizard through the native calendar item action popup.
 3) Wizard can read/write unsaved editor state through `editorId` targeting.
 4) Cleanup flow handles persisted/discarded/superseded editor close actions.
 5) Event move/delete handling remains driven by official calendar item events.
@@ -50,7 +50,7 @@ for persisted monitoring (`browser.calendar.items.onCreated/onUpdated/onRemoved`
 
 ---
 
-## Reviewer Alignment Notes (3.2.0)
+## Reviewer Alignment Notes (3.2.1)
 
 - Core rules are explicit; fallback behavior is bounded and logged instead of relying on silent heuristics.
 - Active runtime paths touched in this release log failures explicitly; silent failure is not intended behavior.
@@ -95,6 +95,11 @@ for persisted monitoring (`browser.calendar.items.onCreated/onUpdated/onRemoved`
   - Share HTML policy templates (`share_html_block_template`, `share_password_template`)
   - Email signature HTML policy template (`email_signature_template`)
   - bundled sanitizer: `DOMPurify 3.4.11` documented in `VENDOR.md`
+- Follow-up for the previous `ui/signatureCompose.js` `innerHTML` review finding:
+  - email signature HTML is still sanitized in background before it reaches the compose script
+  - the compose bridge no longer assigns dynamic HTML with `innerHTML`
+  - sanitized signature HTML is parsed with `DOMParser` and imported into the compose DOM via `document.importNode(...)`
+  - signature change detection serializes managed signature child nodes with `XMLSerializer`
 - Backend policy availability is evaluated per policy domain. Older backend
   payloads without `policy.email_signature` disable only central email
   signatures with an update hint; Share/Talk policy domains remain active when

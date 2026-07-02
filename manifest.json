@@ -2,7 +2,7 @@
   "manifest_version": 2,
   "default_locale": "de",
   "name": "__MSG_extName__",
-  "version": "3.2.0",
+  "version": "3.2.1",
   "description": "__MSG_extDescription__",
   "developer": {
     "name": "Bastian Kleinschmidt"
@@ -11,7 +11,7 @@
   "browser_specific_settings": {
     "gecko": {
       "id": "{4a35421f-0906-439c-bff2-8eef39e2baee}",
-      "strict_min_version": "140.0",
+      "strict_min_version": "115.0",
       "strict_max_version": "153.*"
     }
   },

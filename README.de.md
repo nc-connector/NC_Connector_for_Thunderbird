@@ -63,7 +63,7 @@ Mit Backend kann Thunderbird zentral verwaltete E-Mail-Signaturen einfügen oder
 
 ## Voraussetzungen
 
-- Thunderbird ESR 140 bis 153
+- Thunderbird ESR 115 bis ESR 153
 - Windows, macOS oder Linux
 - Nextcloud mit Files Sharing
 - für Talk-Funktionen: Nextcloud Talk

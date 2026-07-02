@@ -63,7 +63,7 @@ With the backend, Thunderbird can insert managed email signatures or remove loca
 
 ## Requirements
 
-- Thunderbird ESR 140 through 153
+- Thunderbird ESR 115 through ESR 153
 - Windows, macOS, or Linux
 - Nextcloud with Files Sharing
 - for Talk features: Nextcloud Talk

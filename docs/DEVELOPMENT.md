@@ -80,9 +80,9 @@ Non-goals:
 ## 2. Supported versions
 
 Thunderbird:
-- Target: **Thunderbird ESR 140.x through 153.x**
+- Target: **Thunderbird ESR 115 through ESR 153**
   Enforced by `manifest.json`:
-  - `strict_min_version: "140.0"`
+  - `strict_min_version: "115.0"`
   - `strict_max_version: "153.*"`
 
 Nextcloud:
@@ -839,7 +839,7 @@ Before you ship:
    - `node tools/i18n-locale-parity-check.js`
 5. Package the XPI with correct root structure.
 6. Sanity check:
-   - add-on installs on ESR 140.* through 153.*
+   - add-on installs on Thunderbird ESR 115 through ESR 153
    - button is present in dialog + tab editor by default
    - no console spam in non-debug mode
 
