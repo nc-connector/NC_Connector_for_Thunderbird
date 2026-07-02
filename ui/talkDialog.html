@@ -112,6 +112,17 @@ textarea{
   background:var(--tb-surface);
   box-shadow:none;
 }
+.section-grid{
+  display:grid;
+  gap:var(--dialog-gap);
+  width:100%;
+}
+.section-grid-two{
+  grid-template-columns:repeat(2,minmax(0,1fr));
+}
+.section-grid .section{
+  min-width:0;
+}
 .section.delegate-section{
   flex:0 0 auto;
 }
@@ -554,6 +565,23 @@ textarea{
 .checkbox-row input[type="checkbox"]{
   accent-color:var(--dialog-accent);
 }
+.section-options{
+  display:grid;
+  grid-template-columns:repeat(2,minmax(0,1fr));
+  gap:6px 14px;
+}
+.section-options .section-heading{
+  grid-column:1 / -1;
+  margin-bottom:0;
+}
+.section-options .checkbox-row{
+  margin:0;
+  min-width:0;
+}
+.section-options label:nth-of-type(even) .option-tooltip{
+  left:auto;
+  right:0;
+}
 .footer{
   border-top:1px solid var(--tb-border);
   padding:var(--dialog-gap) var(--dialog-pad-right) var(--dialog-gap) var(--dialog-pad-left);
@@ -660,48 +688,50 @@ textarea{
         <div id="policyWarningText" data-i18n="policy_warning_license_invalid">Your NC Connector license or seat is currently not valid. Local settings are used. Please contact your Nextcloud administrator.</div>
         <a id="policyWarningAdminLink" data-i18n="policy_warning_admin_link_label" target="_blank" rel="noopener noreferrer" href="https://github.com/nc-connector/NC_Connector_for_Thunderbird/blob/main/docs/ADMIN.md">Open admin setup guide</a>
       </div>
-      <div class="section">
-        <label for="titleInput" data-i18n="ui_create_title_label">Title</label>
-        <input id="titleInput" type="text">
-      </div>
-      <div class="section roomtype-section">
-        <label for="roomTypeButton" data-i18n="ui_create_roomtype_label">Room type</label>
-        <div class="roomtype-picker" id="roomTypePicker">
-          <button type="button" class="roomtype-button" id="roomTypeButton" aria-haspopup="listbox" aria-expanded="false">
-            <span class="roomtype-button-label" id="roomTypeButtonLabel" data-i18n="ui_create_mode_event">Event conversation</span>
-            <span class="roomtype-button-arrow" aria-hidden="true">▾</span>
-          </button>
-          <div class="roomtype-dropdown" id="roomTypeDropdown" role="listbox" hidden>
-            <button type="button" class="roomtype-option" data-value="event" data-selected="true" role="option">
-              <div class="roomtype-option-main">
-                <span class="roomtype-option-label" data-i18n="ui_create_mode_event">Event conversation</span>
-                <span class="roomtype-option-check" aria-hidden="true">✓</span>
-              </div>
-              <div class="roomtype-tooltip" role="tooltip">
-                <div class="roomtype-tooltip-title" data-i18n="talk_roomtype_event_title">📅 Event conversation</div>
-                <ul class="roomtype-tooltip-list">
-                  <li data-i18n="talk_roomtype_event_line1">Time-limited: for a specific appointment or occasion</li>
-                  <li data-i18n="talk_roomtype_event_line2">Spontaneous & lightweight: suitable for meetings, trainings or webinars</li>
-                  <li data-i18n="talk_roomtype_event_line3">Self-cleaning: removed automatically after some time</li>
-                </ul>
-              </div>
+      <div class="section-grid section-grid-two">
+        <div class="section">
+          <label for="titleInput" data-i18n="ui_create_title_label">Title</label>
+          <input id="titleInput" type="text">
+        </div>
+        <div class="section roomtype-section">
+          <label for="roomTypeButton" data-i18n="ui_create_roomtype_label">Room type</label>
+          <div class="roomtype-picker" id="roomTypePicker">
+            <button type="button" class="roomtype-button" id="roomTypeButton" aria-haspopup="listbox" aria-expanded="false">
+              <span class="roomtype-button-label" id="roomTypeButtonLabel" data-i18n="ui_create_mode_event">Event conversation</span>
+              <span class="roomtype-button-arrow" aria-hidden="true">▾</span>
             </button>
-            <button type="button" class="roomtype-option" data-value="normal" data-selected="false" role="option">
-              <div class="roomtype-option-main">
-                <span class="roomtype-option-label" data-i18n="ui_create_mode_standard">Group conversation</span>
-                <span class="roomtype-option-check" aria-hidden="true">✓</span>
-              </div>
-              <div class="roomtype-tooltip" role="tooltip">
-                <div class="roomtype-tooltip-title" data-i18n="talk_roomtype_group_title">🗨️ Group conversation</div>
-                <ul class="roomtype-tooltip-list">
-                  <li data-i18n="talk_roomtype_group_line1">Persistent: remains until it is actively deleted</li>
-                  <li data-i18n="talk_roomtype_group_line2">Everyday use: ideal for teams, departments, ongoing projects and recurring appointments</li>
-                  <li data-i18n="talk_roomtype_group_line3">With history: the entire chat can be reviewed at any time</li>
-                </ul>
-              </div>
-            </button>
+            <div class="roomtype-dropdown" id="roomTypeDropdown" role="listbox" hidden>
+              <button type="button" class="roomtype-option" data-value="event" data-selected="true" role="option">
+                <div class="roomtype-option-main">
+                  <span class="roomtype-option-label" data-i18n="ui_create_mode_event">Event conversation</span>
+                  <span class="roomtype-option-check" aria-hidden="true">✓</span>
+                </div>
+                <div class="roomtype-tooltip" role="tooltip">
+                  <div class="roomtype-tooltip-title" data-i18n="talk_roomtype_event_title">📅 Event conversation</div>
+                  <ul class="roomtype-tooltip-list">
+                    <li data-i18n="talk_roomtype_event_line1">Time-limited: for a specific appointment or occasion</li>
+                    <li data-i18n="talk_roomtype_event_line2">Spontaneous & lightweight: suitable for meetings, trainings or webinars</li>
+                    <li data-i18n="talk_roomtype_event_line3">Self-cleaning: removed automatically after some time</li>
+                  </ul>
+                </div>
+              </button>
+              <button type="button" class="roomtype-option" data-value="normal" data-selected="false" role="option">
+                <div class="roomtype-option-main">
+                  <span class="roomtype-option-label" data-i18n="ui_create_mode_standard">Group conversation</span>
+                  <span class="roomtype-option-check" aria-hidden="true">✓</span>
+                </div>
+                <div class="roomtype-tooltip" role="tooltip">
+                  <div class="roomtype-tooltip-title" data-i18n="talk_roomtype_group_title">🗨️ Group conversation</div>
+                  <ul class="roomtype-tooltip-list">
+                    <li data-i18n="talk_roomtype_group_line1">Persistent: remains until it is actively deleted</li>
+                    <li data-i18n="talk_roomtype_group_line2">Everyday use: ideal for teams, departments, ongoing projects and recurring appointments</li>
+                    <li data-i18n="talk_roomtype_group_line3">With history: the entire chat can be reviewed at any time</li>
+                  </ul>
+                </div>
+              </button>
+            </div>
+            <input type="hidden" id="roomTypeValue" value="event">
           </div>
-          <input type="hidden" id="roomTypeValue" value="event">
         </div>
       </div>
       <div class="section password-section">
