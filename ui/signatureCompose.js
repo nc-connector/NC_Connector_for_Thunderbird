@@ -27,6 +27,24 @@
     return (hash >>> 0).toString(16);
   }
 
+  function serializeSignatureContent(element){
+    if (!element){
+      return "";
+    }
+    const serializer = new XMLSerializer();
+    return Array.from(element.childNodes).map((node) => {
+      return serializer.serializeToString(node);
+    }).join("");
+  }
+
+  function appendSanitizedSignatureHtml(wrapper, html){
+    const parsed = new DOMParser().parseFromString(String(html || ""), "text/html");
+    const nodes = Array.from(parsed.body?.childNodes || []);
+    for (const node of nodes){
+      wrapper.appendChild(document.importNode(node, true));
+    }
+  }
+
   function listElements(selector){
     return Array.from(document.querySelectorAll(selector));
   }
@@ -70,7 +88,7 @@
     if (!expected){
       return false;
     }
-    return computeHash(element.innerHTML) === expected;
+    return computeHash(serializeSignatureContent(element)) === expected;
   }
 
   function allOwnSignaturesUnchanged(elements){
@@ -110,9 +128,10 @@
       wrapper.style.whiteSpace = "pre-wrap";
       wrapper.textContent = String(payload?.plainText || "");
     }else{
-      wrapper.innerHTML = String(payload?.html || "");
+      // ESR 140 has no setHTML(); import sanitized nodes from an inert parser document.
+      appendSanitizedSignatureHtml(wrapper, payload?.html || "");
     }
-    wrapper.setAttribute("data-nc-connector-signature-hash", computeHash(wrapper.innerHTML));
+    wrapper.setAttribute("data-nc-connector-signature-hash", computeHash(serializeSignatureContent(wrapper)));
     return wrapper;
   }
 

@@ -679,6 +679,7 @@ Runtime rules:
 - Locked backend attachment-automation policy is enforced in compose runtime, not only in the settings surface.
 - Backend email signatures are applied only when `policy.email_signature.email_signature_on_compose=true`, a rendered `email_signature_template` exists, and `policy.email_signature.user_email` matches the active Thunderbird sender identity email.
 - For the matching sender identity, enabled compose signature policy also owns the signature slot in replies and forwards: if reply/forward insertion is disabled, Thunderbird/Signature Switch signatures are removed but no backend signature is inserted.
+- The compose bridge imports sanitized signature HTML with `DOMParser` + `document.importNode(...)` instead of assigning `innerHTML`, because ESR 140 does not expose `setHTML()`.
 - Signature cleanup is limited to the author area before Thunderbird's quoted-message block; quoted sender signatures are left untouched.
 - The compose bridge adds one managed blank line after the backend signature and restores the initial cursor to the author area when Thunderbird has not marked the draft as modified.
 - Non-matching sender identities are left untouched so Thunderbird identity signatures or Signature Switch can continue to manage those identities.
