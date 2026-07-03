@@ -832,13 +832,26 @@ Before you ship:
 1. Bump `manifest.json` version.
 2. Update `docs/ATN_REVIEW_NOTES.md` and README “What’s new”.
 3. Run the manual tests (Talk dialog + tab editor, sharing wizard, event move/delete, delegation, invitee sync).
-4. Run parser rules checks:
-   - `node tools/check-review-clean.js`
-   - `node tools/ical-contract-check.js`
-   - `node tools/share-plaintext-contract-check.js`
-   - `node tools/i18n-locale-parity-check.js`
+4. Run local review checks:
+   - `npm ci`
+   - `npm test`
 5. Package the XPI with correct root structure.
-6. Sanity check:
+6. Run Thunderbird's review linter against a clean add-on folder payload:
+   - `npm run test:webext-linter`
+   - the script refreshes `webext-linter` from upstream before each run, so new ATN review rules are caught early.
+   - the linter already covers generic review rules such as unsafe dynamic HTML writes, manifest/path issues, permissions, vendor files, and Thunderbird API version checks.
+7. GitHub Actions runs the review checks as separate jobs on pushes, pull requests, and manual workflow runs:
+   - iCal contract
+   - share plaintext contract
+   - policy contract
+   - password delivery contract
+   - URL subfolder contract
+   - i18n locale parity
+   - i18n placeholder check
+   - i18n key usage
+   - release consistency
+   - Thunderbird webext-linter
+8. Sanity check:
    - add-on installs on Thunderbird ESR 115 through ESR 153
    - button is present in dialog + tab editor by default
    - no console spam in non-debug mode

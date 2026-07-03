@@ -1,0 +1,9 @@
+node_modules/
+.tmp/
+.cdn-lookup-cache/
+.experiments-cache/
+.library-hashes-cache/
+.schema-cache/
+*.xpi
+webext-linter-*.json
+npm-debug.log*

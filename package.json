@@ -1,0 +1,21 @@
+{
+  "private": true,
+  "scripts": {
+    "test": "npm run test:review && npm run test:webext-linter",
+    "test:review": "node tools/check-review-clean.js",
+    "test:ical-contract": "node tools/ical-contract-check.js",
+    "test:share-plaintext-contract": "node tools/share-plaintext-contract-check.js",
+    "test:policy-contract": "node tools/policy-contract-check.js",
+    "test:password-delivery-contract": "node tools/password-delivery-contract-check.js",
+    "test:url-subfolder-contract": "node tools/url-subfolder-contract-check.js",
+    "test:i18n-locale-parity": "node tools/i18n-locale-parity-check.js",
+    "test:i18n-no-english-placeholders": "node tools/i18n-no-english-placeholders-check.js",
+    "test:i18n-key-usage": "node tools/i18n-key-usage-check.js",
+    "test:release-consistency": "node tools/release-consistency-check.js",
+    "test:webext-linter": "npm run webext-linter:update && node tools/webext-linter-check.js",
+    "webext-linter:update": "npm install --no-save --no-package-lock https://github.com/thunderbird/webext-linter/archive/refs/heads/main.tar.gz"
+  },
+  "devDependencies": {
+    "webext-linter": "https://github.com/thunderbird/webext-linter/archive/55aac574097e6b0f9d74a980eb98ad341ca014be.tar.gz"
+  }
+}
