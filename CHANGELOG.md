@@ -2,14 +2,22 @@
 
 All notable changes to **NC Connector for Thunderbird** will be documented in this file.
 
-This project targets **Thunderbird ESR 115** through **ESR 153**.
+This project targets **Thunderbird ESR 140** through **ESR 153**.
+
+## 3.2.2
+
+### Added
+- Repository review checks now run the Thunderbird webext-linter and local contract checks through npm/GitHub Actions.
+
+### Changed
+- Thunderbird compatibility metadata now targets ESR 140 through ESR 153, matching the APIs used by the add-on.
 
 ## 3.2.1
 
 ### Changed
 - The Talk wizard now uses the native calendar item action popup and a more compact layout, improving focus behavior in event editors.
 - Bundled DOMPurify is now 3.4.11.
-- Thunderbird compatibility metadata now covers ESR 115 through ESR 153.
+- Thunderbird compatibility metadata covered ESR 115 through ESR 153.
 
 ### Fixed
 - Backend email signatures no longer assign dynamic HTML through `innerHTML` in the compose bridge. Sanitized signature HTML is parsed in an inert document and imported into the compose DOM node by node.

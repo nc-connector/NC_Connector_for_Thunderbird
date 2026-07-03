@@ -80,9 +80,9 @@ Non-goals:
 ## 2. Supported versions
 
 Thunderbird:
-- Target: **Thunderbird ESR 115 through ESR 153**
+- Target: **Thunderbird ESR 140 through ESR 153**
   Enforced by `manifest.json`:
-  - `strict_min_version: "115.0"`
+  - `strict_min_version: "140.0"`
   - `strict_max_version: "153.*"`
 
 Nextcloud:
@@ -852,7 +852,7 @@ Before you ship:
    - release consistency
    - Thunderbird webext-linter
 8. Sanity check:
-   - add-on installs on Thunderbird ESR 115 through ESR 153
+   - add-on installs on Thunderbird ESR 140 through ESR 153
    - button is present in dialog + tab editor by default
    - no console spam in non-debug mode
 

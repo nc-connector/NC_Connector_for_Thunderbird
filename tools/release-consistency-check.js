@@ -20,11 +20,11 @@ function run(){
   assert(new RegExp(`^##\\s+${escapeRegExp(version)}\\s*$`, "m").test(changelog), "CHANGELOG.md should contain a heading for manifest version");
   assert(reviewNotes.includes(`version ${version}`) || reviewNotes.includes(`- ${version}`) || reviewNotes.includes(`# Reviewer Notes - ${version}`), "ATN_REVIEW_NOTES.md should reference manifest version");
 
-  assert(minVersion === "115.0", "strict_min_version should stay aligned with supported ESR 115");
+  assert(minVersion === "140.0", "strict_min_version should stay aligned with supported ESR 140");
   assert(maxVersion === "153.*", "strict_max_version should stay aligned with supported ESR 153");
   assert(development.includes(`strict_min_version: "${minVersion}"`), "DEVELOPMENT.md should document strict_min_version");
   assert(development.includes(`strict_max_version: "${maxVersion}"`), "DEVELOPMENT.md should document strict_max_version");
-  assert(changelog.includes("Thunderbird ESR 115") && changelog.includes("ESR 153"), "CHANGELOG.md should document supported ESR range");
+  assert(changelog.includes("Thunderbird ESR 140") && changelog.includes("ESR 153"), "CHANGELOG.md should document supported ESR range");
 
   console.log("[OK] release-consistency-check passed");
 }
