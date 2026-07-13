@@ -115,5 +115,5 @@ body:
     id: logs
     attributes:
       label: Logs or screenshots
-      description: Add relevant debug logs or screenshots. Remove passwords, tokens, and private data.
+      description: See https://github.com/nc-connector/NC_Connector_for_Thunderbird/blob/main/docs/ADMIN.md#25-debug for how to collect logs. Remove passwords, tokens, and private data.
       render: text

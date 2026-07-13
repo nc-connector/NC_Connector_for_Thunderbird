@@ -237,6 +237,16 @@ When enabled, logs appear with prefixes such as:
 
 The bundled `experiments/calendar/**` package remains upstream/as-is. Any console output coming from it is outside the add-on debug-channel rules above.
 
+How to collect useful logs for bug reports:
+1. Open the add-on options and enable **Debug logging**.
+2. Restart Thunderbird if the problem happens during startup or compose-window creation.
+3. Open Thunderbird's Error Console via **Tools -> Developer Tools -> Error Console**.
+4. Reproduce the problem.
+5. Copy the relevant lines with the prefixes listed above and include the Thunderbird version, add-on version, and affected workflow.
+6. Remove app passwords, tokens, private links, customer data, and full mailbox contents before sharing logs.
+
+Screenshots are useful for UI issues, but they should not replace the console lines when the problem involves backend policy, sharing, Talk, signatures, or send/cleanup behavior.
+
 ### 2.6 About & Support
 
 The “About” tab shows:
