@@ -1,4 +1,4 @@
-name: Bug report
+name: "🐞 Bug report"
 description: Report a reproducible Thunderbird add-on problem
 title: "[Bug]: "
 labels: ["bug", "product: thunderbird"]

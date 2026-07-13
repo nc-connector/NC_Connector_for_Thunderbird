@@ -1,11 +1,11 @@
 blank_issues_enabled: false
 contact_links:
-  - name: Thunderbird admin documentation
+  - name: "📘 Thunderbird admin documentation"
     url: https://github.com/nc-connector/NC_Connector_for_Thunderbird/blob/main/docs/ADMIN.md
     about: Setup, managed URL, backend policies, logs, and troubleshooting.
-  - name: Public NC Connector roadmap
+  - name: "🗺️ Public NC Connector roadmap"
     url: https://github.com/orgs/nc-connector/projects/1
     about: Larger feature requests and cross-client planning live here.
-  - name: Support thread
+  - name: "💬 Support thread"
     url: https://help.nextcloud.com/t/nc-connector-support-thread-thunderbird-add-on-outlook-add-in-and-nextcloud-backend/243104
     about: Use this for setup questions or general support discussions.
