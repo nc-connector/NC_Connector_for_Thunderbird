@@ -1,0 +1,119 @@
+name: Bug report
+description: Report a reproducible Thunderbird add-on problem
+title: "[Bug]: "
+labels: ["bug", "product: thunderbird"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for reporting a problem.
+
+        Please keep this short and practical. Do not paste app passwords, tokens, private keys, or full customer data.
+
+        Admin documentation: https://github.com/nc-connector/NC_Connector_for_Thunderbird/blob/main/docs/ADMIN.md
+
+        Thunderbird ESR is the supported target. Mainline, Beta, and Daily reports are welcome too, but ESR regressions have priority.
+  - type: checkboxes
+    id: quick-checks
+    attributes:
+      label: Quick checks
+      options:
+        - label: I searched existing issues first.
+          required: true
+        - label: For setup or policy problems, I checked the admin documentation linked above.
+  - type: textarea
+    id: what-happened
+    attributes:
+      label: What happened?
+      description: Describe the visible problem.
+      placeholder: The Talk wizard opens, but ...
+    validations:
+      required: true
+  - type: textarea
+    id: steps
+    attributes:
+      label: Steps to reproduce
+      description: Write the shortest path that triggers the problem.
+      placeholder: |
+        1. Open Thunderbird ...
+        2. Click ...
+        3. See ...
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected behavior
+      placeholder: I expected ...
+    validations:
+      required: true
+  - type: dropdown
+    id: thunderbird-channel
+    attributes:
+      label: Thunderbird channel
+      options:
+        - ESR 140
+        - ESR 153
+        - Mainline / Release
+        - Beta
+        - Daily
+        - Other
+    validations:
+      required: true
+  - type: input
+    id: thunderbird-version
+    attributes:
+      label: Thunderbird version
+      placeholder: 140.0.1, 153.0, 154.0b1, ...
+    validations:
+      required: true
+  - type: input
+    id: addon-version
+    attributes:
+      label: NC Connector for Thunderbird version
+      placeholder: 3.2.2
+    validations:
+      required: true
+  - type: input
+    id: os
+    attributes:
+      label: Operating system
+      placeholder: Windows 11, macOS 15, Ubuntu 24.04, ...
+    validations:
+      required: true
+  - type: dropdown
+    id: backend-used
+    attributes:
+      label: NC Connector Backend used?
+      options:
+        - "No"
+        - "Yes"
+        - Not sure
+    validations:
+      required: true
+  - type: input
+    id: backend-version
+    attributes:
+      label: Backend version, if used
+      placeholder: 1.2.1
+  - type: dropdown
+    id: area
+    attributes:
+      label: Affected area
+      options:
+        - Sharing / Filelink
+        - Talk / Calendar
+        - Email signatures
+        - Backend policies
+        - Setup / Login
+        - UI / UX
+        - Packaging / Review
+        - Other
+    validations:
+      required: true
+  - type: textarea
+    id: logs
+    attributes:
+      label: Logs or screenshots
+      description: Add relevant debug logs or screenshots. Remove passwords, tokens, and private data.
+      render: text

@@ -1,0 +1,62 @@
+name: Feature request
+description: Suggest an improvement for the Thunderbird add-on
+title: "[Feature]: "
+labels: ["enhancement", "roadmap", "product: thunderbird"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for the idea.
+
+        Please describe the workflow you want to improve. If this should also work in Outlook or needs Backend policy/template support, mention it here.
+
+        Public roadmap: https://github.com/orgs/nc-connector/projects/1
+  - type: checkboxes
+    id: quick-checks
+    attributes:
+      label: Quick checks
+      options:
+        - label: I searched existing issues and the public roadmap first.
+          required: true
+  - type: textarea
+    id: problem
+    attributes:
+      label: What problem would this solve?
+      placeholder: I am always frustrated when ...
+    validations:
+      required: true
+  - type: textarea
+    id: solution
+    attributes:
+      label: What should happen?
+      placeholder: I would like NC Connector to ...
+    validations:
+      required: true
+  - type: dropdown
+    id: area
+    attributes:
+      label: Affected area
+      options:
+        - Sharing / Filelink
+        - Talk / Calendar
+        - Email signatures
+        - Backend policies
+        - Setup / Login
+        - UI / UX
+        - Other
+    validations:
+      required: true
+  - type: checkboxes
+    id: cross-client
+    attributes:
+      label: Cross-client impact
+      description: Select what should also be considered.
+      options:
+        - label: Outlook should behave the same way.
+        - label: Backend policy or template support may be needed.
+        - label: This is Thunderbird-only.
+  - type: textarea
+    id: context
+    attributes:
+      label: Additional context
+      description: Add screenshots, examples, or notes if helpful.
