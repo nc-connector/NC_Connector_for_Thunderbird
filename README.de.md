@@ -89,6 +89,10 @@ Für typische Setup-, Systemadressbuch- und Backend-Policy-Probleme siehe den [A
 - [Development Guide](https://github.com/nc-connector/NC_Connector_for_Thunderbird/blob/main/docs/DEVELOPMENT.md)
 - [Drittanbieter-Lizenzen](https://github.com/nc-connector/NC_Connector_for_Thunderbird/blob/main/VENDOR.md)
 
+## Roadmap
+
+Geplante Arbeiten fuer Thunderbird, Outlook und Backend werden in der oeffentlichen [NC Connector Roadmap](https://github.com/orgs/nc-connector/projects/1) gepflegt.
+
 ## Screenshots
 
 <details>
