@@ -85,7 +85,8 @@ async function run(){
   assert(context.NCTalkTextUtils.normalizeBaseUrl("https://cloud.example.com/nc/") === "https://cloud.example.com/nc", "Base URL normalization must preserve subfolder path");
   assert(context.NCTalkTextUtils.normalizeBaseUrl("http://cloud.example.com/nc") === "", "Base URL normalization must reject non-HTTPS URLs");
 
-  const folderInfo = context.NCSharing.buildShareFolderInfo("Team Shares", "Client/Project", new Date("2026-07-03T12:00:00Z"));
+  const referenceDate = vm.runInContext("new Date('2026-07-03T12:00:00Z')", context);
+  const folderInfo = context.NCSharing.buildShareFolderInfo("Team Shares", "Client/Project", referenceDate);
   assert(folderInfo.relativeFolder === "Team Shares/20260703_Client_Project", "Share folder info should keep base folder and sanitize share name");
 
   const shareInfo = {
