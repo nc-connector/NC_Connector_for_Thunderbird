@@ -1,7 +1,7 @@
 name: "🚀 Feature request"
 description: Suggest an improvement for the Thunderbird add-on
-title: "[Feature]: "
-labels: ["enhancement", "roadmap", "product: thunderbird"]
+labels: ["product: thunderbird"]
+type: feature
 body:
   - type: markdown
     attributes:

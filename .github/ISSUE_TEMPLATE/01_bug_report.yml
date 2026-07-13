@@ -1,7 +1,7 @@
 name: "🐞 Bug report"
 description: Report a reproducible Thunderbird add-on problem
-title: "[Bug]: "
-labels: ["bug", "product: thunderbird"]
+labels: ["product: thunderbird"]
+type: bug
 body:
   - type: markdown
     attributes:

@@ -1,0 +1,24 @@
+name: Cross-client roadmap sync
+
+on:
+  issues:
+    types: [labeled, closed, reopened]
+
+permissions:
+  contents: read
+  issues: write
+
+jobs:
+  sync:
+    if: >-
+      (github.event.action == 'labeled' && github.event.label.name == 'cross-client') ||
+      ((github.event.action == 'closed' || github.event.action == 'reopened') &&
+      contains(github.event.issue.labels.*.name, 'cross-client'))
+    uses: nc-connector/.github/.github/workflows/cross-client-roadmap.yml@main
+    with:
+      issue-owner: ${{ github.repository_owner }}
+      issue-repo: ${{ github.event.repository.name }}
+      issue-number: ${{ github.event.issue.number }}
+      action: ${{ github.event.action }}
+      label-name: ${{ github.event.label.name || '' }}
+    secrets: inherit
