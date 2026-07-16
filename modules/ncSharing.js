@@ -834,6 +834,25 @@
     return "";
   }
 
+  function resolveShareRenderLanguage(request, shareLang, customTemplate){
+    if (String(shareLang || "").toLowerCase() !== "custom"){
+      return shareLang;
+    }
+    if (!customTemplate){
+      return "default";
+    }
+
+    // `custom` selects the backend template; it is not the language of client-generated labels.
+    const backendLanguage = String(request?.policyShare?.share_html_block_effective_language || "").trim();
+    if (!backendLanguage || backendLanguage.toLowerCase() === "custom"){
+      return shareLang;
+    }
+    if (typeof NCI18nOverride !== "undefined" && typeof NCI18nOverride.normalizeLanguageOverride === "function"){
+      return NCI18nOverride.normalizeLanguageOverride(backendLanguage);
+    }
+    return backendLanguage;
+  }
+
   function buildPermissionsTemplateHtml(perms, labels = {}){
     return buildPermissionsBadges(perms, labels);
   }
@@ -997,9 +1016,7 @@
     const hidePassword = !!request?.hidePassword;
     const showPasswordSeparateHint = !!request?.showPasswordSeparateHint;
     const customTemplate = getPolicyTemplate(request, passwordOnly, shareLang);
-    const effectiveLang = String(shareLang || "").toLowerCase() === "custom" && !customTemplate
-      ? "default"
-      : shareLang;
+    const effectiveLang = resolveShareRenderLanguage(request, shareLang, customTemplate);
     const shareUrl = String(result?.shareUrl || "");
     const downloadUrl = request?.zipDownload
       ? buildZipDownloadUrl(shareUrl)
@@ -1142,9 +1159,7 @@
     const hidePassword = !!request?.hidePassword;
     const showPasswordSeparateHint = !!request?.showPasswordSeparateHint;
     const customTemplate = getPolicyTemplate(request, passwordOnly, shareLang);
-    const effectiveLang = String(shareLang || "").toLowerCase() === "custom" && !customTemplate
-      ? "default"
-      : shareLang;
+    const effectiveLang = resolveShareRenderLanguage(request, shareLang, customTemplate);
     const shareUrl = String(result?.shareUrl || "");
     const downloadUrl = request?.zipDownload
       ? buildZipDownloadUrl(shareUrl)

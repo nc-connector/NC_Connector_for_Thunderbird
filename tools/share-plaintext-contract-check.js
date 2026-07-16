@@ -154,6 +154,23 @@ function makeTranslations(){
   };
 }
 
+function makeGermanTranslations(){
+  return {
+    sharing_permission_read: "Lesen",
+    sharing_permission_create: "Hochladen",
+    sharing_permission_write: "Bearbeiten",
+    sharing_permission_delete: "Löschen",
+    sharing_html_password_separate_hint: "Das Passwort wird in einer separaten E-Mail gesendet.",
+    sharing_html_intro_line: "Die Dateien wurden sicher und datenschutzkonform über Nextcloud bereitgestellt. Öffnen Sie den untenstehenden Nextcloud-Link, um die Freigabe aufzurufen.",
+    sharing_html_zip_download_intro: "Die Dateien wurden sicher und datenschutzkonform über Nextcloud bereitgestellt. Laden Sie die freigegebenen Dateien über den untenstehenden Link als ZIP-Archiv herunter.",
+    sharing_html_download_label: "ZIP-Download",
+    sharing_html_share_link_label: "Nextcloud-Link",
+    sharing_html_password_label: "Passwort",
+    sharing_html_expire_label: "Ablaufdatum",
+    sharing_html_permissions_label: "Ihre Berechtigungen"
+  };
+}
+
 function translate(translations, key, substitutions = []){
   let value = translations[key] || key || "";
   const args = Array.isArray(substitutions) ? substitutions : [substitutions];
@@ -170,6 +187,9 @@ function loadScriptIntoContext(relPath, context){
 
 function createHarness(){
   const translations = makeTranslations();
+  const translationsByLanguage = {
+    de: { ...translations, ...makeGermanTranslations() }
+  };
   const storageState = { shareBlockLang: "default" };
   const composeState = {
     detailsByTab: new Map(),
@@ -200,7 +220,11 @@ function createHarness(){
         }
         return normalized;
       },
-      tInLang: async (_lang, key, substitutions = []) => translate(translations, key, substitutions)
+      tInLang: async (lang, key, substitutions = []) => translate(
+        translationsByLanguage[String(lang || "").trim().toLowerCase()] || translations,
+        key,
+        substitutions
+      )
     },
     NCHtmlSanitizer: {
       sanitizeShareTemplateHtml,
@@ -320,6 +344,38 @@ async function testCustomTemplateUsesSeparatePasswordHint(){
   assert(plainText.includes("Password info: Password will be sent in a separate email."), "Custom plaintext build must inject separate password hint when configured");
 }
 
+async function testBackendEffectiveLanguageLocalizesCustomTemplateCopy(){
+  const { context, storageState } = createHarness();
+  storageState.shareBlockLang = "custom";
+  const shareInfo = {
+    shareUrl: "https://cloud.example/s/abc123",
+    password: "Secret123",
+    expireDate: "2026-05-01",
+    permissions: { read: true, create: true, write: true, delete: true }
+  };
+  const policyShare = {
+    language_share_html_block: "custom",
+    share_html_block_effective_language: "de",
+    share_html_block_template_v2: "<p>{LINK_INTRO}</p><p>{LINK_LABEL}: {URL}</p><p>{PASSWORD}</p><p>{RIGHTS}</p>"
+  };
+  const request = {
+    hidePassword: true,
+    showPasswordSeparateHint: true,
+    permissions: shareInfo.permissions,
+    policyShare
+  };
+
+  const html = await context.NCSharing.buildHtmlBlock(shareInfo, request);
+  const plainText = await context.NCSharing.buildPlainTextBlock(shareInfo, request);
+
+  for (const output of [html, plainText]){
+    assert(output.includes("Öffnen Sie den untenstehenden Nextcloud-Link"), "Backend template language must localize LINK_INTRO");
+    assert(output.includes("Nextcloud-Link"), "Backend template language must localize LINK_LABEL");
+    assert(output.includes("Das Passwort wird in einer separaten E-Mail gesendet."), "Backend template language must localize the separate-password hint");
+    assert(output.includes("Lesen") && output.includes("Hochladen") && output.includes("Bearbeiten") && output.includes("Löschen"), "Backend template language must localize permission names");
+  }
+}
+
 async function testCustomTemplateResolvesModeAwareLinkVariables(){
   const { context, storageState } = createHarness();
   storageState.shareBlockLang = "custom";
@@ -427,6 +483,7 @@ async function run(){
   await testLocalPlainTextBuildSkipsSanitizer();
   await testCustomTemplatePrunesEmptyPasswordAndSanitizes();
   await testCustomTemplateUsesSeparatePasswordHint();
+  await testBackendEffectiveLanguageLocalizesCustomTemplateCopy();
   await testCustomTemplateResolvesModeAwareLinkVariables();
   await testOlderBackendModeAwareTemplateStillRenders();
   await testPlainTextInsertCompactsMarkedRightsSegment();
