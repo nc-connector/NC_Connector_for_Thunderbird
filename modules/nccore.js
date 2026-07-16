@@ -15,6 +15,7 @@ const NCCore = (() => {
   const resolveLogPrefix = () =>
     globalThis.NCLogContext?.resolveAddonLogPrefix?.("Core")
     || "[NCBG]";
+  const currentUserIdCache = new Map();
 
   function logNCCoreError(scope, error, details = undefined){
     globalThis.NCLogContext.safeConsoleError(resolveLogPrefix(), scope, error, details);
@@ -31,6 +32,90 @@ const NCCore = (() => {
 
   function normalizeBaseUrl(input){
     return NCTalkTextUtils.normalizeBaseUrl(input);
+  }
+
+  function createCurrentUserIdError(code, message){
+    const error = new Error(message || bgI18n("options_test_failed"));
+    error.ncCurrentUserIdCode = code || "identity";
+    return error;
+  }
+
+  async function resolveCurrentUserId({ baseUrl, user, appPass, forceRefresh = false } = {}){
+    const normalizedBase = normalizeBaseUrl(typeof baseUrl === "string" ? baseUrl.trim() : "");
+    const trimmedUser = typeof user === "string" ? user.trim() : "";
+    const password = typeof appPass === "string" ? appPass : "";
+    if (!normalizedBase || !trimmedUser || !password){
+      throw createCurrentUserIdError("missing", bgI18n("error_credentials_missing"));
+    }
+
+    const cacheKey = `${normalizedBase}\n${trimmedUser}`;
+    if (!forceRefresh && currentUserIdCache.has(cacheKey)){
+      return currentUserIdCache.get(cacheKey);
+    }
+
+    await ensureHostPermission(normalizedBase);
+    const userUrl = normalizedBase + "/ocs/v2.php/cloud/user?format=json";
+    let response;
+    try{
+      response = await fetch(userUrl, {
+        method: "GET",
+        headers: {
+          "OCS-APIRequest": "true",
+          "Authorization": NCOcs.buildAuthHeader(trimmedUser, password),
+          "Accept": "application/json"
+        }
+      });
+    }catch(error){
+      logNCCoreError("current user id request failed", error, { base: normalizedBase });
+      throw createCurrentUserIdError("network", error?.message || String(error));
+    }
+
+    const raw = await response.text().catch((error) => {
+      logNCCoreError("current user id response read failed", error);
+      return "";
+    });
+    let data = null;
+    try{
+      data = raw ? JSON.parse(raw) : null;
+    }catch(error){
+      logNCCoreError("current user id json parse failed", error, {
+        responseSample: String(raw || "").slice(0, 160)
+      });
+    }
+
+    if (response.status === 401 || response.status === 403){
+      throw createCurrentUserIdError("auth", bgI18n("options_test_failed_auth"));
+    }
+    if (!response.ok){
+      const detail = data?.ocs?.meta?.message || raw || (response.status + " " + response.statusText);
+      throw createCurrentUserIdError("http", detail);
+    }
+
+    const rawUserId = data?.ocs?.data?.id;
+    const userId = typeof rawUserId === "string" ? rawUserId.trim() : "";
+    if (!userId){
+      // Login aliases such as email addresses must never be substituted into user-scoped DAV paths.
+      logNCCoreError("current user id missing", new Error("ocs.data.id missing"), {
+        base: normalizedBase,
+        user: coreShortId(trimmedUser)
+      });
+      throw createCurrentUserIdError("identity", bgI18n("options_test_failed"));
+    }
+
+    currentUserIdCache.set(cacheKey, userId);
+    L("current user id resolved", {
+      base: normalizedBase,
+      authUser: coreShortId(trimmedUser),
+      userId: coreShortId(userId)
+    });
+    return userId;
+  }
+
+  async function getCurrentUserId(options = null){
+    const source = options && typeof options === "object"
+      ? options
+      : await getOpts();
+    return resolveCurrentUserId(source);
   }
 
   /**
@@ -52,7 +137,7 @@ const NCCore = (() => {
    * Validate base URL, username, and app password via OCS.
    * Calls /cloud/capabilities first and then /cloud/user.
    * @param {{baseUrl:string,user:string,appPass:string}} params
-   * @returns {Promise<{ok:boolean, code:string, message?:string, version?:string}>}
+   * @returns {Promise<{ok:boolean, code:string, message?:string, version?:string, userId?:string}>}
    */
   async function testCredentials({ baseUrl, user, appPass } = {}){
     const rawBase = typeof baseUrl === "string" ? baseUrl.trim() : "";
@@ -113,39 +198,20 @@ const NCCore = (() => {
       }
       const message = versionStr ? "Nextcloud " + versionStr : "";
       try{
-        const userUrl = normalizedBase + "/ocs/v2.php/cloud/user";
-        const userRes = await fetch(userUrl, {
-          method: "GET",
-          headers: {
-            "OCS-APIRequest": "true",
-            "Authorization": basicHeader,
-            "Accept": "application/json"
-          }
+        const userId = await resolveCurrentUserId({
+          baseUrl: normalizedBase,
+          user: trimmedUser,
+          appPass: password,
+          forceRefresh: true
         });
-        if (userRes.status === 401 || userRes.status === 403){
-          return { ok:false, code:"auth", message: bgI18n("options_test_failed_auth") };
-        }
-        if (!userRes.ok){
-          const userRaw = await userRes.text().catch((error) => {
-            logNCCoreError("user endpoint response read failed", error);
-            return "";
-          });
-          let userData = null;
-          try{
-            userData = userRaw ? JSON.parse(userRaw) : null;
-          }catch(error){
-            logNCCoreError("user endpoint json parse failed", error, { responseSample: String(userRaw || "").slice(0, 160) });
-            userData = null;
-          }
-          const detail = userData?.ocs?.meta?.message || userRaw || (userRes.status + " " + userRes.statusText);
-          return { ok:false, code:"http", message: detail };
-        }
+        return { ok:true, version: versionStr, message, userId };
       }catch(error){
-        console.error(resolveLogPrefix(), "user endpoint request failed", error);
-        logNCCoreError("user endpoint request failed", error, { base: normalizedBase });
-        return { ok:false, code:"network", message: error?.message || String(error) };
+        return {
+          ok: false,
+          code: error?.ncCurrentUserIdCode || "identity",
+          message: error?.message || bgI18n("options_test_failed")
+        };
       }
-      return { ok:true, version: versionStr, message };
     }catch(error){
       console.error(resolveLogPrefix(), "capabilities request failed", error);
       logNCCoreError("capabilities request failed", error, { base: normalizedBase });
@@ -324,6 +390,7 @@ const NCCore = (() => {
     testCredentials,
     startLoginFlow,
     completeLoginFlow,
-    getOpts
+    getOpts,
+    getCurrentUserId
   };
 })();

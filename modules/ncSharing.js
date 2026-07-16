@@ -753,10 +753,11 @@
       throw new Error(i18n("error_credentials_missing"));
     }
     await ensureHostPermission(opts.baseUrl);
+    const userId = await NCCore.getCurrentUserId(opts);
     const info = buildShareFolderInfo(basePath || await getFileLinkBasePath(), shareName, shareDate ? new Date(shareDate) : new Date());
     const authHeader = NCOcs.buildAuthHeader(opts.user, opts.appPass);
     const davBase = opts.baseUrl.replace(/\/+$/, "");
-    const davRoot = `${davBase}/remote.php/dav/files/${encodeURIComponent(opts.user)}`;
+    const davRoot = `${davBase}/remote.php/dav/files/${encodeURIComponent(userId)}`;
     logDebug(opts, "availability:check", {
       shareName,
       basePath: basePath || "",
@@ -1330,6 +1331,7 @@
       throw new Error(i18n("error_credentials_missing"));
     }
     await ensureHostPermission(opts.baseUrl);
+    const userId = await NCCore.getCurrentUserId(opts);
     const basePathSetting = request?.basePath && request.basePath.trim()
       ? request.basePath.trim()
       : (await getFileLinkBasePath());
@@ -1341,8 +1343,8 @@
     const relativeFolder = folderInfo.relativeFolder;
     const authHeader = NCOcs.buildAuthHeader(opts.user, opts.appPass);
     const davBase = opts.baseUrl.replace(/\/+$/, "");
-    const davRoot = `${davBase}/remote.php/dav/files/${encodeURIComponent(opts.user)}`;
-    const uploadRoot = `${davBase}/remote.php/dav/uploads/${encodeURIComponent(opts.user)}`;
+    const davRoot = `${davBase}/remote.php/dav/files/${encodeURIComponent(userId)}`;
+    const uploadRoot = `${davBase}/remote.php/dav/uploads/${encodeURIComponent(userId)}`;
     logDebug(opts, "folders:ensure", { relativeBase, relativeFolder });
     const baseExists = relativeBase
       ? await pathExists({
@@ -1480,8 +1482,9 @@
       throw new Error(i18n("error_credentials_missing"));
     }
     await ensureHostPermission(opts.baseUrl);
+    const userId = await NCCore.getCurrentUserId(opts);
     const authHeader = NCOcs.buildAuthHeader(opts.user, opts.appPass);
-    const davRoot = `${opts.baseUrl.replace(/\/+$/, "")}/remote.php/dav/files/${encodeURIComponent(opts.user)}`;
+    const davRoot = `${opts.baseUrl.replace(/\/+$/, "")}/remote.php/dav/files/${encodeURIComponent(userId)}`;
     logDebug(opts, "folders:delete", { relativeFolder: folderInfo.relativeFolder });
     await deleteRemotePath(davRoot, folderInfo.relativeFolder, authHeader);
     return true;

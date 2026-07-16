@@ -808,6 +808,8 @@ Always ensure errors are logged (reviewer requirement: no silent failures).
 This add-on uses Nextcloud APIs such as:
 - Core capabilities:
   - `/ocs/v2.php/cloud/capabilities`
+- Current canonical user ID:
+  - `/ocs/v2.php/cloud/user?format=json`
 - Backend policy status:
   - `/apps/ncc_backend_4mc/api/v1/status`
   - fallback: `/index.php/apps/ncc_backend_4mc/api/v1/status` when a server has broken pretty URL rewrites
@@ -824,7 +826,9 @@ This add-on uses Nextcloud APIs such as:
 - Addressbook (system addressbook export):
   - `remote.php/dav/addressbooks/.../?export`
 
-All endpoint interaction lives in the shared modules (`modules/ocs.js`, `modules/nccore.js`, `modules/policyRuntime.js`, `modules/talkcore.js`, `modules/ncSharing.js`, `modules/ncSecrets.js`).
+Authentication aliases and DAV identities are intentionally kept separate. Basic Auth uses the configured login (which may be an email address), while `modules/nccore.js` resolves and caches `ocs.data.id` for the current background session. User-scoped FileLink, chunk-upload, and CardDAV paths use only that canonical UID; a missing UID fails explicitly instead of substituting the login.
+
+All endpoint interaction lives in the shared modules (`modules/ocs.js`, `modules/nccore.js`, `modules/policyRuntime.js`, `modules/talkcore.js`, `modules/talkAddressbook.js`, `modules/ncSharing.js`, `modules/ncSecrets.js`).
 
 ---
 
