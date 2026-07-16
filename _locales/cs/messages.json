@@ -612,7 +612,10 @@
     "message": "Vaše oprávnění"
   },
   "sharing_html_download_label": {
-    "message": "Odkaz ke stažení"
+    "message": "Stažení ZIP"
+  },
+  "sharing_html_share_link_label": {
+    "message": "Odkaz na Nextcloud"
   },
   "sharing_html_footer": {
     "message": "$1 je řešení pro bezpečný e-mail a výměnu souborů."
@@ -714,7 +717,10 @@
     "message": "Heslo musí obsahovat alespoň 10 znaků, včetně velkých a malých písmen a speciálního znaku."
   },
   "sharing_html_intro_line": {
-    "message": "Soubory byly prostřednictvím Nextcloudu poskytnuty bezpečně a v souladu s ochranou osobních údajů. Stahování je možné přes níže uvedený odkaz."
+    "message": "Soubory byly prostřednictvím Nextcloudu poskytnuty bezpečně a v souladu s ochranou osobních údajů. Otevřete níže uvedený odkaz na Nextcloud a zobrazte sdílení."
+  },
+  "sharing_html_zip_download_intro": {
+    "message": "Soubory byly prostřednictvím Nextcloudu poskytnuty bezpečně a v souladu s ochranou osobních údajů. Stáhněte sdílené soubory jako archiv ZIP pomocí níže uvedeného odkazu."
   },
   "sharing_attachment_prompt_title": {
     "message": "Překročen limit příloh"

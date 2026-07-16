@@ -797,6 +797,14 @@
     return storedLang;
   }
 
+  async function resolveShareLinkPresentation(lang, zipDownload){
+    const zipMode = !!zipDownload;
+    return {
+      intro: await tShare(lang, zipMode ? "sharing_html_zip_download_intro" : "sharing_html_intro_line"),
+      label: await tShare(lang, zipMode ? "sharing_html_download_label" : "sharing_html_share_link_label")
+    };
+  }
+
   /**
    * Resolve a custom policy template for the current rendering mode.
    * @param {object} request
@@ -987,6 +995,9 @@
     const downloadUrl = request?.zipDownload
       ? buildZipDownloadUrl(shareUrl)
       : shareUrl;
+    const linkPresentation = passwordOnly
+      ? { intro: "", label: "" }
+      : await resolveShareLinkPresentation(effectiveLang, request?.zipDownload);
     const permissionLabels = {
       read: await tShare(effectiveLang, "sharing_permission_read"),
       create: await tShare(effectiveLang, "sharing_permission_create"),
@@ -1032,7 +1043,9 @@
         PASSWORD: passwordText,
         EXPIRATIONDATE: escapeHtml(result.expireDate || ""),
         RIGHTS: permissionsHtml,
-        NOTE: noteText
+        NOTE: noteText,
+        LINK_INTRO: escapeHtml(linkPresentation.intro),
+        LINK_LABEL: escapeHtml(linkPresentation.label)
       }));
     }
 
@@ -1042,7 +1055,7 @@
     }
     const introLine = passwordOnly
       ? await tShare(effectiveLang, secretLink ? "sharing_html_secret_mail_intro" : "sharing_html_password_mail_intro")
-      : await tShare(effectiveLang, "sharing_html_intro_line");
+      : linkPresentation.intro;
     if (introLine){
       paragraphs.push(`<p style="margin:0 0 14px 0;line-height:1.4;">${escapeHtml(introLine)}<br /></p>`);
     }
@@ -1054,7 +1067,7 @@
         : buildPasswordBadge(result.password || "");
       rows.push(buildTableRow(await tShare(effectiveLang, "sharing_html_password_label"), valueHtml));
     }else{
-      rows.push(buildTableRow(await tShare(effectiveLang, "sharing_html_download_label"), downloadLink));
+      rows.push(buildTableRow(linkPresentation.label, downloadLink));
       if (result.password && !hidePassword){
         const badge = buildPasswordBadge(result.password);
         rows.push(buildTableRow(await tShare(effectiveLang, "sharing_html_password_label"), badge));
@@ -1127,6 +1140,9 @@
     const downloadUrl = request?.zipDownload
       ? buildZipDownloadUrl(shareUrl)
       : shareUrl;
+    const linkPresentation = passwordOnly
+      ? { intro: "", label: "" }
+      : await resolveShareLinkPresentation(effectiveLang, request?.zipDownload);
     const permissionLabels = {
       read: await tShare(effectiveLang, "sharing_permission_read"),
       create: await tShare(effectiveLang, "sharing_permission_create"),
@@ -1171,7 +1187,9 @@
         PASSWORD: plainTextToTemplateHtml(passwordText),
         EXPIRATIONDATE: plainTextToTemplateHtml(String(result.expireDate || "")),
         RIGHTS: plainTextToTemplateHtml(permissionsPlain),
-        NOTE: plainTextToTemplateHtml(noteText)
+        NOTE: plainTextToTemplateHtml(noteText),
+        LINK_INTRO: plainTextToTemplateHtml(linkPresentation.intro),
+        LINK_LABEL: plainTextToTemplateHtml(linkPresentation.label)
       });
       const plainText = htmlToPlainTextOrThrow(sanitizeCustomTemplateHtml(renderedTemplate));
       if (!plainText){
@@ -1186,7 +1204,7 @@
     }
     const introLine = passwordOnly
       ? await tShare(effectiveLang, secretLink ? "sharing_html_secret_mail_intro" : "sharing_html_password_mail_intro")
-      : await tShare(effectiveLang, "sharing_html_intro_line");
+      : linkPresentation.intro;
     if (introLine){
       sections.push(normalizePlainTextBlock(introLine));
     }
@@ -1195,7 +1213,7 @@
     if (passwordOnly){
       fields.push(buildPlainTextField(await tShare(effectiveLang, "sharing_html_password_label"), passwordText));
     }else{
-      fields.push(buildPlainTextField(await tShare(effectiveLang, "sharing_html_download_label"), downloadUrl));
+      fields.push(buildPlainTextField(linkPresentation.label, downloadUrl));
       if (result.password && !hidePassword){
         fields.push(buildPlainTextField(await tShare(effectiveLang, "sharing_html_password_label"), String(result.password || "")));
       }

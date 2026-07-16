@@ -612,7 +612,10 @@
     "message": "您的权限"
   },
   "sharing_html_download_label": {
-    "message": "下载链接"
+    "message": "ZIP 下载"
+  },
+  "sharing_html_share_link_label": {
+    "message": "Nextcloud 链接"
   },
   "sharing_html_footer": {
     "message": "$1 是安全邮件和文件交换的解决方案。"
@@ -714,7 +717,10 @@
     "message": "密码至少需要 10 个字符，并包含大写字母、小写字母和特殊字符。"
   },
   "sharing_html_intro_line": {
-    "message": "这些文件已通过 Nextcloud 以安全且符合隐私保护要求的方式提供。可通过下方链接下载。"
+    "message": "这些文件已通过 Nextcloud 以安全且符合隐私保护要求的方式提供。请打开下方的 Nextcloud 链接以查看共享内容。"
+  },
+  "sharing_html_zip_download_intro": {
+    "message": "这些文件已通过 Nextcloud 以安全且符合隐私保护要求的方式提供。请使用下方链接将共享文件下载为 ZIP 压缩包。"
   },
   "sharing_attachment_prompt_title": {
     "message": "附件大小超出限制"

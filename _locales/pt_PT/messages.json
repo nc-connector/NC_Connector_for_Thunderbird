@@ -612,7 +612,10 @@
     "message": "As suas permissões"
   },
   "sharing_html_download_label": {
-    "message": "Link de download"
+    "message": "Transferência ZIP"
+  },
+  "sharing_html_share_link_label": {
+    "message": "Ligação do Nextcloud"
   },
   "sharing_html_footer": {
     "message": "$1 é uma solução para e-mail seguro e troca de ficheiros."
@@ -714,7 +717,10 @@
     "message": "A palavra-passe deve conter pelo menos 10 caracteres, incluindo letras maiúsculas e minúsculas e um caractere especial."
   },
   "sharing_html_intro_line": {
-    "message": "Os ficheiros foram disponibilizados de forma segura e em conformidade com a privacidade através do Nextcloud. A transferência pode ser feita através da ligação abaixo."
+    "message": "Os ficheiros foram disponibilizados de forma segura e em conformidade com a privacidade através do Nextcloud. Abra a ligação do Nextcloud abaixo para ver a partilha."
+  },
+  "sharing_html_zip_download_intro": {
+    "message": "Os ficheiros foram disponibilizados de forma segura e em conformidade com a privacidade através do Nextcloud. Transfira os ficheiros partilhados como um arquivo ZIP através da ligação abaixo."
   },
   "sharing_attachment_prompt_title": {
     "message": "Limite de anexos excedido"

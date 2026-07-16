@@ -612,7 +612,10 @@
     "message": "Twoje uprawnienia"
   },
   "sharing_html_download_label": {
-    "message": "Link do pobrania"
+    "message": "Pobieranie ZIP"
+  },
+  "sharing_html_share_link_label": {
+    "message": "Odnośnik Nextcloud"
   },
   "sharing_html_footer": {
     "message": "$1 to rozwiązanie do bezpiecznej poczty e-mail i wymiany plików."
@@ -714,7 +717,10 @@
     "message": "Hasło musi zawierać co najmniej 10 znaków, w tym małe i wielkie litery oraz znak specjalny."
   },
   "sharing_html_intro_line": {
-    "message": "Pliki zostały udostępnione przez Nextcloud w sposób bezpieczny i zgodny z zasadami ochrony prywatności. Pobieranie jest możliwe za pomocą poniższego linku."
+    "message": "Pliki zostały udostępnione przez Nextcloud w sposób bezpieczny i zgodny z zasadami ochrony prywatności. Otwórz poniższy odnośnik Nextcloud, aby wyświetlić udostępnione pliki."
+  },
+  "sharing_html_zip_download_intro": {
+    "message": "Pliki zostały udostępnione przez Nextcloud w sposób bezpieczny i zgodny z zasadami ochrony prywatności. Pobierz udostępnione pliki jako archiwum ZIP za pomocą poniższego odnośnika."
   },
   "sharing_attachment_prompt_title": {
     "message": "Przekroczono limit załączników"

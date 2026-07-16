@@ -612,7 +612,10 @@
     "message": "Jouw rechten"
   },
   "sharing_html_download_label": {
-    "message": "Downloadlink"
+    "message": "ZIP-download"
+  },
+  "sharing_html_share_link_label": {
+    "message": "Nextcloud-link"
   },
   "sharing_html_footer": {
     "message": "$1 is een oplossing voor veilige e-mail en bestandsuitwisseling."
@@ -714,7 +717,10 @@
     "message": "Het wachtwoord moet minstens 10 tekens bevatten, inclusief hoofd- en kleine letters en een speciaal teken."
   },
   "sharing_html_intro_line": {
-    "message": "De bestanden zijn veilig en privacyconform via Nextcloud beschikbaar gesteld. Downloaden is mogelijk via de onderstaande link."
+    "message": "De bestanden zijn veilig en privacyconform via Nextcloud beschikbaar gesteld. Open de onderstaande Nextcloud-link om de gedeelde bestanden te bekijken."
+  },
+  "sharing_html_zip_download_intro": {
+    "message": "De bestanden zijn veilig en privacyconform via Nextcloud beschikbaar gesteld. Download de gedeelde bestanden via de onderstaande link als ZIP-archief."
   },
   "sharing_attachment_prompt_title": {
     "message": "Bijlagelimiet overschreden"

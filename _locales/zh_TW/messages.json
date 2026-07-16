@@ -612,7 +612,10 @@
     "message": "您的權限"
   },
   "sharing_html_download_label": {
-    "message": "下載連結"
+    "message": "ZIP 下載"
+  },
+  "sharing_html_share_link_label": {
+    "message": "Nextcloud 連結"
   },
   "sharing_html_footer": {
     "message": "$1 是安全郵件與檔案交換的解決方案。"
@@ -714,7 +717,10 @@
     "message": "密碼至少需要 10 個字元，並包含大寫、小寫字母與特殊字元。"
   },
   "sharing_html_intro_line": {
-    "message": "這些檔案已透過 Nextcloud 以安全且符合隱私保護要求的方式提供。可透過下方連結下載。"
+    "message": "這些檔案已透過 Nextcloud 以安全且符合隱私保護要求的方式提供。請開啟下方的 Nextcloud 連結以檢視分享內容。"
+  },
+  "sharing_html_zip_download_intro": {
+    "message": "這些檔案已透過 Nextcloud 以安全且符合隱私保護要求的方式提供。請使用下方連結將分享的檔案下載為 ZIP 壓縮檔。"
   },
   "sharing_attachment_prompt_title": {
     "message": "附件大小超出限制"

@@ -17,8 +17,10 @@ function makeTranslations(){
     sharing_permission_create: "Create",
     sharing_permission_write: "Write",
     sharing_permission_delete: "Delete",
-    sharing_html_intro_line: "The files are available using the link below.",
-    sharing_html_download_label: "Download link",
+    sharing_html_intro_line: "Open the Nextcloud link below to view the share.",
+    sharing_html_zip_download_intro: "Download the shared files as a ZIP archive using the link below.",
+    sharing_html_download_label: "ZIP download",
+    sharing_html_share_link_label: "Nextcloud link",
     sharing_html_password_label: "Password",
     sharing_html_expire_label: "Valid until",
     sharing_html_permissions_label: "Permissions",
@@ -104,7 +106,8 @@ async function run(){
   const plainText = await context.NCSharing.buildPlainTextBlock(shareInfo, renderOptions);
 
   assert(html.includes("https://cloud.example.com/nc/s/abc123/download"), "HTML share block should keep subfolder path in ZIP download URL");
-  assert(plainText.includes("Download link: https://cloud.example.com/nc/s/abc123/download"), "Plaintext share block should keep subfolder path in ZIP download URL");
+  assert(plainText.includes("ZIP download: https://cloud.example.com/nc/s/abc123/download"), "Plaintext share block should label the attachment URL as a ZIP download");
+  assert(plainText.includes("Download the shared files as a ZIP archive"), "Plaintext attachment block should explain ZIP download behavior");
   assert(!html.includes("https://cloud.example.com/s/abc123/download"), "HTML share block must not drop the Nextcloud subfolder path");
   assert(!plainText.includes("https://cloud.example.com/s/abc123/download"), "Plaintext share block must not drop the Nextcloud subfolder path");
 

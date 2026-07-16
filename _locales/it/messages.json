@@ -612,7 +612,10 @@
     "message": "I tuoi permessi"
   },
   "sharing_html_download_label": {
-    "message": "Link di download"
+    "message": "Download ZIP"
+  },
+  "sharing_html_share_link_label": {
+    "message": "Link Nextcloud"
   },
   "sharing_html_footer": {
     "message": "$1 è una soluzione per e-mail sicure e scambio di file."
@@ -714,7 +717,10 @@
     "message": "La password deve contenere almeno 10 caratteri, incluse lettere maiuscole e minuscole e un carattere speciale."
   },
   "sharing_html_intro_line": {
-    "message": "I file sono stati forniti in modo sicuro e conforme alla protezione dei dati tramite Nextcloud. Il download è possibile tramite il link qui sotto."
+    "message": "I file sono stati forniti in modo sicuro e conforme alla protezione dei dati tramite Nextcloud. Apri il link Nextcloud qui sotto per visualizzare la condivisione."
+  },
+  "sharing_html_zip_download_intro": {
+    "message": "I file sono stati forniti in modo sicuro e conforme alla protezione dei dati tramite Nextcloud. Scarica i file condivisi come archivio ZIP tramite il link qui sotto."
   },
   "sharing_attachment_prompt_title": {
     "message": "Limite allegati superato"
