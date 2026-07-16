@@ -687,6 +687,7 @@ Runtime rules:
 - Backend templates are only used when the effective language override is `custom`.
 - If `custom` is selected but the backend template is empty or unavailable, runtime falls back to the local UI-default text block.
 - Share templates may use `{LINK_INTRO}` and `{LINK_LABEL}` in addition to the existing placeholders. Thunderbird resolves both from the existing render mode: normal shares describe and label the Nextcloud share page, while attachment mode describes and labels the `/download` URL as a ZIP download.
+- For custom Share templates, Thunderbird prefers `policy.share.share_html_block_template_v2` and falls back to `policy.share.share_html_block_template`. The fallback keeps current clients compatible with older backend versions, while the V2 key lets newer backends keep the original key safe for clients that do not understand the mode-aware variables.
 - Templates that do not contain the new placeholders keep their previous rendering; the client does not rewrite backend-provided template HTML.
 - Backend-provided rich HTML templates are sanitized client-side with bundled `DOMPurify` before use.
 - Backend custom templates use the sanitizer in both rich-HTML rendering and plain-text rendering; local built-in share blocks remain trusted local render output.

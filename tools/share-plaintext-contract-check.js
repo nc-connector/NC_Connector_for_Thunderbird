@@ -330,9 +330,19 @@ async function testCustomTemplateResolvesModeAwareLinkVariables(){
     permissions: { read: true, create: false, write: false, delete: false }
   };
   const policyShare = {
-    share_html_block_template: "<p>{LINK_INTRO}</p><p>{LINK_LABEL}: {URL}</p>"
+    share_html_block_template: "<p>Legacy template: {URL}</p>",
+    share_html_block_template_v2: "<p>{LINK_INTRO}</p><p>{LINK_LABEL}: {URL}</p>"
   };
 
+  const normalHtml = await context.NCSharing.buildHtmlBlock(shareInfo, {
+    hidePermissions: true,
+    policyShare
+  });
+  const zipHtml = await context.NCSharing.buildHtmlBlock(shareInfo, {
+    hidePermissions: true,
+    zipDownload: true,
+    policyShare
+  });
   const normal = await context.NCSharing.buildPlainTextBlock(shareInfo, {
     hidePermissions: true,
     policyShare
@@ -347,6 +357,28 @@ async function testCustomTemplateResolvesModeAwareLinkVariables(){
   assert(normal.includes("Nextcloud link: https://cloud.example/s/abc123"), "Normal custom template must resolve LINK_LABEL without changing the URL");
   assert(zip.includes("Download the shared files as a ZIP archive"), "Attachment custom template must resolve LINK_INTRO for ZIP mode");
   assert(zip.includes("ZIP download: https://cloud.example/s/abc123/download"), "Attachment custom template must resolve LINK_LABEL and ZIP URL together");
+  assert(normalHtml.includes("Open the Nextcloud link below to view the share."), "Normal custom HTML must use the versioned template");
+  assert(zipHtml.includes("ZIP download"), "Attachment custom HTML must resolve the versioned template in ZIP mode");
+  assert(!normal.includes("Legacy template") && !normalHtml.includes("Legacy template"), "Versioned custom template must take precedence over the compatibility template");
+}
+
+async function testOlderBackendModeAwareTemplateStillRenders(){
+  const { context, storageState } = createHarness();
+  storageState.shareBlockLang = "custom";
+  const plainText = await context.NCSharing.buildPlainTextBlock({
+    shareUrl: "https://cloud.example/s/abc123",
+    password: "",
+    expireDate: "",
+    permissions: { read: true, create: false, write: false, delete: false }
+  }, {
+    hidePermissions: true,
+    policyShare: {
+      share_html_block_template: "<p>{LINK_INTRO}</p><p>{LINK_LABEL}: {URL}</p>"
+    }
+  });
+
+  assert(plainText.includes("Open the Nextcloud link below to view the share."), "Older backend template field must still resolve LINK_INTRO");
+  assert(plainText.includes("Nextcloud link: https://cloud.example/s/abc123"), "Older backend template field must still resolve LINK_LABEL");
 }
 
 async function testPlainTextInsertCompactsMarkedRightsSegment(){
@@ -396,6 +428,7 @@ async function run(){
   await testCustomTemplatePrunesEmptyPasswordAndSanitizes();
   await testCustomTemplateUsesSeparatePasswordHint();
   await testCustomTemplateResolvesModeAwareLinkVariables();
+  await testOlderBackendModeAwareTemplateStillRenders();
   await testPlainTextInsertCompactsMarkedRightsSegment();
   await testInsertRejectsMissingPlainTextVariant();
   console.log("[OK] share-plaintext-contract-check passed");

@@ -93,7 +93,7 @@ for persisted monitoring (`browser.calendar.items.onCreated/onUpdated/onRemoved`
   - after the primary mail was sent, password-follow-up problems never delete the committed share
 - Backend-provided rich HTML is sanitized client-side before use:
   - Talk HTML policy template (`talk_invitation_template`)
-  - Share HTML policy templates (`share_html_block_template`, `share_password_template`)
+  - Share HTML policy templates (`share_html_block_template_v2` with `share_html_block_template` fallback, and `share_password_template`)
   - Email signature HTML policy template (`email_signature_template`)
   - bundled sanitizer: `DOMPurify 3.4.11` documented in `VENDOR.md`
 - Follow-up for the previous `ui/signatureCompose.js` `innerHTML` review finding:

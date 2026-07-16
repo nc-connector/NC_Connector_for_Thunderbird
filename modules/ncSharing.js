@@ -821,9 +821,17 @@
     if (!policyShare || typeof policyShare !== "object"){
       return "";
     }
-    const key = passwordOnly ? "share_password_template" : "share_html_block_template";
-    const template = String(policyShare[key] || "");
-    return template.trim();
+    // New backends keep the original key placeholder-free for clients that predate mode-aware link text.
+    const keys = passwordOnly
+      ? ["share_password_template"]
+      : ["share_html_block_template_v2", "share_html_block_template"];
+    for (const key of keys){
+      const template = String(policyShare[key] || "").trim();
+      if (template){
+        return template;
+      }
+    }
+    return "";
   }
 
   function buildPermissionsTemplateHtml(perms, labels = {}){
