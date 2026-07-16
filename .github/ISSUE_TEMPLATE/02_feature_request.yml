@@ -3,6 +3,17 @@ description: Suggest an improvement for the Thunderbird add-on
 labels: ["product: thunderbird"]
 type: feature
 body:
+  - type: textarea
+    id: feature-support
+    attributes:
+      label: Feature support
+      value: |
+        <!-- Please keep the note below for other contributors -->
+        > [!TIP]
+        > ### Help move this idea forward
+        > * Use the 👍 reaction to show support for this feature.
+        ---
+        <!-- DO NOT EDIT ABOVE THIS LINE -->
   - type: markdown
     attributes:
       value: |
