@@ -17,7 +17,7 @@
  *   fetchedAt: number,
  *   forceFetchedAt: number,
  *   baseUrl: string,
- *   user: string
+ *   userId: string
  * }
  */
 const SYSTEM_ADDRESSBOOK_CACHE = {
@@ -25,7 +25,7 @@ const SYSTEM_ADDRESSBOOK_CACHE = {
   fetchedAt: 0,
   forceFetchedAt: 0,
   baseUrl: "",
-  user: ""
+  userId: ""
 };
 const SYSTEM_ADDRESSBOOK_TTL = 5 * 60 * 1000;
 const SYSTEM_ADDRESSBOOK_FORCE_MIN_INTERVAL_MS = 10 * 1000;
@@ -216,9 +216,10 @@ async function getSystemAddressbookContacts(force = false){
   const { baseUrl, user, appPass } = await getOpts();
   if (!baseUrl || !user || !appPass) throw localizedError("error_credentials_missing");
   await ensureHostPermission(baseUrl);
+  const userId = await NCCore.getCurrentUserId({ baseUrl, user, appPass });
   const now = Date.now();
   const cacheMatchesIdentity =
-    SYSTEM_ADDRESSBOOK_CACHE.user === user &&
+    SYSTEM_ADDRESSBOOK_CACHE.userId === userId &&
     SYSTEM_ADDRESSBOOK_CACHE.baseUrl === baseUrl;
   if (!force &&
       SYSTEM_ADDRESSBOOK_CACHE.contacts.length &&
@@ -242,9 +243,9 @@ async function getSystemAddressbookContacts(force = false){
   }
   const auth = NCOcs.buildAuthHeader(user, appPass);
   const base = baseUrl.replace(/\/$/,"");
-  L("system addressbook fetch", { base, user, force: !!force });
+  L("system addressbook fetch", { base, userId, force: !!force });
   // Access to the server-side system addressbook (CardDAV) requires remote.php permission.
-  const addressUrl = base + "/remote.php/dav/addressbooks/users/" + encodeURIComponent(user) + "/z-server-generated--system/?export";
+  const addressUrl = base + "/remote.php/dav/addressbooks/users/" + encodeURIComponent(userId) + "/z-server-generated--system/?export";
   const res = await fetch(addressUrl, {
     method: "GET",
     headers: {
@@ -268,7 +269,7 @@ async function getSystemAddressbookContacts(force = false){
   if (force){
     SYSTEM_ADDRESSBOOK_CACHE.forceFetchedAt = now;
   }
-  SYSTEM_ADDRESSBOOK_CACHE.user = user;
+  SYSTEM_ADDRESSBOOK_CACHE.userId = userId;
   SYSTEM_ADDRESSBOOK_CACHE.baseUrl = baseUrl;
   return contacts;
 }

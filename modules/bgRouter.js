@@ -427,7 +427,13 @@ browser.runtime.onMessage.addListener((msg, sender) => {
         }catch(error){
           console.error("[NCBG] options:testConnection policy probe failed", error);
         }
-        return { ok:true, message: result.message || "", version: result.version || "", policyStatus };
+        return {
+          ok: true,
+          message: result.message || "",
+          version: result.version || "",
+          userId: result.userId || "",
+          policyStatus
+        };
       }
       return { ok:false, error: result.message || bgI18n("error_credentials_missing"), code: result.code || "" };
     }catch(error){
