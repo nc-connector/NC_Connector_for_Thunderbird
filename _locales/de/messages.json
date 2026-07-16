@@ -612,7 +612,10 @@
     "message": "Ihre Berechtigungen"
   },
   "sharing_html_download_label": {
-    "message": "Downloadlink"
+    "message": "ZIP-Download"
+  },
+  "sharing_html_share_link_label": {
+    "message": "Nextcloud-Link"
   },
   "sharing_html_footer": {
     "message": "$1 ist eine Lösung für sicheren E-Mail- und Datenaustausch."
@@ -714,7 +717,10 @@
     "message": "Passwort muss mindestens 10 Zeichen lang sein und Groß-, Kleinbuchstaben sowie ein Sonderzeichen enthalten."
   },
   "sharing_html_intro_line": {
-    "message": "Die Dateien wurden sicher und datenschutzkonform über Nextcloud bereitgestellt. Der Download ist über den untenstehenden Link möglich."
+    "message": "Die Dateien wurden sicher und datenschutzkonform über Nextcloud bereitgestellt. Öffnen Sie den untenstehenden Nextcloud-Link, um die Freigabe aufzurufen."
+  },
+  "sharing_html_zip_download_intro": {
+    "message": "Die Dateien wurden sicher und datenschutzkonform über Nextcloud bereitgestellt. Laden Sie die freigegebenen Dateien über den untenstehenden Link als ZIP-Archiv herunter."
   },
   "sharing_attachment_prompt_title": {
     "message": "Anhanglimit überschritten"

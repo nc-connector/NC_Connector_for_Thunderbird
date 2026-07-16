@@ -612,7 +612,10 @@
     "message": "Az Ön jogosultságai"
   },
   "sharing_html_download_label": {
-    "message": "Letöltési hivatkozás"
+    "message": "ZIP-letöltés"
+  },
+  "sharing_html_share_link_label": {
+    "message": "Nextcloud-hivatkozás"
   },
   "sharing_html_footer": {
     "message": "$1 egy megoldás a biztonságos e-mail- és fájlmegosztásra."
@@ -714,7 +717,10 @@
     "message": "A jelszónak legalább 10 karakterből kell állnia, nagy- és kisbetűkkel, valamint egy speciális karakterrel."
   },
   "sharing_html_intro_line": {
-    "message": "A fájlok biztonságosan és az adatvédelemnek megfelelően, Nextcloudon keresztül kerültek megosztásra. A letöltés az alábbi hivatkozáson érhető el."
+    "message": "A fájlok biztonságosan és az adatvédelemnek megfelelően, Nextcloudon keresztül kerültek megosztásra. A megosztás megtekintéséhez nyissa meg az alábbi Nextcloud-hivatkozást."
+  },
+  "sharing_html_zip_download_intro": {
+    "message": "A fájlok biztonságosan és az adatvédelemnek megfelelően, Nextcloudon keresztül kerültek megosztásra. Töltse le a megosztott fájlokat ZIP-archívumként az alábbi hivatkozás segítségével."
   },
   "sharing_attachment_prompt_title": {
     "message": "Mellékletkorlát túllépve"

@@ -142,8 +142,10 @@ function makeTranslations(){
     sharing_permission_delete: "Delete",
     sharing_html_password_separate_hint: "Password will be sent in a separate email.",
     sharing_html_password_mail_intro: "Use the following password to access the share.",
-    sharing_html_intro_line: "The files are available using the link below.",
-    sharing_html_download_label: "Download link",
+    sharing_html_intro_line: "Open the Nextcloud link below to view the share.",
+    sharing_html_zip_download_intro: "Download the shared files as a ZIP archive using the link below.",
+    sharing_html_download_label: "ZIP download",
+    sharing_html_share_link_label: "Nextcloud link",
     sharing_html_password_label: "Password",
     sharing_html_expire_label: "Valid until",
     sharing_html_permissions_label: "Permissions",
@@ -271,7 +273,7 @@ async function testLocalPlainTextBuildSkipsSanitizer(){
   });
 
   assert(sanitizeCalls === 0, "Local plaintext build must not invoke backend sanitizer");
-  assert(plainText.includes("Download link: https://cloud.example/s/abc123"), "Local plaintext build must include share URL");
+  assert(plainText.includes("Nextcloud link: https://cloud.example/s/abc123"), "Local plaintext build must label the normal share-page URL as a Nextcloud link");
   assert(plainText.includes("Password: Secret123"), "Local plaintext build must include password field");
   assert(plainText.includes(RIGHTS_SEGMENT_START), "Local plaintext build must preserve explicit rights markers for final insertion");
 }
@@ -316,6 +318,35 @@ async function testCustomTemplateUsesSeparatePasswordHint(){
   });
 
   assert(plainText.includes("Password info: Password will be sent in a separate email."), "Custom plaintext build must inject separate password hint when configured");
+}
+
+async function testCustomTemplateResolvesModeAwareLinkVariables(){
+  const { context, storageState } = createHarness();
+  storageState.shareBlockLang = "custom";
+  const shareInfo = {
+    shareUrl: "https://cloud.example/s/abc123",
+    password: "",
+    expireDate: "",
+    permissions: { read: true, create: false, write: false, delete: false }
+  };
+  const policyShare = {
+    share_html_block_template: "<p>{LINK_INTRO}</p><p>{LINK_LABEL}: {URL}</p>"
+  };
+
+  const normal = await context.NCSharing.buildPlainTextBlock(shareInfo, {
+    hidePermissions: true,
+    policyShare
+  });
+  const zip = await context.NCSharing.buildPlainTextBlock(shareInfo, {
+    hidePermissions: true,
+    zipDownload: true,
+    policyShare
+  });
+
+  assert(normal.includes("Open the Nextcloud link below to view the share."), "Normal custom template must resolve LINK_INTRO for the share page");
+  assert(normal.includes("Nextcloud link: https://cloud.example/s/abc123"), "Normal custom template must resolve LINK_LABEL without changing the URL");
+  assert(zip.includes("Download the shared files as a ZIP archive"), "Attachment custom template must resolve LINK_INTRO for ZIP mode");
+  assert(zip.includes("ZIP download: https://cloud.example/s/abc123/download"), "Attachment custom template must resolve LINK_LABEL and ZIP URL together");
 }
 
 async function testPlainTextInsertCompactsMarkedRightsSegment(){
@@ -364,6 +395,7 @@ async function run(){
   await testLocalPlainTextBuildSkipsSanitizer();
   await testCustomTemplatePrunesEmptyPasswordAndSanitizes();
   await testCustomTemplateUsesSeparatePasswordHint();
+  await testCustomTemplateResolvesModeAwareLinkVariables();
   await testPlainTextInsertCompactsMarkedRightsSegment();
   await testInsertRejectsMissingPlainTextVariant();
   console.log("[OK] share-plaintext-contract-check passed");

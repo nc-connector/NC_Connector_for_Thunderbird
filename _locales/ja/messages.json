@@ -612,7 +612,10 @@
     "message": "あなたの権限"
   },
   "sharing_html_download_label": {
-    "message": "ダウンロードリンク"
+    "message": "ZIP ダウンロード"
+  },
+  "sharing_html_share_link_label": {
+    "message": "Nextcloud リンク"
   },
   "sharing_html_footer": {
     "message": "$1 は安全なメールとファイル交換のソリューションです。"
@@ -714,7 +717,10 @@
     "message": "パスワードは大文字と小文字、特殊文字を含む 10 文字以上である必要があります。"
   },
   "sharing_html_intro_line": {
-    "message": "ファイルは Nextcloud を通じて安全かつプライバシーに配慮した形で提供されています。ダウンロードは以下のリンクから可能です。"
+    "message": "ファイルは Nextcloud を通じて安全かつプライバシーに配慮した形で提供されています。以下の Nextcloud リンクを開いて共有を表示してください。"
+  },
+  "sharing_html_zip_download_intro": {
+    "message": "ファイルは Nextcloud を通じて安全かつプライバシーに配慮した形で提供されています。以下のリンクから共有ファイルを ZIP アーカイブとしてダウンロードしてください。"
   },
   "sharing_attachment_prompt_title": {
     "message": "添付ファイルの上限を超えました"
