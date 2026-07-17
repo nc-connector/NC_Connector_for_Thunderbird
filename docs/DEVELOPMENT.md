@@ -846,7 +846,7 @@ Before you ship:
 5. Package the XPI with correct root structure.
 6. Run Thunderbird's review linter against a clean add-on folder payload:
    - `npm run test:webext-linter`
-   - the script refreshes `webext-linter` from upstream before each run, so new ATN review rules are caught early.
+   - the script installs only the current `main` package from `thunderbird/webext-linter` before each run; no pinned or legacy linter is used as a fallback.
    - the linter already covers generic review rules such as unsafe dynamic HTML writes, manifest/path issues, permissions, vendor files, and Thunderbird API version checks.
 7. GitHub Actions runs the review checks as separate jobs on pushes, pull requests, and manual workflow runs:
    - iCal contract

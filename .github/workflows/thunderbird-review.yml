@@ -226,5 +226,8 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
+      - name: Install current Thunderbird webext-linter main
+        run: npm run webext-linter:update
+
       - name: Run Thunderbird webext-linter
-        run: npm run test:webext-linter
+        run: npm run webext-linter:check

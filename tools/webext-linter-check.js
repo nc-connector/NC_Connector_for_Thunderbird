@@ -8,7 +8,13 @@ const os = require("os");
 const { spawnSync } = require("child_process");
 
 const projectRoot = path.resolve(__dirname, "..");
-const linterVerify = path.join(projectRoot, "node_modules", "webext-linter", "verify.js");
+const linterVerify = path.join(
+  projectRoot,
+  "node_modules",
+  "@thunderbirdops",
+  "webext-linter",
+  "verify.js"
+);
 
 function run(command, args, cwd = projectRoot){
   const result = spawnSync(command, args, {
@@ -77,7 +83,7 @@ function prepareFolderTarget(target){
 }
 
 if (!fs.existsSync(linterVerify)){
-  console.error("[webext-linter] Missing dependency. Run `npm ci` first.");
+  console.error("[webext-linter] Current main package is missing. Run `npm run webext-linter:update` first.");
   process.exit(1);
 }
 
