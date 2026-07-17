@@ -11,7 +11,7 @@
  * DOM cleanup/insertion. Backend HTML is sanitized with the existing Share/Talk
  * sanitizer path before it enters the compose document.
  */
-(() => {
+const NCEmailSignature = (() => {
   const COMPOSE_SCRIPT_FILE = "ui/signatureCompose.js";
   const APPLY_MESSAGE_TYPE = "nc-signature:apply";
   const PING_MESSAGE_TYPE = "nc-signature:ping";
@@ -432,5 +432,10 @@
     });
   }
 
-  init();
+  return {
+    init,
+    STORAGE_KEYS
+  };
 })();
+
+NCEmailSignature.init();
