@@ -12,7 +12,7 @@ function makeResponse(status, payload){
   };
 }
 
-function createCoreHarness(responses){
+function createCoreHarness(responses, { backgroundLogger = true } = {}){
   const requests = [];
   const queue = responses.slice();
   const context = {
@@ -48,7 +48,6 @@ function createCoreHarness(responses){
       safeConsoleError: () => {}
     },
     bgI18n: (key) => key,
-    L: () => {},
     fetch: async (url, options = {}) => {
       requests.push({ url, options });
       const response = queue.shift();
@@ -58,6 +57,9 @@ function createCoreHarness(responses){
       return response;
     }
   };
+  if (backgroundLogger){
+    context.L = () => {};
+  }
   context.globalThis = context;
   context.window = context;
   vm.createContext(context);
@@ -154,6 +156,11 @@ async function run(){
   assert(result.userId === "canonical-user", "Credential test should return ocs.data.id");
   assert(core.requests[1].url === "https://cloud.example.test/nextcloud/ocs/v2.php/cloud/user?format=json", "Current-user request should preserve a Nextcloud subfolder URL");
   assert(core.requests[1].options.headers.Authorization === "Basic " + Buffer.from("login@example.test:app-password").toString("base64"), "Current-user request must authenticate with the configured login");
+
+  const uiCore = createCoreHarness([currentUser], { backgroundLogger: false });
+  const uiUserId = await uiCore.context.__NCCore.getCurrentUserId(credentials);
+  assert(uiUserId === "canonical-user", "UI UID resolution must not depend on the background logger");
+  assert(uiCore.requests.length === 1, "UI UID resolution should issue one current-user request");
 
   const cachedUserId = await core.context.__NCCore.getCurrentUserId(credentials);
   assert(cachedUserId === "canonical-user", "Resolved canonical UID should be reused from the session cache");

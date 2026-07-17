@@ -103,11 +103,13 @@ const NCCore = (() => {
     }
 
     currentUserIdCache.set(cacheKey, userId);
-    L("current user id resolved", {
-      base: normalizedBase,
-      authUser: coreShortId(trimmedUser),
-      userId: coreShortId(userId)
-    });
+    if (typeof L === "function"){
+      L("current user id resolved", {
+        base: normalizedBase,
+        authUser: coreShortId(trimmedUser),
+        userId: coreShortId(userId)
+      });
+    }
     return userId;
   }
 
