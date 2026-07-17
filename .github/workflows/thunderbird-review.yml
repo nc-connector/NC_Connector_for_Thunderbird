@@ -109,6 +109,26 @@ jobs:
       - name: Run URL subfolder contract check
         run: npm run test:url-subfolder-contract
 
+  signature-compose-settle:
+    name: Signature compose settling
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run signature compose settling check
+        run: npm run test:signature-compose-settle
+
   nextcloud-user-id-contract:
     name: Nextcloud user ID contract
     runs-on: ubuntu-latest

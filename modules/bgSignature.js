@@ -18,7 +18,8 @@ const NCEmailSignature = (() => {
   const STORAGE_KEYS = {
     onCompose: "emailSignatureOnCompose",
     onReply: "emailSignatureOnReply",
-    onForward: "emailSignatureOnForward"
+    onForward: "emailSignatureOnForward",
+    debug: "debugEnabled"
   };
   const INIT_RETRY_DELAYS_MS = [100, 250, 500, 900, 1400];
   const TAB_STATE = new Map();
@@ -334,7 +335,8 @@ const NCEmailSignature = (() => {
       html: sanitizedHtml,
       plainText,
       plainTextMode,
-      placeCursorAtStart: reason === "compose_open" && details?.isModified !== true
+      placeCursorAtStart: reason === "compose_open" && details?.isModified !== true,
+      debugEnabled: localOptions?.[STORAGE_KEYS.debug] === true
     });
     if (!result?.ok){
       throw new Error(result?.error || "email_signature_apply_failed");

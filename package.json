@@ -8,6 +8,7 @@
     "test:policy-contract": "node tools/policy-contract-check.js",
     "test:password-delivery-contract": "node tools/password-delivery-contract-check.js",
     "test:url-subfolder-contract": "node tools/url-subfolder-contract-check.js",
+    "test:signature-compose-settle": "node tools/signature-compose-settle-check.js",
     "test:nextcloud-user-id-contract": "node tools/nextcloud-user-id-contract-check.js",
     "test:i18n-locale-parity": "node tools/i18n-locale-parity-check.js",
     "test:i18n-no-english-placeholders": "node tools/i18n-no-english-placeholders-check.js",

@@ -702,6 +702,7 @@ Runtime rules:
 - The compose bridge imports sanitized signature HTML with `DOMParser` + `document.importNode(...)` instead of assigning `innerHTML`, because ESR 140 does not expose `setHTML()`.
 - Signature cleanup is limited to the author area before Thunderbird's quoted-message block; quoted sender signatures are left untouched.
 - The compose bridge adds one managed blank line after the backend signature and restores the initial cursor to the author area when Thunderbird has not marked the draft as modified.
+- After initial insertion, the compose bridge watches the author area for two seconds and reuses the same replacement path only if Thunderbird appends a file-based or Signature Switch signature late. The observer disconnects after that short settling window instead of remaining active for the lifetime of the compose window.
 - Non-matching sender identities are left untouched so Thunderbird identity signatures or Signature Switch can continue to manage those identities.
 - Share, Talk, and email-signature policies are evaluated per backend policy domain. A backend payload without `policy.email_signature` disables only central email signatures and shows the backend-update hint; Share/Talk policy remains active when their domains are present.
 - The signature settings surface stays disabled until the backend endpoint is available, the current user has an active assigned seat, and the `email_signature` policy domain exists. Backend/seat hint text reuses the existing policy messages.
@@ -854,6 +855,7 @@ Before you ship:
    - policy contract
    - password delivery contract
    - URL subfolder contract
+   - signature compose settling
    - i18n locale parity
    - i18n placeholder check
    - i18n key usage

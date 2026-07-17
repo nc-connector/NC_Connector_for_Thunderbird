@@ -12,6 +12,12 @@
   const FOREIGN_SIGNATURE_SELECTOR = '.moz-signature:not([data-nc-connector-signature="true"]), [data-signature-switch-id]';
   const QUOTE_ANCHOR_SELECTOR = '.moz-cite-prefix, blockquote[type="cite"], .moz-forward-container';
   const QUOTED_CONTENT_SELECTOR = 'blockquote[type="cite"], .moz-forward-container';
+  const LATE_SIGNATURE_SETTLE_WINDOW_MS = 2000;
+  const LATE_SIGNATURE_DEBOUNCE_MS = 50;
+  let lateSignatureObserver = null;
+  let lateSignatureStopTimer = null;
+  let lateSignatureApplyTimer = null;
+  let lateSignaturePayload = null;
 
   function getComposeRoot(){
     return document.body || document.documentElement;
@@ -99,6 +105,80 @@
     for (const element of elements){
       element.remove();
     }
+  }
+
+  function logSignatureDebug(payload, message, details = {}){
+    if (payload?.debugEnabled === true){
+      console.debug("[NCUI][Signature]", message, details);
+    }
+  }
+
+  function stopLateSignatureWatch(){
+    lateSignatureObserver?.disconnect();
+    lateSignatureObserver = null;
+    if (lateSignatureStopTimer !== null){
+      clearTimeout(lateSignatureStopTimer);
+      lateSignatureStopTimer = null;
+    }
+    if (lateSignatureApplyTimer !== null){
+      clearTimeout(lateSignatureApplyTimer);
+      lateSignatureApplyTimer = null;
+    }
+    lateSignaturePayload = null;
+  }
+
+  function replaceLateSignature(){
+    lateSignatureApplyTimer = null;
+    const payload = lateSignaturePayload;
+    if (!payload){
+      return;
+    }
+    const foreignSignatures = listActiveSignatureElements(FOREIGN_SIGNATURE_SELECTOR);
+    if (!foreignSignatures.length){
+      return;
+    }
+    const result = applySignature(payload);
+    logSignatureDebug(payload, "late local signature handled", {
+      foreignCount: foreignSignatures.length,
+      changed: result?.changed === true,
+      result: String(result?.reason || result?.error || "")
+    });
+    if (!result?.ok || result?.reason === "own_signature_modified"){
+      stopLateSignatureWatch();
+    }
+  }
+
+  function queueLateSignatureReplacement(){
+    if (lateSignatureApplyTimer !== null
+      || !listActiveSignatureElements(FOREIGN_SIGNATURE_SELECTOR).length){
+      return;
+    }
+    lateSignatureApplyTimer = setTimeout(replaceLateSignature, LATE_SIGNATURE_DEBOUNCE_MS);
+  }
+
+  function startLateSignatureWatch(payload){
+    stopLateSignatureWatch();
+    const root = getComposeRoot();
+    if (payload?.desired !== true
+      || payload?.clearForeign === false
+      || !root
+      || typeof MutationObserver !== "function"){
+      return;
+    }
+
+    // Thunderbird can append file-based signatures after the compose tab event.
+    lateSignaturePayload = { ...payload, placeCursorAtStart: false };
+    lateSignatureObserver = new MutationObserver(queueLateSignatureReplacement);
+    lateSignatureObserver.observe(root, {
+      childList: true,
+      subtree: true,
+      attributes: true,
+      attributeFilter: ["class", "data-signature-switch-id", "data-nc-connector-signature"]
+    });
+    lateSignatureStopTimer = setTimeout(stopLateSignatureWatch, LATE_SIGNATURE_SETTLE_WINDOW_MS);
+    logSignatureDebug(payload, "late local signature watch started", {
+      durationMs: LATE_SIGNATURE_SETTLE_WINDOW_MS
+    });
   }
 
   function placeCursorAtAuthorStart(payload){
@@ -226,12 +306,22 @@
       return false;
     }
     try{
-      return Promise.resolve(applySignature(message.payload || {}));
+      const payload = message.payload || {};
+      const result = applySignature(payload);
+      if (result?.ok && result?.reason === "signature_inserted"){
+        startLateSignatureWatch(payload);
+      }else{
+        stopLateSignatureWatch();
+      }
+      return Promise.resolve(result);
     }catch(error){
+      stopLateSignatureWatch();
       return Promise.resolve({
         ok: false,
         error: error?.message || String(error)
       });
     }
   });
+
+  window.addEventListener("unload", stopLateSignatureWatch, { once: true });
 })();
