@@ -4,6 +4,22 @@ All notable changes to **NC Connector for Thunderbird** will be documented in th
 
 This project targets **Thunderbird ESR 140** through **ESR 153**.
 
+## 3.2.3
+
+### Added
+- A public roadmap and guided GitHub issue forms make planned work and useful support details easier to find.
+
+### Changed
+- Share blocks now use the language selected for backend templates, including link labels, introductory text, password notices, expiration dates, and rights.
+- New clients prefer versioned backend share templates while remaining compatible with older backend responses.
+- Repository checks now fetch the current Thunderbird webext-linter main branch before reviewing the add-on.
+
+### Fixed
+- Share blocks use wording that matches either a normal Nextcloud share page or a ZIP download.
+- Login aliases such as email addresses no longer get used as Nextcloud DAV path IDs; the add-on uses the canonical user ID returned by Nextcloud.
+- The sharing wizard no longer stops after its first step when canonical-user logging runs outside the background page.
+- Backend signatures also replace matching Thunderbird file or Signature Switch signatures that appear shortly after the compose window opens.
+
 ## 3.2.2
 
 ### Added

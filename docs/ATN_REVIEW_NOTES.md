@@ -1,8 +1,8 @@
-# Reviewer Notes - 3.2.2
+# Reviewer Notes - 3.2.3
 NC Connector for Thunderbird (`{4a35421f-0906-439c-bff2-8eef39e2baee}`)
 
 This document summarizes the currently implemented reviewer-relevant behavior
-for add-on version 3.2.2.
+for add-on version 3.2.3.
 
 ---
 
@@ -50,7 +50,7 @@ for persisted monitoring (`browser.calendar.items.onCreated/onUpdated/onRemoved`
 
 ---
 
-## Reviewer Alignment Notes (3.2.2)
+## Reviewer Alignment Notes (3.2.3)
 
 - Core rules are explicit; fallback behavior is bounded and logged instead of relying on silent heuristics.
 - `strict_min_version` is set to `140.0`. The add-on uses Thunderbird APIs added after ESR 115, including `browser.messengerUtilities.parseMailboxString(...)`, and targets the supported ESR 140 through ESR 153 range.
@@ -101,6 +101,7 @@ for persisted monitoring (`browser.calendar.items.onCreated/onUpdated/onRemoved`
   - the compose bridge no longer assigns dynamic HTML with `innerHTML`
   - sanitized signature HTML is parsed with `DOMParser` and imported into the compose DOM via `document.importNode(...)`
   - signature change detection serializes managed signature child nodes with `XMLSerializer`
+  - a bounded two-second observer repeats the same replacement path when Thunderbird or Signature Switch inserts a matching local signature after compose initialization; it then disconnects
 - Backend policy availability is evaluated per policy domain. Older backend
   payloads without `policy.email_signature` disable only central email
   signatures with an update hint; Share/Talk policy domains remain active when
@@ -151,6 +152,10 @@ for persisted monitoring (`browser.calendar.items.onCreated/onUpdated/onRemoved`
   common runtime-context mapper, so active extension pages stay inside the
   `[NCUI][...]` family and background stays on `[NCBG]` instead of using legacy
   standalone helper prefixes.
+- Basic Auth continues to use the configured login name, while user-scoped DAV,
+  chunk-upload, and CardDAV paths use the canonical user ID returned by
+  `/ocs/v2.php/cloud/user`. Missing canonical IDs fail explicitly instead of
+  treating an email login alias as a filesystem path ID.
 
 Known temporary deviation:
 - The editor context bridge still includes scoped tab/window correlation inside
