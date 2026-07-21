@@ -118,6 +118,11 @@ for persisted monitoring (`browser.calendar.items.onCreated/onUpdated/onRemoved`
 - Share compose insertion is mode-aware:
   - HTML compose receives pre-rendered share HTML from `NCSharing.buildHtmlBlock(...)`
   - plain-text compose receives a dedicated pre-rendered share text block from `NCSharing.buildPlainTextBlock(...)`
+  - attachment shares resolve `policy.share.attachment_link_target` / `sharingAttachmentsLinkTarget` to either the direct ZIP URL or the canonical share page; invalid local values count as unset so a usable editable backend default may apply, while a missing or invalid locked backend value forces ZIP instead of stored local state
+  - ZIP derivation checks the decoded public-URL token against the OCS create-share token when present; an invalid URL or mismatch fails visibly without inserting the original URL
+  - manual shares always use the canonical share page, regardless of the attachment default
+  - link-target selection changes only URL and link wording; attachment read-only permissions, hidden permission output, and cleanup remain mode-driven
+  - ZIP conversion accepts only an absolute HTTP(S) URL whose path ends in `/s/<token>`; other schemes or extra path segments stop rendering with a localized visible error, and the original URL is never inserted with ZIP wording
   - local validation covers these render rules via `node tools/share-plaintext-contract-check.js`
   - runtime requires both variants; background does not rebuild missing plain text from HTML
   - backend custom share templates are sanitized before rich or plain-text rendering

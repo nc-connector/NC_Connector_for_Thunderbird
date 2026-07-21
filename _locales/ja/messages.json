@@ -488,6 +488,27 @@
   "options_sharing_attachments_heading": {
     "message": "添付ファイル"
   },
+  "options_sharing_attachments_link_target_label": {
+    "message": "添付ファイルリンクの宛先"
+  },
+  "options_sharing_attachments_link_target_share_page": {
+    "message": "Nextcloud 共有ページ"
+  },
+  "options_sharing_attachments_link_target_zip_download": {
+    "message": "ZIP ダウンロード"
+  },
+  "options_sharing_attachments_link_target_tooltip_title": {
+    "message": "🔗 添付ファイルのリンク先"
+  },
+  "options_sharing_attachments_link_target_tooltip_line1": {
+    "message": "ZIP ダウンロードでは、共有ファイルが ZIP アーカイブとして直接ダウンロードされます。"
+  },
+  "options_sharing_attachments_link_target_tooltip_line2": {
+    "message": "Nextcloud 共有ページでは、まずブラウザーで共有が開きます。"
+  },
+  "options_sharing_attachments_link_target_tooltip_line3": {
+    "message": "この選択は添付ファイルモードにのみ適用され、手動による共有は変更されません。"
+  },
   "options_sharing_attachments_always_label": {
     "message": "添付ファイルは常に NC Connector 経由で処理する"
   },
@@ -694,6 +715,9 @@
   },
   "sharing_error_upload_required": {
     "message": "続行する前にファイルをアップロードしてください。"
+  },
+  "sharing_error_zip_url_invalid": {
+    "message": "Nextcloud の共有 URL から ZIP ダウンロード URL を生成できませんでした。メッセージには何も挿入されていません。"
   },
   "sharing_step_note_heading": {
     "message": "受信者へのメモ"

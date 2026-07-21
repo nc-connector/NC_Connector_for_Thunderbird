@@ -488,6 +488,27 @@
   "options_sharing_attachments_heading": {
     "message": "附件"
   },
+  "options_sharing_attachments_link_target_label": {
+    "message": "附件連結目標"
+  },
+  "options_sharing_attachments_link_target_share_page": {
+    "message": "Nextcloud 分享頁面"
+  },
+  "options_sharing_attachments_link_target_zip_download": {
+    "message": "ZIP 下載"
+  },
+  "options_sharing_attachments_link_target_tooltip_title": {
+    "message": "🔗 附件連結目標"
+  },
+  "options_sharing_attachments_link_target_tooltip_line1": {
+    "message": "ZIP 下載會將分享的檔案直接下載為 ZIP 壓縮檔。"
+  },
+  "options_sharing_attachments_link_target_tooltip_line2": {
+    "message": "Nextcloud 分享頁面會先在瀏覽器中開啟分享內容。"
+  },
+  "options_sharing_attachments_link_target_tooltip_line3": {
+    "message": "此選擇僅適用於附件模式；手動分享維持不變。"
+  },
   "options_sharing_attachments_always_label": {
     "message": "一律透過 NC Connector 處理附件"
   },
@@ -694,6 +715,9 @@
   },
   "sharing_error_upload_required": {
     "message": "繼續之前請先上傳檔案。"
+  },
+  "sharing_error_zip_url_invalid": {
+    "message": "無法從 Nextcloud 分享 URL 產生 ZIP 下載 URL。未在郵件中插入任何內容。"
   },
   "sharing_step_note_heading": {
     "message": "給收件者的備註"

@@ -1026,7 +1026,7 @@
     const effectiveLang = resolveShareRenderLanguage(request, shareLang, customTemplate);
     const shareUrl = String(result?.shareUrl || "");
     const downloadUrl = request?.zipDownload
-      ? buildZipDownloadUrl(shareUrl)
+      ? buildZipDownloadUrl(shareUrl, result?.shareToken)
       : shareUrl;
     const linkPresentation = passwordOnly
       ? { intro: "", label: "" }
@@ -1169,7 +1169,7 @@
     const effectiveLang = resolveShareRenderLanguage(request, shareLang, customTemplate);
     const shareUrl = String(result?.shareUrl || "");
     const downloadUrl = request?.zipDownload
-      ? buildZipDownloadUrl(shareUrl)
+      ? buildZipDownloadUrl(shareUrl, result?.shareToken)
       : shareUrl;
     const linkPresentation = passwordOnly
       ? { intro: "", label: "" }
@@ -1321,20 +1321,33 @@
     return `<table style="border-collapse:collapse;"><tr>${cells}</tr></table>`;
   }
 
-  function buildZipDownloadUrl(shareUrl){
+  function buildZipDownloadUrl(shareUrl, shareToken){
     const base = String(shareUrl || "").trim();
+    const expectedToken = String(shareToken || "").trim();
     if (!base){
-      return "";
+      const error = new Error("Nextcloud public share URL is empty");
+      logInternalError("buildZipDownloadUrl failed", error);
+      throw new Error(i18n("sharing_error_zip_url_invalid"));
     }
     try{
       const parsed = new URL(base);
+      if (parsed.protocol !== "https:" && parsed.protocol !== "http:"){
+        throw new Error("Invalid Nextcloud public share URL scheme");
+      }
       const pathSegments = parsed.pathname.split("/").filter(Boolean);
-      const shareSegmentIndex = pathSegments.lastIndexOf("s");
-      if (shareSegmentIndex < 0 || shareSegmentIndex + 1 >= pathSegments.length){
+      const shareSegmentIndex = pathSegments.length - 2;
+      if (shareSegmentIndex < 0 || pathSegments[shareSegmentIndex] !== "s"){
         throw new Error("Invalid Nextcloud public share URL");
       }
-      const token = pathSegments[shareSegmentIndex + 1];
-      const normalized = pathSegments.slice(0, shareSegmentIndex + 2);
+      const encodedToken = pathSegments[shareSegmentIndex + 1];
+      if (!encodedToken){
+        throw new Error("Invalid Nextcloud public share URL token");
+      }
+      const token = decodeURIComponent(encodedToken);
+      if (expectedToken && token !== expectedToken){
+        throw new Error("Nextcloud public share URL token does not match the OCS share token");
+      }
+      const normalized = pathSegments.slice();
       normalized.push("download");
       parsed.pathname = "/" + normalized.join("/");
       parsed.search = "";
@@ -1342,7 +1355,7 @@
       return parsed.toString();
     }catch(error){
       logInternalError("buildZipDownloadUrl failed", error);
-      return base;
+      throw new Error(i18n("sharing_error_zip_url_invalid"));
     }
   }
 
@@ -1445,6 +1458,7 @@
 
     const resultPayload = {
       shareUrl: share.url,
+      shareToken: share.token || "",
       password: request.passwordEnabled ? (request.password || "") : "",
       expireDate: request.expireEnabled ? (request.expireDate || "") : "",
       permissions: request.permissions,

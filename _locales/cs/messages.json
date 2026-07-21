@@ -488,6 +488,27 @@
   "options_sharing_attachments_heading": {
     "message": "Přílohy"
   },
+  "options_sharing_attachments_link_target_label": {
+    "message": "Cíl odkazu příloh"
+  },
+  "options_sharing_attachments_link_target_share_page": {
+    "message": "Stránka sdílení Nextcloud"
+  },
+  "options_sharing_attachments_link_target_zip_download": {
+    "message": "Stažení ZIP"
+  },
+  "options_sharing_attachments_link_target_tooltip_title": {
+    "message": "🔗 Cíl odkazu pro přílohy"
+  },
+  "options_sharing_attachments_link_target_tooltip_line1": {
+    "message": "Stažení ZIP stáhne sdílené soubory přímo jako archiv ZIP."
+  },
+  "options_sharing_attachments_link_target_tooltip_line2": {
+    "message": "Stránka sdílení Nextcloud nejprve otevře sdílení v prohlížeči."
+  },
+  "options_sharing_attachments_link_target_tooltip_line3": {
+    "message": "Tato volba platí pouze pro režim příloh; ruční sdílení zůstávají beze změny."
+  },
   "options_sharing_attachments_always_label": {
     "message": "Přílohy vždy zpracovat přes NC Connector"
   },
@@ -694,6 +715,9 @@
   },
   "sharing_error_upload_required": {
     "message": "Před pokračováním nahrajte soubory."
+  },
+  "sharing_error_zip_url_invalid": {
+    "message": "Adresu URL pro stažení ZIP se nepodařilo odvodit z adresy URL sdílení Nextcloud. Do zprávy nebylo nic vloženo."
   },
   "sharing_step_note_heading": {
     "message": "Poznámka pro příjemce"

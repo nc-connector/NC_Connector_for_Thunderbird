@@ -13,6 +13,7 @@ const EDITABLE_POLICY_KEYS = [
   { domain: "share", key: "share_send_password_separately", type: "boolean" },
   { domain: "share", key: "share_send_password_mode", type: "string" },
   { domain: "share", key: "share_expire_days", type: "int" },
+  { domain: "share", key: "attachment_link_target", type: "string" },
   { domain: "share", key: "language_share_html_block", type: "string" },
   { domain: "share", key: "attachments_always_via_ncconnector", type: "boolean" },
   { domain: "share", key: "attachments_min_size_mb", type: "int" },
@@ -45,6 +46,17 @@ function loadPolicyApis(){
     policyState: context.NCPolicyState,
     policyUi: context.NCWizardPolicyUi
   };
+}
+
+function loadSharingStorage(){
+  const context = {
+    console,
+    globalThis: null
+  };
+  context.globalThis = context;
+  vm.createContext(context);
+  loadScript("modules/sharingStorage.js", context, "\nglobalThis.NCSharingStorage = NCSharingStorage;");
+  return context.NCSharingStorage;
 }
 
 function createStatus(entry, editable, active = true){
@@ -80,6 +92,9 @@ function getValues(entry){
   if (entry.key === "share_send_password_mode"){
     return { localValue: "plain", backendValue: "secrets" };
   }
+  if (entry.key === "attachment_link_target"){
+    return { localValue: "zip_download", backendValue: "share_page" };
+  }
   if (entry.key === "talk_room_type"){
     return { localValue: "normal", backendValue: "event" };
   }
@@ -103,8 +118,112 @@ function assertEqual(actual, expected, message){
   assert(actual === expected, `${message}: expected ${JSON.stringify(expected)}, got ${JSON.stringify(actual)}`);
 }
 
+function verifyAttachmentLinkTargetValues(sharingStorage){
+  assertEqual(
+    sharingStorage.DEFAULT_ATTACHMENT_LINK_TARGET,
+    "zip_download",
+    "Attachment-link target fallback must remain ZIP download"
+  );
+  assertEqual(
+    sharingStorage.normalizeAttachmentLinkTarget("share_page"),
+    "share_page",
+    "Share-page attachment target must remain valid"
+  );
+  assertEqual(
+    sharingStorage.normalizeAttachmentLinkTarget("zip_download"),
+    "zip_download",
+    "ZIP attachment target must remain valid"
+  );
+  assertEqual(
+    sharingStorage.normalizeAttachmentLinkTarget("unsupported"),
+    "zip_download",
+    "Unknown attachment target must fall back to ZIP download"
+  );
+  assertEqual(
+    sharingStorage.normalizeAttachmentLinkTarget(undefined),
+    "zip_download",
+    "Missing attachment target must fall back to ZIP download"
+  );
+}
+
+function verifyAttachmentLinkTargetLockedFallback(sharingStorage, policyUi){
+  const key = "attachment_link_target";
+  const fallback = sharingStorage.DEFAULT_ATTACHMENT_LINK_TARGET;
+  const binding = {
+    name: "attachmentLinkTarget",
+    domain: "share",
+    key,
+    property: "value",
+    type: "string",
+    fallback,
+    lockedFallback: fallback,
+    normalize: (value, bindingFallback) => sharingStorage.normalizeAttachmentLinkTarget(value, bindingFallback)
+  };
+  const lockedInvalidStatus = createStatus({
+    domain: "share",
+    key,
+    backendValue: "unsupported"
+  }, false);
+  const lockedMissingStatus = createStatus({
+    domain: "share",
+    key,
+    backendValue: "placeholder"
+  }, false);
+  delete lockedMissingStatus.policy.share[key];
+
+  for (const [label, status] of [
+    ["invalid", lockedInvalidStatus],
+    ["missing", lockedMissingStatus]
+  ]){
+    const domainState = policyUi.readPolicyDomain(status, "share");
+    assertEqual(
+      policyUi.readPolicyBoundDefaults(
+        domainState,
+        [binding],
+        { attachmentLinkTarget: "share_page" },
+        { localNames: new Set(["attachmentLinkTarget"]) }
+      ).attachmentLinkTarget,
+      fallback,
+      `Locked ${label} attachment-link policy must ignore a stored share-page value while reading defaults`
+    );
+    assertEqual(
+      policyUi.resolvePolicyBoundValues(status, [binding], { attachmentLinkTarget: "share_page" }).attachmentLinkTarget,
+      fallback,
+      `Locked ${label} attachment-link policy must use ZIP while resolving saved values`
+    );
+
+    const element = { value: "share_page", disabled: false, title: "" };
+    const locked = policyUi.applyPolicyBinding(status, { ...binding, element }, () => "Admin controlled");
+    assert(locked, `Locked ${label} attachment-link policy must lock its options control`);
+    assertEqual(
+      element.value,
+      fallback,
+      `Locked ${label} attachment-link policy must show ZIP in its options control`
+    );
+  }
+
+  const genericBinding = {
+    name: "value",
+    domain: "share",
+    key: "generic_setting",
+    property: "value",
+    type: "string",
+    fallback: "generic fallback"
+  };
+  const genericStatus = createStatus({
+    domain: "share",
+    key: "generic_setting",
+    backendValue: ""
+  }, false);
+  assertEqual(
+    policyUi.resolvePolicyBoundValues(genericStatus, [genericBinding], { value: "local value" }).value,
+    "local value",
+    "Bindings without lockedFallback must retain their existing invalid-policy fallback semantics"
+  );
+}
+
 function verifyPolicyTable(policyState, policyUi){
-  assert(EDITABLE_POLICY_KEYS.length === 24, "Editable policy key table must contain exactly 24 keys");
+  assert(EDITABLE_POLICY_KEYS.length === 25, "Editable policy key table must contain exactly 25 keys");
   assert(
     new Set(EDITABLE_POLICY_KEYS.map((entry) => `${entry.domain}:${entry.key}`)).size === EDITABLE_POLICY_KEYS.length,
     "Editable policy key table must not contain duplicate keys"
@@ -219,6 +338,7 @@ function count(source, value){
 
 function verifyConsumerGuards(){
   const options = readText("options.js");
+  const sharingStorage = readText("modules/sharingStorage.js");
   const talk = readText("ui/talkDialog.js");
   const sharingWizard = readText("ui/nextcloudSharingWizard.js");
   const sharing = readText("modules/ncSharing.js");
@@ -266,6 +386,52 @@ function verifyConsumerGuards(){
     loadBasePath,
     "NCPolicyState.resolveDefaultValue( state.policy.status, \"share\", \"share_base_directory\", localBasePath, !!rawLocalBasePath, NCPolicyState.coerceString )",
     "Share base path must honor editable local values and locked backend values"
+  );
+  assertCode(
+    sharingStorage,
+    "const DEFAULT_ATTACHMENT_LINK_TARGET = ATTACHMENT_LINK_TARGETS.ZIP_DOWNLOAD;",
+    "Missing attachment-link target values must default to ZIP download"
+  );
+  assert(
+    !sharingStorage.includes("migration[SHARING_KEYS.attachmentsLinkTarget]")
+      && !sharingStorage.includes("runtime.onInstalled"),
+    "Attachment-link target must not use install or update migration"
+  );
+  assertCode(
+    options,
+    "name: \"sharingAttachmentsLinkTarget\", storageKey: SHARING_KEYS.attachmentsLinkTarget, domain: \"share\", key: \"attachment_link_target\"",
+    "Options must bind the attachment-link target to the shared backend key"
+  );
+  assertCode(
+    options,
+    "isValid: (value) => NCSharingStorage.isValidAttachmentLinkTarget(value)",
+    "Invalid stored attachment-link targets must not block an editable backend default"
+  );
+  assertCode(
+    options,
+    "lockedFallback: DEFAULT_SHARING_ATTACHMENT_LINK_TARGET",
+    "Options must force the ZIP fallback when locked attachment-link policy is missing or invalid"
+  );
+  assertCode(
+    sharingWizard,
+    "name: \"attachmentLinkTarget\", key: \"attachment_link_target\"",
+    "Sharing wizard must resolve the attachment-link target from the shared backend key"
+  );
+  assertCode(
+    sharingWizard,
+    "lockedFallback: NCSharingStorage.DEFAULT_ATTACHMENT_LINK_TARGET",
+    "Sharing wizard must force the ZIP fallback when locked attachment-link policy is missing or invalid"
+  );
+  const finalizeShare = functionBody(sharingWizard, "finalizeShare");
+  assertCode(
+    finalizeShare,
+    "const zipDownload = attachmentMode && NCSharingStorage.isZipDownloadLinkTarget(attachmentLinkTarget);",
+    "Only attachment mode may use the configured ZIP target"
+  );
+  assertCode(
+    finalizeShare,
+    ": NCSharingStorage.ATTACHMENT_LINK_TARGETS.SHARE_PAGE;",
+    "Manual shares must always use the share-page target"
   );
 
   const resolveShareLanguage = functionBody(sharing, "resolveShareBlockLanguage");
@@ -372,9 +538,12 @@ function verifyConsumerGuards(){
 
 function run(){
   const { policyState, policyUi } = loadPolicyApis();
+  const sharingStorage = loadSharingStorage();
+  verifyAttachmentLinkTargetValues(sharingStorage);
+  verifyAttachmentLinkTargetLockedFallback(sharingStorage, policyUi);
   verifyPolicyTable(policyState, policyUi);
   verifyConsumerGuards();
-  console.log("[OK] policy-editability-check passed (24 editable keys, 4 policy states, consumer guards)");
+  console.log("[OK] policy-editability-check passed (25 editable keys, 4 policy states, consumer guards)");
 }
 
 run();

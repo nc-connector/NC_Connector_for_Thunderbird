@@ -488,6 +488,27 @@
   "options_sharing_attachments_heading": {
     "message": "Mellékletek"
   },
+  "options_sharing_attachments_link_target_label": {
+    "message": "Melléklet hivatkozásának célja"
+  },
+  "options_sharing_attachments_link_target_share_page": {
+    "message": "Nextcloud megosztási oldal"
+  },
+  "options_sharing_attachments_link_target_zip_download": {
+    "message": "ZIP-letöltés"
+  },
+  "options_sharing_attachments_link_target_tooltip_title": {
+    "message": "🔗 Mellékletek hivatkozásának célja"
+  },
+  "options_sharing_attachments_link_target_tooltip_line1": {
+    "message": "A ZIP-letöltés közvetlenül ZIP-archívumként tölti le a megosztott fájlokat."
+  },
+  "options_sharing_attachments_link_target_tooltip_line2": {
+    "message": "A Nextcloud megosztási oldal először a böngészőben nyitja meg a megosztást."
+  },
+  "options_sharing_attachments_link_target_tooltip_line3": {
+    "message": "A választás csak a mellékletmódra vonatkozik; a kézi megosztások változatlanok maradnak."
+  },
   "options_sharing_attachments_always_label": {
     "message": "A mellékletek kezelése mindig az NC Connectorral"
   },
@@ -694,6 +715,9 @@
   },
   "sharing_error_upload_required": {
     "message": "Folytatás előtt töltse fel a fájlokat."
+  },
+  "sharing_error_zip_url_invalid": {
+    "message": "A ZIP-letöltési URL nem volt levezethető a Nextcloud megosztási URL-jéből. Az üzenetbe nem került semmi."
   },
   "sharing_step_note_heading": {
     "message": "Megjegyzés a címzettnek"

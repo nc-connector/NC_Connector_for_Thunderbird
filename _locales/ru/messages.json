@@ -488,6 +488,27 @@
   "options_sharing_attachments_heading": {
     "message": "Вложения"
   },
+  "options_sharing_attachments_link_target_label": {
+    "message": "Назначение ссылки на вложения"
+  },
+  "options_sharing_attachments_link_target_share_page": {
+    "message": "Страница общего доступа Nextcloud"
+  },
+  "options_sharing_attachments_link_target_zip_download": {
+    "message": "Скачивание ZIP"
+  },
+  "options_sharing_attachments_link_target_tooltip_title": {
+    "message": "🔗 Целевой адрес ссылки для вложений"
+  },
+  "options_sharing_attachments_link_target_tooltip_line1": {
+    "message": "При скачивании ZIP файлы общего доступа скачиваются напрямую в виде ZIP-архива."
+  },
+  "options_sharing_attachments_link_target_tooltip_line2": {
+    "message": "Страница общего доступа Nextcloud сначала открывает общий ресурс в браузере."
+  },
+  "options_sharing_attachments_link_target_tooltip_line3": {
+    "message": "Этот выбор действует только для режима вложений; созданные вручную ссылки общего доступа остаются без изменений."
+  },
   "options_sharing_attachments_always_label": {
     "message": "Всегда обрабатывать вложения через NC Connector"
   },
@@ -694,6 +715,9 @@
   },
   "sharing_error_upload_required": {
     "message": "Пожалуйста, загрузите файлы перед продолжением."
+  },
+  "sharing_error_zip_url_invalid": {
+    "message": "Не удалось получить URL для скачивания ZIP из URL общего ресурса Nextcloud. В сообщение ничего не было вставлено."
   },
   "sharing_step_note_heading": {
     "message": "Примечание получателю"

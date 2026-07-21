@@ -488,6 +488,27 @@
   "options_sharing_attachments_heading": {
     "message": "Adjuntos"
   },
+  "options_sharing_attachments_link_target_label": {
+    "message": "Destino del enlace de adjuntos"
+  },
+  "options_sharing_attachments_link_target_share_page": {
+    "message": "Página de uso compartido de Nextcloud"
+  },
+  "options_sharing_attachments_link_target_zip_download": {
+    "message": "Descarga ZIP"
+  },
+  "options_sharing_attachments_link_target_tooltip_title": {
+    "message": "🔗 Destino del enlace de adjuntos"
+  },
+  "options_sharing_attachments_link_target_tooltip_line1": {
+    "message": "La descarga ZIP permite descargar los archivos compartidos directamente como un archivo ZIP."
+  },
+  "options_sharing_attachments_link_target_tooltip_line2": {
+    "message": "La página de uso compartido de Nextcloud abre primero el recurso compartido en el navegador."
+  },
+  "options_sharing_attachments_link_target_tooltip_line3": {
+    "message": "La selección solo se aplica al modo de adjuntos; los recursos compartidos manuales permanecen sin cambios."
+  },
   "options_sharing_attachments_always_label": {
     "message": "Gestionar siempre los adjuntos mediante NC Connector"
   },
@@ -694,6 +715,9 @@
   },
   "sharing_error_upload_required": {
     "message": "Sube los archivos antes de continuar."
+  },
+  "sharing_error_zip_url_invalid": {
+    "message": "No se pudo derivar la URL de descarga ZIP de la URL del recurso compartido de Nextcloud. No se insertó nada en el mensaje."
   },
   "sharing_step_note_heading": {
     "message": "Nota para el destinatario"

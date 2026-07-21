@@ -488,6 +488,27 @@
   "options_sharing_attachments_heading": {
     "message": "Bijlagen"
   },
+  "options_sharing_attachments_link_target_label": {
+    "message": "Doel van bijlagelink"
+  },
+  "options_sharing_attachments_link_target_share_page": {
+    "message": "Nextcloud-deelpagina"
+  },
+  "options_sharing_attachments_link_target_zip_download": {
+    "message": "ZIP-download"
+  },
+  "options_sharing_attachments_link_target_tooltip_title": {
+    "message": "🔗 Linkdoel voor bijlagen"
+  },
+  "options_sharing_attachments_link_target_tooltip_line1": {
+    "message": "Met ZIP-download worden de gedeelde bestanden rechtstreeks als ZIP-archief gedownload."
+  },
+  "options_sharing_attachments_link_target_tooltip_line2": {
+    "message": "De Nextcloud-deelpagina opent de gedeelde inhoud eerst in de browser."
+  },
+  "options_sharing_attachments_link_target_tooltip_line3": {
+    "message": "Deze keuze geldt alleen voor de bijlagemodus; handmatige shares blijven ongewijzigd."
+  },
   "options_sharing_attachments_always_label": {
     "message": "Bijlagen altijd via NC Connector verwerken"
   },
@@ -694,6 +715,9 @@
   },
   "sharing_error_upload_required": {
     "message": "Upload de bestanden voordat je doorgaat."
+  },
+  "sharing_error_zip_url_invalid": {
+    "message": "De ZIP-download-URL kon niet worden afgeleid van de Nextcloud-deel-URL. Er is niets in het bericht ingevoegd."
   },
   "sharing_step_note_heading": {
     "message": "Notitie voor ontvanger"

@@ -75,7 +75,8 @@
       passwordEnabled: true,
       passwordSeparate: false,
       passwordDeliveryMode: NCSharePasswordDelivery.MODE_PLAIN,
-      expireDays: 7
+      expireDays: 7,
+      attachmentLinkTarget: NCSharingStorage.DEFAULT_ATTACHMENT_LINK_TARGET
     },
     passwordPolicy: null,
     uploadInProgress: false,
@@ -121,6 +122,14 @@
       key: "share_expire_days",
       type: "int",
       normalize: (value, fallback) => NCTalkTextUtils.normalizeExpireDays(value, fallback)
+    },
+    {
+      name: "attachmentLinkTarget",
+      key: "attachment_link_target",
+      type: "string",
+      fallback: NCSharingStorage.DEFAULT_ATTACHMENT_LINK_TARGET,
+      lockedFallback: NCSharingStorage.DEFAULT_ATTACHMENT_LINK_TARGET,
+      normalize: (value, fallback) => NCSharingStorage.normalizeAttachmentLinkTarget(value, fallback)
     }
   ];
   const emitDebugLog = typeof NCDebugForwarder?.createUiDebugLogger === 'function'
@@ -382,6 +391,7 @@
     state.defaults.passwordSeparate = false;
     state.defaults.passwordDeliveryMode = NCSharePasswordDelivery.MODE_PLAIN;
     state.defaults.expireDays = DEFAULT_EXPIRE_DAYS;
+    state.defaults.attachmentLinkTarget = NCSharingStorage.DEFAULT_ATTACHMENT_LINK_TARGET;
     if (!browser?.storage?.local){
       return;
     }
@@ -393,7 +403,8 @@
       SHARING_KEYS.defaultPassword,
       SHARING_KEYS.defaultPasswordSeparate,
       SHARING_KEYS.defaultPasswordDeliveryMode,
-      SHARING_KEYS.defaultExpireDays
+      SHARING_KEYS.defaultExpireDays,
+      SHARING_KEYS.attachmentsLinkTarget
     ]);
     const localDefaultNames = new Set();
     const storedShareName = stored[SHARING_KEYS.defaultShareName];
@@ -438,6 +449,12 @@
     if (stored[SHARING_KEYS.defaultExpireDays] !== undefined){
       localDefaultNames.add("expireDays");
     }
+    if (NCSharingStorage.isValidAttachmentLinkTarget(stored[SHARING_KEYS.attachmentsLinkTarget])){
+      state.defaults.attachmentLinkTarget = NCSharingStorage.normalizeAttachmentLinkTarget(
+        stored[SHARING_KEYS.attachmentsLinkTarget]
+      );
+      localDefaultNames.add("attachmentLinkTarget");
+    }
     state.defaults = NCWizardPolicyUi.readPolicyBoundDefaults(
       {
         active: state.policy.active,
@@ -462,6 +479,13 @@
       policyEditable: state.policy.editable?.share_send_password_mode,
       secretsUnavailable: NCSharePasswordDelivery.isSecretsUnavailable(state.policy.status),
       separateDefault: !!state.defaults.passwordSeparate
+    });
+    log('Attachment link target resolved', {
+      storedTarget: stored[SHARING_KEYS.attachmentsLinkTarget] ?? "",
+      effectiveTarget: state.defaults.attachmentLinkTarget,
+      localDefault: localDefaultNames.has("attachmentLinkTarget"),
+      policyTarget: NCPolicyState.readDomainValue(state.policy.share, "attachment_link_target"),
+      policyEditable: state.policy.editable?.attachment_link_target
     });
   }
   /**
@@ -1345,13 +1369,19 @@
       return;
     }
     const attachmentMode = state.mode === "attachments";
+    const attachmentLinkTarget = attachmentMode
+      ? NCSharingStorage.normalizeAttachmentLinkTarget(state.defaults.attachmentLinkTarget)
+      : NCSharingStorage.ATTACHMENT_LINK_TARGETS.SHARE_PAGE;
+    const zipDownload = attachmentMode
+      && NCSharingStorage.isZipDownloadLinkTarget(attachmentLinkTarget);
     const noteEnabled = attachmentMode ? false : !!dom.noteToggle.checked;
     const note = noteEnabled ? dom.noteInput.value.trim() : '';
     const separatePasswordMail = isSeparatePasswordMailEnabled();
     log('Finalize started', {
       attachmentMode,
       noteEnabled,
-      zipDownload: attachmentMode,
+      attachmentLinkTarget,
+      zipDownload,
       hidePermissions: attachmentMode,
       separatePasswordMail
     });
@@ -1372,7 +1402,7 @@
         noteEnabled,
         note,
         hidePermissions: attachmentMode,
-        zipDownload: attachmentMode,
+        zipDownload,
         hidePassword: separatePasswordMail,
         showPasswordSeparateHint: separatePasswordMail
       };
