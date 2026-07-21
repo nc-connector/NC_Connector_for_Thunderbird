@@ -28,6 +28,9 @@
     if (!NCPolicyState.isEndpointAvailable(policyStatus)){
       return text(translate, "sharing_password_separate_backend_required_tooltip", BACKEND_REQUIRED_FALLBACK);
     }
+    if (status?.overlicensed){
+      return text(translate, "policy_warning_license_invalid", LICENSE_INVALID_FALLBACK);
+    }
     if (!status?.seatAssigned){
       return text(translate, "sharing_password_separate_no_seat_tooltip", NO_SEAT_FALLBACK);
     }

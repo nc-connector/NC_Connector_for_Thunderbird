@@ -18,6 +18,19 @@ function loadDeliveryApi(){
   return context.NCSharePasswordDelivery;
 }
 
+function loadWizardPolicyApi(){
+  const context = {
+    globalThis: null,
+    window: null
+  };
+  context.window = context;
+  context.globalThis = context;
+  vm.createContext(context);
+  loadScript("modules/policyState.js", context, "\nglobalThis.NCPolicyState = NCPolicyState;");
+  loadScript("ui/wizardPolicyUi.js", context);
+  return context.NCWizardPolicyUi;
+}
+
 function createStatus(modeValue, expireDays = 30){
   return {
     policyActive: true,
@@ -36,6 +49,58 @@ function createStatus(modeValue, expireDays = 30){
         share_secrets_expire_days: false
       }
     }
+  };
+}
+
+function createSeatStatus(overlicensed = false){
+  return {
+    endpointAvailable: true,
+    status: {
+      seatAssigned: true,
+      seatState: "active",
+      isValid: true,
+      overlicensed
+    }
+  };
+}
+
+function createDispatchRegistrationHarness(policyStatus){
+  let composeDetailsCalls = 0;
+  const context = {
+    browser: {
+      compose: {
+        getComposeDetails: async () => {
+          composeDetailsCalls++;
+          return {};
+        }
+      }
+    },
+    console,
+    globalThis: null,
+    L: () => {},
+    module: undefined,
+    NCPolicyRuntime: {
+      getPolicyStatus: async () => policyStatus
+    },
+    normalizeComposeShareCleanupFolderInfo: () => null,
+    PASSWORD_MAIL_DISPATCH_BY_TAB: new Map(),
+    bgI18n: (key) => key,
+    window: null
+  };
+  context.window = context;
+  context.globalThis = context;
+  vm.createContext(context);
+  loadScript("modules/policyState.js", context, "\nglobalThis.NCPolicyState = NCPolicyState;");
+  loadScript("modules/sharePasswordDelivery.js", context);
+  loadScript(
+    "modules/bgComposePasswordDispatch.js",
+    context,
+    "\nglobalThis.registerSeparatePasswordMailDispatch = registerSeparatePasswordMailDispatch;"
+  );
+  return {
+    register: context.registerSeparatePasswordMailDispatch,
+    getComposeDetailsCalls: () => composeDetailsCalls,
+    queue: context.PASSWORD_MAIL_DISPATCH_BY_TAB
   };
 }
 
@@ -155,6 +220,7 @@ async function expectFailure(promise, message){
 
 async function run(){
   const delivery = loadDeliveryApi();
+  const wizardPolicy = loadWizardPolicyApi();
 
   assert(delivery.normalizeMode("secrets") === "secrets", "secrets mode should be accepted");
   assert(delivery.normalizeMode(" SECRETS ") === "secrets", "secrets mode should be case-insensitive");
@@ -178,6 +244,33 @@ async function run(){
   assert(delivery.resolveSecretsExpireDays(createStatus("secrets", 21)) === 21, "Policy expiry should be used");
   assert(delivery.resolveSecretsExpireDays(createStatus("secrets", null)) === 7, "Null policy expiry should use default");
   assert(delivery.resolveSecretsExpireDays({ policy: { share: {} }, policyEditable: { share: {} } }) === 7, "Missing policy expiry key should use default");
+  assert(wizardPolicy.isSeparatePasswordFeatureAvailable(createSeatStatus(true)) === false, "Overlicensed seat must disable separate password delivery");
+  assert(
+    wizardPolicy.getSeparatePasswordUnavailableHint(createSeatStatus(true), (key) => key) === "policy_warning_license_invalid",
+    "Overlicensed password delivery should show the license warning"
+  );
+
+  const blockedRegistration = createDispatchRegistrationHarness(createSeatStatus(true));
+  const blockedError = await expectFailure(
+    blockedRegistration.register(9, {
+      password: "Password-1!",
+      html: "<p>Password</p>",
+      plainText: "Password",
+      deliveryMode: "secrets"
+    }),
+    "Overlicensed password dispatch should be rejected"
+  );
+  assert(blockedError.message === "sharing_error_insert_failed", "Overlicensed password dispatch should report the insert error");
+  assert(blockedRegistration.getComposeDetailsCalls() === 0, "Rejected password dispatch must stop before compose access");
+  assert(blockedRegistration.queue.size === 0, "Rejected password dispatch must not enter the queue");
+
+  const activeRegistration = createDispatchRegistrationHarness(createSeatStatus(false));
+  const activeError = await expectFailure(
+    activeRegistration.register(9, {}),
+    "Missing active-seat payload should be rejected after the entitlement check"
+  );
+  assert(activeError.message === "password_or_html_or_plaintext_missing", "Active seat should pass the backend entitlement check");
+
   const equivalentDetails = {
     identityId: "identity-1",
     subject: "Password",

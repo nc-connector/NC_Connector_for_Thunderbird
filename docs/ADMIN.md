@@ -146,13 +146,13 @@ Runtime behavior:
 - valid active seat => each backend value is the initial default until a valid local value exists
 - `policy_editable=true` => a stored local value wins and the control remains editable
 - `policy_editable=false` => the backend value always wins and the control is locked in the UI
-- missing backend / no seat / invalid seat => local add-on settings remain active for the normal local defaults
+- missing backend / no seat / invalid or overlicensed seat => local add-on settings remain active for the normal local defaults
 - backend-only features stay disabled until their backend/seat requirements are met
 - if the backend is unreachable, Thunderbird falls back to the locally saved add-on settings for Share/Talk defaults
 - if the backend is reachable but the license/seat state is no longer usable, Thunderbird also falls back to the locally saved add-on settings for Share/Talk defaults
-- invalid seat states remain visible in the UI so users can contact their administrator
-- separate password delivery is only available when the backend endpoint exists and the current user has an active assigned seat
-- plain separate-password follow-up mails use the captured primary-mail `To`/`Cc`/`Bcc` envelope
+- invalid and overlicensed seat states remain visible in the UI so users can contact their administrator
+- separate password delivery is only available when the backend endpoint exists and the current user has a usable active assigned seat
+- plain separate-password follow-up mails use the captured primary-mail `To`/`Cc`/`Bcc` envelope; auto-send compares all three fields again before sending and opens a manual draft on mismatch or timeout
 - Secrets-link delivery creates one one-time Secrets link per recipient and preserves `Bcc` separation
 - if Secrets is unavailable or link creation fails, Thunderbird falls back to plain delivery and warns the user
 - automatic password follow-up send reuses the same Thunderbird sender identity as the primary mail

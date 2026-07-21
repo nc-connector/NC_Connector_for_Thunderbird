@@ -88,6 +88,7 @@ for persisted monitoring (`browser.calendar.items.onCreated/onUpdated/onRemoved`
   - cleanup for a room created in an unsaved and then discarded event editor remains active independently
   - save-button events do not clear pending cleanup because Thunderbird can still reject the save; a matching persisted calendar item clears it
 - Separate-password follow-up dispatch remains restricted to backend endpoint, active assigned seat, and enabled password protection.
+  - `overlicensed=true` makes the seat unusable, keeps all policy domains inactive, shows the license warning, and blocks background dispatch registration before compose access
   - the options/UI toggle surface is only functional when those runtime conditions are met
   - `accountsRead` is requested only to resolve the actual Thunderbird sender identity of the already-open primary compose window, so the password follow-up can reuse the same sender identity instead of guessing from a visible `From` header string.
   - live sender switches are tracked on `compose.onIdentityChanged`, and the final primary-mail envelope is captured on `compose.onBeforeSend`

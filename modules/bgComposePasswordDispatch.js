@@ -406,6 +406,18 @@ async function registerSeparatePasswordMailDispatch(tabId, payload = {}){
   if (!Number.isInteger(tabId) || tabId <= 0){
     throw new Error("invalid_tab_id");
   }
+  const policyStatus = await NCPolicyRuntime.getPolicyStatus();
+  if (!NCPolicyState.hasSeatEntitlement(policyStatus)){
+    L("sharing separate password dispatch blocked", {
+      tabId,
+      endpointAvailable: !!policyStatus?.endpointAvailable,
+      seatAssigned: !!policyStatus?.status?.seatAssigned,
+      seatState: String(policyStatus?.status?.seatState || ""),
+      isValid: policyStatus?.status?.isValid === true,
+      overlicensed: policyStatus?.status?.overlicensed === true
+    });
+    throw new Error(bgI18n("sharing_error_insert_failed"));
+  }
   cancelSeparatePasswordDispatchClear(tabId, "register");
   const password = String(payload.password || "").trim();
   const rawHtml = String(payload.html || "").trim();

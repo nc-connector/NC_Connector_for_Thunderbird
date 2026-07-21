@@ -28,6 +28,16 @@ const NCPolicyRuntime = (() => {
     return isObject(object) && Object.prototype.hasOwnProperty.call(object, key);
   }
 
+  function getSeatWarningCode(status){
+    if (status?.overlicensed){
+      return "overlicensed";
+    }
+    const seatState = String(status?.seatState || "none").trim().toLowerCase();
+    return status?.seatAssigned && (!status?.isValid || seatState !== "active")
+      ? "license_invalid"
+      : "";
+  }
+
   function isBackendStatusPayload(payload){
     return isObject(payload?.status)
       && hasOwn(payload.status, "seat_assigned")
@@ -39,9 +49,8 @@ const NCPolicyRuntime = (() => {
     const seatState = String(details?.seatState || "none");
     const seatAssigned = !!details?.seatAssigned;
     const isValid = details?.isValid !== false;
-    const warningCode = seatAssigned && (!isValid || seatState !== "active")
-      ? "license_invalid"
-      : "";
+    const overlicensed = !!details?.overlicensed;
+    const warningCode = getSeatWarningCode({ seatAssigned, seatState, isValid, overlicensed });
     return {
       ok: true,
       fetchSucceeded: false,
@@ -55,7 +64,7 @@ const NCPolicyRuntime = (() => {
         userId: String(details?.userId || ""),
         seatAssigned,
         seatState,
-        overlicensed: !!details?.overlicensed,
+        overlicensed,
         mode: String(details?.licenseMode || ""),
         isValid,
         expiresAtIso: details?.expiresAtIso || null,
@@ -104,6 +113,7 @@ const NCPolicyRuntime = (() => {
       seatAssigned: !!result?.status?.seatAssigned,
       seatState: String(result?.status?.seatState || ""),
       isValid: result?.status?.isValid === true,
+      overlicensed: result?.status?.overlicensed === true,
       domains: {
         share: result?.policyDomains?.share?.active === true,
         talk: result?.policyDomains?.talk?.active === true,
@@ -161,6 +171,7 @@ const NCPolicyRuntime = (() => {
       seatAssigned: normalized.status.seatAssigned,
       seatState: normalized.status.seatState,
       isValid: normalized.status.isValid,
+      overlicensed: normalized.status.overlicensed,
       warning: normalized.warning.code || ""
     });
   }
@@ -204,10 +215,8 @@ const NCPolicyRuntime = (() => {
     const policyActive = POLICY_DOMAINS.some((domain) => policyDomains[domain]?.active === true);
     const reason = policyActive
       ? "policy_active"
-      : (seatUsable ? "policy_domains_unavailable" : "seat_not_usable");
-    const warningCode = status.seatAssigned && (!status.isValid || status.seatState !== "active")
-      ? "license_invalid"
-      : "";
+      : (status.overlicensed ? "overlicensed" : (seatUsable ? "policy_domains_unavailable" : "seat_not_usable"));
+    const warningCode = getSeatWarningCode(status);
     return {
       ok: true,
       fetchSucceeded: true,

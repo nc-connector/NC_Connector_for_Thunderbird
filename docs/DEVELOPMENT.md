@@ -709,7 +709,7 @@ Runtime rules:
 - Backend custom templates use the sanitizer in both rich-HTML rendering and plain-text rendering; local built-in share blocks remain trusted local render output.
 - Privileged calendar-editor code does not parse backend HTML via `innerHTML`; sanitized markup is imported via `DOMParser` + DOM fragment replacement.
 - Active UI/runtime paths should avoid legacy `innerHTML` and `execCommand(...)` write APIs where ESR-140-compatible DOM/clipboard alternatives exist.
-- Separate password follow-up dispatch is seat-restricted and only available with backend endpoint + active assigned seat.
+- Separate password follow-up dispatch is seat-restricted and only available with backend endpoint + usable active assigned seat. `overlicensed=true` disables it in both UI and background and shows the existing license warning.
 - Backend attachment-threshold policy uses `attachments_min_size_mb` as both value and enable-state: a positive integer enables threshold mode, `null` disables it.
 - Locked backend attachment-automation policy is enforced in compose runtime, not only in the settings surface.
 - Backend email signatures are applied only when `policy.email_signature.email_signature_on_compose=true`, a rendered `email_signature_template` exists, and `policy.email_signature.user_email` matches the active Thunderbird sender identity email.

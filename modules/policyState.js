@@ -50,10 +50,11 @@ const NCPolicyState = (() => {
   }
 
   function isSeatUsable(seatStatus){
+    const seatState = String(seatStatus?.seatState || "").trim().toLowerCase();
     return !!(
       seatStatus?.seatAssigned
       && seatStatus?.isValid
-      && seatStatus?.seatState === ACTIVE_SEAT_STATE
+      && seatState === ACTIVE_SEAT_STATE
       && !seatStatus?.overlicensed
     );
   }
@@ -63,13 +64,9 @@ const NCPolicyState = (() => {
   }
 
   function hasSeatEntitlement(status){
-    const seatStatus = status?.status;
-    const seatState = String(seatStatus?.seatState || "").trim().toLowerCase();
     return !!(
       isEndpointAvailable(status)
-      && seatStatus?.seatAssigned
-      && seatStatus?.isValid
-      && seatState === ACTIVE_SEAT_STATE
+      && isSeatUsable(status?.status)
     );
   }
 
