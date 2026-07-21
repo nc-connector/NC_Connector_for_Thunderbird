@@ -44,7 +44,7 @@ Weitere Punkte:
 
 ## Talk
 
-Aus einem Thunderbird-Termin kann direkt ein Nextcloud Talk-Raum erstellt werden. Der Dialog unterstützt Lobby, Passwort, Raumtyp, Listbarkeit und Moderation.
+Aus einem Thunderbird-Termin kann direkt ein Nextcloud Talk-Raum erstellt werden. Der Dialog unterstützt Lobby, Passwort, Raumtyp, Listbarkeit und Moderation. Passwortgeschützte Räume starten mit einem erzeugten Passwort, das ersetzt oder erneut erzeugt werden kann.
 
 NC Connector kann Terminänderungen mit dem Raum abgleichen und eingeladene Teilnehmer übernehmen. Verworfene, nicht gespeicherte Termine räumen ihre Talk-Räume wieder auf. Das Löschen gespeicherter Termine entfernt Räume nur nach ausdrücklicher Aktivierung.
 

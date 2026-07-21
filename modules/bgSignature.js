@@ -104,8 +104,33 @@ const NCEmailSignature = (() => {
     const templateHtml = String(NCPolicyState.readPolicyValue(status, "email_signature", "email_signature_template") || "").trim();
     const userEmail = normalizeEmail(NCPolicyState.readPolicyValue(status, "email_signature", "user_email"));
 
-    if (!backendOnCompose){
-      return { active: false, reason: "signature_disabled_by_backend" };
+    const onCompose = NCPolicyState.resolveDefaultValue(
+      status,
+      "email_signature",
+      "email_signature_on_compose",
+      NCPolicyState.coerceBoolean(localOptions?.[STORAGE_KEYS.onCompose], backendOnCompose),
+      typeof localOptions?.[STORAGE_KEYS.onCompose] === "boolean",
+      NCPolicyState.coerceBoolean
+    );
+    const onReply = NCPolicyState.resolveDefaultValue(
+      status,
+      "email_signature",
+      "email_signature_on_reply",
+      NCPolicyState.coerceBoolean(localOptions?.[STORAGE_KEYS.onReply], backendOnReply),
+      typeof localOptions?.[STORAGE_KEYS.onReply] === "boolean",
+      NCPolicyState.coerceBoolean
+    );
+    const onForward = NCPolicyState.resolveDefaultValue(
+      status,
+      "email_signature",
+      "email_signature_on_forward",
+      NCPolicyState.coerceBoolean(localOptions?.[STORAGE_KEYS.onForward], backendOnForward),
+      typeof localOptions?.[STORAGE_KEYS.onForward] === "boolean",
+      NCPolicyState.coerceBoolean
+    );
+
+    if (!onCompose){
+      return { active: false, reason: "signature_disabled" };
     }
     if (!templateHtml){
       return { active: false, reason: "signature_template_missing" };
@@ -114,24 +139,11 @@ const NCEmailSignature = (() => {
       return { active: false, reason: "signature_user_email_missing" };
     }
 
-    const composeLocked = NCPolicyState.isLocked(status, "email_signature", "email_signature_on_compose");
-    const replyLocked = NCPolicyState.isLocked(status, "email_signature", "email_signature_on_reply");
-    const forwardLocked = NCPolicyState.isLocked(status, "email_signature", "email_signature_on_forward");
-    const onCompose = composeLocked
-      ? backendOnCompose
-      : NCPolicyState.coerceBoolean(localOptions?.[STORAGE_KEYS.onCompose], backendOnCompose);
-    const onReply = replyLocked
-      ? backendOnReply
-      : NCPolicyState.coerceBoolean(localOptions?.[STORAGE_KEYS.onReply], backendOnReply);
-    const onForward = forwardLocked
-      ? backendOnForward
-      : NCPolicyState.coerceBoolean(localOptions?.[STORAGE_KEYS.onForward], backendOnForward);
-
     return {
       active: true,
       userEmail,
       templateHtml,
-      onCompose: backendOnCompose && onCompose,
+      onCompose,
       onReply,
       onForward
     };

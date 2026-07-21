@@ -44,7 +44,7 @@ Key points:
 
 ## Talk
 
-A Thunderbird event can create a Nextcloud Talk room directly. The dialog supports lobby, password, room type, listable scope, and moderation.
+A Thunderbird event can create a Nextcloud Talk room directly. The dialog supports lobby, password, room type, listable scope, and moderation. Password-protected rooms start with a generated password that can be replaced or generated again.
 
 NC Connector can sync event changes back to the room and add invited attendees. Discarded unsaved events clean up their Talk rooms again. Deleting saved events removes rooms only when this behavior is explicitly enabled.
 

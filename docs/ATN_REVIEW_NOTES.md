@@ -77,6 +77,10 @@ for persisted monitoring (`browser.calendar.items.onCreated/onUpdated/onRemoved`
 - Talk user search, moderator selection, and participant toggles (users/guests)
   depend on runtime system-addressbook availability checks and are disabled
   with explicit user guidance when the addressbook endpoint is unavailable.
+- Effective Talk setting `talk_set_password` controls password protection. New
+  password-protected rooms start with a generated password that users can
+  replace or generate again.
+  The existing manual Generate button remains independent of this default.
 - Talk room deletion for existing saved calendar events is disabled by default and can be enabled locally or locked by backend policy via `talk_delete_room_on_event_delete`.
   - the event must have trusted NC Connector `X-NCTALK-*` metadata written by Thunderbird/Outlook integration
   - generic Talk URLs copied into event `LOCATION` or `URL` fields are not parsed as ownership proof

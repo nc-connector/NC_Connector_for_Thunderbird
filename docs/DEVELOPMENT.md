@@ -267,6 +267,13 @@ Storage backend:
 - `browser.storage.local`
 - `browser.storage.managed` for read-only administrator-provided setup values
 
+Backend policy precedence for every add-on-editable default:
+1. Inactive/unavailable policy domain: use the stored local value or the add-on fallback.
+2. Active policy with `policy_editable=true`: use a valid stored local value; if none exists, seed the UI/runtime from the backend value.
+3. Active policy with `policy_editable=false`: use the backend value and lock the corresponding control.
+
+The same resolution must be used by options, wizards, and background consumers. Template and derived output fields remain backend-controlled.
+
 ### 6.2 Storage schema (key list)
 
 Managed setup:
@@ -285,7 +292,7 @@ Talk defaults:
 - `talkDefaultLobby`
 - `talkDefaultListable`
 - `talkDefaultRoomType` (`"event"` or `"normal"`)
-- `talkPasswordDefaultEnabled`
+- `talkPasswordDefaultEnabled` — enable password protection and fill an initial generated password for a new Talk room
 - `talkDeleteRoomOnEventDelete`
 - `talkAddUsersDefaultEnabled`
 - `talkAddGuestsDefaultEnabled`
@@ -467,6 +474,8 @@ Wizard initialization:
 User clicks “Talk-Raum erstellen”:
 - Wizard sends `talk:createRoom` to background.
 
+When the effective `talkPasswordDefaultEnabled` / `talk_set_password` value enables password protection, the wizard fills the password field immediately. The manual Generate button remains available for replacing that password.
+
 Background:
 - uses `modules/talkcore.js` + `modules/ocs.js` + `modules/nccore.js`
 - creates the room, applies lobby/listable/password, etc.
@@ -569,7 +578,7 @@ On create/update (`handleCalendarItemUpsert` in `modules/bgCalendar.js`):
 - If `X-NCTALK-TOKEN` is missing in the event payload, processing is skipped fail-closed (no token recovery from cached mapping).
 
 On remove:
-- Existing saved-event room deletion is opt-in only (`talkDeleteRoomOnEventDelete` or locked backend policy `talk_delete_room_on_event_delete`).
+- Existing saved-event room deletion follows the resolved `talkDeleteRoomOnEventDelete` default: local when present and editable, otherwise the active backend default; a locked backend value always wins.
 - The removed event must have a trusted token mapping created from NC Connector `X-NCTALK-*` properties. Tokens derived from generic `LOCATION` or `URL` fields are never accepted as ownership proof.
 - If moderation was delegated, deletion may fail (403). This is expected and should be handled gracefully.
 
@@ -853,9 +862,11 @@ Before you ship:
    - iCal contract
    - share plaintext contract
    - policy contract
+   - policy editability
    - password delivery contract
    - URL subfolder contract
    - signature compose settling
+   - Nextcloud user ID check
    - i18n locale parity
    - i18n placeholder check
    - i18n key usage

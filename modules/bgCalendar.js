@@ -879,21 +879,25 @@ async function handleCalendarItemUpsert(item){
  */
 async function isSavedEventRoomDeleteEnabled(){
   let localEnabled = false;
+  let hasLocalValue = false;
   try{
     const stored = await browser.storage.local.get(["talkDeleteRoomOnEventDelete"]);
-    localEnabled = stored.talkDeleteRoomOnEventDelete === true;
+    hasLocalValue = typeof stored.talkDeleteRoomOnEventDelete === "boolean";
+    localEnabled = hasLocalValue ? stored.talkDeleteRoomOnEventDelete : false;
   }catch(error){
     console.error("[NCBG] talk delete-room option read failed", error);
   }
 
   try{
     const status = await NCPolicyRuntime.getPolicyStatus();
-    if (
-      NCPolicyState.isDomainActive(status, "talk")
-      && NCPolicyState.isLocked(status, "talk", "talk_delete_room_on_event_delete")
-    ){
-      return NCPolicyState.readPolicyValue(status, "talk", "talk_delete_room_on_event_delete") === true;
-    }
+    return NCPolicyState.resolveDefaultValue(
+      status,
+      "talk",
+      "talk_delete_room_on_event_delete",
+      localEnabled,
+      hasLocalValue,
+      NCPolicyState.coerceBoolean
+    );
   }catch(error){
     console.error("[NCBG] talk delete-room policy check failed", error);
   }

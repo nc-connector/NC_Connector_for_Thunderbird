@@ -6,6 +6,7 @@
     "test:ical-contract": "node tools/ical-contract-check.js",
     "test:share-plaintext-contract": "node tools/share-plaintext-contract-check.js",
     "test:policy-contract": "node tools/policy-contract-check.js",
+    "test:policy-editability": "node tools/policy-editability-check.js",
     "test:password-delivery-contract": "node tools/password-delivery-contract-check.js",
     "test:url-subfolder-contract": "node tools/url-subfolder-contract-check.js",
     "test:signature-compose-settle": "node tools/signature-compose-settle-check.js",

@@ -14,6 +14,7 @@ const CHECKS = [
   "tools/ical-contract-check.js",
   "tools/share-plaintext-contract-check.js",
   "tools/policy-contract-check.js",
+  "tools/policy-editability-check.js",
   "tools/password-delivery-contract-check.js",
   "tools/url-subfolder-contract-check.js",
   "tools/signature-compose-settle-check.js",

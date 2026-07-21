@@ -196,24 +196,28 @@ async function getComposeAttachmentAutomationSettings(){
     keys.attachmentsOfferAboveEnabled,
     keys.attachmentsOfferAboveMb
   ]);
-  let alwaysConnector = !!stored[keys.attachmentsAlwaysConnector];
-  let offerAboveEnabled = stored[keys.attachmentsOfferAboveEnabled] !== undefined
-    ? !!stored[keys.attachmentsOfferAboveEnabled]
+  const hasLocalAlways = typeof stored[keys.attachmentsAlwaysConnector] === "boolean";
+  const hasLocalThreshold = typeof stored[keys.attachmentsOfferAboveEnabled] === "boolean"
+    || stored[keys.attachmentsOfferAboveMb] !== undefined;
+  let alwaysConnector = hasLocalAlways ? stored[keys.attachmentsAlwaysConnector] : false;
+  let offerAboveEnabled = typeof stored[keys.attachmentsOfferAboveEnabled] === "boolean"
+    ? stored[keys.attachmentsOfferAboveEnabled]
     : true;
   let thresholdMb = normalizeAttachmentThresholdMb(stored[keys.attachmentsOfferAboveMb]);
 
   try{
     const policyStatus = await NCPolicyRuntime.getPolicyStatus();
     if (NCPolicyState.isDomainActive(policyStatus, "share")){
-      if (NCPolicyState.isLocked(policyStatus, "share", "attachments_always_via_ncconnector")){
-        alwaysConnector = !!NCPolicyState.readPolicyValue(
-          policyStatus,
-          "share",
-          "attachments_always_via_ncconnector"
-        );
-      }
+      alwaysConnector = NCPolicyState.resolveDefaultValue(
+        policyStatus,
+        "share",
+        "attachments_always_via_ncconnector",
+        alwaysConnector,
+        hasLocalAlways,
+        NCPolicyState.coerceBoolean
+      );
       if (
-        NCPolicyState.isLocked(policyStatus, "share", "attachments_min_size_mb")
+        (!hasLocalThreshold || NCPolicyState.isLocked(policyStatus, "share", "attachments_min_size_mb"))
         && NCPolicyState.hasPolicyKey(policyStatus, "share", "attachments_min_size_mb")
       ){
         const policyThreshold = NCPolicyState.readPolicyValue(

@@ -143,7 +143,6 @@
   };
   const wizardTranslate = (key, fallback = "") => t(key, fallback);
   const TALK_POLICY_RUNTIME_BINDINGS = [
-    { name: "generatePassword", key: "talk_generate_password", type: "boolean" },
     {
       name: "descriptionLanguage",
       key: "language_talk_description",
@@ -158,14 +157,15 @@
     { name: "invitationTemplate", key: "talk_invitation_template", type: "string" }
   ];
   const TALK_DEFAULT_POLICY_BINDINGS = [
-    { name: "title", key: "talk_title", type: "string" },
-    { name: "lobby", key: "talk_lobby_active", type: "boolean" },
-    { name: "listable", key: "talk_show_in_search", type: "boolean" },
-    { name: "addUsersEnabled", key: "talk_add_users", type: "boolean" },
-    { name: "addGuestsEnabled", key: "talk_add_guests", type: "boolean" },
-    { name: "passwordEnabled", key: "talk_set_password", type: "boolean" },
+    { name: "title", domain: "talk", key: "talk_title", type: "string" },
+    { name: "lobby", domain: "talk", key: "talk_lobby_active", type: "boolean" },
+    { name: "listable", domain: "talk", key: "talk_show_in_search", type: "boolean" },
+    { name: "addUsersEnabled", domain: "talk", key: "talk_add_users", type: "boolean" },
+    { name: "addGuestsEnabled", domain: "talk", key: "talk_add_guests", type: "boolean" },
+    { name: "passwordEnabled", domain: "talk", key: "talk_set_password", type: "boolean" },
     {
       name: "roomType",
+      domain: "talk",
       key: "talk_room_type",
       type: "string",
       normalize: (value) => value === "event" ? "event" : "normal"
@@ -204,7 +204,6 @@
       editable: null,
       warningVisible: false,
       warningCode: "",
-      generatePassword: true,
       descriptionLanguage: "",
       descriptionType: "plain_text",
       invitationTemplate: ""
@@ -264,15 +263,24 @@
       state.policy.editable = domainState.editable;
       state.policy.warningVisible = domainState.warningVisible;
       state.policy.warningCode = domainState.warningCode;
+      const runtimeDefaults = {
+        descriptionLanguage: "",
+        descriptionType: "plain_text",
+        invitationTemplate: ""
+      };
+      const localRuntimeNames = new Set();
+      if (browser?.storage?.local){
+        const stored = await browser.storage.local.get("eventDescriptionLang");
+        if (typeof stored.eventDescriptionLang === "string" && stored.eventDescriptionLang.trim()){
+          runtimeDefaults.descriptionLanguage = normalizeDescriptionLanguage(stored.eventDescriptionLang);
+          localRuntimeNames.add("descriptionLanguage");
+        }
+      }
       Object.assign(state.policy, NCWizardPolicyUi.readPolicyBoundDefaults(
         domainState,
         TALK_POLICY_RUNTIME_BINDINGS,
-        {
-          generatePassword: true,
-          descriptionLanguage: "",
-          descriptionType: "plain_text",
-          invitationTemplate: ""
-        }
+        runtimeDefaults,
+        { localNames: localRuntimeNames }
       ));
       logDebug("policy status", {
         active: state.policy.active,
@@ -509,43 +517,56 @@
         "talkDefaultRoomType",
         "talkPasswordDefaultEnabled"
       ]);
+      const localDefaultNames = new Set();
       const rawTitle = (stored.talkDefaultTitle || "").trim();
       if (rawTitle){
         defaults.title = rawTitle;
+        localDefaultNames.add("title");
       }
       if (typeof stored.talkDefaultLobby === "boolean"){
         defaults.lobby = stored.talkDefaultLobby;
+        localDefaultNames.add("lobby");
       }
       if (typeof stored.talkDefaultListable === "boolean"){
         defaults.listable = stored.talkDefaultListable;
+        localDefaultNames.add("listable");
       }
       if (typeof stored.talkAddUsersDefaultEnabled === "boolean"){
         defaults.addUsersEnabled = stored.talkAddUsersDefaultEnabled;
+        localDefaultNames.add("addUsersEnabled");
       }
       if (typeof stored.talkAddGuestsDefaultEnabled === "boolean"){
         defaults.addGuestsEnabled = stored.talkAddGuestsDefaultEnabled;
+        localDefaultNames.add("addGuestsEnabled");
       }
       if (typeof stored.talkAddParticipantsDefaultEnabled === "boolean"
         && typeof stored.talkAddUsersDefaultEnabled !== "boolean"
         && typeof stored.talkAddGuestsDefaultEnabled !== "boolean"){
         defaults.addUsersEnabled = stored.talkAddParticipantsDefaultEnabled;
         defaults.addGuestsEnabled = stored.talkAddParticipantsDefaultEnabled;
+        localDefaultNames.add("addUsersEnabled");
+        localDefaultNames.add("addGuestsEnabled");
       }
       if (typeof stored.talkPasswordDefaultEnabled === "boolean"){
         defaults.passwordEnabled = stored.talkPasswordDefaultEnabled;
+        localDefaultNames.add("passwordEnabled");
       }
       if (stored.talkDefaultRoomType === "normal"){
         defaults.roomType = "normal";
+        localDefaultNames.add("roomType");
       }else if (stored.talkDefaultRoomType === "event"){
         defaults.roomType = "event";
+        localDefaultNames.add("roomType");
       }
       Object.assign(defaults, NCWizardPolicyUi.readPolicyBoundDefaults(
         {
           active: state.policy.active,
-          policy: state.policy.talk
+          policy: state.policy.talk,
+          editable: state.policy.editable
         },
         TALK_DEFAULT_POLICY_BINDINGS,
-        defaults
+        defaults,
+        { localNames: localDefaultNames }
       ));
     }catch(error){
       logUiError("load defaults failed", error);
@@ -572,7 +593,7 @@
       }
     }
     if (passwordGenerateBtn){
-      passwordGenerateBtn.disabled = !enabled || !state.policy.generatePassword;
+      passwordGenerateBtn.disabled = !enabled;
     }
   }
 
@@ -633,38 +654,47 @@
     const eventTitle = (ev.title || "").trim();
     const metaTitle = (meta.title || "").trim();
     const fallbackTitle = effectiveDefaults.title || t("ui_default_title");
-    if (titleInput){
-      titleInput.value = eventTitle || metaTitle || fallbackTitle;
-    }
-
     const lobbyValue = meta.lobbyEnabled;
     const listableValue = meta.listable;
     const eventValue = meta.eventConversation;
     const addUsersValue = meta.addUsers;
     const addGuestsValue = meta.addGuests;
+    const candidateValues = {
+      title: eventTitle || metaTitle || fallbackTitle,
+      lobby: lobbyValue == null ? !!effectiveDefaults.lobby : !!lobbyValue,
+      listable: listableValue == null ? !!effectiveDefaults.listable : !!listableValue,
+      addUsersEnabled: addUsersValue == null ? !!effectiveDefaults.addUsersEnabled : !!addUsersValue,
+      addGuestsEnabled: addGuestsValue == null ? !!effectiveDefaults.addGuestsEnabled : !!addGuestsValue,
+      passwordEnabled: effectiveDefaults.passwordEnabled !== false,
+      roomType: (eventValue == null ? effectiveDefaults.roomType !== "normal" : !!eventValue) ? "event" : "normal"
+    };
+    const resolvedValues = NCWizardPolicyUi.resolvePolicyBoundValues(
+      state.policy.status,
+      TALK_DEFAULT_POLICY_BINDINGS,
+      candidateValues
+    );
+    if (titleInput){
+      titleInput.value = resolvedValues.title;
+    }
+
     if (lobbyToggle){
-      lobbyToggle.checked = lobbyValue == null ? !!effectiveDefaults.lobby : !!lobbyValue;
+      lobbyToggle.checked = !!resolvedValues.lobby;
     }
     if (listableToggle){
-      listableToggle.checked = listableValue == null ? !!effectiveDefaults.listable : !!listableValue;
+      listableToggle.checked = !!resolvedValues.listable;
     }
     if (addUsersToggle){
-      addUsersToggle.checked = addUsersValue == null
-        ? !!effectiveDefaults.addUsersEnabled
-        : !!addUsersValue;
+      addUsersToggle.checked = !!resolvedValues.addUsersEnabled;
     }
     if (addGuestsToggle){
-      addGuestsToggle.checked = addGuestsValue == null
-        ? !!effectiveDefaults.addGuestsEnabled
-        : !!addGuestsValue;
+      addGuestsToggle.checked = !!resolvedValues.addGuestsEnabled;
     }
-    const eventMode = eventValue == null ? effectiveDefaults.roomType !== "normal" : !!eventValue;
-    setRoomTypeValue(eventMode ? "event" : "normal", { closeDropdown:false });
+    setRoomTypeValue(resolvedValues.roomType, { closeDropdown:false });
       if (passwordToggle){
-        const enabled = effectiveDefaults.passwordEnabled !== false;
+        const enabled = resolvedValues.passwordEnabled !== false;
         passwordToggle.checked = enabled;
         applyPasswordToggleState(enabled);
-        if (enabled && passwordInput && !passwordInput.value && state.passwordPolicy){
+        if (enabled && passwordInput && !passwordInput.value){
           passwordPolicyActions.generate().then((pwd) => {
             if (pwd && passwordInput && !passwordInput.value){
               passwordInput.value = pwd;
@@ -1169,7 +1199,7 @@
     if (!buildStandard){
       return { text:"", html:"" };
     }
-    if (state.policy.active && policyLang && policyLang !== "default" && policyLang !== "custom"){
+    if (policyLang && policyLang !== "default" && policyLang !== "custom"){
       const text = await buildStandard(url, password, policyLang);
       return { text, html:"" };
     }

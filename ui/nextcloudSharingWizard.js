@@ -470,10 +470,19 @@
    */
   async function loadBasePath(){
     try{
-      const policyBasePath = state.policy.active
-        ? NCPolicyState.coerceString(NCPolicyState.readDomainValue(state.policy.share, "share_base_directory"), "")
-        : "";
-      const basePath = policyBasePath || await NCSharing.getFileLinkBasePath();
+      const stored = browser?.storage?.local
+        ? await browser.storage.local.get([SHARING_KEYS.basePath])
+        : {};
+      const rawLocalBasePath = String(stored?.[SHARING_KEYS.basePath] || "").trim();
+      const localBasePath = rawLocalBasePath || NCSharing.DEFAULT_BASE_PATH;
+      const basePath = NCPolicyState.resolveDefaultValue(
+        state.policy.status,
+        "share",
+        "share_base_directory",
+        localBasePath,
+        !!rawLocalBasePath,
+        NCPolicyState.coerceString
+      );
       state.basePath = basePath || '';
       if (dom.basePathLabel){
         dom.basePathLabel.textContent = state.basePath || '';
@@ -1240,6 +1249,7 @@
         shareDate: shareContext.shareDate.toISOString(),
         folderInfo: shareContext.folderInfo,
         policyShare: state.policy.active ? state.policy.share : null,
+        policyEditableShare: state.policy.active ? state.policy.editable : null,
         permissions,
         passwordEnabled: !!dom.passwordToggle.checked,
         password: dom.passwordInput.value,
@@ -1358,6 +1368,7 @@
       setMessage(i18n('sharing_status_inserting'), 'info');
       const renderOptions = {
         policyShare: state.policy.active ? state.policy.share : null,
+        policyEditableShare: state.policy.active ? state.policy.editable : null,
         noteEnabled,
         note,
         hidePermissions: attachmentMode,
@@ -1378,6 +1389,7 @@
       if (separatePasswordMail){
         const passwordRenderOptions = {
           policyShare: state.policy.active ? state.policy.share : null,
+          policyEditableShare: state.policy.active ? state.policy.editable : null,
           passwordOnly: true
         };
         const passwordMailHtml = await NCSharing.buildHtmlBlock(state.uploadResult.shareInfo, passwordRenderOptions);
@@ -1393,6 +1405,7 @@
           secretsExpireDays: NCSharePasswordDelivery.resolveSecretsExpireDays(state.policy.status),
           renderShareInfo: state.uploadResult.shareInfo,
           policyShare: state.policy.active ? state.policy.share : null,
+          policyEditableShare: state.policy.active ? state.policy.editable : null,
           html: passwordMailHtml,
           plainText: passwordMailPlainText
         });
@@ -1570,7 +1583,7 @@
   /**
    * Register a password-only follow-up mail dispatch in the background.
    * The background captures final recipients when the main message is sent.
-   * @param {{tabId:number,shareLabel:string,shareUrl:string,shareId?:string,folderInfo?:object,password:string,deliveryMode?:string,secretsExpireDays?:number,renderShareInfo?:object,policyShare?:object,html:string,plainText?:string}} payload
+   * @param {{tabId:number,shareLabel:string,shareUrl:string,shareId?:string,folderInfo?:object,password:string,deliveryMode?:string,secretsExpireDays?:number,renderShareInfo?:object,policyShare?:object,policyEditableShare?:object,html:string,plainText?:string}} payload
    * @returns {Promise<void>}
    */
   async function registerSeparatePasswordDispatch(payload = {}){
@@ -1606,6 +1619,9 @@
           : null,
         policyShare: payload?.policyShare && typeof payload.policyShare === "object"
           ? payload.policyShare
+          : null,
+        policyEditableShare: payload?.policyEditableShare && typeof payload.policyEditableShare === "object"
+          ? payload.policyEditableShare
           : null,
         html,
         plainText

@@ -107,7 +107,7 @@ Datenfluss:
 - Debug-Modus für detaillierte Logs
 - Freigabe-Basisverzeichnis und Default-Share-Name/Rechte/Passwort/Ablauf
 - Freigabe-Anhangsregeln (`sharingAttachmentsAlwaysConnector`, `sharingAttachmentsOfferAboveEnabled`, `sharingAttachmentsOfferAboveMb`)
-- Talk Defaults: Titel, Lobby, Listable, Room Type (event vs normal), Benutzer hinzufügen + Gäste hinzufügen
+- Talk Defaults: Titel, Lobby, Listable, Passwortschutz mit initial erzeugtem Passwort, Room Type (event vs normal), Benutzer hinzufügen + Gäste hinzufügen
 Security-Hinweise:
 - Zugangsdaten liegen in browser.storage.local und werden für Basic-Auth-Header genutzt
 - Debug-Logs können URLs und Metadaten enthalten; Logs vertraulich behandeln

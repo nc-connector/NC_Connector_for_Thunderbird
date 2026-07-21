@@ -109,7 +109,7 @@ Data flow:
 - Debug mode for verbose logging
 - Sharing base path and default share name/permissions/password/expiry
 - Sharing attachment automation defaults (`sharingAttachmentsAlwaysConnector`, `sharingAttachmentsOfferAboveEnabled`, `sharingAttachmentsOfferAboveMb`)
-- Talk defaults: title, lobby, listable, room type (event vs normal), add users + add guests toggles
+- Talk defaults: title, lobby, listable, password protection with an initial generated password, room type (event vs normal), add users + add guests toggles
 Security notes:
 - Credentials are stored in browser.storage.local and used to build Basic auth headers
 - Debug logs may include URLs and metadata; treat logs as sensitive

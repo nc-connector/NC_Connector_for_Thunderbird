@@ -105,6 +105,7 @@ const DEFAULT_SHARING_BASE = (typeof NCSharing !== "undefined" ? NCSharing.DEFAU
 const OPTION_SHARE_POLICY_BINDINGS = [
   {
     name: "sharingBasePath",
+    storageKey: SHARING_KEYS.basePath,
     domain: "share",
     key: "share_base_directory",
     element: sharingBaseInput,
@@ -115,6 +116,7 @@ const OPTION_SHARE_POLICY_BINDINGS = [
   },
   {
     name: "sharingDefaultShareName",
+    storageKey: SHARING_KEYS.defaultShareName,
     domain: "share",
     key: "share_name_template",
     element: sharingDefaultShareNameInput,
@@ -125,6 +127,7 @@ const OPTION_SHARE_POLICY_BINDINGS = [
   },
   {
     name: "sharingDefaultPermCreate",
+    storageKey: SHARING_KEYS.defaultPermCreate,
     domain: "share",
     key: "share_permission_upload",
     element: sharingDefaultPermCreateInput,
@@ -133,6 +136,7 @@ const OPTION_SHARE_POLICY_BINDINGS = [
   },
   {
     name: "sharingDefaultPermWrite",
+    storageKey: SHARING_KEYS.defaultPermWrite,
     domain: "share",
     key: "share_permission_edit",
     element: sharingDefaultPermWriteInput,
@@ -141,6 +145,7 @@ const OPTION_SHARE_POLICY_BINDINGS = [
   },
   {
     name: "sharingDefaultPermDelete",
+    storageKey: SHARING_KEYS.defaultPermDelete,
     domain: "share",
     key: "share_permission_delete",
     element: sharingDefaultPermDeleteInput,
@@ -149,6 +154,7 @@ const OPTION_SHARE_POLICY_BINDINGS = [
   },
   {
     name: "sharingDefaultPassword",
+    storageKey: SHARING_KEYS.defaultPassword,
     domain: "share",
     key: "share_set_password",
     element: sharingDefaultPasswordInput,
@@ -158,6 +164,7 @@ const OPTION_SHARE_POLICY_BINDINGS = [
   },
   {
     name: "sharingDefaultPasswordSeparate",
+    storageKey: SHARING_KEYS.defaultPasswordSeparate,
     domain: "share",
     key: "share_send_password_separately",
     element: sharingDefaultPasswordSeparateInput,
@@ -166,6 +173,7 @@ const OPTION_SHARE_POLICY_BINDINGS = [
   },
   {
     name: "sharingDefaultPasswordDeliveryMode",
+    storageKey: SHARING_KEYS.defaultPasswordDeliveryMode,
     domain: "share",
     key: "share_send_password_mode",
     element: sharingDefaultPasswordDeliveryModeSelect,
@@ -177,6 +185,7 @@ const OPTION_SHARE_POLICY_BINDINGS = [
   },
   {
     name: "sharingDefaultExpireDays",
+    storageKey: SHARING_KEYS.defaultExpireDays,
     domain: "share",
     key: "share_expire_days",
     element: sharingDefaultExpireDaysInput,
@@ -187,6 +196,7 @@ const OPTION_SHARE_POLICY_BINDINGS = [
   },
   {
     name: "shareBlockLang",
+    storageKey: "shareBlockLang",
     domain: "share",
     key: "language_share_html_block",
     element: shareBlockLangSelect,
@@ -199,6 +209,7 @@ const OPTION_SHARE_POLICY_BINDINGS = [
 const OPTION_TALK_POLICY_BINDINGS = [
   {
     name: "talkDefaultTitle",
+    storageKey: "talkDefaultTitle",
     domain: "talk",
     key: "talk_title",
     element: talkDefaultTitleInput,
@@ -209,6 +220,7 @@ const OPTION_TALK_POLICY_BINDINGS = [
   },
   {
     name: "talkDefaultLobby",
+    storageKey: "talkDefaultLobby",
     domain: "talk",
     key: "talk_lobby_active",
     element: talkDefaultLobbyInput,
@@ -218,6 +230,7 @@ const OPTION_TALK_POLICY_BINDINGS = [
   },
   {
     name: "talkDefaultListable",
+    storageKey: "talkDefaultListable",
     domain: "talk",
     key: "talk_show_in_search",
     element: talkDefaultListableInput,
@@ -227,6 +240,8 @@ const OPTION_TALK_POLICY_BINDINGS = [
   },
   {
     name: "talkAddUsersDefaultEnabled",
+    storageKey: "talkAddUsersDefaultEnabled",
+    legacyStorageKey: "talkAddParticipantsDefaultEnabled",
     domain: "talk",
     key: "talk_add_users",
     element: talkDefaultAddUsersInput,
@@ -235,6 +250,8 @@ const OPTION_TALK_POLICY_BINDINGS = [
   },
   {
     name: "talkAddGuestsDefaultEnabled",
+    storageKey: "talkAddGuestsDefaultEnabled",
+    legacyStorageKey: "talkAddParticipantsDefaultEnabled",
     domain: "talk",
     key: "talk_add_guests",
     element: talkDefaultAddGuestsInput,
@@ -243,6 +260,7 @@ const OPTION_TALK_POLICY_BINDINGS = [
   },
   {
     name: "talkPasswordDefaultEnabled",
+    storageKey: "talkPasswordDefaultEnabled",
     domain: "talk",
     key: "talk_set_password",
     element: talkDefaultPasswordInput,
@@ -252,6 +270,7 @@ const OPTION_TALK_POLICY_BINDINGS = [
   },
   {
     name: "talkDeleteRoomOnEventDelete",
+    storageKey: "talkDeleteRoomOnEventDelete",
     domain: "talk",
     key: "talk_delete_room_on_event_delete",
     element: talkDeleteRoomOnEventDeleteInput,
@@ -261,6 +280,7 @@ const OPTION_TALK_POLICY_BINDINGS = [
   },
   {
     name: "eventDescriptionLang",
+    storageKey: "eventDescriptionLang",
     domain: "talk",
     key: "language_talk_description",
     element: eventDescriptionLangSelect,
@@ -444,8 +464,10 @@ function getPolicyLanguageKey(domain){
   return domain === "talk" ? "language_talk_description" : "language_share_html_block";
 }
 
-function getPolicyTemplateKey(domain){
-  return domain === "talk" ? "talk_invitation_template" : "share_html_block_template";
+function getPolicyTemplateKeys(domain){
+  return domain === "talk"
+    ? ["talk_invitation_template"]
+    : ["share_html_block_template_v2", "share_html_block_template"];
 }
 
 /**
@@ -462,8 +484,10 @@ function isCustomLanguageModeAvailable(domain){
     NCPolicyState.coerceString(NCPolicyState.readPolicyValue(runtimePolicyStatus, domain, getPolicyLanguageKey(domain)), ""),
     { allowCustom: true }
   );
-  const template = NCPolicyState.coerceString(NCPolicyState.readPolicyValue(runtimePolicyStatus, domain, getPolicyTemplateKey(domain)), "");
-  return language === "custom" && !!template;
+  const hasTemplate = getPolicyTemplateKeys(domain).some((key) => (
+    !!NCPolicyState.coerceString(NCPolicyState.readPolicyValue(runtimePolicyStatus, domain, key), "")
+  ));
+  return language === "custom" && hasTemplate;
 }
 
 function isSeparatePasswordMailFeatureAvailable(){
@@ -548,6 +572,96 @@ function applyOptionPolicyBindings(bindings){
   return locks;
 }
 
+function hasValidStoredBindingValue(stored, binding){
+  if (!binding?.storageKey){
+    return false;
+  }
+  let value = stored?.[binding.storageKey];
+  if (value === undefined && binding.legacyStorageKey){
+    value = stored?.[binding.legacyStorageKey];
+  }
+  if (binding.type === "boolean"){
+    return typeof value === "boolean";
+  }
+  if (binding.type === "int"){
+    return Number.isFinite(Number.parseInt(String(value ?? ""), 10));
+  }
+  if (binding.type === "string"){
+    return typeof value === "string" && !!value.trim();
+  }
+  return value !== undefined;
+}
+
+/**
+ * Apply backend defaults once during initial options loading. Editable values
+ * keep valid local storage values; locked values always use the backend.
+ * @param {Array<object>} bindings
+ * @param {object} stored
+ */
+function applyInitialPolicyDefaults(bindings, stored){
+  const domains = new Set(bindings.map((binding) => binding.domain).filter(Boolean));
+  domains.forEach((domain) => {
+    const domainBindings = bindings.filter((binding) => binding.domain === domain && binding.element && binding.property);
+    const currentValues = {};
+    const localNames = new Set();
+    domainBindings.forEach((binding) => {
+      currentValues[binding.name] = binding.element[binding.property];
+      if (hasValidStoredBindingValue(stored, binding)){
+        localNames.add(binding.name);
+      }
+    });
+    const resolved = NCWizardPolicyUi.readPolicyBoundDefaults(
+      NCWizardPolicyUi.readPolicyDomain(runtimePolicyStatus, domain),
+      domainBindings,
+      currentValues,
+      { localNames }
+    );
+    domainBindings.forEach((binding) => {
+      binding.element[binding.property] = resolved[binding.name];
+    });
+  });
+}
+
+function applyInitialSpecialPolicyDefaults(stored){
+  const hasLocalRoomType = stored?.talkDefaultRoomType === "normal" || stored?.talkDefaultRoomType === "event";
+  const roomType = NCPolicyState.resolveDefaultValue(
+    runtimePolicyStatus,
+    "talk",
+    "talk_room_type",
+    getSelectedTalkDefaultRoomType(),
+    hasLocalRoomType,
+    NCPolicyState.coerceString
+  );
+  setTalkDefaultRoomType(roomType === "normal" ? "normal" : "event");
+
+  const hasLocalAlways = typeof stored?.[SHARING_KEYS.attachmentsAlwaysConnector] === "boolean";
+  if (sharingAttachmentsAlwaysNcInput){
+    sharingAttachmentsAlwaysNcInput.checked = NCPolicyState.resolveDefaultValue(
+      runtimePolicyStatus,
+      "share",
+      "attachments_always_via_ncconnector",
+      !!sharingAttachmentsAlwaysNcInput.checked,
+      hasLocalAlways,
+      NCPolicyState.coerceBoolean
+    );
+  }
+
+  const hasLocalThreshold = typeof stored?.[SHARING_KEYS.attachmentsOfferAboveEnabled] === "boolean"
+    || stored?.[SHARING_KEYS.attachmentsOfferAboveMb] !== undefined;
+  const usePolicyThreshold = NCPolicyState.isDomainActive(runtimePolicyStatus, "share")
+    && (!hasLocalThreshold || NCPolicyState.isLocked(runtimePolicyStatus, "share", "attachments_min_size_mb"))
+    && NCPolicyState.hasPolicyKey(runtimePolicyStatus, "share", "attachments_min_size_mb");
+  if (usePolicyThreshold){
+    const rawThreshold = NCPolicyState.readPolicyValue(runtimePolicyStatus, "share", "attachments_min_size_mb");
+    if (sharingAttachmentsOfferAboveEnabledInput){
+      sharingAttachmentsOfferAboveEnabledInput.checked = rawThreshold != null;
+    }
+    if (rawThreshold != null && sharingAttachmentsOfferAboveMbInput){
+      sharingAttachmentsOfferAboveMbInput.value = String(normalizeAttachmentThresholdMb(rawThreshold));
+    }
+  }
+}
+
 function normalizeEmailAddress(value){
   const email = String(value || "").trim().toLowerCase();
   return email.includes("@") ? email : "";
@@ -573,7 +687,6 @@ function getEmailSignatureUnavailableHint(){
       || "Please update the NC Connector backend. This backend version does not support central email signatures yet.";
   }
   if (!NCPolicyState.isDomainActive(runtimePolicyStatus, "email_signature")
-    || NCPolicyState.readPolicyValue(runtimePolicyStatus, "email_signature", "email_signature_on_compose") !== true
     || !String(NCPolicyState.readPolicyValue(runtimePolicyStatus, "email_signature", "email_signature_template") || "").trim()
     || !normalizeEmailAddress(NCPolicyState.readPolicyValue(runtimePolicyStatus, "email_signature", "user_email"))){
     return i18n("options_signature_backend_inactive_tooltip")
@@ -666,15 +779,25 @@ function applyPolicyWarningUi(){
   });
 }
 
-async function refreshBackendPolicyStatus(){
+async function refreshBackendPolicyStatus(credentials = null){
   try{
-    const response = await browser.runtime.sendMessage({
-      type: "policy:getStatus"
-    });
-    if (response?.ok && response.status){
-      runtimePolicyStatus = response.status;
-    }
+    const response = credentials
+      ? await browser.runtime.sendMessage({
+        type: "options:testConnection",
+        payload: {
+          baseUrl: credentials.baseUrl,
+          user: credentials.user,
+          appPass: credentials.appPass
+        }
+      })
+      : await browser.runtime.sendMessage({
+        type: "policy:getStatus"
+      });
+    runtimePolicyStatus = response?.ok
+      ? (credentials ? (response.policyStatus || null) : (response.status || null))
+      : null;
   }catch(error){
+    runtimePolicyStatus = null;
     globalThis.NCLogContext.safeConsoleError(OPTIONS_LOG_PREFIX, "policy status check failed", error);
   }
   refreshLanguageOverrideSelects();
@@ -906,11 +1029,17 @@ async function load(){
   setTalkDefaultRoomType(stored.talkDefaultRoomType);
   await refreshBackendPolicyStatus();
   if (shareBlockLangSelect){
-    shareBlockLangSelect.value = normalizeLangChoice(storedShareBlockLang);
+    shareBlockLangSelect.value = normalizeLangChoice(storedShareBlockLang, {
+      allowCustom: isCustomLanguageModeAvailable("share")
+    });
   }
   if (eventDescriptionLangSelect){
-    eventDescriptionLangSelect.value = normalizeLangChoice(storedEventDescriptionLang);
+    eventDescriptionLangSelect.value = normalizeLangChoice(storedEventDescriptionLang, {
+      allowCustom: isCustomLanguageModeAvailable("talk")
+    });
   }
+  applyInitialPolicyDefaults(OPTION_SHARE_POLICY_BINDINGS.concat(OPTION_TALK_POLICY_BINDINGS), stored);
+  applyInitialSpecialPolicyDefaults(stored);
   applyPolicySettingsOverlay();
   await refreshTalkSystemAddressbookState({ forceRefresh: true });
   setAuthMode(stored.authMode || "manual");
@@ -1128,8 +1257,12 @@ async function save(){
   let talkPasswordDefaultEnabled = talkDefaultPasswordInput ? !!talkDefaultPasswordInput.checked : true;
   let talkDeleteRoomOnEventDelete = talkDeleteRoomOnEventDeleteInput ? !!talkDeleteRoomOnEventDeleteInput.checked : false;
   let talkDefaultRoomType = getSelectedTalkDefaultRoomType();
-  let shareBlockLang = normalizeLangChoice(shareBlockLangSelect?.value);
-  let eventDescriptionLang = normalizeLangChoice(eventDescriptionLangSelect?.value);
+  let shareBlockLang = normalizeLangChoice(shareBlockLangSelect?.value, {
+    allowCustom: isCustomLanguageModeAvailable("share")
+  });
+  let eventDescriptionLang = normalizeLangChoice(eventDescriptionLangSelect?.value, {
+    allowCustom: isCustomLanguageModeAvailable("talk")
+  });
   let emailSignatureOnCompose = emailSignatureOnComposeInput ? !!emailSignatureOnComposeInput.checked : false;
   let emailSignatureOnReply = emailSignatureOnReplyInput ? !!emailSignatureOnReplyInput.checked : false;
   let emailSignatureOnForward = emailSignatureOnForwardInput ? !!emailSignatureOnForwardInput.checked : false;
@@ -1137,7 +1270,7 @@ async function save(){
   if (!permissionOk){
     return;
   }
-  await refreshBackendPolicyStatus();
+  await refreshBackendPolicyStatus({ baseUrl, user, appPass });
   const policyValues = NCWizardPolicyUi.resolvePolicyBoundValues(
     runtimePolicyStatus,
     OPTION_SHARE_POLICY_BINDINGS.concat(OPTION_TALK_POLICY_BINDINGS),
@@ -1320,7 +1453,6 @@ if (sharingDefaultPasswordSeparateInput){
     updateSharingPasswordState();
   });
 }
-
 const testButton = document.getElementById("testConnection");
 if (testButton){
   testButton.addEventListener("click", async () => {
@@ -1646,7 +1778,7 @@ function setTalkDefaultRoomType(value, options = {}){
 function normalizeLangChoice(value, options = {}){
   const allowCustom = options.allowCustom !== undefined
     ? !!options.allowCustom
-    : isCustomLanguageModeAvailable();
+    : false;
   const raw = String(value || "default").trim();
   return NCI18nOverride.normalizeLanguageOverride(raw, { allowCustom });
 }

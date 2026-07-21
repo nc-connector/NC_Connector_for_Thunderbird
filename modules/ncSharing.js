@@ -124,12 +124,16 @@
     });
   }
 
-  async function getShareBlockLang(){
+  async function getShareBlockLanguageSetting(){
     if (typeof browser === "undefined" || !browser?.storage?.local){
-      return "default";
+      return { value: "default", hasLocalValue: false };
     }
     const stored = await browser.storage.local.get(["shareBlockLang"]);
-    return stored.shareBlockLang || "default";
+    const hasLocalValue = typeof stored.shareBlockLang === "string" && !!stored.shareBlockLang.trim();
+    return {
+      value: hasLocalValue ? stored.shareBlockLang : "default",
+      hasLocalValue
+    };
   }
 
   /**
@@ -779,23 +783,26 @@
   }
 
   /**
-   * Resolve the effective share-block language (policy-first, storage fallback).
+   * Resolve the effective share-block language from policy and local storage.
+   * Legacy callers without editability metadata keep the historical policy-first behavior.
    * @param {object} request
    * @returns {Promise<string>}
    */
   async function resolveShareBlockLanguage(request){
+    const localSetting = await getShareBlockLanguageSetting();
     const policyLang = String(request?.policyShare?.language_share_html_block || "").trim();
-    if (policyLang){
-      if (typeof NCI18nOverride !== "undefined" && typeof NCI18nOverride.normalizeLanguageOverride === "function"){
-        return NCI18nOverride.normalizeLanguageOverride(policyLang, { allowCustom: true });
-      }
-      return policyLang;
-    }
-    const storedLang = await getShareBlockLang();
+    const editableShare = request?.policyEditableShare;
+    const hasEditableMetadata = !!editableShare && typeof editableShare === "object";
+    const localMayOverride = hasEditableMetadata
+      && editableShare.language_share_html_block !== false
+      && localSetting.hasLocalValue;
+    const selectedLang = localMayOverride
+      ? localSetting.value
+      : (policyLang || localSetting.value);
     if (typeof NCI18nOverride !== "undefined" && typeof NCI18nOverride.normalizeLanguageOverride === "function"){
-      return NCI18nOverride.normalizeLanguageOverride(storedLang, { allowCustom: true });
+      return NCI18nOverride.normalizeLanguageOverride(selectedLang, { allowCustom: true });
     }
-    return storedLang;
+    return selectedLang;
   }
 
   async function resolveShareLinkPresentation(lang, zipDownload){

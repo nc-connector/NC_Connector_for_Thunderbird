@@ -143,7 +143,9 @@ Runtime behavior:
 - checked when Talk wizard opens
 - checked when Sharing wizard opens
 - checked when add-on settings open and when add-on settings are saved
-- valid active seat => backend policy values apply and `policy_editable=false` fields are locked in the UI
+- valid active seat => each backend value is the initial default until a valid local value exists
+- `policy_editable=true` => a stored local value wins and the control remains editable
+- `policy_editable=false` => the backend value always wins and the control is locked in the UI
 - missing backend / no seat / invalid seat => local add-on settings remain active for the normal local defaults
 - backend-only features stay disabled until their backend/seat requirements are met
 - if the backend is unreachable, Thunderbird falls back to the locally saved add-on settings for Share/Talk defaults
@@ -168,6 +170,7 @@ Runtime behavior:
 - current clients prefer the backend's versioned Share template and automatically fall back to the original template field when connected to an older backend; no administrator migration is required
 - existing custom templates without these variables remain valid and are rendered unchanged apart from their existing placeholder substitutions
 - `policy.talk.event_description_type` may be `html` or `plain_text`; when `html` is active, Thunderbird writes the Talk block into the rich event description editor as HTML and keeps a plain-text representation alongside it for non-HTML consumers
+- if effective `policy.talk.talk_set_password` is `true`, the Talk wizard starts with a generated password; users can replace it or generate another one
 
 Central policy can currently control:
 - Talk defaults and lock state

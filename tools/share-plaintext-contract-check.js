@@ -376,6 +376,77 @@ async function testBackendEffectiveLanguageLocalizesCustomTemplateCopy(){
   }
 }
 
+async function testEditableShareLanguageUsesLocalOverride(){
+  const { context, storageState } = createHarness();
+  storageState.shareBlockLang = "de";
+  const shareInfo = {
+    shareUrl: "https://cloud.example/s/abc123",
+    password: "",
+    expireDate: "",
+    permissions: { read: true, create: false, write: false, delete: false }
+  };
+  const request = {
+    hidePermissions: true,
+    policyShare: {
+      language_share_html_block: "custom",
+      share_html_block_template_v2: "<p>BACKEND-MARKER {URL}</p>"
+    },
+    policyEditableShare: {
+      language_share_html_block: true
+    }
+  };
+
+  const html = await context.NCSharing.buildHtmlBlock(shareInfo, request);
+  const plainText = await context.NCSharing.buildPlainTextBlock(shareInfo, request);
+  assert(!html.includes("BACKEND-MARKER") && !plainText.includes("BACKEND-MARKER"), "Editable Share language must let a stored local language bypass the backend template mode");
+  assert(html.includes("Öffnen Sie den untenstehenden Nextcloud-Link"), "Editable Share language should render the local German HTML copy");
+  assert(plainText.includes("Öffnen Sie den untenstehenden Nextcloud-Link"), "Editable Share language should render the local German plaintext copy");
+}
+
+async function testEditableShareLanguageWithoutLocalUsesBackendDefault(){
+  const { context, storageState } = createHarness();
+  delete storageState.shareBlockLang;
+  const request = {
+    hidePermissions: true,
+    policyShare: {
+      language_share_html_block: "custom",
+      share_html_block_template_v2: "<p>BACKEND-MARKER {URL}</p>"
+    },
+    policyEditableShare: {
+      language_share_html_block: true
+    }
+  };
+  const plainText = await context.NCSharing.buildPlainTextBlock({
+    shareUrl: "https://cloud.example/s/abc123",
+    password: "",
+    expireDate: "",
+    permissions: { read: true, create: false, write: false, delete: false }
+  }, request);
+  assert(plainText.includes("BACKEND-MARKER"), "Editable Share language without a local value must use the backend default");
+}
+
+async function testLockedShareLanguageOverridesLocalValue(){
+  const { context, storageState } = createHarness();
+  storageState.shareBlockLang = "de";
+  const request = {
+    hidePermissions: true,
+    policyShare: {
+      language_share_html_block: "custom",
+      share_html_block_template_v2: "<p>BACKEND-MARKER {URL}</p>"
+    },
+    policyEditableShare: {
+      language_share_html_block: false
+    }
+  };
+  const plainText = await context.NCSharing.buildPlainTextBlock({
+    shareUrl: "https://cloud.example/s/abc123",
+    password: "",
+    expireDate: "",
+    permissions: { read: true, create: false, write: false, delete: false }
+  }, request);
+  assert(plainText.includes("BACKEND-MARKER"), "Locked Share language must override a stored local language");
+}
+
 async function testCustomTemplateResolvesModeAwareLinkVariables(){
   const { context, storageState } = createHarness();
   storageState.shareBlockLang = "custom";
@@ -484,6 +555,9 @@ async function run(){
   await testCustomTemplatePrunesEmptyPasswordAndSanitizes();
   await testCustomTemplateUsesSeparatePasswordHint();
   await testBackendEffectiveLanguageLocalizesCustomTemplateCopy();
+  await testEditableShareLanguageUsesLocalOverride();
+  await testEditableShareLanguageWithoutLocalUsesBackendDefault();
+  await testLockedShareLanguageOverridesLocalValue();
   await testCustomTemplateResolvesModeAwareLinkVariables();
   await testOlderBackendModeAwareTemplateStillRenders();
   await testPlainTextInsertCompactsMarkedRightsSegment();

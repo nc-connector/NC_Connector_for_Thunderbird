@@ -139,6 +139,26 @@ const NCPolicyState = (() => {
     return typeof coerce === "function" ? coerce(policyValue, localValue) : localValue;
   }
 
+  /**
+   * Resolve a persisted default against the active backend policy.
+   * An editable policy value seeds the add-on until a valid local value exists;
+   * a locked policy value always wins.
+   * @param {object|null} status
+   * @param {string} domain
+   * @param {string} key
+   * @param {*} localValue
+   * @param {boolean} hasLocalValue
+   * @param {Function} coerce
+   * @returns {*}
+   */
+  function resolveDefaultValue(status, domain, key, localValue, hasLocalValue, coerce){
+    if (!isDomainActive(status, domain) || (hasLocalValue && !isLocked(status, domain, key))){
+      return localValue;
+    }
+    const policyValue = readPolicyValue(status, domain, key);
+    return typeof coerce === "function" ? coerce(policyValue, localValue) : localValue;
+  }
+
   return {
     POLICY_DOMAINS,
     isObject,
@@ -158,6 +178,7 @@ const NCPolicyState = (() => {
     coerceBoolean,
     coerceInt,
     coerceString,
-    resolveValue
+    resolveValue,
+    resolveDefaultValue
   };
 })();

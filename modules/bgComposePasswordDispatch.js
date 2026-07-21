@@ -322,7 +322,7 @@ function normalizePasswordMailSendMode(value){
  * Recipients are captured from compose.onBeforeSend for the final send action.
  * Initial compose details are captured immediately to preserve identity context.
  * @param {number} tabId
- * @param {{shareLabel?:string,shareUrl?:string,shareId?:string,folderInfo?:object,password?:string,deliveryMode?:string,secretsExpireDays?:number,renderShareInfo?:object,policyShare?:object,html?:string,plainText?:string}} payload
+ * @param {{shareLabel?:string,shareUrl?:string,shareId?:string,folderInfo?:object,password?:string,deliveryMode?:string,secretsExpireDays?:number,renderShareInfo?:object,policyShare?:object,policyEditableShare?:object,html?:string,plainText?:string}} payload
  */
 async function registerSeparatePasswordMailDispatch(tabId, payload = {}){
   if (!Number.isInteger(tabId) || tabId <= 0){
@@ -352,6 +352,9 @@ async function registerSeparatePasswordMailDispatch(tabId, payload = {}){
       : null,
     policyShare: payload?.policyShare && typeof payload.policyShare === "object"
       ? payload.policyShare
+      : null,
+    policyEditableShare: payload?.policyEditableShare && typeof payload.policyEditableShare === "object"
+      ? payload.policyEditableShare
       : null,
     html,
     plainText,
@@ -1014,7 +1017,10 @@ function clonePasswordDispatch(dispatch){
     bcc: Array.isArray(dispatch.bcc) ? dispatch.bcc.slice() : [],
     folderInfo: dispatch.folderInfo && typeof dispatch.folderInfo === "object" ? { ...dispatch.folderInfo } : null,
     renderShareInfo: dispatch.renderShareInfo && typeof dispatch.renderShareInfo === "object" ? { ...dispatch.renderShareInfo } : null,
-    policyShare: dispatch.policyShare && typeof dispatch.policyShare === "object" ? { ...dispatch.policyShare } : null
+    policyShare: dispatch.policyShare && typeof dispatch.policyShare === "object" ? { ...dispatch.policyShare } : null,
+    policyEditableShare: dispatch.policyEditableShare && typeof dispatch.policyEditableShare === "object"
+      ? { ...dispatch.policyEditableShare }
+      : null
   };
 }
 
@@ -1093,6 +1099,7 @@ async function renderPasswordDispatchBodies(dispatch, deliveryValue, secretLink)
   const shareInfo = buildPasswordDeliveryShareInfo(dispatch, deliveryValue);
   const renderOptions = {
     policyShare: dispatch?.policyShare || null,
+    policyEditableShare: dispatch?.policyEditableShare || null,
     passwordOnly: true,
     secretLink: !!secretLink
   };
