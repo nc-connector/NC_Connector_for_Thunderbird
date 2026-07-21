@@ -91,6 +91,8 @@ for persisted monitoring (`browser.calendar.items.onCreated/onUpdated/onRemoved`
   - `accountsRead` is requested only to resolve the actual Thunderbird sender identity of the already-open primary compose window, so the password follow-up can reuse the same sender identity instead of guessing from a visible `From` header string.
   - live sender switches are tracked on `compose.onIdentityChanged`, and the final primary-mail envelope is captured on `compose.onBeforeSend`
   - plain password follow-up uses the captured primary-mail recipient envelope
+  - auto-send parses string recipients with `messengerUtilities.parseMailboxString(...)`, compares `To`/`Cc`/`Bcc` separately including opaque contact/list IDs, and repeats the full comparison after the settle tick
+  - empty, mismatching, or timed-out recipient readiness never reaches `compose.sendMessage()` and opens the existing manual fallback
   - Secrets-link delivery creates one one-time Secrets link per recipient and keeps `Bcc` separation intact
   - if Secrets is unavailable or link creation fails, Thunderbird falls back to plain delivery and warns the user
   - if sender identity cannot be resolved cleanly, or if auto-send fails, the add-on opens an explicit manual fallback draft instead of attempting an unsafe partial send

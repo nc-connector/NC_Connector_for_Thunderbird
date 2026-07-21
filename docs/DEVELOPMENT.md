@@ -648,14 +648,15 @@ Attachment mode specifics:
   - If Thunderbird closes the compose tab while send is still pending, the password-dispatch queue stays alive for the same grace timer as share cleanup. A later successful `onAfterSend` still sends the follow-up; without send confirmation the queue is cleared after the timer.
   - The primary-mail sender is resolved via Thunderbird compose details plus `accountsRead` identity lookup; the password follow-up must use the same Thunderbird identity as the main mail.
   - Plain-text follow-up mails use the captured `To`/`Cc`/`Bcc` envelope from the primary mail.
+  - Before auto-send, background parses string recipients with `messengerUtilities.parseMailboxString(...)` and compares `To`, `Cc`, and `Bcc` separately. Contact and mailing-list references keep their opaque IDs.
   - Secrets mode creates one one-time Secrets link per recipient and preserves `Bcc` separation.
   - Secrets are titled `NCC <share label>` when a label exists, otherwise `NCC share password`.
   - HTML follow-up mails render Secrets URLs as localized link text; plain-text follow-up mails keep the full URL visible.
   - Backend custom password templates (`language_share_html_block=custom` + `share_password_template`) are sanitized in the render path before follow-up registration; rich HTML uses `NCSharing.buildHtmlBlock(...)`, plain text uses `NCSharing.buildPlainTextBlock(...)`, and missing sanitizer or empty sanitized output aborts finalize (fail-closed).
   - Follow-up mail delivery mode mirrors the source compose mode (`isPlainText` / `deliveryFormat`) captured from compose details and refreshed on `compose.onBeforeSend`.
   - Follow-up registration now requires both pre-rendered HTML and pre-rendered plain text; when follow-up is plain text, background uses the provided plain-text block and frames it with a fixed 50-character `#` border.
-  - Dispatch path: first warm the freshly created password compose tab until Thunderbird exposes the expected sender/recipient envelope, then send with the same `sendNow`/`sendLater` mode as the confirmed primary mail.
-  - If sender identity cannot be resolved cleanly, or if immediate send fails (or times out), background opens a prefilled compose draft as explicit manual fallback.
+  - Dispatch path: first warm the freshly created password compose tab until Thunderbird exposes the complete expected recipient envelope, repeat the full comparison after a short settle tick, then send with the same `sendNow`/`sendLater` mode as the confirmed primary mail.
+  - An empty or mismatching envelope and any readiness timeout stop auto-send. As with unresolved sender identity or send failure, background opens a prefilled compose draft as explicit manual fallback.
   - After confirmed primary send, unexpected password-dispatch errors also open manual fallback drafts from the queued payload instead of only notifying.
   - If a manual fallback draft was opened, a dedicated desktop notification tells the user to send the password mail manually.
   - Once the primary mail was sent, password-follow-up problems must never delete the committed remote share.

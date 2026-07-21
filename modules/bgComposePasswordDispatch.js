@@ -61,8 +61,8 @@ function composeRecipientKey(recipient){
     return "";
   }
   const type = String(recipient.type || "").trim().toLowerCase();
-  const id = String(recipient.id || "").trim().toLowerCase();
-  const nodeId = String(recipient.nodeId || "").trim().toLowerCase();
+  const id = String(recipient.id || "").trim();
+  const nodeId = String(recipient.nodeId || "").trim();
   if (type && id){
     return `${type}:id:${id}`;
   }
@@ -96,6 +96,32 @@ function normalizeMailboxEmail(value){
   return email.includes("@") ? email : "";
 }
 
+function collectParsedMailboxEmails(parsed, target = []){
+  for (const mailbox of Array.isArray(parsed) ? parsed : []){
+    const email = normalizeMailboxEmail(mailbox?.email || "");
+    if (email){
+      target.push(email);
+    }
+    if (Array.isArray(mailbox?.group)){
+      collectParsedMailboxEmails(mailbox.group, target);
+    }
+  }
+  return target;
+}
+
+async function parseComposeMailboxEmails(value){
+  const raw = String(value || "").trim();
+  if (!raw){
+    return [];
+  }
+  const messengerUtilities = browser?.messengerUtilities;
+  if (!messengerUtilities || typeof messengerUtilities.parseMailboxString !== "function"){
+    throw new Error("messenger_utilities_mailbox_parser_unavailable");
+  }
+  const parsed = await messengerUtilities.parseMailboxString(raw);
+  return collectParsedMailboxEmails(parsed);
+}
+
 /**
  * Parse the sender mailbox of one compose `from` string.
  * @param {string} value
@@ -106,21 +132,73 @@ async function extractComposeMailboxEmail(value){
   if (!raw){
     return "";
   }
-  const messengerUtilities = browser?.messengerUtilities;
-  if (messengerUtilities && typeof messengerUtilities.parseMailboxString === "function"){
-    try{
-      const parsed = await messengerUtilities.parseMailboxString(raw);
-      if (Array.isArray(parsed) && parsed.length){
-        return normalizeMailboxEmail(parsed[0]?.email || "");
-      }
-    }catch(error){
-      console.error("[NCBG] compose sender mailbox parse failed", {
-        value: raw.slice(0, 160),
-        error: error?.message || String(error)
-      });
+  try{
+    const emails = await parseComposeMailboxEmails(raw);
+    if (emails.length){
+      return emails[0];
     }
+  }catch(error){
+    console.error("[NCBG] compose sender mailbox parse failed", {
+      value: raw.slice(0, 160),
+      error: error?.message || String(error)
+    });
   }
   return "";
+}
+
+async function buildComposeRecipientValueSet(value){
+  const recipients = normalizeComposeRecipientList(value);
+  const keys = new Set();
+  for (const recipient of recipients){
+    if (typeof recipient === "string"){
+      const emails = await parseComposeMailboxEmails(recipient);
+      if (!emails.length){
+        throw new Error("password_mail_recipient_parse_failed");
+      }
+      for (const email of emails){
+        keys.add(`addr:${email}`);
+      }
+      continue;
+    }
+    const key = composeRecipientKey(recipient);
+    if (!key){
+      throw new Error("password_mail_recipient_reference_invalid");
+    }
+    keys.add(key);
+  }
+  return keys;
+}
+
+async function buildComposeRecipientEnvelope(details = {}){
+  const [to, cc, bcc] = await Promise.all([
+    buildComposeRecipientValueSet(details?.to),
+    buildComposeRecipientValueSet(details?.cc),
+    buildComposeRecipientValueSet(details?.bcc)
+  ]);
+  return {
+    to,
+    cc,
+    bcc,
+    count: to.size + cc.size + bcc.size
+  };
+}
+
+function composeRecipientValueSetsMatch(expected, actual){
+  if (!(expected instanceof Set) || !(actual instanceof Set) || expected.size !== actual.size){
+    return false;
+  }
+  for (const key of expected){
+    if (!actual.has(key)){
+      return false;
+    }
+  }
+  return true;
+}
+
+function composeRecipientEnvelopesMatch(expected, actual){
+  return composeRecipientValueSetsMatch(expected?.to, actual?.to)
+    && composeRecipientValueSetsMatch(expected?.cc, actual?.cc)
+    && composeRecipientValueSetsMatch(expected?.bcc, actual?.bcc);
 }
 
 function normalizeComposeIdentityRecord(identity, accountId = ""){
@@ -425,8 +503,8 @@ async function registerSeparatePasswordMailDispatch(tabId, payload = {}){
 
 /**
  * Capture the final sender/recipient envelope from compose.onBeforeSend.
- * The password follow-up itself targets only `To`, but `Cc`/`Bcc` are still
- * recorded here as the final primary-mail recipient state.
+ * The password follow-up reuses `To`, `Cc`, and `Bcc` from the final
+ * primary-mail recipient state.
  * @param {number} tabId
  * @param {object} details
  * @returns {Promise<void>}
@@ -850,19 +928,65 @@ async function sendComposeWithTimeout(composeTabId, sendMode = "sendNow", timeou
   }
 }
 
+async function readPasswordMailComposeState(composeTabId){
+  const details = await browser.compose.getComposeDetails(composeTabId);
+  return {
+    identityId: String(details?.identityId || "").trim(),
+    subject: String(details?.subject || "").trim(),
+    recipients: await buildComposeRecipientEnvelope(details)
+  };
+}
+
+function passwordMailComposeStateMatches(expected, actual){
+  const identityMatches = !expected.identityId || actual.identityId === expected.identityId;
+  const subjectMatches = !expected.subject || actual.subject === expected.subject;
+  return identityMatches
+    && subjectMatches
+    && composeRecipientEnvelopesMatch(expected.recipients, actual.recipients);
+}
+
+function passwordMailComposeStateSummary(state, attempt, settled = false){
+  return {
+    attempt,
+    settled,
+    identityId: state?.identityId || "",
+    subject: state?.subject || "",
+    toCount: state?.recipients?.to?.size || 0,
+    ccCount: state?.recipients?.cc?.size || 0,
+    bccCount: state?.recipients?.bcc?.size || 0
+  };
+}
+
 /**
  * Warm a freshly opened compose tab before auto-send.
  * Thunderbird can return from beginNew() before the compose window is fully
- * ready to send. We therefore poll compose details until the expected sender /
- * recipient envelope is visible, then wait one short additional settle tick.
+ * ready to send. Poll and compare the complete recipient envelope, then repeat
+ * the same check after one short settle tick.
  * @param {number} composeTabId
- * @param {{identityId?:string,to?:Array<any>,subject?:string}} expected
+ * @param {{identityId?:string,to?:Array<any>,cc?:Array<any>,bcc?:Array<any>,subject?:string}} expected
  * @returns {Promise<void>}
  */
 async function waitForComposeAutoSendReady(composeTabId, expected = {}){
-  const expectedIdentityId = String(expected?.identityId || "").trim();
-  const expectedSubject = String(expected?.subject || "").trim();
-  const expectedToCount = normalizeComposeRecipientList(expected?.to).length;
+  const expectedState = {
+    identityId: String(expected?.identityId || "").trim(),
+    subject: String(expected?.subject || "").trim(),
+    recipients: null
+  };
+  try{
+    expectedState.recipients = await buildComposeRecipientEnvelope(expected);
+  }catch(error){
+    console.error("[NCBG] sharing separate password expected recipients invalid", {
+      composeTabId,
+      error: error?.message || String(error)
+    });
+    throw error;
+  }
+  if (expectedState.recipients.count <= 0){
+    console.error("[NCBG] sharing separate password expected recipient envelope empty", {
+      composeTabId
+    });
+    throw new Error("password_mail_expected_recipients_empty");
+  }
   let lastProbe = null;
   let lastError = null;
   for (let attempt = 0; attempt < PASSWORD_MAIL_COMPOSE_READY_RETRY_DELAYS_MS.length; attempt++){
@@ -871,41 +995,40 @@ async function waitForComposeAutoSendReady(composeTabId, expected = {}){
       await waitMs(delayMs);
     }
     try{
-      const details = await browser.compose.getComposeDetails(composeTabId);
-      const actualIdentityId = String(details?.identityId || "").trim();
-      const actualSubject = String(details?.subject || "").trim();
-      const actualTo = normalizeComposeRecipientList(details?.to);
-      const readyIdentity = !expectedIdentityId || actualIdentityId === expectedIdentityId;
-      const readySubject = !expectedSubject || actualSubject === expectedSubject;
-      const readyRecipients = !expectedToCount || actualTo.length >= expectedToCount;
-      lastProbe = {
-        attempt: attempt + 1,
-        identityId: actualIdentityId,
-        subject: actualSubject,
-        toCount: actualTo.length
-      };
-      if (readyIdentity && readySubject && readyRecipients){
+      let actualState = await readPasswordMailComposeState(composeTabId);
+      lastProbe = passwordMailComposeStateSummary(actualState, attempt + 1);
+      if (passwordMailComposeStateMatches(expectedState, actualState)){
         // getComposeDetails can expose the envelope before send commands settle.
-        // One short tick avoids intermittent empty-recipient sends on newer TB builds.
         await waitMs(250);
-        L("sharing separate password compose ready", {
-          composeTabId,
-          attempt: attempt + 1,
-          to: actualTo.length,
-          hasIdentityId: !!actualIdentityId,
-          subjectLength: actualSubject.length
-        });
-        return;
+        actualState = await readPasswordMailComposeState(composeTabId);
+        lastProbe = passwordMailComposeStateSummary(actualState, attempt + 1, true);
+        if (passwordMailComposeStateMatches(expectedState, actualState)){
+          L("sharing separate password compose ready", {
+            composeTabId,
+            attempt: attempt + 1,
+            to: actualState.recipients.to.size,
+            cc: actualState.recipients.cc.size,
+            bcc: actualState.recipients.bcc.size,
+            hasIdentityId: !!actualState.identityId,
+            subjectLength: actualState.subject.length
+          });
+          return;
+        }
       }
       L("sharing separate password compose not ready yet", {
         composeTabId,
         attempt: attempt + 1,
-        expectedTo: expectedToCount,
-        actualTo: actualTo.length,
-        expectedIdentityId: !!expectedIdentityId,
-        actualIdentityId: !!actualIdentityId,
-        expectedSubjectLength: expectedSubject.length,
-        actualSubjectLength: actualSubject.length
+        settled: !!lastProbe?.settled,
+        expectedTo: expectedState.recipients.to.size,
+        actualTo: actualState.recipients.to.size,
+        expectedCc: expectedState.recipients.cc.size,
+        actualCc: actualState.recipients.cc.size,
+        expectedBcc: expectedState.recipients.bcc.size,
+        actualBcc: actualState.recipients.bcc.size,
+        expectedIdentityId: !!expectedState.identityId,
+        actualIdentityId: !!actualState.identityId,
+        expectedSubjectLength: expectedState.subject.length,
+        actualSubjectLength: actualState.subject.length
       });
     }catch(error){
       lastError = error;
@@ -921,6 +1044,7 @@ async function waitForComposeAutoSendReady(composeTabId, expected = {}){
     lastProbe,
     error: lastError?.message || ""
   });
+  throw new Error("password_mail_compose_readiness_timeout");
 }
 
 /**
@@ -1271,6 +1395,8 @@ async function sendSeparatePasswordMail(tabId, queue, sendMode = "sendNow"){
       await waitForComposeAutoSendReady(composeTabId, {
         identityId: identityResolution.identityId,
         to: dispatch.to,
+        cc: dispatch.cc,
+        bcc: dispatch.bcc,
         subject: autoComposeDetails.subject
       });
       await sendComposeWithTimeout(composeTabId, passwordSendMode, PASSWORD_MAIL_AUTO_SEND_TIMEOUT_MS);

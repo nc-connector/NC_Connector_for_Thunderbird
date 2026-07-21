@@ -53,6 +53,7 @@ Data flow:
   - Secrets mode creates one one-time link per recipient and falls back to plain text with a warning if Secrets is unavailable
   - main share block hides inline password and shows a separate-password notice
   - password-only follow-up mail is sent after the main compose message is sent (auto-send with timeout guard + manual fallback draft on send failure)
+  - auto-send compares the complete `To`/`Cc`/`Bcc` envelope before sending and opens the manual fallback on mismatch or timeout
   - successful password-mail delivery triggers a desktop success notification
   - once the primary mail was sent, password-follow-up problems never delete the committed remote share
 - Optional compose attachment automation:

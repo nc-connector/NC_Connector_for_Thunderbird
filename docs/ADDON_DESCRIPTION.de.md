@@ -51,6 +51,7 @@ Datenfluss:
   - nur aktiv, wenn Passwortschutz aktiv ist
   - Hauptmail blendet das Inline-Passwort aus und zeigt einen Hinweis auf die separate Passwortmail
   - Passwort-Only-Follow-up wird nach Versand der Hauptmail gesendet (Auto-Send mit Timeout-Guard; bei Sendefehler mit manuellem Fallback-Entwurf)
+  - Auto-Send vergleicht vor dem Versand den vollständigen `To`-/`Cc`-/`Bcc`-Umschlag und öffnet bei Abweichung oder Timeout den manuellen Fallback
   - bei erfolgreichem Passwortversand wird eine Desktop-Erfolgsmeldung angezeigt
   - sobald die Hauptmail gesendet wurde, löschen Probleme beim Passwort-Follow-up niemals die bereits freigegebene Remote-Freigabe
 - Optionale Compose-Anhang-Automatisierung:
