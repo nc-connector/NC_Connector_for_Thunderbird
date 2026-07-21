@@ -497,6 +497,18 @@
   "options_sharing_attachments_link_target_zip_download": {
     "message": "ZIP-letöltés"
   },
+  "options_sharing_attachments_link_target_tooltip_title": {
+    "message": "🔗 Mellékletek hivatkozásának célja"
+  },
+  "options_sharing_attachments_link_target_tooltip_line1": {
+    "message": "A ZIP-letöltés közvetlenül ZIP-archívumként tölti le a megosztott fájlokat."
+  },
+  "options_sharing_attachments_link_target_tooltip_line2": {
+    "message": "A Nextcloud megosztási oldal először a böngészőben nyitja meg a megosztást."
+  },
+  "options_sharing_attachments_link_target_tooltip_line3": {
+    "message": "A választás csak a mellékletmódra vonatkozik; a kézi megosztások változatlanok maradnak."
+  },
   "options_sharing_attachments_always_label": {
     "message": "A mellékletek kezelése mindig az NC Connectorral"
   },

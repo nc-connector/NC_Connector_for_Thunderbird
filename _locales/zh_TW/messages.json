@@ -497,6 +497,18 @@
   "options_sharing_attachments_link_target_zip_download": {
     "message": "ZIP 下載"
   },
+  "options_sharing_attachments_link_target_tooltip_title": {
+    "message": "🔗 附件連結目標"
+  },
+  "options_sharing_attachments_link_target_tooltip_line1": {
+    "message": "ZIP 下載會將分享的檔案直接下載為 ZIP 壓縮檔。"
+  },
+  "options_sharing_attachments_link_target_tooltip_line2": {
+    "message": "Nextcloud 分享頁面會先在瀏覽器中開啟分享內容。"
+  },
+  "options_sharing_attachments_link_target_tooltip_line3": {
+    "message": "此選擇僅適用於附件模式；手動分享維持不變。"
+  },
   "options_sharing_attachments_always_label": {
     "message": "一律透過 NC Connector 處理附件"
   },

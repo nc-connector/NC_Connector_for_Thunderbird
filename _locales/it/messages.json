@@ -497,6 +497,18 @@
   "options_sharing_attachments_link_target_zip_download": {
     "message": "Download ZIP"
   },
+  "options_sharing_attachments_link_target_tooltip_title": {
+    "message": "🔗 Destinazione del link degli allegati"
+  },
+  "options_sharing_attachments_link_target_tooltip_line1": {
+    "message": "Il download ZIP scarica direttamente i file condivisi come archivio ZIP."
+  },
+  "options_sharing_attachments_link_target_tooltip_line2": {
+    "message": "La pagina di condivisione Nextcloud apre prima la condivisione nel browser."
+  },
+  "options_sharing_attachments_link_target_tooltip_line3": {
+    "message": "La selezione si applica solo alla modalità allegati; le condivisioni manuali rimangono invariate."
+  },
   "options_sharing_attachments_always_label": {
     "message": "Gestisci sempre gli allegati tramite NC Connector"
   },

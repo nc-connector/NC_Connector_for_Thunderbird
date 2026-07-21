@@ -497,6 +497,18 @@
   "options_sharing_attachments_link_target_zip_download": {
     "message": "ZIP 下载"
   },
+  "options_sharing_attachments_link_target_tooltip_title": {
+    "message": "🔗 附件链接目标"
+  },
+  "options_sharing_attachments_link_target_tooltip_line1": {
+    "message": "ZIP 下载会将共享文件直接下载为 ZIP 压缩包。"
+  },
+  "options_sharing_attachments_link_target_tooltip_line2": {
+    "message": "Nextcloud 共享页面会先在浏览器中打开共享内容。"
+  },
+  "options_sharing_attachments_link_target_tooltip_line3": {
+    "message": "此选择仅适用于附件模式；手动共享保持不变。"
+  },
   "options_sharing_attachments_always_label": {
     "message": "始终通过 NC Connector 处理附件"
   },

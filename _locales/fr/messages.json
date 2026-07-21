@@ -491,6 +491,18 @@
   "options_sharing_attachments_link_target_zip_download": {
     "message": "Téléchargement ZIP"
   },
+  "options_sharing_attachments_link_target_tooltip_title": {
+    "message": "🔗 Cible du lien des pièces jointes"
+  },
+  "options_sharing_attachments_link_target_tooltip_line1": {
+    "message": "Le téléchargement ZIP permet de télécharger directement les fichiers partagés sous forme d'archive ZIP."
+  },
+  "options_sharing_attachments_link_target_tooltip_line2": {
+    "message": "La page de partage Nextcloud ouvre d'abord le partage dans le navigateur."
+  },
+  "options_sharing_attachments_link_target_tooltip_line3": {
+    "message": "Ce choix s'applique uniquement au mode pièces jointes ; les partages manuels restent inchangés."
+  },
   "options_sharing_attachments_always_label": {
     "message": "Toujours traiter les pièces jointes via NC Connector"
   },

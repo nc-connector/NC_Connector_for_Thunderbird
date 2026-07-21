@@ -497,6 +497,18 @@
   "options_sharing_attachments_link_target_zip_download": {
     "message": "Stažení ZIP"
   },
+  "options_sharing_attachments_link_target_tooltip_title": {
+    "message": "🔗 Cíl odkazu pro přílohy"
+  },
+  "options_sharing_attachments_link_target_tooltip_line1": {
+    "message": "Stažení ZIP stáhne sdílené soubory přímo jako archiv ZIP."
+  },
+  "options_sharing_attachments_link_target_tooltip_line2": {
+    "message": "Stránka sdílení Nextcloud nejprve otevře sdílení v prohlížeči."
+  },
+  "options_sharing_attachments_link_target_tooltip_line3": {
+    "message": "Tato volba platí pouze pro režim příloh; ruční sdílení zůstávají beze změny."
+  },
   "options_sharing_attachments_always_label": {
     "message": "Přílohy vždy zpracovat přes NC Connector"
   },

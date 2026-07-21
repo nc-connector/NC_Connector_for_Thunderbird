@@ -520,7 +520,17 @@ footer{
     <fieldset class="auth-block">
       <legend data-i18n="options_sharing_attachments_heading">Attachments</legend>
       <div class="row" id="sharingAttachmentsLinkTargetRow">
-        <label for="sharingAttachmentsLinkTarget" data-i18n="options_sharing_attachments_link_target_label">Attachment link target</label>
+        <label for="sharingAttachmentsLinkTarget" class="option-tooltip-wrap">
+          <span data-i18n="options_sharing_attachments_link_target_label">Attachment link target</span>
+          <div class="option-tooltip" role="tooltip">
+            <div class="option-tooltip-title" data-i18n="options_sharing_attachments_link_target_tooltip_title">🔗 Attachment link target</div>
+            <ul class="option-tooltip-list">
+              <li data-i18n="options_sharing_attachments_link_target_tooltip_line1">ZIP download downloads the shared files directly as a ZIP archive.</li>
+              <li data-i18n="options_sharing_attachments_link_target_tooltip_line2">The Nextcloud share page opens the share in the browser first.</li>
+              <li data-i18n="options_sharing_attachments_link_target_tooltip_line3">This selection applies only to attachment mode; manual shares remain unchanged.</li>
+            </ul>
+          </div>
+        </label>
         <select id="sharingAttachmentsLinkTarget">
           <option value="zip_download" data-i18n="options_sharing_attachments_link_target_zip_download">ZIP download</option>
           <option value="share_page" data-i18n="options_sharing_attachments_link_target_share_page">Nextcloud share page</option>
