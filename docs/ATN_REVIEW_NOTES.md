@@ -106,6 +106,7 @@ for persisted monitoring (`browser.calendar.items.onCreated/onUpdated/onRemoved`
   - sanitized signature HTML is parsed with `DOMParser` and imported into the compose DOM via `document.importNode(...)`
   - signature change detection serializes managed signature child nodes with `XMLSerializer`
   - a bounded two-second observer repeats the same replacement path when Thunderbird or Signature Switch inserts a matching local signature after compose initialization; it then disconnects
+  - background queues identity changes per compose tab and rechecks the current identity plus its email immediately before each signature write
 - Backend policy availability is evaluated per policy domain. Older backend
   payloads without `policy.email_signature` disable only central email
   signatures with an update hint; Share/Talk policy domains remain active when

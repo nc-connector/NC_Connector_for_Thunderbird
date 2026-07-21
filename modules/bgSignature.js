@@ -23,7 +23,7 @@ const NCEmailSignature = (() => {
   };
   const INIT_RETRY_DELAYS_MS = [100, 250, 500, 900, 1400];
   const TAB_STATE = new Map();
-  const PENDING_TABS = new Set();
+  const APPLY_STATE_BY_TAB = new Map();
 
   function normalizeEmail(value){
     const email = String(value || "").trim().toLowerCase();
@@ -215,6 +215,24 @@ const NCEmailSignature = (() => {
     return new Promise((resolve) => setTimeout(resolve, Math.max(0, Number(ms) || 0)));
   }
 
+  function isApplyRequestCurrent(tabId, applyState, generation){
+    const current = APPLY_STATE_BY_TAB.get(tabId);
+    return current === applyState && current.generation === generation;
+  }
+
+  async function readComposeDetails(tabId, reason){
+    try{
+      return await browser.compose.getComposeDetails(tabId);
+    }catch(error){
+      L("email signature compose details unavailable", {
+        tabId,
+        reason,
+        error: error?.message || String(error)
+      });
+      return null;
+    }
+  }
+
   async function waitForComposeScript(tabId){
     for (const delayMs of INIT_RETRY_DELAYS_MS){
       try{
@@ -230,11 +248,61 @@ const NCEmailSignature = (() => {
     return false;
   }
 
-  async function sendSignatureMessage(tabId, payload){
+  async function sendSignatureMessage(tabId, payloadFactory, applyRequest){
     const ready = await waitForComposeScript(tabId);
     if (!ready){
       return { ok: false, error: "compose_script_unavailable" };
     }
+    let currentDetails = await readComposeDetails(tabId, applyRequest.reason);
+    if (!currentDetails){
+      return { ok: false, error: "compose_details_unavailable" };
+    }
+    if (!isApplyRequestCurrent(tabId, applyRequest.state, applyRequest.generation)){
+      return { ok: false, superseded: true, error: "signature_apply_superseded" };
+    }
+    const currentIdentityId = String(currentDetails.identityId || "").trim();
+    if (currentIdentityId !== applyRequest.identityId){
+      return {
+        ok: false,
+        superseded: true,
+        retry: true,
+        error: "signature_identity_changed_before_apply"
+      };
+    }
+    if (typeof applyRequest.policyMatch === "boolean"){
+      const currentIdentityEmail = await resolveIdentityEmail(currentIdentityId);
+      if (!isApplyRequestCurrent(tabId, applyRequest.state, applyRequest.generation)){
+        return { ok: false, superseded: true, error: "signature_apply_superseded" };
+      }
+      currentDetails = await readComposeDetails(tabId, applyRequest.reason);
+      if (!currentDetails){
+        return { ok: false, error: "compose_details_unavailable" };
+      }
+      const confirmedIdentityId = String(currentDetails.identityId || "").trim();
+      if (confirmedIdentityId !== currentIdentityId){
+        return {
+          ok: false,
+          superseded: true,
+          retry: true,
+          error: "signature_identity_changed_before_apply"
+        };
+      }
+      if (!isApplyRequestCurrent(tabId, applyRequest.state, applyRequest.generation)){
+        return { ok: false, superseded: true, error: "signature_apply_superseded" };
+      }
+      const policyMatches = currentIdentityEmail === applyRequest.policyEmail;
+      if (policyMatches !== applyRequest.policyMatch){
+        return {
+          ok: false,
+          superseded: true,
+          retry: true,
+          error: "signature_identity_policy_match_changed"
+        };
+      }
+    }
+    const payload = typeof payloadFactory === "function"
+      ? payloadFactory(currentDetails)
+      : payloadFactory;
     return browser.tabs.sendMessage(tabId, {
       type: APPLY_MESSAGE_TYPE,
       payload
@@ -255,13 +323,16 @@ const NCEmailSignature = (() => {
     }
   }
 
-  async function clearOwnSignatureIfUnchanged(tabId, reason){
+  async function clearOwnSignatureIfUnchanged(tabId, reason, applyRequest){
     const result = await sendSignatureMessage(tabId, {
       desired: false,
       clearOwnOnly: true,
       clearForeign: false,
       requireExistingOwnUnchanged: true
-    });
+    }, applyRequest);
+    if (result?.superseded){
+      return result;
+    }
     TAB_STATE.set(tabId, { managed: false, matched: false });
     L("email signature own signature cleared or skipped", {
       tabId,
@@ -269,19 +340,23 @@ const NCEmailSignature = (() => {
       changed: result?.changed === true,
       result: String(result?.reason || result?.error || "")
     });
+    return result;
   }
 
-  async function applySignatureToTab(tabId, reason){
-    let details;
-    try{
-      details = await browser.compose.getComposeDetails(tabId);
-    }catch(error){
-      L("email signature compose details unavailable", {
-        tabId,
-        reason,
-        error: error?.message || String(error)
-      });
-      return;
+  async function applySignatureToTab(tabId, reason, applyState, generation){
+    const [status, localOptions] = await Promise.all([
+      NCPolicyRuntime.getPolicyStatus(),
+      readLocalSignatureOptions()
+    ]);
+    if (!isApplyRequestCurrent(tabId, applyState, generation)){
+      return { superseded: true };
+    }
+    const details = await readComposeDetails(tabId, reason);
+    if (!details){
+      return { completed: true };
+    }
+    if (!isApplyRequestCurrent(tabId, applyState, generation)){
+      return { superseded: true };
     }
 
     const composeKind = resolveComposeKind(details);
@@ -291,18 +366,24 @@ const NCEmailSignature = (() => {
         reason,
         composeType: String(details?.type || "")
       });
-      return;
+      return { completed: true };
     }
 
-    const [status, localOptions] = await Promise.all([
-      NCPolicyRuntime.getPolicyStatus(),
-      readLocalSignatureOptions()
-    ]);
     const policy = resolveSignaturePolicy(status, localOptions);
     const previousState = TAB_STATE.get(tabId) || {};
+    const identityId = String(details.identityId || "").trim();
+    const applyRequest = {
+      state: applyState,
+      generation,
+      reason,
+      identityId
+    };
     if (!policy.active){
       if (previousState.managed === true){
-        await clearOwnSignatureIfUnchanged(tabId, policy.reason);
+        const clearResult = await clearOwnSignatureIfUnchanged(tabId, policy.reason, applyRequest);
+        if (clearResult?.superseded){
+          return clearResult;
+        }
       }else{
         TAB_STATE.set(tabId, { managed: false, matched: false });
       }
@@ -311,15 +392,23 @@ const NCEmailSignature = (() => {
         reason,
         cause: policy.reason
       });
-      return;
+      return { completed: true };
     }
 
-    const identityEmail = await resolveIdentityEmail(details?.identityId);
+    const identityEmail = await resolveIdentityEmail(identityId);
+    if (!isApplyRequestCurrent(tabId, applyState, generation)){
+      return { superseded: true };
+    }
     if (identityEmail !== policy.userEmail){
       // Only the matching Nextcloud identity owns the managed signature slot.
       // Other Thunderbird identities may use local or Signature Switch signatures.
       if (reason === "identity_changed" && TAB_STATE.get(tabId)?.matched){
-        await clearOwnSignatureIfUnchanged(tabId, "identity_mismatch");
+        applyRequest.policyEmail = policy.userEmail;
+        applyRequest.policyMatch = false;
+        const clearResult = await clearOwnSignatureIfUnchanged(tabId, "identity_mismatch", applyRequest);
+        if (clearResult?.superseded){
+          return clearResult;
+        }
       }else{
         TAB_STATE.set(tabId, { managed: false, matched: false });
       }
@@ -330,32 +419,42 @@ const NCEmailSignature = (() => {
         hasIdentityEmail: !!identityEmail,
         hasPolicyEmail: !!policy.userEmail
       });
-      return;
+      return { completed: true };
     }
 
     const shouldInsert = resolveShouldInsert(policy, composeKind);
     const shouldClearForeign = resolveShouldClearForeign(policy, composeKind);
     const requireExistingOwnUnchanged = reason === "identity_changed" && previousState.managed === true;
     const sanitizedHtml = shouldInsert ? sanitizeSignatureHtml(policy.templateHtml) : "";
-    const plainTextMode = shouldInsert && resolvePlainTextMode(details);
-    const plainText = plainTextMode ? signatureHtmlToPlainText(sanitizedHtml) : "";
-    const result = await sendSignatureMessage(tabId, {
-      desired: shouldInsert,
-      clearForeign: shouldClearForeign,
-      clearOwnOnly: !shouldInsert && !shouldClearForeign,
-      requireExistingOwnUnchanged,
-      html: sanitizedHtml,
-      plainText,
-      plainTextMode,
-      placeCursorAtStart: reason === "compose_open" && details?.isModified !== true,
-      debugEnabled: localOptions?.[STORAGE_KEYS.debug] === true
-    });
+    applyRequest.policyEmail = policy.userEmail;
+    applyRequest.policyMatch = true;
+    let appliedDetails = details;
+    let plainTextMode = false;
+    const result = await sendSignatureMessage(tabId, (currentDetails) => {
+      appliedDetails = currentDetails;
+      plainTextMode = shouldInsert && resolvePlainTextMode(currentDetails);
+      const plainText = plainTextMode ? signatureHtmlToPlainText(sanitizedHtml) : "";
+      return {
+        desired: shouldInsert,
+        clearForeign: shouldClearForeign,
+        clearOwnOnly: !shouldInsert && !shouldClearForeign,
+        requireExistingOwnUnchanged,
+        html: sanitizedHtml,
+        plainText,
+        plainTextMode,
+        placeCursorAtStart: reason === "compose_open" && currentDetails?.isModified !== true,
+        debugEnabled: localOptions?.[STORAGE_KEYS.debug] === true
+      };
+    }, applyRequest);
+    if (result?.superseded){
+      return result;
+    }
     if (!result?.ok){
       throw new Error(result?.error || "email_signature_apply_failed");
     }
     const managed = shouldInsert ? result.managed !== false : false;
     TAB_STATE.set(tabId, { managed, matched: true });
-    await resetModifiedStateIfNeeded(tabId, details?.isModified === true, result);
+    await resetModifiedStateIfNeeded(tabId, appliedDetails?.isModified === true, result);
     L("email signature processed", {
       tabId,
       reason,
@@ -366,6 +465,7 @@ const NCEmailSignature = (() => {
       result: String(result.reason || ""),
       plainTextMode
     });
+    return { completed: true };
   }
 
   function scheduleApply(tabId, reason){
@@ -373,22 +473,64 @@ const NCEmailSignature = (() => {
     if (!Number.isInteger(normalizedTabId) || normalizedTabId <= 0){
       return;
     }
-    if (PENDING_TABS.has(normalizedTabId)){
+    const pendingState = APPLY_STATE_BY_TAB.get(normalizedTabId);
+    if (pendingState){
+      pendingState.generation += 1;
+      if (reason === "identity_changed" || pendingState.reason !== "identity_changed"){
+        pendingState.reason = reason;
+      }
+      L("email signature apply queued", {
+        tabId: normalizedTabId,
+        reason: pendingState.reason,
+        generation: pendingState.generation
+      });
       return;
     }
-    PENDING_TABS.add(normalizedTabId);
+    const applyState = {
+      generation: 1,
+      reason
+    };
+    APPLY_STATE_BY_TAB.set(normalizedTabId, applyState);
     (async () => {
       try{
         await delay(150);
-        await applySignatureToTab(normalizedTabId, reason);
-      }catch(error){
-        console.error("[NCBG] email signature processing failed", {
-          tabId: normalizedTabId,
-          reason,
-          error: error?.message || String(error)
-        });
+        while (APPLY_STATE_BY_TAB.get(normalizedTabId) === applyState){
+          const generation = applyState.generation;
+          const currentReason = applyState.reason;
+          let result = null;
+          try{
+            result = await applySignatureToTab(
+              normalizedTabId,
+              currentReason,
+              applyState,
+              generation
+            );
+          }catch(error){
+            console.error("[NCBG] email signature processing failed", {
+              tabId: normalizedTabId,
+              reason: currentReason,
+              error: error?.message || String(error)
+            });
+          }
+          if (APPLY_STATE_BY_TAB.get(normalizedTabId) !== applyState){
+            return;
+          }
+          if (result?.retry === true && applyState.generation === generation){
+            applyState.generation += 1;
+            applyState.reason = "identity_changed";
+            L("email signature apply retried after identity drift", {
+              tabId: normalizedTabId,
+              generation: applyState.generation
+            });
+          }
+          if (applyState.generation === generation){
+            return;
+          }
+        }
       }finally{
-        PENDING_TABS.delete(normalizedTabId);
+        if (APPLY_STATE_BY_TAB.get(normalizedTabId) === applyState){
+          APPLY_STATE_BY_TAB.delete(normalizedTabId);
+        }
       }
     })();
   }
@@ -442,7 +584,7 @@ const NCEmailSignature = (() => {
     });
     browser.tabs.onRemoved.addListener((tabId) => {
       TAB_STATE.delete(Number(tabId));
-      PENDING_TABS.delete(Number(tabId));
+      APPLY_STATE_BY_TAB.delete(Number(tabId));
     });
   }
 

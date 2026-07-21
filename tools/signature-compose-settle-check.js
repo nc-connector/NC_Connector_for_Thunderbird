@@ -252,6 +252,351 @@ function createHarness(){
   };
 }
 
+function createDeferred(){
+  let resolve;
+  let reject;
+  const promise = new Promise((resolvePromise, rejectPromise) => {
+    resolve = resolvePromise;
+    reject = rejectPromise;
+  });
+  return { promise, resolve, reject };
+}
+
+function createEventChannel(){
+  const listeners = [];
+  return {
+    listeners,
+    addListener(listener){
+      listeners.push(listener);
+    }
+  };
+}
+
+function wait(delayMs){
+  return new Promise((resolve) => setTimeout(resolve, delayMs));
+}
+
+async function waitForCondition(predicate, failureMessage, timeoutMs = 2000){
+  const startedAt = Date.now();
+  while (Date.now() - startedAt < timeoutMs){
+    if (predicate()){
+      return;
+    }
+    await wait(10);
+  }
+  throw new Error(failureMessage);
+}
+
+function createBackgroundSignatureHarness({ initialIdentityId, pauseFirstPing = false }){
+  const tabId = 41;
+  const firstPolicyStarted = createDeferred();
+  const firstPolicyRelease = createDeferred();
+  const firstPingStarted = createDeferred();
+  const firstPingRelease = createDeferred();
+  const tabCreated = createEventChannel();
+  const tabRemoved = createEventChannel();
+  const windowCreated = createEventChannel();
+  const identityChanged = createEventChannel();
+  const applyMessages = [];
+  const logs = [];
+  const errors = [];
+  let policyCallCount = 0;
+  let pingCallCount = 0;
+  let composeDetails = {
+    identityId: initialIdentityId,
+    type: "new",
+    isModified: false,
+    isPlainText: false,
+    deliveryFormat: "auto"
+  };
+  const identityRecords = new Map([
+    ["seat-identity", { id: "seat-identity", email: "seat@example.test", accountId: "account-1" }],
+    ["other-identity", { id: "other-identity", email: "other@example.test", accountId: "account-1" }]
+  ]);
+  const signaturePolicy = {
+    email_signature_on_compose: true,
+    email_signature_on_reply: true,
+    email_signature_on_forward: true,
+    email_signature_template: "<p>Managed signature</p>",
+    user_email: "seat@example.test"
+  };
+  const policyStatus = {
+    policy: {
+      email_signature: signaturePolicy
+    }
+  };
+
+  const browser = {
+    accounts: {
+      async list(){
+        return [{ id: "account-1", identities: Array.from(identityRecords.values()) }];
+      }
+    },
+    compose: {
+      onIdentityChanged: identityChanged,
+      async getComposeDetails(requestedTabId){
+        assert(requestedTabId === tabId, "Signature background requested an unexpected compose tab");
+        return { ...composeDetails };
+      },
+      async setComposeDetails(requestedTabId, changes){
+        assert(requestedTabId === tabId, "Signature background changed an unexpected compose tab");
+        composeDetails = { ...composeDetails, ...changes };
+      }
+    },
+    composeScripts: {
+      async register(){
+        return {};
+      }
+    },
+    identities: {
+      async get(identityId){
+        return identityRecords.get(identityId) || null;
+      },
+      async list(){
+        return Array.from(identityRecords.values());
+      }
+    },
+    storage: {
+      local: {
+        async get(){
+          return {
+            emailSignatureOnCompose: true,
+            emailSignatureOnReply: true,
+            emailSignatureOnForward: true,
+            debugEnabled: false
+          };
+        }
+      }
+    },
+    tabs: {
+      onCreated: tabCreated,
+      onRemoved: tabRemoved,
+      async query(){
+        return [{ id: tabId, type: "messageCompose" }];
+      },
+      async sendMessage(requestedTabId, message){
+        assert(requestedTabId === tabId, "Signature background messaged an unexpected compose tab");
+        if (message?.type === "nc-signature:ping"){
+          pingCallCount += 1;
+          if (pauseFirstPing && pingCallCount === 1){
+            firstPingStarted.resolve();
+            await firstPingRelease.promise;
+          }
+          return { ok: true };
+        }
+        if (message?.type === "nc-signature:apply"){
+          applyMessages.push({
+            identityId: composeDetails.identityId,
+            payload: message.payload
+          });
+          return {
+            ok: true,
+            changed: true,
+            managed: message.payload?.desired === true,
+            reason: message.payload?.desired === true ? "signature_inserted" : "signature_cleared"
+          };
+        }
+        throw new Error("Unexpected signature tab message");
+      }
+    },
+    windows: {
+      onCreated: windowCreated
+    }
+  };
+  const context = {
+    browser,
+    console: {
+      debug(){},
+      error(){
+        errors.push(Array.from(arguments));
+      },
+      log(){}
+    },
+    L(message, details){
+      logs.push({ message, details: details || {} });
+    },
+    NCHtmlSanitizer: {
+      sanitizeShareTemplateHtml(value){
+        return String(value || "");
+      },
+      htmlToPlainText(){
+        return "Managed signature";
+      }
+    },
+    NCPolicyRuntime: {
+      getPolicyStatus(){
+        policyCallCount += 1;
+        if (policyCallCount === 1){
+          firstPolicyStarted.resolve();
+          return firstPolicyRelease.promise;
+        }
+        return Promise.resolve(policyStatus);
+      }
+    },
+    NCPolicyState: {
+      coerceBoolean(value, fallback = false){
+        return typeof value === "boolean" ? value : fallback;
+      },
+      isDomainActive(status, domain){
+        return !!status?.policy?.[domain];
+      },
+      isDomainAvailable(status, domain){
+        return !!status?.policy?.[domain];
+      },
+      readPolicyValue(status, domain, key){
+        return status?.policy?.[domain]?.[key];
+      },
+      resolveDefaultValue(status, domain, key, localValue){
+        const policyValue = status?.policy?.[domain]?.[key];
+        return typeof policyValue === "boolean" ? policyValue : localValue;
+      }
+    },
+    Promise,
+    clearTimeout,
+    setTimeout
+  };
+  vm.createContext(context);
+  vm.runInContext(readText("modules/bgSignature.js"), context, { filename: "modules/bgSignature.js" });
+
+  return {
+    tabId,
+    applyMessages,
+    errors,
+    logs,
+    get policyCallCount(){
+      return policyCallCount;
+    },
+    start(){
+      tabCreated.listeners[0]({ id: tabId, type: "messageCompose" });
+    },
+    changeIdentity(identityId){
+      composeDetails = { ...composeDetails, identityId };
+      identityChanged.listeners[0]({ id: tabId, type: "messageCompose" }, identityId);
+    },
+    setIdentityWithoutEvent(identityId){
+      composeDetails = { ...composeDetails, identityId };
+    },
+    setIdentityEmail(identityId, email){
+      const current = identityRecords.get(identityId);
+      identityRecords.set(identityId, { ...current, email });
+    },
+    async waitForFirstPolicyRequest(){
+      await Promise.race([
+        firstPolicyStarted.promise,
+        wait(2000).then(() => {
+          throw new Error("Signature policy request did not start");
+        })
+      ]);
+    },
+    releaseFirstPolicy(){
+      firstPolicyRelease.resolve(policyStatus);
+    },
+    async waitForFirstPing(){
+      await Promise.race([
+        firstPingStarted.promise,
+        wait(2000).then(() => {
+          throw new Error("Signature compose-script ping did not start");
+        })
+      ]);
+    },
+    releaseFirstPing(){
+      firstPingRelease.resolve();
+    },
+    close(){
+      tabRemoved.listeners[0](tabId);
+    }
+  };
+}
+
+async function runIdentityChangeRaceChecks(){
+  const matchingToOther = createBackgroundSignatureHarness({
+    initialIdentityId: "seat-identity"
+  });
+  matchingToOther.start();
+  await matchingToOther.waitForFirstPolicyRequest();
+  matchingToOther.changeIdentity("other-identity");
+  matchingToOther.start();
+  matchingToOther.releaseFirstPolicy();
+  await waitForCondition(
+    () => matchingToOther.logs.some((entry) => {
+      return entry.message === "email signature skipped for non-seat identity"
+        && entry.details.reason === "identity_changed";
+    }),
+    "Final non-seat identity was not processed"
+  );
+  assert(matchingToOther.policyCallCount >= 2, "Identity change should trigger a follow-up policy pass");
+  assert(matchingToOther.applyMessages.length === 0, "Old matching identity must not insert a signature");
+  assert(matchingToOther.errors.length === 0, "Matching-to-other race should not log a processing error");
+  matchingToOther.close();
+
+  const otherToMatching = createBackgroundSignatureHarness({
+    initialIdentityId: "other-identity"
+  });
+  otherToMatching.start();
+  await otherToMatching.waitForFirstPolicyRequest();
+  otherToMatching.changeIdentity("seat-identity");
+  otherToMatching.releaseFirstPolicy();
+  await waitForCondition(
+    () => otherToMatching.logs.some((entry) => {
+      return entry.message === "email signature processed"
+        && entry.details.reason === "identity_changed";
+    }),
+    "Final seat identity was not processed"
+  );
+  assert(otherToMatching.policyCallCount >= 2, "Identity change should trigger a follow-up policy pass");
+  assert(otherToMatching.applyMessages.length === 1, "Final matching identity should insert one signature");
+  assert(
+    otherToMatching.applyMessages[0].identityId === "seat-identity",
+    "Signature write must use the final matching identity"
+  );
+  assert(otherToMatching.errors.length === 0, "Other-to-matching race should not log a processing error");
+  otherToMatching.close();
+
+  const finalReadGuard = createBackgroundSignatureHarness({
+    initialIdentityId: "seat-identity",
+    pauseFirstPing: true
+  });
+  finalReadGuard.start();
+  await finalReadGuard.waitForFirstPolicyRequest();
+  finalReadGuard.releaseFirstPolicy();
+  await finalReadGuard.waitForFirstPing();
+  finalReadGuard.setIdentityWithoutEvent("other-identity");
+  finalReadGuard.releaseFirstPing();
+  await waitForCondition(
+    () => finalReadGuard.logs.some((entry) => {
+      return entry.message === "email signature skipped for non-seat identity"
+        && entry.details.reason === "identity_changed";
+    }),
+    "Final compose identity was not processed after the pre-write check"
+  );
+  assert(finalReadGuard.policyCallCount >= 2, "Pre-write identity drift should trigger another policy pass");
+  assert(finalReadGuard.applyMessages.length === 0, "Pre-write identity drift must block the old signature");
+  assert(finalReadGuard.errors.length === 0, "Pre-write identity drift should not log a processing error");
+  finalReadGuard.close();
+
+  const policyEmailGuard = createBackgroundSignatureHarness({
+    initialIdentityId: "seat-identity",
+    pauseFirstPing: true
+  });
+  policyEmailGuard.start();
+  await policyEmailGuard.waitForFirstPolicyRequest();
+  policyEmailGuard.releaseFirstPolicy();
+  await policyEmailGuard.waitForFirstPing();
+  policyEmailGuard.setIdentityEmail("seat-identity", "other@example.test");
+  policyEmailGuard.releaseFirstPing();
+  await waitForCondition(
+    () => policyEmailGuard.logs.some((entry) => {
+      return entry.message === "email signature skipped for non-seat identity"
+        && entry.details.reason === "identity_changed";
+    }),
+    "Final identity email was not checked against the signature policy"
+  );
+  assert(policyEmailGuard.policyCallCount >= 2, "Changed identity email should trigger another policy pass");
+  assert(policyEmailGuard.applyMessages.length === 0, "Policy email mismatch must block the old signature");
+  assert(policyEmailGuard.errors.length === 0, "Policy email mismatch should not log a processing error");
+  policyEmailGuard.close();
+}
+
 async function run(){
   const harness = createHarness();
   const payload = {
@@ -328,6 +673,7 @@ async function run(){
   for (const listener of harness.unloadListeners){
     listener();
   }
+  await runIdentityChangeRaceChecks();
   console.log("[OK] signature-compose-settle-check passed");
 }
 

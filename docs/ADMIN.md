@@ -160,7 +160,7 @@ Runtime behavior:
 - once the primary mail was sent, password-follow-up problems never delete the committed share
 - central email signatures are applied only when `policy.email_signature` provides enabled compose policy, rendered HTML, and `user_email`
 - for the matching sender identity, enabled compose signature policy also clears Thunderbird identity signatures or Signature Switch signatures in replies and forwards when backend insertion is disabled for that compose type
-- Thunderbird applies the central signature only to sender identities whose email address matches `policy.email_signature.user_email`; other identities are left untouched so Thunderbird identity signatures or Signature Switch can continue to work
+- Thunderbird applies the central signature only to sender identities whose email address matches `policy.email_signature.user_email`; identity changes are reevaluated immediately before writing, and other identities are left untouched so Thunderbird identity signatures or Signature Switch can continue to work
 - the signature settings tab is disabled with the existing backend/seat guidance text while the backend endpoint is unavailable or the current user has no active assigned seat
 - if the backend endpoint is available and the seat is active, but the status payload has no `policy.email_signature` domain, only central email signatures stay disabled and the UI asks the user to update/check the backend; Share and Talk policy domains keep working independently
 - backend custom templates stay inactive until the corresponding language override is set to `custom`
