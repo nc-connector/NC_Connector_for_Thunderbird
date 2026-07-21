@@ -10,6 +10,11 @@
  */
 const NCSharingStorage = (() => {
   const DEFAULT_ATTACHMENT_THRESHOLD_MB = 5;
+  const ATTACHMENT_LINK_TARGETS = Object.freeze({
+    ZIP_DOWNLOAD: "zip_download",
+    SHARE_PAGE: "share_page"
+  });
+  const DEFAULT_ATTACHMENT_LINK_TARGET = ATTACHMENT_LINK_TARGETS.ZIP_DOWNLOAD;
   const SHARING_KEYS = {
     basePath: "sharingBasePath",
     defaultShareName: "sharingDefaultShareName",
@@ -20,6 +25,7 @@ const NCSharingStorage = (() => {
     defaultPasswordSeparate: "sharingDefaultPasswordSeparate",
     defaultPasswordDeliveryMode: "sharingDefaultPasswordDeliveryMode",
     defaultExpireDays: "sharingDefaultExpireDays",
+    attachmentsLinkTarget: "sharingAttachmentsLinkTarget",
     attachmentsAlwaysConnector: "sharingAttachmentsAlwaysConnector",
     attachmentsOfferAboveEnabled: "sharingAttachmentsOfferAboveEnabled",
     attachmentsOfferAboveMb: "sharingAttachmentsOfferAboveMb"
@@ -43,6 +49,27 @@ const NCSharingStorage = (() => {
       return DEFAULT_ATTACHMENT_THRESHOLD_MB;
     }
     return parsed;
+  }
+
+  function isValidAttachmentLinkTarget(value){
+    const normalized = String(value ?? "").trim();
+    return normalized === ATTACHMENT_LINK_TARGETS.ZIP_DOWNLOAD
+      || normalized === ATTACHMENT_LINK_TARGETS.SHARE_PAGE;
+  }
+
+  function normalizeAttachmentLinkTarget(value, fallback = DEFAULT_ATTACHMENT_LINK_TARGET){
+    const normalized = String(value ?? "").trim();
+    if (isValidAttachmentLinkTarget(normalized)){
+      return normalized;
+    }
+    const normalizedFallback = String(fallback ?? "").trim();
+    return isValidAttachmentLinkTarget(normalizedFallback)
+      ? normalizedFallback
+      : DEFAULT_ATTACHMENT_LINK_TARGET;
+  }
+
+  function isZipDownloadLinkTarget(value){
+    return normalizeAttachmentLinkTarget(value) === ATTACHMENT_LINK_TARGETS.ZIP_DOWNLOAD;
   }
 
   function isStorageUnset(value){
@@ -108,8 +135,13 @@ const NCSharingStorage = (() => {
 
   return {
     DEFAULT_ATTACHMENT_THRESHOLD_MB,
+    ATTACHMENT_LINK_TARGETS,
+    DEFAULT_ATTACHMENT_LINK_TARGET,
     SHARING_KEYS,
     normalizeAttachmentThresholdMb,
+    isValidAttachmentLinkTarget,
+    normalizeAttachmentLinkTarget,
+    isZipDownloadLinkTarget,
     migrateLegacySharingKeys
   };
 })();

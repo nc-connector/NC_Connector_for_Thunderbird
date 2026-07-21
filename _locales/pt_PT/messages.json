@@ -488,6 +488,15 @@
   "options_sharing_attachments_heading": {
     "message": "Anexos"
   },
+  "options_sharing_attachments_link_target_label": {
+    "message": "Destino da ligação de anexos"
+  },
+  "options_sharing_attachments_link_target_share_page": {
+    "message": "Página de partilha do Nextcloud"
+  },
+  "options_sharing_attachments_link_target_zip_download": {
+    "message": "Transferência ZIP"
+  },
   "options_sharing_attachments_always_label": {
     "message": "Tratar sempre os anexos através do NC Connector"
   },
@@ -694,6 +703,9 @@
   },
   "sharing_error_upload_required": {
     "message": "Carregue os ficheiros antes de continuar."
+  },
+  "sharing_error_zip_url_invalid": {
+    "message": "Não foi possível derivar o URL de transferência ZIP do URL de partilha do Nextcloud. Nada foi inserido na mensagem."
   },
   "sharing_step_note_heading": {
     "message": "Nota para o destinatário"

@@ -94,6 +94,13 @@
       : coerced;
   }
 
+  function getBindingFallback(binding, current, locked){
+    if (locked && Object.prototype.hasOwnProperty.call(binding, "lockedFallback")){
+      return binding.lockedFallback;
+    }
+    return current;
+  }
+
   function readPolicyBoundDefaults(domainState, bindings, defaults = {}, options = {}){
     const next = { ...defaults };
     if (!domainState?.active || !domainState?.policy){
@@ -112,7 +119,12 @@
         ? next[binding.name]
         : binding.fallback;
       const raw = NCPolicyState.readDomainValue(domainState.policy, binding.key);
-      next[binding.name] = normalizeBindingValue(raw, current, binding);
+      const locked = NCPolicyState.isEditableLocked(domainState.active, domainState.editable, binding.key);
+      next[binding.name] = normalizeBindingValue(
+        raw,
+        getBindingFallback(binding, current, locked),
+        binding
+      );
     });
     return next;
   }
@@ -126,12 +138,17 @@
       const current = Object.prototype.hasOwnProperty.call(next, binding.name)
         ? next[binding.name]
         : binding.fallback;
+      const locked = NCPolicyState.isLocked(status, binding.domain, binding.key);
       next[binding.name] = NCPolicyState.resolveValue(
         status,
         binding.domain,
         binding.key,
         current,
-        (value, fallback) => normalizeBindingValue(value, fallback, binding)
+        (value) => normalizeBindingValue(
+          value,
+          getBindingFallback(binding, current, locked),
+          binding
+        )
       );
     });
     return next;
@@ -171,9 +188,10 @@
     const element = binding.element || null;
     if (locked && element && binding.property){
       const current = element[binding.property];
-      const fallback = (current === "" || current == null) && binding.fallback !== undefined
+      const currentFallback = (current === "" || current == null) && binding.fallback !== undefined
         ? binding.fallback
         : current;
+      const fallback = getBindingFallback(binding, currentFallback, locked);
       const raw = NCPolicyState.readPolicyValue(status, binding.domain, binding.key);
       element[binding.property] = normalizeBindingValue(raw, fallback, binding);
     }

@@ -488,6 +488,15 @@
   "options_sharing_attachments_heading": {
     "message": "Anhänge"
   },
+  "options_sharing_attachments_link_target_label": {
+    "message": "Linkziel im Anhangsmodus"
+  },
+  "options_sharing_attachments_link_target_share_page": {
+    "message": "Nextcloud-Freigabeseite"
+  },
+  "options_sharing_attachments_link_target_zip_download": {
+    "message": "ZIP-Download"
+  },
   "options_sharing_attachments_always_label": {
     "message": "Anhänge immer über NC Connector"
   },
@@ -694,6 +703,9 @@
   },
   "sharing_error_upload_required": {
     "message": "Bitte zuerst den Upload ausführen."
+  },
+  "sharing_error_zip_url_invalid": {
+    "message": "Die ZIP-Download-URL konnte nicht aus der Nextcloud-Freigabe-URL abgeleitet werden. Es wurde nichts in die Nachricht eingefügt."
   },
   "sharing_step_note_heading": {
     "message": "Notiz an Empfänger"

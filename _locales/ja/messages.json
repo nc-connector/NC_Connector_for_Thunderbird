@@ -488,6 +488,15 @@
   "options_sharing_attachments_heading": {
     "message": "添付ファイル"
   },
+  "options_sharing_attachments_link_target_label": {
+    "message": "添付ファイルリンクの宛先"
+  },
+  "options_sharing_attachments_link_target_share_page": {
+    "message": "Nextcloud 共有ページ"
+  },
+  "options_sharing_attachments_link_target_zip_download": {
+    "message": "ZIP ダウンロード"
+  },
   "options_sharing_attachments_always_label": {
     "message": "添付ファイルは常に NC Connector 経由で処理する"
   },
@@ -694,6 +703,9 @@
   },
   "sharing_error_upload_required": {
     "message": "続行する前にファイルをアップロードしてください。"
+  },
+  "sharing_error_zip_url_invalid": {
+    "message": "Nextcloud の共有 URL から ZIP ダウンロード URL を生成できませんでした。メッセージには何も挿入されていません。"
   },
   "sharing_step_note_heading": {
     "message": "受信者へのメモ"

@@ -59,8 +59,10 @@ Datenfluss:
   - nur bei Überschreiten eines konfigurierten Gesamtgrößen-Grenzwerts
   - Grenzwert-Dialog mit klarer Auswahl: "Mit NC Connector teilen" oder "Zuletzt ausgewählte Anhänge entfernen" (die Entfernen-Aktion löscht die zuletzt ausgewählte Anhangsgruppe)
   - Attachment-Mode startet direkt in Schritt 3 mit vorausgefüllter Upload-Queue
-  - der erzeugte Compose-Block nutzt ZIP-Download-Links (`/s/<token>/download`) ohne Rechtezeile
-  - solange Thunderbirds eigene Option "Hochladen für Dateien größer als" aktiv ist, sind die Anhangsoptionen mit Hinweistext gesperrt
+  - konfigurierbares Linkziel für Anhangsfreigaben: direkter ZIP-Download (`/s/<token>/download`) oder Nextcloud-Freigabeseite (`/s/<token>`); ZIP ist der eingebaute Fallback, wenn kein gültiger effektiver Wert vorliegt, auch bei einem fehlenden oder ungültigen gesperrten Backendwert
+  - das Linkziel ändert nur URL und Linktext; Read-only-Rechte, ausgeblendete Rechtezeile und Cleanup des Attachment-Mode bleiben in beiden Varianten aktiv
+  - eine ungültige ZIP-Quell-URL oder eine Abweichung vom OCS-Freigabetoken stoppt Finalize mit sichtbarem Fehler, statt die Original-URL mit ZIP-Text einzufügen
+  - solange Thunderbirds eigene Option "Hochladen für Dateien größer als" aktiv ist, sind die Automatisierungsoptionen mit Hinweistext gesperrt
 
 ### Talk
 - Capabilities-Check für Talk und Core bestimmt Event-Conversation-Support
@@ -107,7 +109,7 @@ Datenfluss:
 - Base URL, User und App-Passwort (manuell) oder Login Flow v2 (automatisch)
 - Debug-Modus für detaillierte Logs
 - Freigabe-Basisverzeichnis und Default-Share-Name/Rechte/Passwort/Ablauf
-- Freigabe-Anhangsregeln (`sharingAttachmentsAlwaysConnector`, `sharingAttachmentsOfferAboveEnabled`, `sharingAttachmentsOfferAboveMb`)
+- Freigabe-Anhangsregeln (`sharingAttachmentsLinkTarget`, `sharingAttachmentsAlwaysConnector`, `sharingAttachmentsOfferAboveEnabled`, `sharingAttachmentsOfferAboveMb`)
 - Talk Defaults: Titel, Lobby, Listable, Passwortschutz mit initial erzeugtem Passwort, Room Type (event vs normal), Benutzer hinzufügen + Gäste hinzufügen
 Security-Hinweise:
 - Zugangsdaten liegen in browser.storage.local und werden für Basic-Auth-Header genutzt

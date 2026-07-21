@@ -61,8 +61,10 @@ Data flow:
   - route only when total attachment size exceeds configured threshold
   - threshold prompt offers explicit choice: share via NC Connector or remove last selected attachments (remove action deletes the last selected attachment batch)
   - attachment-mode wizard starts in step 3 with preloaded upload queue
-  - resulting compose block uses ZIP download URL (`/s/<token>/download`) and hides permission row
-  - options are locked with a guidance note while Thunderbird's own "Upload for files larger than" setting is active
+  - configurable attachment link target: direct ZIP download (`/s/<token>/download`) or Nextcloud share page (`/s/<token>`); ZIP is the built-in fallback when no valid effective value exists, including a missing or invalid locked backend value
+  - the link target changes only the URL and link wording; attachment-mode read-only permissions, hidden permission row, and cleanup stay active in both modes
+  - an invalid ZIP source URL or a mismatch with the OCS share token stops finalize with a visible error instead of inserting the original URL with ZIP wording
+  - automation controls are locked with a guidance note while Thunderbird's own "Upload for files larger than" setting is active
 
 ### Talk
 - Checks Talk capabilities and core capabilities to decide event-conversation support
@@ -109,7 +111,7 @@ Data flow:
 - Base URL, user, and app password (manual) or Login Flow v2 (auto)
 - Debug mode for verbose logging
 - Sharing base path and default share name/permissions/password/expiry
-- Sharing attachment automation defaults (`sharingAttachmentsAlwaysConnector`, `sharingAttachmentsOfferAboveEnabled`, `sharingAttachmentsOfferAboveMb`)
+- Sharing attachment defaults (`sharingAttachmentsLinkTarget`, `sharingAttachmentsAlwaysConnector`, `sharingAttachmentsOfferAboveEnabled`, `sharingAttachmentsOfferAboveMb`)
 - Talk defaults: title, lobby, listable, password protection with an initial generated password, room type (event vs normal), add users + add guests toggles
 Security notes:
 - Credentials are stored in browser.storage.local and used to build Basic auth headers

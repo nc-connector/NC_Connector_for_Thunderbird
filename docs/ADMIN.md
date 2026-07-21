@@ -217,6 +217,7 @@ These defaults are used by the **Sharing Wizard** (compose window).
 | Default: send password in separate mail | `sharingDefaultPasswordSeparate` | Pre-enables the separate-password toggle in the wizard (only effective when password is enabled) |
 | Default: password delivery | `sharingDefaultPasswordDeliveryMode` | `plain` sends the password as text; `secrets` sends a Nextcloud Secrets link when backend policy allows it |
 | Expiration (days) | `sharingDefaultExpireDays` | Default expiration time for new shares |
+| Link target for attachment shares | `sharingAttachmentsLinkTarget` | `zip_download` inserts a direct ZIP download; `share_page` opens the Nextcloud share page. Invalid local values count as unset so a usable editable backend default can apply. A locked valid backend value wins; a missing or invalid locked backend value forces the `zip_download` fallback instead of a stored local value. |
 | Always handle attachments via NC Connector | `sharingAttachmentsAlwaysConnector` | Immediately moves compose attachments into NC Connector share flow |
 | Offer upload for files larger than | `sharingAttachmentsOfferAboveEnabled` | Enables threshold-based decision popup in compose |
 | Threshold (MB) | `sharingAttachmentsOfferAboveMb` | Total attachment-size limit that triggers the popup |
@@ -226,7 +227,9 @@ Attachment behavior details:
 - If the threshold is exceeded, users can choose to:
   - share attachments via NC Connector, or
   - remove the most recently selected attachment batch.
-- In attachment mode, the sharing wizard starts directly in file step and publishes a ZIP download link.
+- In attachment mode, the sharing wizard starts directly in the file step. The selected link target controls whether the mail contains a direct ZIP download or the Nextcloud share page.
+- The link target changes only the inserted URL and its link wording. Read-only recipient permissions, the hidden permission row, and cleanup behavior stay unchanged.
+- Manual shares always use the Nextcloud share page. Direct ZIP conversion accepts only an absolute HTTP(S) share URL ending in `/s/<token>` (with an optional trailing slash, query, or fragment). Other URL shapes show an error and insert nothing instead of using the original URL with ZIP wording.
 - In attachment mode, recipient permissions are enforced as read-only (independent of default permission toggles).
 
 ### 2.3 Talk Link defaults
@@ -262,6 +265,7 @@ Runtime behavior:
 - valid active seat => each backend value is the initial default until a valid local value exists
 - `policy_editable=true` => a stored local value wins and the control remains editable
 - `policy_editable=false` => the backend value always wins and the control is locked in the UI
+- `policy.share.attachment_link_target` accepts `zip_download` or `share_page`; `policy_editable.share.attachment_link_target` controls whether users may change it. An invalid local value counts as unset, so a usable editable backend default may seed it. A locked valid backend value always wins; if that locked value is missing or invalid, `zip_download` is enforced even when `share_page` is stored locally.
 - missing backend / no seat / invalid or overlicensed seat => local add-on settings remain active for the normal local defaults
 - backend-only features stay disabled until their backend/seat requirements are met
 - if the backend is unreachable, Thunderbird falls back to the locally saved add-on settings for Share/Talk defaults
@@ -282,7 +286,8 @@ Runtime behavior:
 - backend custom templates stay inactive until the corresponding language override is set to `custom`
 - the `custom` option is only shown when the backend endpoint exists and stays disabled unless the effective backend policy for that domain is actually `custom` and provides a template
 - if `custom` is selected but the backend template is empty or unavailable, Thunderbird falls back to the local UI-default text block
-- custom share templates may use `{LINK_INTRO}` and `{LINK_LABEL}`; Thunderbird fills them with share-page wording for normal shares and ZIP-download wording for attachment mode
+- custom share templates may use `{LINK_INTRO}` and `{LINK_LABEL}`; Thunderbird fills them with share-page wording for manual shares and `share_page` attachment shares, or ZIP-download wording for `zip_download` attachment shares
+- before deriving a ZIP URL, Thunderbird compares the decoded `/s/<token>` path token with the token returned by the OCS create-share response; a mismatch stops rendering with a visible error and never falls back to the original URL
 - current clients prefer the backend's versioned Share template and automatically fall back to the original template field when connected to an older backend; no administrator migration is required
 - existing custom templates without these variables remain valid and are rendered unchanged apart from their existing placeholder substitutions
 - `policy.talk.event_description_type` may be `html` or `plain_text`; when `html` is active, Thunderbird writes the Talk block into the rich event description editor as HTML and keeps a plain-text representation alongside it for non-HTML consumers
@@ -291,6 +296,7 @@ Runtime behavior:
 Central policy can currently control:
 - Talk defaults and lock state
 - Sharing defaults and lock state
+- Attachment link target and lock state
 - share HTML/password templates
 - central email signature defaults and lock state
 - Talk description language / custom invitation template

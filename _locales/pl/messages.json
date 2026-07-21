@@ -488,6 +488,15 @@
   "options_sharing_attachments_heading": {
     "message": "Załączniki"
   },
+  "options_sharing_attachments_link_target_label": {
+    "message": "Cel odnośnika załączników"
+  },
+  "options_sharing_attachments_link_target_share_page": {
+    "message": "Strona udostępniania Nextcloud"
+  },
+  "options_sharing_attachments_link_target_zip_download": {
+    "message": "Pobieranie ZIP"
+  },
   "options_sharing_attachments_always_label": {
     "message": "Zawsze obsługuj załączniki przez NC Connector"
   },
@@ -694,6 +703,9 @@
   },
   "sharing_error_upload_required": {
     "message": "Prześlij pliki przed kontynuowaniem."
+  },
+  "sharing_error_zip_url_invalid": {
+    "message": "Nie udało się utworzyć adresu URL pobierania ZIP na podstawie adresu URL udostępnienia Nextcloud. Do wiadomości niczego nie wstawiono."
   },
   "sharing_step_note_heading": {
     "message": "Notatka dla odbiorcy"

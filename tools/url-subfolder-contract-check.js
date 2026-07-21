@@ -1,7 +1,7 @@
 "use strict";
 
 const vm = require("node:vm");
-const { assert, loadScript } = require("./review-check-utils");
+const { assert, loadScript, readText } = require("./review-check-utils");
 
 function escapeHtml(value){
   return String(value || "")
@@ -26,6 +26,7 @@ function makeTranslations(){
     sharing_html_permissions_label: "Permissions",
     sharing_html_footer: "Shared securely via {0}",
     sharing_share_default: "Share",
+    sharing_error_zip_url_invalid: "The ZIP download URL could not be derived from the Nextcloud share URL. Nothing was inserted into the message.",
     error_host_permission_missing: "Host permission missing"
   };
 }
@@ -58,6 +59,9 @@ function createHarness(){
       htmlToPlainText: (value) => String(value || "").replace(/<[^>]+>/g, " ").trim(),
       plainTextToHtml: (value) => escapeHtml(value).replace(/\r?\n/g, "<br />"),
       sanitizeShareTemplateHtml: (value) => String(value || "")
+    },
+    NCLogContext: {
+      safeConsoleError: () => {}
     },
     browser: {
       i18n: {
@@ -93,6 +97,7 @@ async function run(){
 
   const shareInfo = {
     shareUrl: "https://cloud.example.com/nc/s/abc123",
+    shareToken: "abc123",
     password: "Secret123",
     expireDate: "2026-07-31",
     permissions: { read: true, create: false, write: true, delete: false }
@@ -104,12 +109,85 @@ async function run(){
 
   const html = await context.NCSharing.buildHtmlBlock(shareInfo, renderOptions);
   const plainText = await context.NCSharing.buildPlainTextBlock(shareInfo, renderOptions);
+  const sharePageHtml = await context.NCSharing.buildHtmlBlock(shareInfo, {});
+  const sharePagePlainText = await context.NCSharing.buildPlainTextBlock(shareInfo, {});
+  const indexPhpZipPlainText = await context.NCSharing.buildPlainTextBlock({
+    ...shareInfo,
+    shareUrl: "https://cloud.example.com/nc/index.php/s/abc123"
+  }, renderOptions);
+  const trailingSlashZipPlainText = await context.NCSharing.buildPlainTextBlock({
+    ...shareInfo,
+    shareUrl: "https://cloud.example.com/nc/s/abc123/?source=mail#details"
+  }, renderOptions);
+  const encodedTokenZipPlainText = await context.NCSharing.buildPlainTextBlock({
+    ...shareInfo,
+    shareUrl: "https://cloud.example.com/nc/s/abc%20123",
+    shareToken: "abc 123"
+  }, renderOptions);
 
   assert(html.includes("https://cloud.example.com/nc/s/abc123/download"), "HTML share block should keep subfolder path in ZIP download URL");
   assert(plainText.includes("ZIP download: https://cloud.example.com/nc/s/abc123/download"), "Plaintext share block should label the attachment URL as a ZIP download");
   assert(plainText.includes("Download the shared files as a ZIP archive"), "Plaintext attachment block should explain ZIP download behavior");
   assert(!html.includes("https://cloud.example.com/s/abc123/download"), "HTML share block must not drop the Nextcloud subfolder path");
   assert(!plainText.includes("https://cloud.example.com/s/abc123/download"), "Plaintext share block must not drop the Nextcloud subfolder path");
+  assert(sharePageHtml.includes("https://cloud.example.com/nc/s/abc123"), "Share-page HTML must preserve the canonical URL");
+  assert(!sharePageHtml.includes("/abc123/download"), "Share-page HTML must not append the ZIP path");
+  assert(sharePagePlainText.includes("Nextcloud link: https://cloud.example.com/nc/s/abc123"), "Share-page plaintext must use the canonical URL and label");
+  assert(
+    indexPhpZipPlainText.includes("https://cloud.example.com/nc/index.php/s/abc123/download"),
+    "ZIP plaintext must preserve subfolder and index.php share paths"
+  );
+  assert(
+    trailingSlashZipPlainText.includes("https://cloud.example.com/nc/s/abc123/download")
+      && !trailingSlashZipPlainText.includes("source=mail")
+      && !trailingSlashZipPlainText.includes("#details"),
+    "ZIP plaintext must accept a trailing slash and remove query or fragment data"
+  );
+  assert(
+    encodedTokenZipPlainText.includes("https://cloud.example.com/nc/s/abc%20123/download"),
+    "ZIP token validation must compare the decoded URL path token with the OCS share token"
+  );
+
+  const invalidZipUrls = [
+    "https://cloud.example.com/public/abc123",
+    "ftp://cloud.example.com/nc/s/abc123",
+    "https://cloud.example.com/nc/s/abc123/preview"
+  ];
+  for (const invalidZipUrl of invalidZipUrls){
+    for (const builder of [context.NCSharing.buildHtmlBlock, context.NCSharing.buildPlainTextBlock]){
+      let visibleError = null;
+      try{
+        await builder({ ...shareInfo, shareUrl: invalidZipUrl }, renderOptions);
+      }catch(error){
+        visibleError = error;
+      }
+      assert(visibleError && typeof visibleError.message === "string", "Invalid ZIP share URLs must stop rendering");
+      assert(
+        visibleError.message === makeTranslations().sharing_error_zip_url_invalid,
+        "Invalid ZIP share URLs must expose the localized user-facing error"
+      );
+    }
+  }
+
+  for (const builder of [context.NCSharing.buildHtmlBlock, context.NCSharing.buildPlainTextBlock]){
+    let visibleError = null;
+    try{
+      await builder({ ...shareInfo, shareUrl: "https://cloud.example.com/nc/s/different" }, renderOptions);
+    }catch(error){
+      visibleError = error;
+    }
+    assert(visibleError && typeof visibleError.message === "string", "A ZIP URL/OCS token mismatch must stop rendering");
+    assert(
+      visibleError.message === makeTranslations().sharing_error_zip_url_invalid,
+      "A ZIP URL/OCS token mismatch must expose the localized user-facing error"
+    );
+  }
+
+  const sharingSource = readText("modules/ncSharing.js");
+  assert(
+    sharingSource.includes('shareToken: share.token || ""'),
+    "The OCS share token must be transported in the share result payload"
+  );
 
   console.log("[OK] url-subfolder-contract-check passed");
 }

@@ -519,6 +519,13 @@ footer{
     </fieldset>
     <fieldset class="auth-block">
       <legend data-i18n="options_sharing_attachments_heading">Attachments</legend>
+      <div class="row" id="sharingAttachmentsLinkTargetRow">
+        <label for="sharingAttachmentsLinkTarget" data-i18n="options_sharing_attachments_link_target_label">Attachment link target</label>
+        <select id="sharingAttachmentsLinkTarget">
+          <option value="zip_download" data-i18n="options_sharing_attachments_link_target_zip_download">ZIP download</option>
+          <option value="share_page" data-i18n="options_sharing_attachments_link_target_share_page">Nextcloud share page</option>
+        </select>
+      </div>
       <div class="row" id="sharingAttachmentsAlwaysRow">
         <span aria-hidden="true"></span>
         <label for="sharingAttachmentsAlwaysNc" class="checkbox-inline option-tooltip-wrap">

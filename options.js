@@ -7,12 +7,14 @@
 const i18n = NCI18n.translate;
 const DEFAULT_SHARING_EXPIRE_DAYS = 7;
 const DEFAULT_SHARING_ATTACHMENT_THRESHOLD_MB = NCSharingStorage.DEFAULT_ATTACHMENT_THRESHOLD_MB;
+const DEFAULT_SHARING_ATTACHMENT_LINK_TARGET = NCSharingStorage.DEFAULT_ATTACHMENT_LINK_TARGET;
 const DEFAULT_SHARING_SHARE_NAME = i18n("sharing_share_default") || "Share name";
 const DEFAULT_TALK_TITLE = i18n("ui_default_title") || "Meeting";
 const FALLBACK_POPUP_WIDTH = 520;
 const FALLBACK_POPUP_HEIGHT = 320;
 const SHARING_KEYS = NCSharingStorage.SHARING_KEYS;
 const normalizeAttachmentThresholdMb = NCSharingStorage.normalizeAttachmentThresholdMb;
+const normalizeAttachmentLinkTarget = NCSharingStorage.normalizeAttachmentLinkTarget;
 const OPTIONS_LOG_PREFIX = "[NCUI][Options]";
 const SYSTEM_ADDRESSBOOK_ADMIN_URL = "https://github.com/nc-connector/NC_Connector_for_Thunderbird/blob/main/docs/ADMIN.md#system-address-book-required-for-user-search-and-moderator-selection";
 const POLICY_ADMIN_URL = "https://github.com/nc-connector/NC_Connector_for_Thunderbird/blob/main/docs/ADMIN.md";
@@ -55,6 +57,8 @@ const sharingDefaultPasswordDeliveryModeRow = document.getElementById("sharingDe
 const sharingDefaultPasswordDeliveryModeSelect = document.getElementById("sharingDefaultPasswordDeliveryMode");
 const sharingDefaultExpireDaysRow = document.getElementById("sharingDefaultExpireDaysRow");
 const sharingDefaultExpireDaysInput = document.getElementById("sharingDefaultExpireDays");
+const sharingAttachmentsLinkTargetRow = document.getElementById("sharingAttachmentsLinkTargetRow");
+const sharingAttachmentsLinkTargetSelect = document.getElementById("sharingAttachmentsLinkTarget");
 const sharingAttachmentsAlwaysNcInput = document.getElementById("sharingAttachmentsAlwaysNc");
 const sharingAttachmentsAlwaysRow = document.getElementById("sharingAttachmentsAlwaysRow");
 const sharingAttachmentsOfferRow = document.getElementById("sharingAttachmentsOfferRow");
@@ -193,6 +197,20 @@ const OPTION_SHARE_POLICY_BINDINGS = [
     property: "value",
     type: "int",
     normalize: (value, fallback) => NCTalkTextUtils.normalizeExpireDays(value, fallback || DEFAULT_SHARING_EXPIRE_DAYS)
+  },
+  {
+    name: "sharingAttachmentsLinkTarget",
+    storageKey: SHARING_KEYS.attachmentsLinkTarget,
+    domain: "share",
+    key: "attachment_link_target",
+    element: sharingAttachmentsLinkTargetSelect,
+    row: sharingAttachmentsLinkTargetRow,
+    property: "value",
+    type: "string",
+    fallback: DEFAULT_SHARING_ATTACHMENT_LINK_TARGET,
+    lockedFallback: DEFAULT_SHARING_ATTACHMENT_LINK_TARGET,
+    normalize: (value, fallback) => normalizeAttachmentLinkTarget(value, fallback),
+    isValid: (value) => NCSharingStorage.isValidAttachmentLinkTarget(value)
   },
   {
     name: "shareBlockLang",
@@ -580,6 +598,9 @@ function hasValidStoredBindingValue(stored, binding){
   if (value === undefined && binding.legacyStorageKey){
     value = stored?.[binding.legacyStorageKey];
   }
+  if (typeof binding.isValid === "function"){
+    return binding.isValid(value);
+  }
   if (binding.type === "boolean"){
     return typeof value === "boolean";
   }
@@ -890,6 +911,7 @@ async function load(){
     SHARING_KEYS.defaultPasswordSeparate,
     SHARING_KEYS.defaultPasswordDeliveryMode,
     SHARING_KEYS.defaultExpireDays,
+    SHARING_KEYS.attachmentsLinkTarget,
     SHARING_KEYS.attachmentsAlwaysConnector,
     SHARING_KEYS.attachmentsOfferAboveEnabled,
     SHARING_KEYS.attachmentsOfferAboveMb,
@@ -957,6 +979,12 @@ async function load(){
       DEFAULT_SHARING_EXPIRE_DAYS
     );
     sharingDefaultExpireDaysInput.value = String(normalizedExpireDays);
+  }
+  if (sharingAttachmentsLinkTargetSelect){
+    sharingAttachmentsLinkTargetSelect.value = normalizeAttachmentLinkTarget(
+      stored[SHARING_KEYS.attachmentsLinkTarget],
+      DEFAULT_SHARING_ATTACHMENT_LINK_TARGET
+    );
   }
   if (sharingAttachmentsAlwaysNcInput){
     sharingAttachmentsAlwaysNcInput.checked = !!stored[SHARING_KEYS.attachmentsAlwaysConnector];
@@ -1245,6 +1273,10 @@ async function save(){
     NCSharePasswordDelivery.MODE_PLAIN
   );
   let sharingDefaultExpireDays = NCTalkTextUtils.normalizeExpireDays(sharingDefaultExpireDaysInput?.value, DEFAULT_SHARING_EXPIRE_DAYS);
+  let sharingAttachmentsLinkTarget = normalizeAttachmentLinkTarget(
+    sharingAttachmentsLinkTargetSelect?.value,
+    DEFAULT_SHARING_ATTACHMENT_LINK_TARGET
+  );
   let sharingAttachmentsAlwaysConnector = !!sharingAttachmentsAlwaysNcInput?.checked;
   let sharingAttachmentsOfferAboveEnabled = !!sharingAttachmentsOfferAboveEnabledInput?.checked;
   let sharingAttachmentsOfferAboveMb = normalizeAttachmentThresholdMb(sharingAttachmentsOfferAboveMbInput?.value);
@@ -1284,6 +1316,7 @@ async function save(){
       sharingDefaultPasswordSeparate,
       sharingDefaultPasswordDeliveryMode,
       sharingDefaultExpireDays,
+      sharingAttachmentsLinkTarget,
       shareBlockLang,
       talkDefaultTitle,
       talkDefaultLobby,
@@ -1305,6 +1338,7 @@ async function save(){
     sharingDefaultPasswordSeparate,
     sharingDefaultPasswordDeliveryMode,
     sharingDefaultExpireDays,
+    sharingAttachmentsLinkTarget,
     shareBlockLang,
     talkDefaultTitle,
     talkDefaultLobby,
@@ -1375,6 +1409,7 @@ async function save(){
     [SHARING_KEYS.defaultPasswordSeparate]: sharingDefaultPasswordSeparate,
     [SHARING_KEYS.defaultPasswordDeliveryMode]: sharingDefaultPasswordDeliveryMode,
     [SHARING_KEYS.defaultExpireDays]: sharingDefaultExpireDays,
+    [SHARING_KEYS.attachmentsLinkTarget]: sharingAttachmentsLinkTarget,
     [SHARING_KEYS.attachmentsAlwaysConnector]: sharingAttachmentsAlwaysConnector,
     [SHARING_KEYS.attachmentsOfferAboveEnabled]: sharingAttachmentsOfferAboveEnabled,
     [SHARING_KEYS.attachmentsOfferAboveMb]: sharingAttachmentsOfferAboveMb,

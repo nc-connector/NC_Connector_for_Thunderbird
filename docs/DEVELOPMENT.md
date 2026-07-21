@@ -308,6 +308,7 @@ Sharing defaults (managed by `modules/sharingStorage.js`):
 - `sharingDefaultPasswordSeparate`
 - `sharingDefaultPasswordDeliveryMode` (`"plain"` or `"secrets"`)
 - `sharingDefaultExpireDays`
+- `sharingAttachmentsLinkTarget` (`"zip_download"` or `"share_page"`; an invalid local value counts as unset, so a usable editable backend default may seed it; a locked missing or invalid backend value forces `"zip_download"` instead of a stored local value)
 - `sharingAttachmentsAlwaysConnector`
 - `sharingAttachmentsOfferAboveEnabled`
 - `sharingAttachmentsOfferAboveMb`
@@ -327,6 +328,8 @@ Talk “participants” split (as of 2.2.7):
 Backward compatibility:
 - If both new properties are missing, we interpret legacy `ADD-PARTICIPANTS` as “users + guests”.
 - When writing, we still write legacy `ADD-PARTICIPANTS` as `ADD-USERS || ADD-GUESTS`.
+
+The attachment-link target has no install/update migration. Profiles without a valid local value first use normal backend-default resolution. Without a usable editable backend value, the `zip_download` fallback keeps the previous ZIP-download behavior. A locked missing or invalid backend value also forces `zip_download`, regardless of a stored local value.
 
 ---
 
@@ -627,7 +630,10 @@ Attachment mode specifics:
 - Wizard starts in step 3 (files queue), without note step.
 - Share label is fixed at create time; note metadata is pushed at finalize time via the documented OCS update endpoint.
 - Share name base is fixed to `email_attachment` with fixed `_1`, `_2`, ... suffix handling.
-- Compose HTML block for this mode uses ZIP download URL (`/s/<token>/download`) and hides permission row.
+- The effective attachment-link target comes from `sharingAttachmentsLinkTarget` and backend policy key `policy.share.attachment_link_target` (`zip_download` or `share_page`). An invalid local value counts as unset, allowing a usable editable backend default to seed it. A locked valid backend value always wins; a locked missing or invalid backend value forces `zip_download` instead of falling back to stored local state.
+- The target changes only the inserted URL plus `{LINK_INTRO}` / `{LINK_LABEL}` wording. Attachment-mode read-only permissions, hidden permission row, and cleanup behavior stay unchanged.
+- `zip_download` inserts `/s/<token>/download`; `share_page` keeps the canonical `/s/<token>` URL. Manual wizard shares always keep the share-page URL.
+- ZIP derivation accepts only an absolute HTTP(S) URL whose path ends in `/s/<token>`; a trailing slash, query, or fragment is accepted and removed. When the OCS create-share response contains a token, the decoded path token must match it. Any invalid shape or mismatch makes finalize show an error and insert neither the original URL nor a share block.
 - Recipient permissions are enforced as read-only in this mode (`read=true`, `create/write/delete=false`), independent of sharing defaults.
 - Queue UI behavior:
   - path column shows the best available source path (including file name)
@@ -701,7 +707,7 @@ Runtime rules:
 - `custom` stays disabled unless the effective backend policy for the respective domain is actually `custom` and provides a template.
 - Backend templates are only used when the effective language override is `custom`.
 - If `custom` is selected but the backend template is empty or unavailable, runtime falls back to the local UI-default text block.
-- Share templates may use `{LINK_INTRO}` and `{LINK_LABEL}` in addition to the existing placeholders. Thunderbird resolves both from the existing render mode: normal shares describe and label the Nextcloud share page, while attachment mode describes and labels the `/download` URL as a ZIP download.
+- Share templates may use `{LINK_INTRO}` and `{LINK_LABEL}` in addition to the existing placeholders. Thunderbird resolves both from the effective link target: manual shares and `share_page` attachment shares describe the Nextcloud share page, while `zip_download` attachment shares describe and label the `/download` URL as a ZIP download.
 - For custom Share templates, Thunderbird prefers `policy.share.share_html_block_template_v2` and falls back to `policy.share.share_html_block_template`. The fallback keeps current clients compatible with older backend versions, while the V2 key lets newer backends keep the original key safe for clients that do not understand the mode-aware variables.
 - With current backends, `policy.share.share_html_block_effective_language` supplies the actual language of a custom template. Thunderbird uses it for all client-generated template text, including link wording, field labels, permission names, and the separate-password hint. Older backends without this output-only field retain the previous fallback behavior.
 - Templates that do not contain the new placeholders keep their previous rendering; the client does not rewrite backend-provided template HTML.
@@ -711,6 +717,7 @@ Runtime rules:
 - Active UI/runtime paths should avoid legacy `innerHTML` and `execCommand(...)` write APIs where ESR-140-compatible DOM/clipboard alternatives exist.
 - Separate password follow-up dispatch is seat-restricted and only available with backend endpoint + usable active assigned seat. `overlicensed=true` disables it in both UI and background and shows the existing license warning.
 - Backend attachment-threshold policy uses `attachments_min_size_mb` as both value and enable-state: a positive integer enables threshold mode, `null` disables it.
+- Backend attachment-link policy uses `attachment_link_target` with values `zip_download` and `share_page`; `policy_editable.share.attachment_link_target=false` locks the options control. If a locked value is missing or invalid, the effective value is `zip_download`.
 - Locked backend attachment-automation policy is enforced in compose runtime, not only in the settings surface.
 - Backend email signatures are applied only when `policy.email_signature.email_signature_on_compose=true`, a rendered `email_signature_template` exists, and `policy.email_signature.user_email` matches the active Thunderbird sender identity email.
 - Identity changes are queued per compose tab. Immediately before a signature write, background reads the current `identityId` again and resolves its current email against `policy.email_signature.user_email`; a changed identity starts a new pass instead of applying stale state.
