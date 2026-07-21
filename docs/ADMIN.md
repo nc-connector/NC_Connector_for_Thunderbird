@@ -16,6 +16,7 @@ Related docs:
 ## Table of Contents
 
 - [1. Supported versions & requirements](#1-supported-versions--requirements)
+  - [1.1 Nextcloud Pretty URLs](#11-nextcloud-pretty-urls)
 - [2. Add-on settings reference](#2-add-on-settings-reference)
   - [2.1 General (Nextcloud connection)](#21-general-nextcloud-connection)
   - [2.2 Sharing defaults](#22-sharing-defaults)
@@ -62,6 +63,121 @@ Network:
   - Secrets OCS calls when Secrets-link password delivery is enabled
   - DAV operations (uploads / folder creation)
   - Capabilities (password policy)
+
+### 1.1 Nextcloud Pretty URLs
+
+NC Connector uses Nextcloud for file sharing, uploads, authentication, Talk meetings, and optional services. Pretty URLs are a server-wide Nextcloud routing feature; they are not a setting for any one NC Connector function. One visible symptom of a broken rewrite is the public Talk link written to a calendar entry. For that link, NC Connector combines the configured public Nextcloud base URL with `/call/<TOKEN>`:
+
+```text
+https://cloud.example.com/call/<TOKEN>
+```
+
+If the same room works only with `/index.php/`, for example
+`https://cloud.example.com/index.php/call/<TOKEN>`, the Nextcloud front-controller rewrite is missing or misconfigured. This is a web-server or reverse-proxy problem, not a Talk or NC Connector setting. Fix the public route instead of adding `/index.php` to the Nextcloud URL configured in NC Connector.
+
+If Nextcloud is publicly available below a path such as `/nextcloud`, that path is part of the base URL. The expected room URL is then `https://cloud.example.com/nextcloud/call/<TOKEN>`.
+
+#### Quick check
+
+For an installation at the web root, open both URLs in a browser:
+
+```text
+https://cloud.example.com/index.php/login
+https://cloud.example.com/login
+```
+
+For an installation below `/nextcloud`, use:
+
+```text
+https://cloud.example.com/nextcloud/index.php/login
+https://cloud.example.com/nextcloud/login
+```
+
+The first URL is the baseline. The second URL must also reach Nextcloud or redirect to its login page instead of returning a web-server 404. If only the first URL works, Pretty URL rewriting is not working and `/call/<TOKEN>` links will fail for the same reason.
+
+#### Nginx
+
+Use Nextcloud's complete Nginx configuration as the baseline. The following blocks are only the relevant excerpts; merge them into the matching existing `server` and PHP/FastCGI locations rather than creating duplicate locations.
+
+For Nextcloud at the web root, the request fallback must reach `index.php`:
+
+```nginx
+location / {
+    try_files $uri $uri/ /index.php$request_uri;
+}
+```
+
+The PHP/FastCGI location also needs:
+
+```nginx
+fastcgi_param front_controller_active true;
+```
+
+For Nextcloud below `/nextcloud`, the fallback inside Nextcloud's outer `location ^~ /nextcloud` block must include that path:
+
+```nginx
+location /nextcloud {
+    try_files $uri $uri/ /nextcloud/index.php$request_uri;
+}
+```
+
+Validate and reload Nginx after changing its configuration:
+
+```bash
+sudo nginx -t
+sudo systemctl reload nginx
+```
+
+#### Apache
+
+Apache must load `mod_rewrite` and `mod_env`, and the `<Directory>` block for the Nextcloud installation must permit its `.htaccess` rules with `AllowOverride All`. On Debian or Ubuntu:
+
+```bash
+sudo a2enmod rewrite env
+sudo systemctl reload apache2
+```
+
+Set the public CLI URL and the rewrite base in Nextcloud's `config/config.php`.
+
+For Nextcloud at the web root:
+
+```php
+'overwrite.cli.url' => 'https://cloud.example.com/',
+'htaccess.RewriteBase' => '/',
+```
+
+For Nextcloud below `/nextcloud`:
+
+```php
+'overwrite.cli.url' => 'https://cloud.example.com/nextcloud',
+'htaccess.RewriteBase' => '/nextcloud',
+```
+
+Behind a reverse proxy, `htaccess.RewriteBase` is the path relative to the backend Apache `DocumentRoot`, after the proxy mapping. If the public proxy exposes `/nextcloud` but strips that prefix before forwarding to Apache, use `/`, not `/nextcloud`.
+
+Regenerate Nextcloud's `.htaccess` as the web-server user, using the real installation path if it differs:
+
+```bash
+cd /var/www/nextcloud
+sudo -E -u www-data php occ maintenance:update:htaccess
+sudo systemctl reload apache2
+```
+
+Only if rewriting still fails after checking `mod_rewrite`, `AllowOverride All`, the rewrite base, and the regenerated `.htaccess`, add this fallback to `config/config.php`:
+
+```php
+'htaccess.IgnoreFrontController' => true,
+```
+
+Then run `maintenance:update:htaccess` again and reload Apache.
+
+After the change, repeat the `/login` test and open a newly generated `/call/<TOKEN>` link from a client outside the server network. On managed hosting or appliances, apply the equivalent setting through the provider's supported web-server or reverse-proxy configuration.
+
+Official Nextcloud references:
+
+- [Nginx configuration](https://docs.nextcloud.com/server/stable/admin_manual/installation/nginx.html)
+- [Apache installation and Pretty URLs](https://docs.nextcloud.com/server/stable/admin_manual/installation/source_installation.html#pretty-urls)
+- [`maintenance:update:htaccess`](https://docs.nextcloud.com/server/stable/admin_manual/occ_system.html#maintenance-commands)
 
 ---
 
