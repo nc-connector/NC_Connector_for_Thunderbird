@@ -16,6 +16,7 @@ const CHECKS = [
   "tools/policy-contract-check.js",
   "tools/policy-editability-check.js",
   "tools/password-delivery-contract-check.js",
+  "tools/password-policy-runtime-check.js",
   "tools/url-subfolder-contract-check.js",
   "tools/signature-compose-settle-check.js",
   "tools/i18n-locale-parity-check.js",

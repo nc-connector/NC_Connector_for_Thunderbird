@@ -42,7 +42,7 @@ Datenfluss:
 - Erstellt einen datierten Share-Ordner über DAV und lädt Dateien hoch
 - Erstellt Shares über /ocs/v2.php/apps/files_sharing/api/v1/shares
 - Setzt Defaults für Share-Name, Rechte, Passwort und Ablaufdatum
-- Berücksichtigt Nextcloud Passwort-Policy (Mindestlänge + Generator-API mit sicherem Fallback)
+- Berücksichtigt Nextcloud Passwort-Policy (Mindestlänge + Generator-API nur auf derselben Origin mit sicherer lokaler Erzeugung als Fallback)
 - Sendet das Share-Label bereits beim OCS-Create und aktualisiert veränderliche Metadaten wie die Notiz danach über den dokumentierten OCS-Update-Endpunkt
 - Armierung eines Compose-Cleanup im Background; bei geschlossenem Compose ohne erfolgreichen Versand wird der Remote-Share-Ordner entfernt
 - Behandelt doppelte Namen und Remote-Konflikte; Fehlerpfade aus DAV/OCS
@@ -70,7 +70,7 @@ Datenfluss:
   - **Gäste:** externe Teilnehmer per E-Mail (kann – je nach Server-Settings – zusätzliche Einladungsmails von Nextcloud auslösen)
 - Baut Description-Block mit Link, Passwort und Help-URL
 - Unterstützt Moderator-Delegation und Participant-Promotion
-- Berücksichtigt Nextcloud Passwort-Policy (Mindestlänge + Generator-API mit sicherem Fallback)
+- Berücksichtigt Nextcloud Passwort-Policy (Mindestlänge + Generator-API nur auf derselben Origin mit sicherer lokaler Erzeugung als Fallback)
 
 ### Kalender
 - Talk-Button in den Kalender-Termin-Editoren (Dialog + Tab) über Standard-`calendar_item_action`

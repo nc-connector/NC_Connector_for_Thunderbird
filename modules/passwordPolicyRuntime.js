@@ -18,18 +18,25 @@ const NCPasswordPolicyRuntime = (() => {
 
   function resolvePolicyUrl(value, baseUrl){
     const raw = typeof value === "string" ? value.trim() : "";
-    if (!raw){
+    const normalizedBaseUrl = NCCore.normalizeBaseUrl(String(baseUrl || "").trim());
+    if (!raw || !normalizedBaseUrl){
       return null;
     }
     try{
-      if (baseUrl){
-        return new URL(raw, baseUrl).toString();
+      const base = new URL(normalizedBaseUrl);
+      const resolved = new URL(raw, normalizedBaseUrl);
+      if (resolved.origin !== base.origin){
+        globalThis.NCLogContext.safeConsoleError("[NCBG]", "password policy URL origin rejected", {
+          baseOrigin: base.origin,
+          targetOrigin: resolved.origin
+        });
+        return null;
       }
-      return new URL(raw).toString();
+      return resolved.toString();
     }catch(error){
       globalThis.NCLogContext.safeConsoleError("[NCBG]", "normalize URL failed", {
         raw: String(raw || ""),
-        baseUrl: String(baseUrl || ""),
+        baseUrl: normalizedBaseUrl,
         error: error?.message || String(error)
       });
       return null;

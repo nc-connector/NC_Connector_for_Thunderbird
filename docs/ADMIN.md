@@ -290,8 +290,8 @@ If a server-side generator is available, it provides:
 
 If the user enables “Set password”:
 1. The add-on fetches the current policy (min length, generator endpoint if available).
-2. If a generator endpoint exists, it is used to generate a password server-side.
-3. If not, the add-on falls back to a strong local generator.
+2. If a generator endpoint exists on the same origin as the configured Nextcloud base URL, it is used to generate a password server-side.
+3. A missing, invalid, or different-origin endpoint is rejected before an authenticated request; the add-on then falls back to a strong local generator.
 
 If the user disables “Set password”:
 - No password is generated or set, regardless of policy presence.

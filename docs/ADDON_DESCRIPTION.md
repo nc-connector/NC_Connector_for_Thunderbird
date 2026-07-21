@@ -42,7 +42,7 @@ Data flow:
 - Creates a dated share folder via DAV and uploads selected files
 - Creates a share via /ocs/v2.php/apps/files_sharing/api/v1/shares
 - Applies defaults for share name, permissions, password, and expiry date
-- Honors Nextcloud password policies (min length + generator API with secure fallback)
+- Honors Nextcloud password policies (min length + same-origin generator API with secure local fallback)
 - Sends the share label during OCS create and updates mutable metadata like note afterwards via the documented OCS update endpoint
 - Arms compose-share cleanup in background and removes the remote share folder if compose is closed without successful send
 - Handles duplicate names and remote path conflicts; surfaces errors from DAV/OCS
@@ -72,7 +72,7 @@ Data flow:
   - **Guests:** external attendees via e-mail (may trigger additional invitation e-mails from Nextcloud, depending on server settings)
 - Builds a description block with link, password, and help URL
 - Supports moderator delegation and participant promotion
-- Honors Nextcloud password policies (min length + generator API with secure fallback)
+- Honors Nextcloud password policies (min length + same-origin generator API with secure local fallback)
 
 ### Calendar
 - Provides a Talk button inside the calendar event editors (dialog + tab) via standard `calendar_item_action`

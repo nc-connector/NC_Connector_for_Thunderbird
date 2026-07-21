@@ -829,6 +829,7 @@ This add-on uses Nextcloud APIs such as:
   - `/ocs/v2.php/apps/spreed/api/v4/...`
 - Password policy:
   - `/ocs/v2.php/apps/password_policy/api/v1/generate`
+  - an authenticated generator URL is accepted only when its origin matches the normalized Nextcloud base URL; any other origin is rejected before the request and local generation is used
 - Files sharing:
   - `/ocs/v2.php/apps/files_sharing/api/v1/shares`
 - Secrets:
@@ -864,6 +865,7 @@ Before you ship:
    - policy contract
    - policy editability
    - password delivery contract
+   - password policy runtime
    - URL subfolder contract
    - signature compose settling
    - Nextcloud user ID check

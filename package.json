@@ -8,6 +8,7 @@
     "test:policy-contract": "node tools/policy-contract-check.js",
     "test:policy-editability": "node tools/policy-editability-check.js",
     "test:password-delivery-contract": "node tools/password-delivery-contract-check.js",
+    "test:password-policy-runtime": "node tools/password-policy-runtime-check.js",
     "test:url-subfolder-contract": "node tools/url-subfolder-contract-check.js",
     "test:signature-compose-settle": "node tools/signature-compose-settle-check.js",
     "test:nextcloud-user-id-contract": "node tools/nextcloud-user-id-contract-check.js",

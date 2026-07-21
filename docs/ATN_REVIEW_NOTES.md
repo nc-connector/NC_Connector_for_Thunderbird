@@ -160,6 +160,7 @@ for persisted monitoring (`browser.calendar.items.onCreated/onUpdated/onRemoved`
   chunk-upload, and CardDAV paths use the canonical user ID returned by
   `/ocs/v2.php/cloud/user`. Missing canonical IDs fail explicitly instead of
   treating an email login alias as a filesystem path ID.
+- Password-policy generator URLs are resolved against the normalized Nextcloud base and accepted only for the same origin. A different origin is rejected before any Basic Auth request and uses local password generation.
 
 Known temporary deviation:
 - The editor context bridge still includes scoped tab/window correlation inside

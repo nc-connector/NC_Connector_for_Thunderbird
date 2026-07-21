@@ -109,6 +109,26 @@ jobs:
       - name: Run password delivery contract check
         run: npm run test:password-delivery-contract
 
+  password-policy-runtime:
+    name: Password policy runtime
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run password policy runtime check
+        run: npm run test:password-policy-runtime
+
   url-subfolder-contract:
     name: URL subfolder contract
     runs-on: ubuntu-latest
