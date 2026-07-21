@@ -132,7 +132,7 @@ Important behavior details:
 - **Invitee sync happens after saving the event**, driven by calendar item updates (not immediately when clicking the toolbar button).
 - “Guests” may trigger **additional invitation e-mails** from Nextcloud depending on server configuration and Talk version.
 - Deleting a saved calendar event deletes the linked Talk room only when this opt-in is enabled and the event has NC Connector `X-NCTALK-*` metadata. Generic Talk links in `LOCATION` or `URL` fields are ignored.
-- Cleanup for rooms created in an unsaved and then discarded event editor remains active independently.
+- Cleanup for rooms created in an unsaved and then discarded event editor remains active independently. A save attempt clears it only after Thunderbird reports a stored event with matching `X-NCTALK-TOKEN`.
 
 ### 2.3.1 Optional NC Connector backend policies
 

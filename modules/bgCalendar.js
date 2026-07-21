@@ -705,6 +705,9 @@ async function handleCalendarItemUpsert(item){
       });
       return;
     }
+    // Only a calendar event carrying the connector token proves that the
+    // editor contents were accepted and stored by Thunderbird.
+    removeRoomCleanupEntry(meta.token, "calendar_item_persisted");
     const persistedMeta = getRoomMeta(meta.token) || {};
     if (meta.lobbyEnabled == null && typeof persistedMeta.lobbyEnabled === "boolean"){
       meta.lobbyEnabled = persistedMeta.lobbyEnabled;
@@ -753,7 +756,6 @@ async function handleCalendarItemUpsert(item){
         meta.startTimestamp = null;
       }
     }
-    removeRoomCleanupEntry(meta.token, "calendar_upsert");
     await setEventTokenEntry(item.calendarId, item.id, { token: meta.token, url: meta.url, source: "x-nctalk" });
 
     if (meta.lobbyEnabled !== false){

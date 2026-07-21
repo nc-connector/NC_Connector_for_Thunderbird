@@ -41,7 +41,7 @@ for persisted monitoring (`browser.calendar.items.onCreated/onUpdated/onRemoved`
 1) Talk button is present in dialog and tab editors.
 2) Button click opens the Talk wizard through the native calendar item action popup.
 3) Wizard can read/write unsaved editor state through `editorId` targeting.
-4) Cleanup flow handles persisted/discarded/superseded editor close actions.
+4) Editor close signals handle discarded/superseded cleanup; only official calendar create/update events with matching `X-NCTALK-TOKEN` confirm persistence.
 5) Event move/delete handling remains driven by official calendar item events.
 6) Talk/Sharing wizard windows use best-effort focus retries after popup creation; focus requests remain non-fatal due to OS/window-manager policy.
 7) Lobby timer updates consume `X-NCTALK-START` as source value; on calendar upserts, `DTSTART` is parsed through the shared iCal rules and synchronized back into `X-NCTALK-START`.
@@ -86,6 +86,7 @@ for persisted monitoring (`browser.calendar.items.onCreated/onUpdated/onRemoved`
   - generic Talk URLs copied into event `LOCATION` or `URL` fields are not parsed as ownership proof
   - old cached mappings without trusted source metadata are ignored and cleared instead of deleting a room
   - cleanup for a room created in an unsaved and then discarded event editor remains active independently
+  - save-button events do not clear pending cleanup because Thunderbird can still reject the save; a matching persisted calendar item clears it
 - Separate-password follow-up dispatch remains restricted to backend endpoint, active assigned seat, and enabled password protection.
   - the options/UI toggle surface is only functional when those runtime conditions are met
   - `accountsRead` is requested only to resolve the actual Thunderbird sender identity of the already-open primary compose window, so the password follow-up can reuse the same sender identity instead of guessing from a visible `From` header string.

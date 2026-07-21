@@ -109,10 +109,6 @@ function handleCalendarItemsEditorClosed(event){
   if (!token){
     return;
   }
-  if (action === "persisted"){
-    removeRoomCleanupEntry(token, `persisted:${reason}`);
-    return;
-  }
   if (action === "discarded"){
     scheduleRoomCleanupDelete(token, reason || "discarded");
     return;

@@ -12,6 +12,7 @@ const { spawnSync } = require("node:child_process");
 const ROOT = path.resolve(__dirname, "..");
 const CHECKS = [
   "tools/ical-contract-check.js",
+  "tools/calendar-room-cleanup-check.js",
   "tools/share-plaintext-contract-check.js",
   "tools/policy-contract-check.js",
   "tools/policy-editability-check.js",

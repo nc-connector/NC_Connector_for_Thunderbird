@@ -53,14 +53,14 @@
       {
         "id": "EditorClosedAction",
         "type": "string",
-        "enum": ["persisted", "discarded", "superseded"],
-        "description": "persisted: emitted for dialogaccept or dialogextra1. discarded: emitted for dialogcancel, dialogextra2, or unload. superseded: tracked editorId was replaced by a new editorId for the same UI target."
+        "enum": ["discarded", "superseded"],
+        "description": "discarded: emitted for dialogcancel, dialogextra2, or unload. superseded: tracked editorId was replaced by a new editorId for the same UI target. Persisted items are reported by calendar.items.onCreated or calendar.items.onUpdated instead of this editor-close event."
       },
       {
         "id": "EditorClosedReason",
         "type": "string",
         "description": "Underlying UI signal that produced the close action.",
-        "enum": ["dialogaccept", "dialogextra1", "dialogcancel", "dialogextra2", "unload", "re-bound"]
+        "enum": ["dialogcancel", "dialogextra2", "unload", "re-bound"]
       },
       {
         "id": "TrackedEditorClosedInfo",

@@ -408,7 +408,8 @@ Write-back:
 - `browser.ncCalToolbar.updateCurrent({ editorId, fields, properties, returnFormat: "ical" })`
 
 Lifecycle:
-- `browser.ncCalToolbar.onTrackedEditorClosed` with action payload (`persisted`, `discarded`, `superseded`)
+- `browser.ncCalToolbar.onTrackedEditorClosed` with action payload (`discarded`, `superseded`)
+- Successful persistence is reported separately by `browser.calendar.items.onCreated/onUpdated`.
 
 ### 7.4 Click snapshot & editor references
 
@@ -436,13 +437,15 @@ Problem:
 Solution:
 - Background stores cleanup tracking via `talk:registerCleanup` using `editorId`.
 - `browser.ncCalToolbar.onTrackedEditorClosed` (tracked editors only, after `getCurrent`/`updateCurrent`) emits:
-  - `action: "persisted"` (saved) / `"discarded"` (closed/canceled) / `"superseded"`
-  - `reason`: `dialogaccept`, `dialogextra1`, `dialogcancel`, `dialogextra2`, `unload`, `re-bound`
+  - `action: "discarded"` (closed/canceled) / `"superseded"`
+  - `reason`: `dialogcancel`, `dialogextra2`, `unload`, `re-bound`
   - ordering relative to other calendar item events is intentionally not guaranteed
+- Save-button signals are not treated as persistence proof because Thunderbird can reject the save during later validation.
 
 Background behavior:
-- If discarded: delete the room (if it was created during this session and not persisted).
-- If persisted: cancel cleanup entry and keep the room.
+- If discarded: schedule deletion of the room after a short grace period.
+- A real `calendar.items.onCreated/onUpdated` event containing the matching `X-NCTALK-TOKEN` cancels the cleanup entry and keeps the room.
+- A rejected save does not clear cleanup tracking; canceling or closing that editor still deletes its pending room.
 
 ---
 
@@ -570,6 +573,7 @@ We use `returnFormat: "ical"` so our parsing logic stays consistent.
 ### 9.2 What we do on create/update/remove
 
 On create/update (`handleCalendarItemUpsert` in `modules/bgCalendar.js`):
+- Cancel pending unsaved-editor cleanup when the stored event contains the matching `X-NCTALK-TOKEN`.
 - Keep room meta in sync:
   - lobby timer updates when event time changes
   - store token ↔ event mapping
@@ -585,7 +589,8 @@ On remove:
 ### 9.3 Orphan-room prevention
 
 Orphan prevention is handled by:
-- `browser.ncCalToolbar.onTrackedEditorClosed` (editor saved vs discarded)
+- `browser.ncCalToolbar.onTrackedEditorClosed` (editor discarded or superseded)
+- `browser.calendar.items.onCreated/onUpdated` with matching `X-NCTALK-TOKEN` as the persistence signal
 - background cleanup maps keyed by room token + editor reference
 
 ---
@@ -862,6 +867,7 @@ Before you ship:
    - the script installs only the current `main` package from `thunderbird/webext-linter` before each run; no pinned or legacy linter is used as a fallback.
    - the linter already covers generic review rules such as unsafe dynamic HTML writes, manifest/path issues, permissions, vendor files, and Thunderbird API version checks.
 7. GitHub Actions runs the review checks as separate jobs on pushes, pull requests, and manual workflow runs:
+   - calendar room cleanup
    - iCal contract
    - share plaintext contract
    - policy contract

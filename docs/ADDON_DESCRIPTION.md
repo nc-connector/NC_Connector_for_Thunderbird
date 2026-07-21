@@ -88,7 +88,7 @@ Data flow:
   - optionally delete linked rooms when saved NC Connector events are removed
   - delegation + participant auto-add triggered by calendar item updates
 - Saved-event room deletion is opt-in only and requires trusted NC Connector `X-NCTALK-*` metadata; generic Talk links in `LOCATION` or `URL` are ignored.
-- Cleans up newly created rooms when the editor is closed without saving (prevents orphan rooms)
+- Cleans up newly created rooms when the editor is closed without saving; only a stored calendar item with matching `X-NCTALK-TOKEN` cancels this cleanup
 
 ### Logging and Debug
 - Enable debug mode in options to log detailed traces

@@ -1247,8 +1247,6 @@ this.ncCalToolbar = class extends ExtensionAPI {
       state.cleanup.push(() => window.removeEventListener(type, handler, options));
     };
     if ((window.location?.href || "").startsWith(EVENT_DIALOG_URL)) {
-      add("dialogaccept", () => emitOnce("persisted", "dialogaccept"), true);
-      add("dialogextra1", () => emitOnce("persisted", "dialogextra1"), true);
       add("dialogcancel", () => emitOnce("discarded", "dialogcancel"), true);
       add("dialogextra2", () => emitOnce("discarded", "dialogextra2"), true);
     }

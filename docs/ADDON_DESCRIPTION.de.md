@@ -86,7 +86,7 @@ Datenfluss:
   - optionales Löschen verknüpfter Räume bei gelöschten gespeicherten NC Connector Terminen
   - Delegation + Teilnehmer-Auto-Add über Kalender-Item-Updates
 - Das Löschen verknüpfter Räume bei gespeicherten Terminen ist opt-in und benötigt vertrauenswürdige NC Connector `X-NCTALK-*`-Metadaten; generische Talk-Links in `LOCATION` oder `URL` werden ignoriert.
-- Räumt neu erstellte Räume auf, wenn der Editor ohne Speichern geschlossen wird (keine „Orphan“-Räume)
+- Räumt neu erstellte Räume auf, wenn der Editor ohne Speichern geschlossen wird; nur ein gespeicherter Termin mit passendem `X-NCTALK-TOKEN` hebt diese Bereinigung auf
 
 ### Logging und Debug
 - Debug-Modus in den Optionen aktiviert detaillierte Logs

@@ -4,6 +4,7 @@
     "test": "npm run test:review && npm run test:webext-linter",
     "test:review": "node tools/check-review-clean.js",
     "test:ical-contract": "node tools/ical-contract-check.js",
+    "test:calendar-room-cleanup": "node tools/calendar-room-cleanup-check.js",
     "test:share-plaintext-contract": "node tools/share-plaintext-contract-check.js",
     "test:policy-contract": "node tools/policy-contract-check.js",
     "test:policy-editability": "node tools/policy-editability-check.js",
