@@ -22,7 +22,7 @@
   });
 
   const LOG_PREFIX = "[NCUI][Talk]";
-  const SYSTEM_ADDRESSBOOK_ADMIN_URL = "https://github.com/nc-connector/NC_Connector_for_Thunderbird/blob/main/docs/ADMIN.md#system-address-book-required-for-user-search-and-moderator-selection";
+  const SYSTEM_ADDRESSBOOK_ADMIN_URL = "https://github.com/nc-connector/NC_Connector_for_Thunderbird/blob/main/docs/ADMIN.md#43-talk-and-system-address-book";
   const POLICY_ADMIN_URL = "https://github.com/nc-connector/NC_Connector_for_Thunderbird/blob/main/docs/ADMIN.md";
   const params = new URLSearchParams(window.location.search);
   const contextId = (params.get("contextId") || "").trim();

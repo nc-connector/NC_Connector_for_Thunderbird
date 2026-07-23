@@ -16,9 +16,9 @@ const SHARING_KEYS = NCSharingStorage.SHARING_KEYS;
 const normalizeAttachmentThresholdMb = NCSharingStorage.normalizeAttachmentThresholdMb;
 const normalizeAttachmentLinkTarget = NCSharingStorage.normalizeAttachmentLinkTarget;
 const OPTIONS_LOG_PREFIX = "[NCUI][Options]";
-const SYSTEM_ADDRESSBOOK_ADMIN_URL = "https://github.com/nc-connector/NC_Connector_for_Thunderbird/blob/main/docs/ADMIN.md#system-address-book-required-for-user-search-and-moderator-selection";
+const SYSTEM_ADDRESSBOOK_ADMIN_URL = "https://github.com/nc-connector/NC_Connector_for_Thunderbird/blob/main/docs/ADMIN.md#43-talk-and-system-address-book";
 const POLICY_ADMIN_URL = "https://github.com/nc-connector/NC_Connector_for_Thunderbird/blob/main/docs/ADMIN.md";
-const ATTACHMENT_AUTOMATION_ADMIN_URL = "https://github.com/nc-connector/NC_Connector_for_Thunderbird/blob/main/docs/ADMIN.md#47-attachment-automation-prerequisite-disable-competing-thunderbird-compose-features";
+const ATTACHMENT_AUTOMATION_ADMIN_URL = "https://github.com/nc-connector/NC_Connector_for_Thunderbird/blob/main/docs/ADMIN.md#63-attachment-policy-example";
 const NC_CONNECTOR_HOMEPAGE_URL = "https://nc-connector.de";
 const EMAIL_SIGNATURE_KEYS = {
   onCompose: "emailSignatureOnCompose",
