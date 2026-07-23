@@ -49,6 +49,7 @@ It complements:
   - [10.1 Flow & responsibilities](#101-flow--responsibilities)
   - [10.2 Inserting share blocks into compose (mode-aware)](#102-inserting-share-blocks-into-compose-mode-aware)
   - [10.3 Share block language override](#103-share-block-language-override)
+  - [10.4 FileLink upload engine (Nextcloud 32+)](#104-filelink-upload-engine-nextcloud-32)
 - [11. Data model](#11-data-model)
   - [11.1 `X-NCTALK-*` iCalendar properties](#111-x-nctalk--icalendar-properties)
   - [11.2 Internal persistence (`storage.local`)](#112-internal-persistence-storagelocal)
@@ -86,10 +87,10 @@ Thunderbird:
   - `strict_max_version: "153.*"`
 
 Nextcloud:
-- Requires a Nextcloud instance with:
+- Requires Nextcloud 32 or newer with:
   - OCS endpoints enabled
-  - Nextcloud Talk installed
   - Files sharing (DAV + OCS) enabled
+  - Nextcloud Talk installed for calendar and Talk features
   - optional `nc_connector` backend app for centralized seat/policy runtime
 
 ---
@@ -113,6 +114,13 @@ Key files you’ll touch most:
 - `modules/bgComposeShareCleanup.js` — compose-tab and wizard-window remote cleanup lifecycle
 - `modules/bgComposeShareInsert.js` — mode-aware share-block insertion (HTML vs plain-text compose)
 - `modules/bgComposePasswordDispatch.js` — separate-password-mail dispatch and follow-up compose handling
+- `modules/bgFileLinkUpload.js` — background-owned FileLink upload sessions, cancellation, and cleanup handoff
+- `modules/fileLinkUploadPolicy.js` — upload-mode thresholds, batching, concurrency, and retry limits
+- `modules/fileLinkDav.js` — shared DAV request, retry, path-probe, and folder helpers
+- `modules/fileLinkUploadProgress.js` — aggregate and per-item progress throttling
+- `modules/fileLinkBulkUpload.js` — Nextcloud DAV bulk multipart construction, MD5 calculation, and response handling
+- `modules/fileLinkUpload.js` — root reservation plus Direct, Chunked, and Bulk orchestration
+- `modules/fileLinkShare.js` — public-share creation and ambiguous-response recovery
 - `modules/passwordPolicyRuntime.js` — background password-policy fetch/generate helper for wizard requests
 - `modules/bgCompose.js` — compose/window/tab listener wiring
 - `modules/bgSignature.js` — central backend email-signature policy orchestration for compose windows
@@ -610,7 +618,9 @@ Entry point:
   Window-manager policy may still refuse foreground focus.
 
 Responsibilities:
-- The sharing wizard UI performs most DAV/OCS actions using shared modules.
+- The sharing wizard collects files and starts a named `runtime.connect()` Port.
+- `modules/bgFileLinkUpload.js` owns the upload, abort controller, share-folder cleanup handoff, and result delivery for the lifetime of that Port.
+- Shared FileLink modules perform DAV/OCS work in the background context.
 - Public-link share creation follows the documented OCS rules: `label` is sent during create, and mutable metadata such as `note` is updated later via form-encoded OCS update arguments.
 - The background is used for **compose insertion**, because the compose APIs are executed from the background.
 - In attachment mode, background removes selected attachments from compose and
@@ -622,6 +632,13 @@ Key files:
 - `ui/composeAttachmentPrompt.html`
 - `ui/composeAttachmentPrompt.js`
 - `modules/ncSharing.js`
+- `modules/bgFileLinkUpload.js`
+- `modules/fileLinkUploadPolicy.js`
+- `modules/fileLinkDav.js`
+- `modules/fileLinkUploadProgress.js`
+- `modules/fileLinkBulkUpload.js`
+- `modules/fileLinkUpload.js`
+- `modules/fileLinkShare.js`
 - `modules/ocs.js`
 - `modules/nccore.js`
 - `modules/sharingStorage.js`
@@ -639,16 +656,24 @@ Attachment mode specifics:
   - path column shows the best available source path (including file name)
   - path text is horizontally scrollable per row (mouse wheel), while type/status columns remain fixed
   - currently uploading row is highlighted in accent blue; upload progress and done state use green success styling
+  - aggregate progress shows completed files, total files, transferred bytes, total bytes, percentage, and current transfer rate
+  - UI progress delivery is limited to 10 updates per second and batches changed queue rows
 - Upload uniqueness behavior:
   - local duplicate target paths are resolved before upload (rename prompt)
-  - no per-file remote preflight checks are executed for each queue entry in newly created share folders
+  - no per-file remote preflight checks are executed for queue entries in a newly reserved share folder
+  - manual mode stops on an existing share-folder name
+  - attachment mode tries its fixed numbered folder-name candidates
 - Share cleanup rules:
-  - cleanup is armed in background once a share was created and prepared for compose insertion
-  - cleanup is cleared only after successful `compose.onAfterSend` (`sendNow`/`sendLater` with message id)
-  - if compose tab is closed without successful send, background deletes the share folder on the server
+  - cleanup is armed in background for every share created and prepared for insertion into the same compose tab
+  - arming compose cleanup transfers ownership from the wizard entry before the UI continues with insertion and password-dispatch registration
+  - cleanup for the complete set is cleared only after successful `compose.onAfterSend` (`sendNow`/`sendLater` with message id)
+  - if the compose tab is closed without successful send, background deletes every tracked share folder on the server
   - when send is still pending at tab-close time, cleanup delete is delayed by a short grace timer to avoid send/close races
   - wizard-side cleanup is armed by window id in background; if the sharing wizard closes before finalize, background deletes the remote folder on `windows.onRemoved`
   - finalize explicitly clears the wizard cleanup entry before closing the popup
+  - an upload Port disconnect or wizard-window removal aborts active requests before cleanup starts
+  - cleanup entries carry a generation ID so a delayed retry cannot delete a newer share registered for the same wizard window
+  - failed deletes are retried after 2, 5, 10, 30, and 60 seconds; roots already removed from a multi-share draft are dropped from the retry set
 - Password separation:
   - Option + wizard toggle can send the password in a dedicated follow-up mail.
   - This toggle is only active when password protection is enabled.
@@ -730,6 +755,157 @@ Runtime rules:
 - Share, Talk, and email-signature policies are evaluated per backend policy domain. A backend payload without `policy.email_signature` disables only central email signatures and shows the backend-update hint; Share/Talk policy remains active when their domains are present.
 - The signature settings surface stays disabled until the backend endpoint is available, the current user has an active assigned seat, and the `email_signature` policy domain exists. Backend/seat hint text reuses the existing policy messages.
 
+### 10.4 FileLink upload engine (Nextcloud 32+)
+
+#### Capability gate and cache
+
+`modules/nccore.js` reads `/ocs/v2.php/cloud/capabilities?format=json` before any FileLink mutation.
+
+The response is accepted only when:
+
+- HTTP succeeds
+- OCS meta contains an explicit successful result
+- OCS data is an object
+- the server version can be parsed and has major version 32 or newer
+
+The capability snapshot is cached for five minutes per normalized base URL and configured login. Concurrent non-abortable reads for the same account share one in-flight request. A request with its own abort signal stays independent so canceling one wizard cannot cancel another caller's capability read.
+
+DAV bulk upload is enabled only for the exact string capability:
+
+```text
+capabilities.dav.bulkupload = "1.0"
+```
+
+Missing, numeric, or different values keep DAV bulk disabled. Direct and chunked upload remain available after the Nextcloud 32 gate passes.
+
+#### Upload planning
+
+`modules/fileLinkUploadPolicy.js` builds an immutable plan:
+
+- Direct: files up to and including 20 MiB
+- Chunked v2: files above 20 MiB
+- default chunk size: 20 MiB
+- supported chunk size range: 5 MiB through 5 GiB
+- maximum: 10,000 chunks per file
+- Bulk candidate: file up to and including 8 MiB
+- Bulk batch: at most 100 files and at most 20 MiB
+- Bulk requires at least 20 candidate files
+- Bulk is chosen only when its calculated request count is at least 20 percent lower
+
+Direct and chunked files run in a pool of at most three workers. Chunks belonging to one file are sent in order. Bulk batches are sent one at a time before the Direct/Chunked pool starts.
+
+Directory planning creates:
+
+- every directory needed by chunked or Bulk destinations
+- only shared parent paths for Direct files
+
+Direct PUT sends `X-NC-WebDAV-AutoMkcol: 1`, using the Nextcloud 32 header spelling. This lets Nextcloud create a missing path for an individual Direct destination without one `MKCOL` per unique single-file directory.
+
+#### Root reservation and collision handling
+
+`modules/fileLinkUpload.js` reserves the share root in two steps:
+
+1. create a unique staging collection below the configured FileLink base path
+2. `MOVE` it to a candidate target with `Overwrite: F`
+
+The MOVE is the server-side collision decision. A `412` means that candidate is already present. Manual mode has one candidate and stops with the localized collision message. Attachment automation can try its numbered candidates.
+
+An unclear MOVE result is not repeated blindly. The code probes staging and target:
+
+- staging absent plus target collection present: reservation succeeded
+- staging collection present plus target present: collision
+- any other combination: fail and retain the technical detail in debug logging
+
+If the server cannot answer either probe, cleanup retains both the unique staging URL and candidate target URL. A later bounded cleanup attempt probes staging first. A present staging collection is removed without touching the candidate target; only a missing staging collection plus an existing target collection resolves to the moved target.
+
+An unused staging collection is removed in `finally`. Once the target exists, background cleanup receives an immutable URL/auth/path snapshot, so later option changes cannot redirect deletion.
+
+#### Direct, Chunked, and Bulk protocols
+
+Direct upload uses an authenticated DAV `PUT` to the final file URL.
+
+Chunked upload v2 uses:
+
+1. a unique collection below `/remote.php/dav/uploads/<uid>/`
+2. numbered chunk PUTs with `Destination` and `OC-Total-Length`
+3. one MOVE from `<upload-folder>/.file` to the final file URL
+
+The final chunk MOVE is not repeated after an unclear transport or gateway result. A target `PROPFIND` must report a non-collection with the expected content length before the operation is accepted as completed. Failed or canceled chunk sessions delete their upload collection on a best-effort path. Nextcloud expires an upload collection after 24 hours without activity if the client-side delete cannot reach the server.
+
+Bulk upload posts `multipart/related` to `/remote.php/dav/bulk`. Every part contains:
+
+- `Content-Length`
+- `Content-Type`
+- `X-File-MD5`
+- `X-File-Mtime`
+- `X-File-Path`
+
+MD5 values are calculated incrementally from 2 MiB slices with the vendored `SparkMD5` component. The multipart boundary and byte ranges stay fixed across retries; each retry creates a fresh `Blob` from the same descriptor. The JSON response is checked for every destination path, including a per-file `507`.
+
+There is no mode switch after a failed Direct, Chunked, or Bulk operation.
+
+#### Retry and error rules
+
+Replay-safe DAV requests use at most three attempts. Retry status codes are:
+
+```text
+408, 423, 429, 502, 503, 504
+```
+
+`Retry-After` supports seconds and HTTP dates and is capped at 30 seconds. Without a valid server value, the delay is 500 ms after the first failed attempt and 1,000 ms after the second.
+
+DAV and OCS control requests, including response-body reads, stop after 60 seconds per attempt. Upload XHR requests stop after five minutes. Cleanup requests stop after 10 seconds per attempt. A control-request timeout is treated as a transport failure only for a replay-safe operation.
+
+State-changing final MOVE and share-create decisions have separate recovery rules instead of generic retry. HTTP `507` maps to the localized insufficient-storage message; other technical details stay in debug output while the UI receives the normal localized upload error.
+
+#### Public-share creation
+
+`modules/fileLinkShare.js` sends the initial public-share create payload without `publicUpload`. It includes the final path, share type, permissions, and the selected password, expiry, label, and note values. The existing finalize path may update mutable share metadata later.
+
+Both create and metadata update require an explicit successful OCS meta result. HTTP success with an OCS failure status is rejected.
+
+When a create response is unclear:
+
+1. query public shares for the exact path
+2. accept one valid matching public share
+3. retry create once only after a successful lookup reports no match
+4. stop when lookup fails, returns multiple matches, or cannot establish a known empty result
+
+The remembered recovery state stores a salted SHA-256 fingerprint of account and payload, not the password text. A later request for the same path with different share settings is rejected while the earlier result remains unclear.
+
+#### Background lifetime, progress, and cleanup
+
+The wizard opens:
+
+```js
+browser.runtime.connect({ name: "nc-filelink-upload" })
+```
+
+The Port transfers the start request, batched progress events, final result, cancel request, and serialized error. File values cross the WebExtension boundary through the platform's structured-clone support. `modules/bgFileLinkUpload.js` owns one abort controller per session.
+
+Cancellation starts when:
+
+- the wizard sends `cancel`
+- the Port disconnects
+- Thunderbird reports the wizard window removed
+- a newer upload replaces the same wizard session
+
+The background waits for active workers to settle before root cleanup. A result that can no longer be delivered to the wizard triggers immediate remote cleanup. Cleanup records have a generation ID, so a delayed delete retry applies only to the record that scheduled it. Failed deletes are retried after 2, 5, 10, 30, and 60 seconds. Compose cleanup tracks every share block inserted into the same draft, deletes all of them when the unsent draft closes, and clears the complete set only after Thunderbird confirms a successful send.
+
+`modules/fileLinkUploadProgress.js` sends UI summaries at most every 100 ms and debug summaries at most every five seconds. Per-file changes are grouped into one `items` event. A summary contains completed/total files, loaded/total bytes, and bytes per second. This avoids progress-message and console growth proportional to raw XHR progress callbacks.
+
+Nextcloud protocol references:
+
+- [WebDAV basics for Nextcloud 32](https://docs.nextcloud.com/server/32/developer_manual/client_apis/WebDAV/basic.html)
+- [Chunked upload v2 for Nextcloud 32](https://docs.nextcloud.com/server/32/developer_manual/client_apis/WebDAV/chunking.html)
+- [DAV bulk upload](https://docs.nextcloud.com/server/latest/developer_manual/client_apis/WebDAV/bulkupload.html)
+
+Thunderbird platform references:
+
+- [Thunderbird runtime API](https://webextension-api.thunderbird.net/en/esr-mv2/runtime.html)
+- [Thunderbird windows API](https://webextension-api.thunderbird.net/en/mv2/windows.html)
+- [Structured clone algorithm](https://developer.mozilla.org/en-US/docs/Web/API/Web_Workers_API/Structured_clone_algorithm)
+
 ---
 
 ## 11. Data model
@@ -809,12 +985,16 @@ Talk wizard:
 Sharing wizard:
 - `sharing:insertRenderedBlock`
 - `sharing:armComposeShareCleanup`
-- `sharing:armWizardRemoteCleanup`
 - `sharing:clearWizardRemoteCleanup`
 - `sharing:getLaunchContext`
 - `sharing:resolveAttachmentPrompt`
 - `sharing:checkAttachmentAutomationAllowed`
 - `sharing:registerSeparatePasswordDispatch`
+
+FileLink upload uses the named runtime Port `nc-filelink-upload` instead of one long-lived `runtime.sendMessage()` call:
+
+- wizard → background: `start`, `cancel`
+- background → wizard: `progress`, `result`, `error`
 
 Note:
 - Talk-related runtime messaging uses the `talk:*` namespace only.
@@ -849,7 +1029,9 @@ This add-on uses Nextcloud APIs such as:
 - Secrets:
   - `/ocs/v2.php/apps/secrets/api/v1/secrets`
 - DAV:
-  - `remote.php/dav/...`
+  - Direct/final files: `/remote.php/dav/files/<canonical-uid>/...`
+  - Chunked upload v2: `/remote.php/dav/uploads/<canonical-uid>/<upload-id>/...`
+  - DAV bulk upload: `/remote.php/dav/bulk`
 - Addressbook (system addressbook export):
   - `remote.php/dav/addressbooks/.../?export`
 
@@ -882,6 +1064,7 @@ Before you ship:
    - password delivery contract
    - password policy runtime
    - URL subfolder contract
+   - FileLink upload planning, DAV protocol, progress, and cleanup lifecycle
    - signature compose settling
    - Nextcloud user ID check
    - i18n locale parity
@@ -915,6 +1098,22 @@ Common symptoms:
 
 - **Room deletion fails with 403**
   - Can happen after delegation (moderation transferred). Handle gracefully.
+
+- **FileLink stops before creating a folder**
+  - Check the localized minimum-version error and the capabilities request.
+  - Nextcloud 32 or newer plus an explicit successful OCS meta result is required.
+
+- **FileLink remains in scanning or folder preparation**
+  - Bulk candidates are hashed before upload; large sets of small files can spend measurable time in this phase.
+  - Check the phase summary and matching Nextcloud DAV requests instead of relying only on byte percentage.
+
+- **FileLink fails with 507**
+  - The UI maps server-level and Bulk-part `507` responses to the localized insufficient-storage message.
+  - Check user quota, storage capacity, and proxy temporary space.
+
+- **Upload result is lost when the wizard closes**
+  - The Port disconnect aborts active work.
+  - If the root or share already exists, background cleanup uses the captured cleanup target and generation ID.
 
 ---
 

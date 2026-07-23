@@ -13,6 +13,8 @@ for add-on version 3.2.3.
 - Custom experiments are limited to required editor/context bridges plus one
   read-only compose preference bridge (`ncComposePrefs`) used to detect and
   lock conflicting Thunderbird big-attachment behavior.
+- The Nextcloud 32 FileLink upload engine is ordinary WebExtension/background
+  code. It adds no permission and no Experiment API.
 
 ---
 
@@ -47,6 +49,7 @@ for persisted monitoring (`browser.calendar.items.onCreated/onUpdated/onRemoved`
 7) Lobby timer updates consume `X-NCTALK-START` as source value; on calendar upserts, `DTSTART` is parsed through the shared iCal rules and synchronized back into `X-NCTALK-START`.
 8) Existing saved-event Talk room deletion is opt-in only and requires trusted NC Connector `X-NCTALK-*` metadata.
 9) Generic Talk links in `LOCATION` or `URL` fields are deliberately ignored for room-deletion ownership.
+10) FileLink upload sessions stay in background while the Sharing wizard owns a named runtime Port; disconnect or window removal aborts the session and starts remote cleanup.
 
 ---
 
@@ -150,8 +153,6 @@ for persisted monitoring (`browser.calendar.items.onCreated/onUpdated/onRemoved`
   plus the upstream `experiments/calendar/**` code that is shipped unmodified;
   the privileged experiment-parent startup path no longer relies on a bare
   global `setTimeout`.
-- Sharing attachment-mode folder creation skips known-existing DAV prefixes,
-  avoiding benign repeated `MKCOL 405` responses for the configured base folder.
 - Shared UI debug forwarding tracks page teardown centrally and suppresses the
   expected runtime-disconnect race (`context unloaded` / `Conduits`) during popup close.
 - Talk + Sharing now mark the forwarder as unloading before close and briefly
@@ -171,6 +172,33 @@ for persisted monitoring (`browser.calendar.items.onCreated/onUpdated/onRemoved`
   `/ocs/v2.php/cloud/user`. Missing canonical IDs fail explicitly instead of
   treating an email login alias as a filesystem path ID.
 - Password-policy generator URLs are resolved against the normalized Nextcloud base and accepted only for the same origin. A different origin is rejected before any Basic Auth request and uses local password generation.
+
+### Nextcloud 32 FileLink upload
+
+- Nextcloud 32 or newer is checked through the core OCS capabilities response before the first remote FileLink mutation.
+- The exact DAV bulk capability string `"1.0"` enables Bulk planning. Servers without it use Direct and Chunked upload after passing the Nextcloud 32 version check.
+- Upload methods are selected automatically:
+  - Direct PUT for files up to and including 20 MiB
+  - Nextcloud chunked upload v2 for larger files
+  - DAV Bulk only for a sufficiently large small-file set with at least 20 percent fewer calculated requests
+- Direct PUT uses the documented `X-NC-WebDAV-AutoMkcol` header.
+- The final share root is reserved through a unique staging collection and `MOVE` with `Overwrite: F`. A target collision is decided by Nextcloud without an earlier check/create race.
+- Final MOVE requests are not repeated blindly. Unclear root and chunk-finalization results are resolved with exact DAV probes.
+- Replay-safe requests use at most three attempts for transport failures or HTTP `408`, `423`, `429`, `502`, `503`, and `504`; `Retry-After` is capped at 30 seconds.
+- HTTP `507`, including a failed item reported by DAV Bulk, maps to the localized insufficient-storage message.
+- Public-share create does not send `publicUpload`. Unclear create responses use an exact-path lookup and permit one more create only after the lookup reports a known empty result. The later share-metadata update path remains unchanged.
+- The Sharing wizard receives aggregate progress and batched item changes at most every 100 ms. Debug upload summaries are limited to one every five seconds.
+- Port disconnect, wizard removal, cancellation, and undeliverable success results lead to abort and cleanup. Cleanup generation IDs prevent an older delayed retry from deleting a newer window entry.
+- New visible FileLink status, speed, minimum-version, and storage messages are present in every supported locale.
+- `vendor/spark-md5.min.js` is SparkMD5 3.0.2 and calculates DAV Bulk MD5 values incrementally. Its exact source, license, local file, and SHA-256 are recorded in `VENDOR.md`.
+- New background/runtime files:
+  - `modules/bgFileLinkUpload.js`
+  - `modules/fileLinkUploadPolicy.js`
+  - `modules/fileLinkDav.js`
+  - `modules/fileLinkUploadProgress.js`
+  - `modules/fileLinkBulkUpload.js`
+  - `modules/fileLinkUpload.js`
+  - `modules/fileLinkShare.js`
 
 Known temporary deviation:
 - The editor context bridge still includes scoped tab/window correlation inside
