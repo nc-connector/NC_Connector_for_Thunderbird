@@ -131,8 +131,9 @@ function assertPermissionsHtmlContract(caseName, html, labels, enabledStates){
 
   permissionCells.forEach((permissionCell, index) => {
     assert(permissionCell.attributes.nowrap === "nowrap", `${caseName} item ${index + 1} must use nowrap=nowrap`);
+    assert(permissionCell.attributes.valign === "middle", `${caseName} item ${index + 1} must use valign=middle`);
     const parentStyle = parseStyle(permissionCell.attributes.style);
-    const expectedPadding = index === permissionCells.length - 1 ? "0 0 0 0" : "0 12px 0 0";
+    const expectedPadding = index === permissionCells.length - 1 ? "0" : "0 12px 0 0";
     assert(parentStyle.padding === expectedPadding, `${caseName} item ${index + 1} must use padding ${expectedPadding}`);
     assert(parentStyle["white-space"] === "nowrap", `${caseName} item ${index + 1} must prevent wrapping`);
     assert(parentStyle["vertical-align"] === "middle", `${caseName} item ${index + 1} must align vertically`);
@@ -159,14 +160,15 @@ function assertPermissionsHtmlContract(caseName, html, labels, enabledStates){
     assert(iconStyle["font-size"] === "11px", `${caseName} icon ${index + 1} must use an 11px symbol`);
     assert(iconStyle["font-weight"] === "700", `${caseName} icon ${index + 1} must use bold symbol weight`);
     assert(iconStyle["line-height"] === "14px", `${caseName} icon ${index + 1} must use a 14px line height`);
-    assert(iconStyle["mso-line-height-rule"] === "exactly", `${caseName} icon ${index + 1} must use Outlook's exact line-height rule`);
+    assert(!Object.prototype.hasOwnProperty.call(iconStyle, "mso-line-height-rule"), `${caseName} icon ${index + 1} must not use an MSO line-height rule`);
     assert(iconStyle["text-align"] === "center" && iconStyle["vertical-align"] === "middle", `${caseName} icon ${index + 1} must center the symbol`);
     assert(nodeText(iconCell).trim() === expectedSymbol, `${caseName} icon ${index + 1} must contain the correct state symbol`);
 
     const labelCell = iconAndLabelCells[1];
     assert(labelCell.attributes.nowrap === "nowrap" && labelCell.attributes.valign === "middle", `${caseName} label ${index + 1} must use no-wrap alignment attributes`);
     const labelStyle = parseStyle(labelCell.attributes.style);
-    assert(labelStyle.padding === "0 0 0 5px", `${caseName} label ${index + 1} must be spaced 5px from its icon`);
+    assert(labelStyle["padding-left"] === "5px", `${caseName} label ${index + 1} must be spaced 5px from its icon`);
+    assert(!Object.prototype.hasOwnProperty.call(labelStyle, "padding"), `${caseName} label ${index + 1} must not use padding shorthand`);
     assert(labelStyle["white-space"] === "nowrap", `${caseName} label ${index + 1} must prevent wrapping`);
     assert(labelStyle["font-weight"] === "600", `${caseName} label ${index + 1} must use the required weight`);
     assert(labelStyle["vertical-align"] === "middle", `${caseName} label ${index + 1} must align vertically`);
