@@ -701,6 +701,21 @@
   "sharing_status_uploading_bulk": {
     "message": "ファイルをアップロード中..."
   },
+  "sharing_status_scanning": {
+    "message": "ファイルとフォルダーをスキャン中..."
+  },
+  "sharing_status_preparing_folders": {
+    "message": "フォルダーを準備中 ($1 / $2)..."
+  },
+  "sharing_status_uploading_summary": {
+    "message": "ファイルをアップロード中 ($1 / $2) — $3 / $4 — $5"
+  },
+  "nextcloud_minimum_version_required": {
+    "message": "NC Connector には Nextcloud 32 以降が必要です。検出されたバージョン: $1"
+  },
+  "sharing_insufficient_storage": {
+    "message": "このアップロードに必要な空き容量が Nextcloud にありません。"
+  },
   "sharing_message_invalid_share_name": {
     "message": "共有名を入力してください。"
   },
@@ -966,6 +981,6 @@
     "message": "NC Connector バックエンドを更新してください。このバックエンドバージョンは、中央管理のメール署名をまだサポートしていません。"
   },
   "sharing_status_speed_kbps": {
-    "message": "速度: $1 KB/s"
+    "message": "$1 KB/s"
   }
 }

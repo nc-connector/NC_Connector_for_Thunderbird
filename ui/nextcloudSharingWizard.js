@@ -18,6 +18,10 @@
     getContentHeight: () => getContentHeight()
   });
   let pendingUploadScroll = null;
+  let uploadRenderTimer = null;
+  const fileEntriesById = new Map();
+  const fileRowsById = new Map();
+  const pendingUploadRowIds = new Set();
   const TOTAL_STEPS = 4;
   const ATTACHMENT_DEFAULT_SHARE_NAME = "email_attachment";
   const LOG_SOURCE = 'nextcloudSharingWizard';
@@ -82,13 +86,13 @@
     uploadInProgress: false,
     uploadCompleted: false,
     uploadResult: null,
+    uploadPort: null,
     tabId: null,
     launchContextId: null,
     mode: 'default',
     attachmentReason: null,
     debugEnabled: false,
     wizardWindowId: 0,
-    remoteFolderInfo: null,
     pathColumnScrollLeft: 0,
     policy: {
       status: null,
@@ -256,6 +260,8 @@
     dom.fileTableBody = document.getElementById('fileTableBody');
     dom.fileTableWrapper = document.querySelector('.file-table-wrapper');
     dom.fileEmptyPlaceholder = document.getElementById('fileEmptyPlaceholder');
+    dom.overallUploadProgress = document.getElementById('overallUploadProgress');
+    dom.overallUploadProgressBar = document.getElementById('overallUploadProgressBar');
     dom.uploadStatus = document.getElementById('uploadStatus');
     dom.attachmentModeInfo = document.getElementById('attachmentModeInfo');
     dom.noteToggle = document.getElementById('noteToggle');
@@ -616,6 +622,7 @@
           progressStartedAt: 0
         };
       });
+    rebuildFileEntryIndex();
     state.selectedFileId = null;
     log('Attachment queue prepared', { files: state.files.length });
   }
@@ -629,7 +636,8 @@
     dom.noteToggle.checked = false;
     dom.noteFields.classList.add('hidden');
     dom.noteInput.value = '';
-    await resolveAttachmentShareName();
+    dom.shareName.value = ATTACHMENT_DEFAULT_SHARE_NAME;
+    resetShareContext();
     log('Attachment mode defaults set', {
       shareName: dom.shareName.value || '',
       files: state.files.length
@@ -914,8 +922,8 @@
       return;
     }
     if (state.currentStep === 1){
-      const ok = await ensureShareNameAvailable();
-      if (!ok){
+      if (!getSanitizedShareName()){
+        setMessage(i18n('sharing_message_invalid_share_name'), 'error');
         return;
       }
     }
@@ -934,54 +942,6 @@
     }
     if (state.currentStep < TOTAL_STEPS){
       updateStep(state.currentStep + 1);
-    }
-  }
-
-  /**
-   * Verify that the share folder name is available.
-   * @returns {Promise<boolean>}
-   */
-  async function ensureShareNameAvailable(){
-    if (state.mode === "attachments"){
-      try{
-        await resolveAttachmentShareName();
-        return true;
-      }catch(error){
-        logUiError("resolve attachment share name failed", error);
-        setMessage(error?.message || i18n('sharing_error_folder_exists'), 'error');
-        log('Attachment shareName error', error?.message || String(error));
-        return false;
-      }
-    }
-    const shareName = getSanitizedShareName();
-    if (!shareName){
-      setMessage(i18n('sharing_message_invalid_share_name'), 'error');
-      return false;
-    }
-    if (state.shareContext.verified && state.shareContext.folderInfo && state.shareContext.sanitizedName === shareName){
-      return true;
-    }
-    setMessage(i18n('sharing_status_checking_folder'), 'info');
-    try{
-      const result = await NCSharing.checkShareFolderAvailability({
-        shareName,
-        basePath: state.basePath,
-        shareDate: (state.shareContext.shareDate instanceof Date ? state.shareContext.shareDate : new Date()).toISOString()
-      });
-      if (result.exists){
-        setMessage(i18n('sharing_error_folder_exists'), 'error');
-        log('Folder already exists', shareName);
-        return false;
-      }
-      rememberShareFolder(result.folderInfo, shareName);
-      setMessage('');
-      log('Folder name available', shareName);
-      return true;
-    }catch(error){
-      logUiError("ensure share name availability failed", error);
-      setMessage(error?.message || i18n('sharing_status_error'), 'error');
-      log('Folder check error', error?.message);
-      return false;
     }
   }
 
@@ -1036,6 +996,7 @@
       };
     });
     state.files.push(...entries);
+    rebuildFileEntryIndex();
     pendingUploadScroll = '__bottom__';
     state.selectedFileId = null;
     event.target.value = '';
@@ -1048,12 +1009,22 @@
     }
     const removed = state.files.find((entry) => entry.id === state.selectedFileId);
     state.files = state.files.filter((entry) => entry.id !== state.selectedFileId);
+    rebuildFileEntryIndex();
     state.selectedFileId = null;
     invalidateUpload();
     log('Entry removed', removed?.displayPath || '');
   }
 
+  function rebuildFileEntryIndex(){
+    fileEntriesById.clear();
+    for (const entry of state.files){
+      fileEntriesById.set(entry.id, entry);
+    }
+  }
+
   function renderFileTable(){
+    fileRowsById.clear();
+    pendingUploadRowIds.clear();
     dom.fileTableBody.replaceChildren();
     if (!state.files.length){
       dom.fileEmptyPlaceholder.style.display = 'block';
@@ -1061,6 +1032,7 @@
       return;
     }
     dom.fileEmptyPlaceholder.style.display = 'none';
+    const rows = document.createDocumentFragment();
     state.files.forEach((entry) => {
       const row = document.createElement('tr');
       row.dataset.id = entry.id;
@@ -1086,12 +1058,16 @@
       statusCell.appendChild(buildStatusNode(entry));
       row.append(pathCell, typeCell, statusCell);
       row.addEventListener('click', () => {
+        const previousId = state.selectedFileId;
         state.selectedFileId = entry.id;
-        renderFileTable();
+        fileRowsById.get(previousId)?.classList.remove('selected');
+        row.classList.add('selected');
         updateButtons();
       });
-      dom.fileTableBody.appendChild(row);
+      rows.appendChild(row);
+      fileRowsById.set(entry.id, row);
     });
+    dom.fileTableBody.appendChild(rows);
     applySharedPathColumnScroll(state.pathColumnScrollLeft);
     ensureUploadListVisible();
   }
@@ -1141,10 +1117,83 @@
   function formatUploadSpeedKbps(kbps){
     const numeric = Number(kbps);
     const safeValue = Number.isFinite(numeric) && numeric > 0 ? numeric : 0;
-    const rounded = safeValue >= 100
-      ? String(Math.round(safeValue))
-      : safeValue.toFixed(1);
+    const rounded = String(Math.round(safeValue));
     return i18n('sharing_status_speed_kbps', [rounded]);
+  }
+
+  function formatTransferSize(bytes){
+    const value = Math.max(0, Number(bytes) || 0);
+    const units = ['B', 'KB', 'MB', 'GB', 'TB'];
+    let scaled = value;
+    let unitIndex = 0;
+    while (scaled >= 1024 && unitIndex < units.length - 1){
+      scaled /= 1024;
+      unitIndex++;
+    }
+    const formatted = unitIndex === 0
+      ? String(Math.round(scaled))
+      : scaled.toFixed(1);
+    return `${formatted} ${units[unitIndex]}`;
+  }
+
+  function formatTransferRate(bytesPerSecond){
+    return `${formatTransferSize(bytesPerSecond)}/s`;
+  }
+
+  function setOverallProgress({ visible = true, indeterminate = false, percent = 0 } = {}){
+    if (!dom.overallUploadProgress || !dom.overallUploadProgressBar){
+      return;
+    }
+    dom.overallUploadProgress.hidden = !visible;
+    if (!visible || indeterminate){
+      dom.overallUploadProgressBar.removeAttribute('value');
+      return;
+    }
+    dom.overallUploadProgressBar.value = Math.min(100, Math.max(0, Number(percent) || 0));
+  }
+
+  function patchUploadRow(entry){
+    const row = fileRowsById.get(entry?.id);
+    if (!row){
+      return false;
+    }
+    row.classList.toggle('uploading', entry.status === 'uploading');
+    const statusCell = row.querySelector('.status-cell');
+    if (!statusCell){
+      return false;
+    }
+    statusCell.replaceChildren(buildStatusNode(entry));
+    return true;
+  }
+
+  function scheduleUploadRender(itemIds = [], force = false){
+    for (const itemId of itemIds){
+      if (itemId){
+        pendingUploadRowIds.add(itemId);
+      }
+    }
+    if (force){
+      if (uploadRenderTimer){
+        clearTimeout(uploadRenderTimer);
+        uploadRenderTimer = null;
+      }
+      renderFileTable();
+      return;
+    }
+    if (uploadRenderTimer){
+      return;
+    }
+    uploadRenderTimer = setTimeout(() => {
+      uploadRenderTimer = null;
+      const ids = Array.from(pendingUploadRowIds);
+      pendingUploadRowIds.clear();
+      const missingRow = ids.some((itemId) =>
+        !patchUploadRow(fileEntriesById.get(itemId))
+      );
+      if (missingRow){
+        renderFileTable();
+      }
+    }, 100);
   }
 
   /**
@@ -1197,8 +1246,79 @@
     state.files.forEach((entry) => {
       resetFileEntry(entry);
     });
+    setUploadStatus('');
+    setOverallProgress({ visible: false });
     renderFileTable();
     updateButtons();
+  }
+
+  /**
+   * Run one FileLink job in the background runtime.
+   * @param {object} request
+   * @returns {Promise<object>}
+   */
+  async function runBackgroundFileLinkUpload(request){
+    return new Promise((resolve, reject) => {
+      const port = browser.runtime.connect({ name: 'nc-filelink-upload' });
+      state.uploadPort = port;
+      let settled = false;
+      const dispose = () => {
+        port.onMessage.removeListener(onMessage);
+        port.onDisconnect.removeListener(onDisconnect);
+        if (state.uploadPort === port){
+          state.uploadPort = null;
+        }
+      };
+      const complete = (callback, value) => {
+        if (settled){
+          return;
+        }
+        settled = true;
+        dispose();
+        try{
+          port.disconnect();
+        }catch(error){
+          logUiError("upload port disconnect failed", error);
+        }
+        callback(value);
+      };
+      const onMessage = (message) => {
+        if (message?.type === 'progress'){
+          handleUploadStatus(message.event);
+          return;
+        }
+        if (message?.type === 'result'){
+          complete(resolve, message.result);
+          return;
+        }
+        if (message?.type === 'error'){
+          const error = new Error(message.error?.message || i18n('sharing_status_error'));
+          error.name = message.error?.name || 'Error';
+          error.status = Number(message.error?.status) || 0;
+          error.code = message.error?.code || '';
+          complete(reject, error);
+        }
+      };
+      const onDisconnect = () => {
+        const runtimeError = browser.runtime.lastError;
+        complete(
+          reject,
+          new Error(runtimeError?.message || i18n('sharing_status_error'))
+        );
+      };
+      port.onMessage.addListener(onMessage);
+      port.onDisconnect.addListener(onDisconnect);
+      try{
+        port.postMessage({
+          type: 'start',
+          windowId: state.wizardWindowId,
+          tabId: Number(state.tabId) || 0,
+          request
+        });
+      }catch(error){
+        complete(reject, error);
+      }
+    });
   }
 
   /**
@@ -1215,10 +1335,6 @@
       return;
     }
     log('Upload started', { files: state.files.length });
-    if (!(await ensureShareNameAvailable())){
-      log('Upload canceled: shareName unavailable');
-      return;
-    }
     if (!validatePasswordIfNeeded()){
       log('Upload cancelled: invalid password');
       return;
@@ -1230,15 +1346,17 @@
     const hasFiles = state.files.length > 0;
     state.uploadInProgress = true;
     if (hasFiles){
-      setMessage(i18n('sharing_status_uploading_bulk'), 'info');
-      setUploadStatus(i18n('sharing_status_uploading_bulk'));
+      setMessage('');
+      setUploadStatus(i18n('sharing_status_scanning'));
+      setOverallProgress({ visible: true, indeterminate: true });
       state.files.forEach((entry) => {
         resetFileEntry(entry);
         entry.status = 'queued';
       });
     }else{
       setMessage(i18n('sharing_status_creating'), 'info');
-      setUploadStatus('');
+      setUploadStatus(i18n('sharing_status_creating'));
+      setOverallProgress({ visible: true, indeterminate: true });
     }
     renderFileTable();
     updateButtons();
@@ -1249,16 +1367,6 @@
       if (!shareContext){
         throw new Error(i18n('sharing_message_invalid_share_name'));
       }
-      if (shareContext.folderInfo){
-        state.remoteFolderInfo = { ...shareContext.folderInfo };
-        await armWizardRemoteCleanup({
-          tabId: Number(state.tabId),
-          shareLabel: shareContext.sanitizedName || "",
-          shareUrl: "",
-          shareId: "",
-          folderInfo: state.remoteFolderInfo
-        });
-      }
       const permissions = getPermissions();
       log('Upload permissions', {
         mode: state.mode,
@@ -1267,11 +1375,11 @@
         write: !!permissions.write,
         delete: !!permissions.delete
       });
-      const result = await NCSharing.createFileLink({
+      const result = await runBackgroundFileLinkUpload({
         shareName: shareContext.sanitizedName,
         basePath: state.basePath,
         shareDate: shareContext.shareDate.toISOString(),
-        folderInfo: shareContext.folderInfo,
+        attachmentMode: state.mode === 'attachments',
         policyShare: state.policy.active ? state.policy.share : null,
         policyEditableShare: state.policy.active ? state.policy.editable : null,
         permissions,
@@ -1287,20 +1395,13 @@
           displayPath: entry.displayPath,
           renamedName: entry.renamedName,
           relativeDir: entry.relativeDir
-        })),
-        onUploadStatus: handleUploadStatus
+        }))
       });
       state.uploadResult = result;
-      await armWizardRemoteCleanup({
-        tabId: Number(state.tabId),
-        shareLabel: String(result?.shareInfo?.label || shareContext.sanitizedName || ""),
-        shareUrl: String(result?.shareInfo?.shareUrl || ""),
-        shareId: String(result?.shareInfo?.shareId || ""),
-        folderInfo: result?.shareInfo?.folderInfo || state.remoteFolderInfo || null
-      });
       state.uploadCompleted = true;
       setMessage(i18n('sharing_status_ready'), 'success');
       setUploadStatus(i18n('sharing_status_ready'));
+      setOverallProgress({ visible: true, percent: 100 });
       log('Upload completed');
     }catch(error){
       logUiError("upload failed", error);
@@ -1320,18 +1421,70 @@
    * @param {object} event
    */
   function handleUploadStatus(event){
-    if (!event || !event.itemId){
+    if (!event){
       return;
     }
-    const entry = state.files.find((item) => item.id === event.itemId);
-    if (!entry){
+    if (event.phase === 'scanning'){
+      setUploadStatus(i18n('sharing_status_scanning'));
+      setOverallProgress({ visible: true, indeterminate: true });
       return;
+    }
+    if (event.phase === 'folders'){
+      const current = Math.max(0, Number(event.current) || 0);
+      const total = Math.max(0, Number(event.total) || 0);
+      setUploadStatus(i18n('sharing_status_preparing_folders', [String(current), String(total)]));
+      setOverallProgress({
+        visible: true,
+        percent: total > 0 ? Math.round((current / total) * 100) : 100
+      });
+      return;
+    }
+    if (event.phase === 'summary'){
+      const completedFiles = Math.max(0, Number(event.completedFiles) || 0);
+      const totalFiles = Math.max(0, Number(event.totalFiles) || 0);
+      const loadedBytes = Math.max(0, Number(event.loadedBytes) || 0);
+      const totalBytes = Math.max(0, Number(event.totalBytes) || 0);
+      const rawPercent = totalBytes > 0
+        ? Math.round((loadedBytes / totalBytes) * 100)
+        : (totalFiles > 0 ? Math.round((completedFiles / totalFiles) * 100) : 100);
+      const percent = completedFiles < totalFiles ? Math.min(99, rawPercent) : rawPercent;
+      setUploadStatus(i18n('sharing_status_uploading_summary', [
+        String(completedFiles),
+        String(totalFiles),
+        formatTransferSize(loadedBytes),
+        formatTransferSize(totalBytes),
+        formatTransferRate(event.bytesPerSecond)
+      ]));
+      setOverallProgress({ visible: true, percent });
+      return;
+    }
+    if (event.phase === 'items' && Array.isArray(event.items)){
+      const changedIds = [];
+      for (const itemEvent of event.items){
+        if (applyUploadItemStatus(itemEvent)){
+          changedIds.push(itemEvent.itemId);
+        }
+      }
+      scheduleUploadRender(changedIds);
+      return;
+    }
+    if (applyUploadItemStatus(event)){
+      scheduleUploadRender([event.itemId]);
+    }
+  }
+
+  function applyUploadItemStatus(event){
+    if (!event?.itemId){
+      return false;
+    }
+    const entry = fileEntriesById.get(event.itemId);
+    if (!entry){
+      return false;
     }
     if (event.phase === 'start'){
       resetFileEntry(entry);
       entry.status = 'uploading';
       entry.progressStartedAt = Date.now();
-      log('Upload file started', entry.displayPath || entry.file?.name || entry.id);
     }else if (event.phase === 'progress'){
       entry.status = 'uploading';
       entry.progress = event.percent || 0;
@@ -1347,15 +1500,15 @@
       entry.status = 'done';
       entry.progress = 100;
       entry.speedKbps = 0;
-      log('Upload file completed', entry.displayPath || entry.file?.name || entry.id);
     }else if (event.phase === 'error'){
       entry.status = 'error';
       entry.error = event.error || '';
       entry.speedKbps = 0;
       log('Upload file error', { name: entry.displayPath || entry.file?.name || entry.id, error: entry.error });
+    }else{
+      return false;
     }
-    pendingUploadScroll = entry.id;
-    renderFileTable();
+    return true;
   }
 
   /**
@@ -1441,7 +1594,6 @@
         });
       }
       await clearWizardRemoteCleanup();
-      state.remoteFolderInfo = null;
       await closeWizardWindow();
     }catch(error){
       logUiError("finalize share failed", error);
@@ -1487,54 +1639,6 @@
       uiMode: dom.passwordDeliveryMode?.value || ""
     });
     return mode;
-  }
-
-  /**
-   * Arm server-side remote cleanup for this wizard popup window in background.
-   * The cleanup is triggered when the popup window closes unless explicitly cleared.
-   * @param {{tabId:number,shareId:string,shareLabel:string,shareUrl:string,folderInfo:object}} payload
-   * @returns {Promise<void>}
-   */
-  async function armWizardRemoteCleanup(payload = {}){
-    const folderInfo = payload?.folderInfo && typeof payload.folderInfo === "object"
-      ? payload.folderInfo
-      : null;
-    if (!folderInfo || typeof folderInfo.relativeFolder !== "string" || !folderInfo.relativeFolder.trim()){
-      throw new Error(i18n('sharing_error_insert_failed'));
-    }
-    if (!Number.isInteger(state.wizardWindowId) || state.wizardWindowId <= 0){
-      state.wizardWindowId = await resolveWizardWindowId();
-    }
-    if (!Number.isInteger(state.wizardWindowId) || state.wizardWindowId <= 0){
-      throw new Error(i18n('sharing_error_insert_failed'));
-    }
-    const response = await browser.runtime.sendMessage({
-      type: "sharing:armWizardRemoteCleanup",
-      payload: {
-        windowId: state.wizardWindowId,
-        tabId: Number(payload.tabId) || 0,
-        shareId: String(payload.shareId || ""),
-        shareLabel: String(payload.shareLabel || ""),
-        shareUrl: String(payload.shareUrl || ""),
-        folderInfo: {
-          relativeFolder: String(folderInfo.relativeFolder || ""),
-          relativeBase: String(folderInfo.relativeBase || ""),
-          folderName: String(folderInfo.folderName || "")
-        }
-      }
-    });
-    if (!response?.ok){
-      log('Wizard remote cleanup arm failed', {
-        error: String(response?.error || ""),
-        windowId: state.wizardWindowId
-      });
-      throw new Error(i18n('sharing_error_insert_failed'));
-    }
-    log('Wizard remote cleanup armed', {
-      windowId: state.wizardWindowId,
-      relativeFolder: String(folderInfo.relativeFolder || ""),
-      shareLabel: String(payload.shareLabel || "")
-    });
   }
 
   /**
@@ -1587,6 +1691,7 @@
       type: "sharing:armComposeShareCleanup",
       payload: {
         tabId,
+        wizardWindowId: Number(state.wizardWindowId) || 0,
         shareId: String(payload.shareId || ""),
         shareLabel: String(payload.shareLabel || ""),
         shareUrl: String(payload.shareUrl || ""),
@@ -1766,7 +1871,6 @@
 
   function setUploadStatus(text){
     dom.uploadStatus.textContent = text || '';
-    log('Status', text);
   }
 
   /**
@@ -1821,8 +1925,6 @@
     const sanitized = NCSharing.sanitizeShareName(raw);
     if (state.shareContext.sanitizedName !== sanitized){
       state.shareContext.sanitizedName = sanitized;
-      state.shareContext.folderInfo = null;
-      state.shareContext.verified = false;
       state.shareContext.shareDate = new Date();
     }
     return sanitized;
@@ -1837,38 +1939,7 @@
     if (!shareName){
       return null;
     }
-    if (!state.shareContext.folderInfo){
-      const info = NCSharing.buildShareFolderInfo(state.basePath, shareName, state.shareContext.shareDate);
-      rememberShareFolder(info, shareName);
-    }
     return state.shareContext;
-  }
-
-  /**
-   * Resolve the fixed attachment share name with collision suffixes.
-   * Uses `email_attachment`, then `email_attachment_1`, `email_attachment_2`, ...
-   * @returns {Promise<string>}
-   */
-  async function resolveAttachmentShareName(){
-    const baseName = ATTACHMENT_DEFAULT_SHARE_NAME;
-    const shareDate = state.shareContext.shareDate instanceof Date ? state.shareContext.shareDate : new Date();
-    for (let suffix = 0; suffix < 1000; suffix++){
-      const candidate = suffix === 0 ? baseName : `${baseName}_${suffix}`;
-      log('Check attachment share name', { candidate, suffix });
-      const result = await NCSharing.checkShareFolderAvailability({
-        shareName: candidate,
-        basePath: state.basePath,
-        shareDate: shareDate.toISOString()
-      });
-      if (!result.exists){
-        dom.shareName.value = candidate;
-        rememberShareFolder(result.folderInfo, candidate);
-        log('Attachment share name set', { candidate });
-        return candidate;
-      }
-    }
-    log('Attachment share name failed (no free variant found)');
-    throw new Error(i18n('sharing_error_folder_exists'));
   }
 
   function getDefaultExpireDate(){
@@ -1890,30 +1961,12 @@
   function createShareContext(){
     return {
       sanitizedName: '',
-      folderInfo: null,
-      shareDate: new Date(),
-      verified: false
+      shareDate: new Date()
     };
   }
 
   function resetShareContext(){
     state.shareContext = createShareContext();
-  }
-
-  /**
-   * Store the verified share folder info in state.
-   * @param {object} folderInfo
-   * @param {string} shareName
-   */
-  function rememberShareFolder(folderInfo, shareName){
-    state.shareContext.folderInfo = folderInfo || null;
-    if (folderInfo?.date instanceof Date){
-      state.shareContext.shareDate = folderInfo.date;
-    }
-    if (shareName){
-      state.shareContext.sanitizedName = shareName;
-    }
-    state.shareContext.verified = !!state.shareContext.folderInfo && !!state.shareContext.sanitizedName;
   }
 
   function resetFileEntry(entry){
@@ -2113,6 +2166,22 @@
     // Wizard remote cleanup is handled centrally in background by window removal.
     NCDebugForwarder.markRuntimeContextUnloading?.();
     isPageUnloading = true;
+    if (state.uploadPort){
+      try{
+        state.uploadPort.postMessage({
+          type: 'cancel',
+          reason: 'wizard_unload'
+        });
+        state.uploadPort.disconnect();
+      }catch(error){
+        logUiError("upload port cancellation failed", error);
+      }
+      state.uploadPort = null;
+    }
+    if (uploadRenderTimer){
+      clearTimeout(uploadRenderTimer);
+      uploadRenderTimer = null;
+    }
     disposeDebugFlagMirror?.();
     disposeDebugFlagMirror = null;
     state.debugEnabled = false;

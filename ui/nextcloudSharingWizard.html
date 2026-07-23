@@ -434,6 +434,19 @@ tbody tr.uploading .status-speed{
   color:var(--tb-muted);
   margin-top:8px;
 }
+.overall-upload-progress{
+  display:grid;
+  gap:6px;
+  margin-top:8px;
+}
+.overall-upload-progress[hidden]{
+  display:none;
+}
+.overall-upload-progress progress{
+  width:100%;
+  height:8px;
+  accent-color:#0082C9;
+}
 .nc-dialog-footer{
   border-top:1px solid var(--tb-border);
   padding:var(--dialog-gap) var(--dialog-pad-right) var(--dialog-gap) var(--dialog-pad-left);
@@ -568,7 +581,10 @@ tbody tr.uploading .status-speed{
           </table>
           <div class="empty-placeholder" id="fileEmptyPlaceholder" data-i18n="sharing_files_empty">No files selected.</div>
         </div>
-        <div class="status-text" id="uploadStatus"></div>
+        <div class="overall-upload-progress" id="overallUploadProgress" hidden>
+          <progress id="overallUploadProgressBar" max="100"></progress>
+          <div class="status-text" id="uploadStatus" role="status" aria-live="polite"></div>
+        </div>
       </section>
 
       <section class="wizard-step" data-step="4">
@@ -619,7 +635,6 @@ tbody tr.uploading .status-speed{
   <script src="debugForwarder.js"></script>
   <script src="nextcloudSharingWizard.js"></script>
 </body>
-
 
 
 

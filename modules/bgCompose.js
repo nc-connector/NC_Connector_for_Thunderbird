@@ -176,11 +176,29 @@ browser.windows.onRemoved.addListener((windowId) => {
     resolveAttachmentPrompt(promptId, "dismiss", "prompt_window_closed");
   }
   if (SHARING_WIZARD_CLEANUP_BY_WINDOW.has(windowId)){
-    void deleteSharingWizardRemoteCleanupNow(windowId, "wizard_window_removed").catch((error) => {
+    const cleanupId = SHARING_WIZARD_CLEANUP_BY_WINDOW.get(windowId)?.cleanupId || "";
+    void deleteSharingWizardRemoteCleanupNow(
+      windowId,
+      "wizard_window_removed",
+      cleanupId
+    ).then((removed) => {
+      if (!removed){
+        scheduleSharingWizardRemoteCleanupRetry(
+          windowId,
+          cleanupId,
+          "wizard_window_removed_retry"
+        );
+      }
+    }).catch((error) => {
       console.error("[NCBG] sharing wizard cleanup delete execution failed", {
         windowId,
         error: error?.message || String(error)
       });
+      scheduleSharingWizardRemoteCleanupRetry(
+        windowId,
+        cleanupId,
+        "wizard_window_removed_retry"
+      );
     });
   }
 });

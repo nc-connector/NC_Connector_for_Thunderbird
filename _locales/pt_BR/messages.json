@@ -701,6 +701,21 @@
   "sharing_status_uploading_bulk": {
     "message": "Enviando arquivos..."
   },
+  "sharing_status_scanning": {
+    "message": "Analisando arquivos e pastas..."
+  },
+  "sharing_status_preparing_folders": {
+    "message": "Preparando pastas ($1 / $2)..."
+  },
+  "sharing_status_uploading_summary": {
+    "message": "Enviando arquivos ($1 / $2) — $3 / $4 — $5"
+  },
+  "nextcloud_minimum_version_required": {
+    "message": "O NC Connector requer o Nextcloud 32 ou mais recente. Versão detectada: $1"
+  },
+  "sharing_insufficient_storage": {
+    "message": "O Nextcloud não tem espaço de armazenamento livre suficiente para este envio."
+  },
   "sharing_message_invalid_share_name": {
     "message": "Informe um nome do compartilhamento."
   },
@@ -966,6 +981,6 @@
     "message": "Atualize o backend do NC Connector. Esta versão do backend ainda não oferece suporte a assinaturas de e-mail centrais."
   },
   "sharing_status_speed_kbps": {
-    "message": "Velocidade: $1 KB/s"
+    "message": "$1 KB/s"
   }
 }

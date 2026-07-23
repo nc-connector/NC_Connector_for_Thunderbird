@@ -183,37 +183,14 @@ async function requestTalkCapabilities(url, headers){
 
 /**
  * Request core capabilities and interpret them for event support.
- * @param {string} baseUrl - Normalized Nextcloud base URL
- * @param {object} headers - Prepared OCS headers
+ * @param {{baseUrl:string,user:string,appPass:string}} options
  * @returns {Promise<{supported:boolean|null, reason:string}>}
  */
-async function requestCoreCapabilities(baseUrl, headers){
-  const coreUrl = baseUrl + "/ocs/v2.php/cloud/capabilities";
+async function requestCoreCapabilities(options){
   try{
-    L("request core capabilities", { url: coreUrl });
-    const res = await fetch(coreUrl, { method:"GET", headers });
-    L("core capabilities status", { status: res.status, ok: res.ok });
-    const raw = await res.text();
-    let data = null;
-    try{
-      data = raw ? JSON.parse(raw) : null;
-    }catch(error){
-      logTalkCoreError("core capabilities json parse failed", error, {
-        responseSample: String(raw || "").slice(0, 160)
-      });
-    }
-    if (!res.ok){
-      const meta = data?.ocs?.meta || {};
-      const detailParts = [];
-      if (meta.message && meta.message !== meta.status) detailParts.push(meta.message);
-      if (meta.status && meta.status !== meta.statuscode) detailParts.push(meta.status);
-      if (meta.statuscode) detailParts.push("HTTP " + meta.statuscode);
-      if (res.status) detailParts.push("HTTP " + res.status + " " + res.statusText);
-      const detail = detailParts.filter(Boolean).join(" / ") || raw || ("HTTP " + res.status + " " + res.statusText);
-      return { supported:null, reason:"Cloud capabilities request failed: " + detail };
-    }
-    const capabilities = data?.ocs?.data?.capabilities || {};
-    const spreedCaps = capabilities.spreed ?? data?.ocs?.data?.spreed ?? null;
+    const snapshot = await NCCore.getRequiredCapabilities(options);
+    const capabilities = snapshot.capabilities || {};
+    const spreedCaps = capabilities.spreed ?? null;
     const parsed = parseEventSupportFlag(spreedCaps);
     if (parsed.status === true){
       return { supported:true, reason:"Cloud Capabilities: " + parsed.hint };
@@ -221,12 +198,9 @@ async function requestCoreCapabilities(baseUrl, headers){
     if (parsed.status === false){
       return { supported:false, reason:"Cloud capabilities: " + parsed.hint + " => event not available." };
     }
-    const versionMajor =
+    const versionMajor = snapshot.versionMajor ??
       parseMajorVersion(spreedCaps?.version) ??
-      parseMajorVersion(capabilities?.spreed?.version) ??
-      parseMajorVersion(data?.ocs?.data?.version) ??
-      parseMajorVersion(data?.ocs?.data?.installed?.version) ??
-      parseMajorVersion(data?.ocs?.data?.system?.version);
+      parseMajorVersion(capabilities?.spreed?.version);
     if (versionMajor !== null && versionMajor < 32){
       return { supported:false, reason:"Cloud capabilities: Nextcloud version " + versionMajor + " (<32) => event disabled." };
     }
@@ -235,7 +209,12 @@ async function requestCoreCapabilities(baseUrl, headers){
     }
     return { supported:null, reason:"Cloud capabilities without event indicators." };
   }catch(error){
-    logTalkCoreError("requestCoreCapabilities failed", error, { url: coreUrl });
+    logTalkCoreError("requestCoreCapabilities failed", error, {
+      baseUrl: options?.baseUrl || ""
+    });
+    if (error?.ncCapabilitiesCode === "minimum_version"){
+      return { supported:false, reason:error.message };
+    }
     return { supported:null, reason: error?.message || "Cloud capabilities endpoint unreachable." };
   }
 }
@@ -287,7 +266,7 @@ async function getEventConversationSupport(){
     noteEventSupport(false, reason);
     return { supported:false, reason };
   }
-  const coreResult = await requestCoreCapabilities(baseUrl, headers);
+  const coreResult = await requestCoreCapabilities({ baseUrl, user, appPass });
   if (coreResult.supported === true){
     const reason = coreResult.reason || "";
     if (reason){

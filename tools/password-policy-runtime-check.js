@@ -17,7 +17,23 @@ function createHarness({ capabilityGenerateUrl = null, generatedPassword = "Serv
         baseUrl,
         user: "alice",
         appPass: "app-password"
-      })
+      }),
+      getRequiredCapabilities: async () => {
+        requests.push({
+          url: `${baseUrl}/ocs/v2.php/cloud/capabilities?format=json`
+        });
+        return {
+          versionMajor: 32,
+          capabilities: {
+            password_policy: {
+              minLength: 16,
+              api: {
+                generate: capabilityGenerateUrl
+              }
+            }
+          }
+        };
+      }
     },
     NCHostPermissions: {
       hasOriginPermission: async () => true
@@ -26,26 +42,6 @@ function createHarness({ capabilityGenerateUrl = null, generatedPassword = "Serv
       buildAuthHeader: () => "Basic test",
       ocsRequest: async (request) => {
         requests.push(request);
-        if (request.url.includes("/ocs/v2.php/cloud/capabilities")){
-          return {
-            ok: true,
-            status: 200,
-            data: {
-              ocs: {
-                data: {
-                  capabilities: {
-                    password_policy: {
-                      minLength: 16,
-                      api: {
-                        generate: capabilityGenerateUrl
-                      }
-                    }
-                  }
-                }
-              }
-            }
-          };
-        }
         return {
           ok: true,
           status: 200,

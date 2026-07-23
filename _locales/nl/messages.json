@@ -701,6 +701,21 @@
   "sharing_status_uploading_bulk": {
     "message": "Bestanden uploaden..."
   },
+  "sharing_status_scanning": {
+    "message": "Bestanden en mappen scannen..."
+  },
+  "sharing_status_preparing_folders": {
+    "message": "Mappen voorbereiden ($1 / $2)..."
+  },
+  "sharing_status_uploading_summary": {
+    "message": "Bestanden uploaden ($1 / $2) — $3 / $4 — $5"
+  },
+  "nextcloud_minimum_version_required": {
+    "message": "NC Connector vereist Nextcloud 32 of nieuwer. Gedetecteerde versie: $1"
+  },
+  "sharing_insufficient_storage": {
+    "message": "Nextcloud heeft onvoldoende vrije opslagruimte voor deze upload."
+  },
   "sharing_message_invalid_share_name": {
     "message": "Voer een deelnaam in."
   },
@@ -966,6 +981,6 @@
     "message": "Werk de NC Connector-backend bij. Deze backendversie ondersteunt centrale e-mailhandtekeningen nog niet."
   },
   "sharing_status_speed_kbps": {
-    "message": "Snelheid: $1 KB/s"
+    "message": "$1 KB/s"
   }
 }

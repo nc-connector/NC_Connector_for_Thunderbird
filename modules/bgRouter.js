@@ -569,19 +569,6 @@ browser.runtime.onMessage.addListener((msg, sender) => {
       return { ok:false, error: error?.message || String(error) };
     }
   }
-  if (msg.type === "sharing:armWizardRemoteCleanup"){
-    try{
-      const windowId = Number(msg.payload?.windowId);
-      if (!Number.isInteger(windowId) || windowId <= 0){
-        return { ok:false, error: "window_id_missing" };
-      }
-      await armSharingWizardRemoteCleanup(windowId, msg.payload || {});
-      return { ok:true };
-    }catch(error){
-      console.error("[NCBG] sharing:armWizardRemoteCleanup", error);
-      return { ok:false, error: error?.message || String(error) };
-    }
-  }
   if (msg.type === "sharing:clearWizardRemoteCleanup"){
     try{
       const windowId = Number(msg.payload?.windowId);

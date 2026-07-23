@@ -16,6 +16,10 @@ const NCCore = (() => {
     globalThis.NCLogContext?.resolveAddonLogPrefix?.("Core")
     || "[NCBG]";
   const currentUserIdCache = new Map();
+  const capabilitiesCache = new Map();
+  const capabilitiesInflight = new Map();
+  const CAPABILITIES_CACHE_MS = 5 * 60 * 1000;
+  const MINIMUM_NEXTCLOUD_MAJOR = 32;
 
   function logNCCoreError(scope, error, details = undefined){
     globalThis.NCLogContext.safeConsoleError(resolveLogPrefix(), scope, error, details);
@@ -40,40 +44,297 @@ const NCCore = (() => {
     return error;
   }
 
-  async function resolveCurrentUserId({ baseUrl, user, appPass, forceRefresh = false } = {}){
+  function createCapabilitiesError(code, message, status = 0){
+    const error = new Error(message || bgI18n("options_test_failed"));
+    error.ncCapabilitiesCode = code || "http";
+    error.status = Number(status) || 0;
+    return error;
+  }
+
+  function throwIfRequestAborted(signal){
+    if (!signal?.aborted){
+      return;
+    }
+    const error = new Error("Aborted");
+    error.name = "AbortError";
+    throw error;
+  }
+
+  function parseVersionPart(value){
+    const numeric = Number.parseInt(String(value ?? "").trim(), 10);
+    return Number.isFinite(numeric) && numeric >= 0 ? numeric : null;
+  }
+
+  function parseNextcloudVersion(versionValue, fallbackValue = ""){
+    let versionString = "";
+    let major = null;
+    let minor = null;
+    let micro = null;
+    if (versionValue && typeof versionValue === "object"){
+      major = parseVersionPart(versionValue.major);
+      minor = parseVersionPart(versionValue.minor);
+      micro = parseVersionPart(versionValue.micro);
+      if (typeof versionValue.string === "string" && versionValue.string.trim()){
+        versionString = versionValue.string.trim();
+      }
+    }else if (typeof versionValue === "string" || typeof versionValue === "number"){
+      versionString = String(versionValue).trim();
+    }
+    if (!versionString && fallbackValue != null){
+      versionString = String(fallbackValue).trim();
+    }
+    if (major == null && versionString){
+      const match = versionString.match(/^\s*(\d+)(?:\.(\d+))?(?:\.(\d+))?/);
+      if (match){
+        major = parseVersionPart(match[1]);
+        minor = parseVersionPart(match[2]);
+        micro = parseVersionPart(match[3]);
+      }
+    }
+    if (!versionString && major != null){
+      const parts = [major];
+      if (minor != null) parts.push(minor);
+      if (micro != null) parts.push(micro);
+      versionString = parts.join(".");
+    }
+    return Object.freeze({
+      string: versionString,
+      major,
+      minor,
+      micro
+    });
+  }
+
+  async function fetchCapabilitiesSnapshot({
+    normalizedBase,
+    trimmedUser,
+    password,
+    cacheKey,
+    signal
+  }){
+    throwIfRequestAborted(signal);
+    await ensureHostPermission(normalizedBase);
+    throwIfRequestAborted(signal);
+    const url = normalizedBase + "/ocs/v2.php/cloud/capabilities?format=json";
+    let response;
+    let raw = "";
+    try{
+      const requestResult = await NCOcs.runWithTimeout(async (requestSignal) => {
+        const fetched = await fetch(url, {
+          method: "GET",
+          headers: {
+            "OCS-APIRequest": "true",
+            "Authorization": NCOcs.buildAuthHeader(trimmedUser, password),
+            "Accept": "application/json"
+          },
+          signal: requestSignal
+        });
+        const responseText = await fetched.text().catch((error) => {
+          if (requestSignal?.aborted || error?.name === "AbortError"){
+            throw error;
+          }
+          logNCCoreError("capabilities response read failed", error);
+          throw error;
+        });
+        return { response: fetched, raw: responseText };
+      }, {
+        signal
+      });
+      response = requestResult.response;
+      raw = requestResult.raw;
+    }catch(error){
+      if (signal?.aborted || error?.name === "AbortError"){
+        throwIfRequestAborted(signal);
+        throw error;
+      }
+      logNCCoreError("capabilities request failed", error, { base: normalizedBase });
+      throw createCapabilitiesError("network", error?.message || String(error));
+    }
+
+    let data = null;
+    try{
+      data = raw ? JSON.parse(raw) : null;
+    }catch(error){
+      logNCCoreError("capabilities json parse failed", error, {
+        responseSample: String(raw || "").slice(0, 160)
+      });
+    }
+    if (response.status === 401 || response.status === 403){
+      const detail = data?.ocs?.meta?.message || "HTTP " + response.status;
+      throw createCapabilitiesError("auth", detail, response.status);
+    }
+    if (!response.ok){
+      const detail = data?.ocs?.meta?.message || raw || (response.status + " " + response.statusText);
+      throw createCapabilitiesError("http", detail, response.status);
+    }
+    const meta = data?.ocs?.meta;
+    const ocsResponse = { ok: response.ok, data, raw };
+    const hasMetaResult = NCOcs.hasExplicitResult(ocsResponse);
+    const metaStatusCode = Number(meta?.statuscode);
+    if (!NCOcs.isExplicitSuccess(ocsResponse)){
+      throw createCapabilitiesError(
+        hasMetaResult ? "ocs" : "invalid",
+        NCOcs.getFailureMessage(ocsResponse, bgI18n("options_test_failed")),
+        metaStatusCode
+      );
+    }
+    if (!data?.ocs?.data || typeof data.ocs.data !== "object"){
+      throw createCapabilitiesError("invalid", bgI18n("options_test_failed"));
+    }
+
+    const ocsData = data.ocs.data;
+    const version = parseNextcloudVersion(
+      ocsData.version,
+      ocsData.versionstring ?? ocsData.versionString ?? ""
+    );
+    const bulkVersion = ocsData.capabilities?.dav?.bulkupload;
+    const snapshot = Object.freeze({
+      baseUrl: normalizedBase,
+      user: trimmedUser,
+      version,
+      versionString: version.string,
+      versionMajor: version.major,
+      bulkUploadSupported: typeof bulkVersion === "string" && bulkVersion.trim() === "1.0",
+      capabilities: ocsData.capabilities || {},
+      loadedAt: Date.now()
+    });
+    capabilitiesCache.set(cacheKey, snapshot);
+    if (typeof L === "function"){
+      L("Nextcloud capabilities loaded", {
+        version: snapshot.versionString || "?",
+        davBulkUpload: snapshot.bulkUploadSupported ? "1.0" : "off"
+      });
+    }
+    return snapshot;
+  }
+
+  async function getCapabilitiesSnapshot({
+    baseUrl,
+    user,
+    appPass,
+    forceRefresh = false,
+    signal = null
+  } = {}){
+    const normalizedBase = normalizeBaseUrl(typeof baseUrl === "string" ? baseUrl.trim() : "");
+    const trimmedUser = typeof user === "string" ? user.trim() : "";
+    const password = typeof appPass === "string" ? appPass : "";
+    if (!normalizedBase || !trimmedUser || !password){
+      throw createCapabilitiesError("missing", bgI18n("error_credentials_missing"));
+    }
+    throwIfRequestAborted(signal);
+
+    const cacheKey = `${normalizedBase}\n${trimmedUser}`;
+    const cached = capabilitiesCache.get(cacheKey);
+    if (!forceRefresh && cached && Date.now() - cached.loadedAt < CAPABILITIES_CACHE_MS){
+      return cached;
+    }
+    if (signal){
+      return fetchCapabilitiesSnapshot({
+        normalizedBase,
+        trimmedUser,
+        password,
+        cacheKey,
+        signal
+      });
+    }
+    if (capabilitiesInflight.has(cacheKey)){
+      return capabilitiesInflight.get(cacheKey);
+    }
+
+    const request = fetchCapabilitiesSnapshot({
+      normalizedBase,
+      trimmedUser,
+      password,
+      cacheKey,
+      signal: null
+    });
+    capabilitiesInflight.set(cacheKey, request);
+    try{
+      return await request;
+    }finally{
+      if (capabilitiesInflight.get(cacheKey) === request){
+        capabilitiesInflight.delete(cacheKey);
+      }
+    }
+  }
+
+  function requireSupportedNextcloud(snapshot){
+    if (snapshot?.versionMajor != null && snapshot.versionMajor >= MINIMUM_NEXTCLOUD_MAJOR){
+      return snapshot;
+    }
+    const detectedVersion = snapshot?.versionString || "?";
+    throw createCapabilitiesError(
+      "minimum_version",
+      bgI18n("nextcloud_minimum_version_required", [detectedVersion])
+    );
+  }
+
+  async function getRequiredCapabilities(options = null){
+    const source = options && typeof options === "object"
+      ? options
+      : await getOpts();
+    return requireSupportedNextcloud(await getCapabilitiesSnapshot(source));
+  }
+
+  async function resolveCurrentUserId({
+    baseUrl,
+    user,
+    appPass,
+    forceRefresh = false,
+    signal = null
+  } = {}){
     const normalizedBase = normalizeBaseUrl(typeof baseUrl === "string" ? baseUrl.trim() : "");
     const trimmedUser = typeof user === "string" ? user.trim() : "";
     const password = typeof appPass === "string" ? appPass : "";
     if (!normalizedBase || !trimmedUser || !password){
       throw createCurrentUserIdError("missing", bgI18n("error_credentials_missing"));
     }
+    throwIfRequestAborted(signal);
 
     const cacheKey = `${normalizedBase}\n${trimmedUser}`;
     if (!forceRefresh && currentUserIdCache.has(cacheKey)){
       return currentUserIdCache.get(cacheKey);
     }
 
+    throwIfRequestAborted(signal);
     await ensureHostPermission(normalizedBase);
+    throwIfRequestAborted(signal);
     const userUrl = normalizedBase + "/ocs/v2.php/cloud/user?format=json";
     let response;
+    let raw = "";
     try{
-      response = await fetch(userUrl, {
-        method: "GET",
-        headers: {
-          "OCS-APIRequest": "true",
-          "Authorization": NCOcs.buildAuthHeader(trimmedUser, password),
-          "Accept": "application/json"
-        }
+      const requestResult = await NCOcs.runWithTimeout(async (requestSignal) => {
+        const fetched = await fetch(userUrl, {
+          method: "GET",
+          headers: {
+            "OCS-APIRequest": "true",
+            "Authorization": NCOcs.buildAuthHeader(trimmedUser, password),
+            "Accept": "application/json"
+          },
+          signal: requestSignal
+        });
+        const responseText = await fetched.text().catch((error) => {
+          if (requestSignal?.aborted || error?.name === "AbortError"){
+            throw error;
+          }
+          logNCCoreError("current user id response read failed", error);
+          throw error;
+        });
+        return { response: fetched, raw: responseText };
+      }, {
+        signal
       });
+      response = requestResult.response;
+      raw = requestResult.raw;
     }catch(error){
+      if (signal?.aborted || error?.name === "AbortError"){
+        throwIfRequestAborted(signal);
+        throw error;
+      }
       logNCCoreError("current user id request failed", error, { base: normalizedBase });
       throw createCurrentUserIdError("network", error?.message || String(error));
     }
 
-    const raw = await response.text().catch((error) => {
-      logNCCoreError("current user id response read failed", error);
-      return "";
-    });
     let data = null;
     try{
       data = raw ? JSON.parse(raw) : null;
@@ -152,52 +413,15 @@ const NCCore = (() => {
     if (!normalizedBase){
       return { ok:false, code:"https_required", message: bgI18n("error_baseurl_https_required") };
     }
-    await ensureHostPermission(normalizedBase);
-    const basicHeader = NCOcs.buildAuthHeader(trimmedUser, password);
     try{
       L("options test connection", { base: normalizedBase, user: coreShortId(trimmedUser) });
-      const headers = {
-        "OCS-APIRequest": "true",
-        "Authorization": basicHeader,
-        "Accept": "application/json"
-      };
-      const url = normalizedBase + "/ocs/v2.php/cloud/capabilities";
-      const res = await fetch(url, { method:"GET", headers });
-      const raw = await res.text().catch((error) => {
-        logNCCoreError("capabilities response read failed", error);
-        return "";
-      });
-      let data = null;
-      try{
-        data = raw ? JSON.parse(raw) : null;
-      }catch(error){
-        logNCCoreError("capabilities json parse failed", error, { responseSample: String(raw || "").slice(0, 160) });
-      }
-      if (res.status === 401 || res.status === 403){
-        const detail = data?.ocs?.meta?.message || "HTTP " + res.status;
-        return { ok:false, code:"auth", message: detail };
-      }
-      if (!res.ok){
-        const detail = data?.ocs?.meta?.message || raw || (res.status + " " + res.statusText);
-        return { ok:false, code:"http", message: detail };
-      }
-      const versionRaw = data?.ocs?.meta?.version || data?.ocs?.data?.version || "";
-      let versionStr = "";
-      if (typeof versionRaw === "string"){
-        versionStr = versionRaw;
-      } else if (versionRaw && typeof versionRaw === "object"){
-        if (typeof versionRaw.string === "string" && versionRaw.string.trim()){
-          versionStr = versionRaw.string.trim();
-        } else {
-          const parts = [];
-          if (versionRaw.major != null) parts.push(String(versionRaw.major));
-          if (versionRaw.minor != null) parts.push(String(versionRaw.minor));
-          if (versionRaw.micro != null) parts.push(String(versionRaw.micro));
-          if (parts.length){
-            versionStr = parts.join(".");
-          }
-        }
-      }
+      const snapshot = requireSupportedNextcloud(await getCapabilitiesSnapshot({
+        baseUrl: normalizedBase,
+        user: trimmedUser,
+        appPass: password,
+        forceRefresh: true
+      }));
+      const versionStr = snapshot.versionString;
       const message = versionStr ? "Nextcloud " + versionStr : "";
       try{
         const userId = await resolveCurrentUserId({
@@ -215,9 +439,11 @@ const NCCore = (() => {
         };
       }
     }catch(error){
-      console.error(resolveLogPrefix(), "capabilities request failed", error);
-      logNCCoreError("capabilities request failed", error, { base: normalizedBase });
-      return { ok:false, code:"network", message: error?.message || String(error) };
+      return {
+        ok: false,
+        code: error?.ncCapabilitiesCode || "network",
+        message: error?.message || String(error)
+      };
     }
   }
 
@@ -389,6 +615,10 @@ const NCCore = (() => {
 
   return {
     normalizeBaseUrl,
+    parseNextcloudVersion,
+    getCapabilitiesSnapshot,
+    getRequiredCapabilities,
+    requireSupportedNextcloud,
     testCredentials,
     startLoginFlow,
     completeLoginFlow,

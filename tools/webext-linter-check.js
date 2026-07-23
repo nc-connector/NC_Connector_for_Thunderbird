@@ -56,6 +56,7 @@ function shouldCopySource(source){
     name !== "package.json" &&
     name !== "package-lock.json" &&
     !name.endsWith(".xpi") &&
+    !name.endsWith(".zip") &&
     !/^webext-linter-.*\.json$/i.test(name) &&
     !/^npm-debug\.log/i.test(name)
   );

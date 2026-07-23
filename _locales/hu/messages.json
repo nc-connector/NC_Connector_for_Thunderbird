@@ -701,6 +701,21 @@
   "sharing_status_uploading_bulk": {
     "message": "Fájlok feltöltése..."
   },
+  "sharing_status_scanning": {
+    "message": "Fájlok és mappák vizsgálata..."
+  },
+  "sharing_status_preparing_folders": {
+    "message": "Mappák előkészítése ($1 / $2)..."
+  },
+  "sharing_status_uploading_summary": {
+    "message": "Fájlok feltöltése ($1 / $2) — $3 / $4 — $5"
+  },
+  "nextcloud_minimum_version_required": {
+    "message": "Az NC Connector használatához Nextcloud 32 vagy újabb verzió szükséges. Észlelt verzió: $1"
+  },
+  "sharing_insufficient_storage": {
+    "message": "A Nextcloudon nincs elegendő szabad tárhely ehhez a feltöltéshez."
+  },
   "sharing_message_invalid_share_name": {
     "message": "Kérjük, adjon meg megosztásnevet."
   },
@@ -966,6 +981,6 @@
     "message": "Kérjük, frissítse az NC Connector backendet. Ez a backendverzió még nem támogatja a központi e-mail aláírásokat."
   },
   "sharing_status_speed_kbps": {
-    "message": "Sebesseg: $1 KB/s"
+    "message": "$1 KB/s"
   }
 }

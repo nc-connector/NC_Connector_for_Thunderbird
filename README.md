@@ -10,7 +10,7 @@ NC Connector is the Thunderbird-native Nextcloud integration for organizations t
 ## What the add-on does
 
 - create Nextcloud shares directly from new mails, replies, and forwards
-- upload large files with Nextcloud chunked WebDAV upload v2 and send links instead of attachments
+- upload files through Nextcloud 32 WebDAV using parallel direct uploads, chunked upload v2, and DAV bulk upload when supported
 - control password, expiration date, permissions, and separate password delivery
 - send passwords either as plain mail or as a Nextcloud Secret link
 - create and update Talk rooms directly from Thunderbird events
@@ -36,6 +36,7 @@ The sharing wizard uploads files and folders to Nextcloud and inserts the finish
 Key points:
 
 - available in compose windows, replies, and forwards
+- high-speed upload selection is automatic, with progress for folder preparation, completed files, transferred bytes, and current transfer rate
 - optional expiration date and custom permissions per share
 - attachment automation for large attachments or always through NC Connector, with a selectable `ZIP download` or `Nextcloud share page` link target; ZIP is the built-in fallback when no valid effective value exists, including a missing or invalid locked backend value
 - separate password mails are sent only after the primary mail was sent successfully
@@ -65,7 +66,7 @@ With the backend, Thunderbird can insert managed email signatures or remove loca
 
 - Thunderbird ESR 140 through ESR 153
 - Windows, macOS, or Linux
-- Nextcloud with Files Sharing
+- Nextcloud 32 or newer with Files Sharing
 - for Talk features: Nextcloud Talk
 - for user/moderator search: Nextcloud system address book
 - for Secret-link password delivery: Nextcloud Secrets and NC Connector Backend

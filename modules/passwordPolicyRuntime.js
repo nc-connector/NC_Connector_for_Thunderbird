@@ -78,21 +78,12 @@ const NCPasswordPolicyRuntime = (() => {
           return fallbackPolicy();
         }
       }
-      const url = baseUrl + "/ocs/v2.php/cloud/capabilities?format=json";
-      const headers = {
-        "OCS-APIRequest": "true",
-        "Authorization": NCOcs.buildAuthHeader(user, appPass),
-        "Accept": "application/json"
-      };
-      const response = await NCOcs.ocsRequest({ url, method: "GET", headers, acceptJson: true });
-      if (!response.ok){
-        globalThis.NCLogContext.safeConsoleError("[NCBG]", "password policy fetch failed", {
-          error: response.errorMessage || "",
-          status: response.status || 0
-        });
-        return fallbackPolicy();
-      }
-      const capabilities = response.data?.ocs?.data?.capabilities || {};
+      const snapshot = await NCCore.getRequiredCapabilities({
+        baseUrl,
+        user,
+        appPass
+      });
+      const capabilities = snapshot.capabilities || {};
       const policyRaw = capabilities.password_policy || capabilities.passwordPolicy || null;
       if (!policyRaw || typeof policyRaw !== "object"){
         L("password policy fallback", { reason: "policy_missing" });

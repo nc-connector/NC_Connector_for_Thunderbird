@@ -27,7 +27,8 @@ const ALLOWED_IDENTICAL_KEYS_GLOBAL = new Set([
   "options_base_url_placeholder",
   "options_about_license_value",
   "options_sharing_attachments_offer_suffix",
-  "options_about_homepage_link"
+  "options_about_homepage_link",
+  "sharing_status_speed_kbps"
 ]);
 
 const ALLOWED_IDENTICAL_KEYS_BY_LOCALE = {

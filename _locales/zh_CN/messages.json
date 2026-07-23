@@ -701,6 +701,21 @@
   "sharing_status_uploading_bulk": {
     "message": "正在上传文件..."
   },
+  "sharing_status_scanning": {
+    "message": "正在扫描文件和文件夹..."
+  },
+  "sharing_status_preparing_folders": {
+    "message": "正在准备文件夹（$1 / $2）..."
+  },
+  "sharing_status_uploading_summary": {
+    "message": "正在上传文件（$1 / $2）— $3 / $4 — $5"
+  },
+  "nextcloud_minimum_version_required": {
+    "message": "NC Connector 需要 Nextcloud 32 或更高版本。检测到的版本：$1"
+  },
+  "sharing_insufficient_storage": {
+    "message": "Nextcloud 没有足够的可用存储空间来完成此次上传。"
+  },
   "sharing_message_invalid_share_name": {
     "message": "请输入共享名称。"
   },
@@ -966,6 +981,6 @@
     "message": "请更新 NC Connector 后端。此后端版本尚不支持集中管理的电子邮件签名。"
   },
   "sharing_status_speed_kbps": {
-    "message": "速度: $1 KB/s"
+    "message": "$1 KB/s"
   }
 }

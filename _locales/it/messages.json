@@ -701,6 +701,21 @@
   "sharing_status_uploading_bulk": {
     "message": "Caricamento file..."
   },
+  "sharing_status_scanning": {
+    "message": "Analisi di file e cartelle..."
+  },
+  "sharing_status_preparing_folders": {
+    "message": "Preparazione delle cartelle ($1 / $2)..."
+  },
+  "sharing_status_uploading_summary": {
+    "message": "Caricamento dei file ($1 / $2) — $3 / $4 — $5"
+  },
+  "nextcloud_minimum_version_required": {
+    "message": "NC Connector richiede Nextcloud 32 o una versione successiva. Versione rilevata: $1"
+  },
+  "sharing_insufficient_storage": {
+    "message": "Nextcloud non dispone di spazio di archiviazione libero sufficiente per questo caricamento."
+  },
   "sharing_message_invalid_share_name": {
     "message": "Inserisci un nome di condivisione."
   },
@@ -966,6 +981,6 @@
     "message": "Aggiornare il backend NC Connector. Questa versione del backend non supporta ancora le firme e-mail centralizzate."
   },
   "sharing_status_speed_kbps": {
-    "message": "Velocita: $1 KB/s"
+    "message": "$1 KB/s"
   }
 }

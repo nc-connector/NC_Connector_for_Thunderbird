@@ -6,17 +6,12 @@
 (function(__context){
   'use strict';
   const DEFAULT_BASE_PATH = "NC Connector";
-  const NEXTCLOUD_DEVICE_NAME = "NC Connector for Thunderbird";
   const PERMISSION_FLAGS = {
     read: 1,
     write: 2,
     create: 4,
     delete: 8
   };
-  const DIRECT_UPLOAD_LIMIT_BYTES = 20 * 1024 * 1024;
-  const CHUNK_UPLOAD_CHUNK_SIZE_BYTES = 20 * 1024 * 1024;
-  const CHUNK_UPLOAD_MIN_CHUNK_BYTES = 5 * 1024 * 1024;
-  const CHUNK_UPLOAD_MAX_CHUNKS = 10000;
   const RIGHTS_SEGMENT_START = NCShareTemplateContract.RIGHTS_SEGMENT_START;
   const RIGHTS_SEGMENT_END = NCShareTemplateContract.RIGHTS_SEGMENT_END;
   const INVALID_PATH_CHARS = /[\\/:*?"<>|]/g;
@@ -64,7 +59,7 @@
     try{
       console.log(getSharingRuntimePrefix(), ...args);
     }catch(error){
-      console.error(`${getSharingRuntimePrefix()} debug log failed`, error);
+      logInternalError("debug log failed", error);
     }
   }
 
@@ -156,13 +151,27 @@
   function sanitizeShareName(value){
     const fallback = i18n("sharing_share_default") || "Share";
     if (!value) return fallback;
-    const normalized = String(value).normalize("NFKC").replace(INVALID_PATH_CHARS, "_").trim();
+    const normalized = String(value)
+      .normalize("NFKC")
+      .replace(INVALID_PATH_CHARS, "_")
+      .replace(/[\u0000-\u001f\u007f]/g, "_")
+      .trim();
+    if (normalized === "." || normalized === ".."){
+      return normalized.replace(/\./g, "_");
+    }
     return normalized || fallback;
   }
 
   function sanitizeFileName(value, fallback = "File"){
     if (!value && value !== 0) return fallback;
-    const normalized = String(value).normalize("NFKC").replace(INVALID_PATH_CHARS, "_").trim();
+    const normalized = String(value)
+      .normalize("NFKC")
+      .replace(INVALID_PATH_CHARS, "_")
+      .replace(/[\u0000-\u001f\u007f]/g, "_")
+      .trim();
+    if (normalized === "." || normalized === ".."){
+      return normalized.replace(/\./g, "_");
+    }
     return normalized || fallback;
   }
 
@@ -196,7 +205,8 @@
   function buildShareFolderInfo(basePath, shareName, referenceDate){
     const dateObj = referenceDate instanceof Date ? referenceDate : new Date();
     const folderName = `${formatDateForFolder(dateObj)}_${sanitizeShareName(shareName)}`;
-    const relativeBase = normalizeRelativePath(basePath || DEFAULT_BASE_PATH);
+    const relativeBase = sanitizeRelativeDir(basePath || DEFAULT_BASE_PATH)
+      || sanitizeRelativeDir(DEFAULT_BASE_PATH);
     const relativeFolder = joinRelativePath(relativeBase, folderName);
     return {
       date: dateObj,
@@ -215,397 +225,6 @@
       .join("/");
   }
 
-  async function pathExists({ davRoot, relativePath, authHeader }){
-    const cleanPath = normalizeRelativePath(relativePath || "");
-    if (!cleanPath){
-      return false;
-    }
-    const url = davRoot + "/" + encodePath(cleanPath);
-    const res = await fetch(url, {
-      method: "PROPFIND",
-      headers: {
-        "Authorization": authHeader,
-        "Depth": "0"
-      }
-    });
-    if (res.status === 404){
-      return false;
-    }
-    if (res.status === 207 || res.status === 200){
-      return true;
-    }
-    if (!res.ok){
-      const text = await res.text().catch((error) => {
-        logInternalError("pathExists response read failed", error);
-        return "";
-      });
-      throw new Error(text || `Path check failed (${res.status})`);
-    }
-    return true;
-  }
-
-  /**
-   * Ensure each segment of a relative path exists in WebDAV.
-   * @param {string} davRoot
-   * @param {string} relativePath
-   * @param {string} authHeader
-   * @param {{knownExistingPrefix?:string}} options
-   * @returns {Promise<void>}
-   */
-  async function ensureFolderExists(davRoot, relativePath, authHeader, options = {}){
-    const cleanPath = normalizeRelativePath(relativePath);
-    if (!cleanPath){
-      return;
-    }
-    const knownExistingPrefix = normalizeRelativePath(options?.knownExistingPrefix || "");
-    let current = "";
-    let remainingPath = cleanPath;
-    if (knownExistingPrefix && (cleanPath === knownExistingPrefix || cleanPath.startsWith(knownExistingPrefix + "/"))){
-      current = knownExistingPrefix;
-      remainingPath = cleanPath.slice(knownExistingPrefix.length).replace(/^\/+/, "");
-      if (!remainingPath){
-        return;
-      }
-    }
-    const segments = remainingPath.split("/").filter(Boolean);
-    for (const segment of segments){
-      current = current ? current + "/" + segment : segment;
-      const url = davRoot + "/" + encodePath(current);
-      const res = await fetch(url, {
-        method: "MKCOL",
-        headers: {
-          "Authorization": authHeader
-        }
-      });
-      if (res.status === 201 || res.status === 405){
-        continue;
-      }
-      if (!res.ok){
-        const text = await res.text().catch((error) => {
-          logInternalError("ensureFolderExists response read failed", error);
-          return "";
-        });
-        throw new Error(text || `MKCOL failed (${res.status})`);
-      }
-    }
-  }
-
-  /**
-   * Delete a remote DAV path (file or folder).
-   * @param {string} davRoot
-   * @param {string} relativePath
-   * @param {string} authHeader
-   * @returns {Promise<boolean>}
-   */
-  async function deleteRemotePath(davRoot, relativePath, authHeader){
-    const clean = normalizeRelativePath(relativePath);
-    if (!clean){
-      return false;
-    }
-    const url = davRoot + "/" + encodePath(clean);
-    const res = await fetch(url, {
-      method: "DELETE",
-      headers: {
-        "Authorization": authHeader
-      }
-    });
-    if (res.status === 404){
-      return false;
-    }
-    if (!res.ok){
-      const text = await res.text().catch((error) => {
-        logInternalError("deleteRemotePath response read failed", error);
-        return "";
-      });
-      throw new Error(text || `DELETE failed (${res.status})`);
-    }
-    return true;
-  }
-
-  function encodePath(path){
-    return path.split("/").map((segment) => encodeURIComponent(segment)).join("/");
-  }
-
-  function buildChunkUploadId(){
-    if (globalThis.crypto && typeof globalThis.crypto.randomUUID === "function"){
-      return `ncconnector-${globalThis.crypto.randomUUID()}`;
-    }
-    const random = Math.random().toString(36).slice(2, 12);
-    return `ncconnector-${Date.now().toString(36)}-${random}`;
-  }
-
-  function shouldUseChunkedUpload(file){
-    const size = Number(file?.size) || 0;
-    return size > DIRECT_UPLOAD_LIMIT_BYTES;
-  }
-
-  function getChunkSize(fileSize){
-    const minimumForChunkLimit = Math.ceil((Number(fileSize) || 0) / CHUNK_UPLOAD_MAX_CHUNKS);
-    return Math.max(CHUNK_UPLOAD_CHUNK_SIZE_BYTES, CHUNK_UPLOAD_MIN_CHUNK_BYTES, minimumForChunkLimit);
-  }
-
-  /**
-   * Read a failed DAV response body without hiding the original HTTP status.
-   * @param {Response} response
-   * @returns {Promise<string>}
-   */
-  async function readDavErrorText(response){
-    if (!response){
-      return "";
-    }
-    return response.text().catch((error) => {
-      logInternalError("DAV error response read failed", error);
-      return "";
-    });
-  }
-
-  /**
-   * Create the temporary Nextcloud chunked upload folder.
-   * @param {{uploadFolderUrl:string,targetUrl:string,authHeader:string}} options
-   * @returns {Promise<void>}
-   */
-  async function createChunkUploadFolder({ uploadFolderUrl, targetUrl, authHeader }){
-    const res = await fetch(uploadFolderUrl, {
-      method: "MKCOL",
-      headers: {
-        "Authorization": authHeader,
-        "Destination": targetUrl
-      }
-    });
-    if (res.status === 201){
-      return;
-    }
-    const text = await readDavErrorText(res);
-    throw new Error(text || `Upload failed (${res.status})`);
-  }
-
-  /**
-   * Delete an unfinished Nextcloud chunked upload folder.
-   * @param {{uploadFolderUrl:string,authHeader:string}} options
-   * @returns {Promise<void>}
-   */
-  async function cleanupChunkUploadFolder({ uploadFolderUrl, authHeader }){
-    try{
-      const res = await fetch(uploadFolderUrl, {
-        method: "DELETE",
-        headers: {
-          "Authorization": authHeader
-        }
-      });
-      if (res.ok || res.status === 404){
-        return;
-      }
-      const text = await readDavErrorText(res);
-      logInternalError("chunked upload cleanup failed", text || `DELETE failed (${res.status})`);
-    }catch(error){
-      logInternalError("chunked upload cleanup failed", error);
-    }
-  }
-
-  /**
-   * Assemble uploaded chunks into the final WebDAV file.
-   * @param {{uploadFolderUrl:string,targetUrl:string,authHeader:string,totalSize:number}} options
-   * @returns {Promise<void>}
-   */
-  async function moveChunkedUpload({ uploadFolderUrl, targetUrl, authHeader, totalSize }){
-    const res = await fetch(`${uploadFolderUrl}/.file`, {
-      method: "MOVE",
-      headers: {
-        "Authorization": authHeader,
-        "Destination": targetUrl,
-        "OC-Total-Length": String(totalSize)
-      }
-    });
-    if (res.ok){
-      return;
-    }
-    const text = await readDavErrorText(res);
-    throw new Error(text || `Upload failed (${res.status})`);
-  }
-
-  /**
-   * Upload one file or chunk using XMLHttpRequest to preserve upload progress.
-   * @param {object} options
-   * @returns {Promise<void>}
-   */
-  async function uploadBlobWithProgress({
-    url,
-    blob,
-    authHeader,
-    headers = {},
-    statusCb,
-    progressCb,
-    fileName,
-    displayPath,
-    itemId,
-    loadedOffset = 0,
-    totalSize = 0
-  }){
-    await new Promise((resolve, reject) => {
-      const xhr = new XMLHttpRequest();
-      xhr.open("PUT", url, true);
-      xhr.setRequestHeader("Authorization", authHeader);
-      xhr.setRequestHeader("Content-Type", blob?.type || "application/octet-stream");
-      for (const [headerName, headerValue] of Object.entries(headers)){
-        xhr.setRequestHeader(headerName, headerValue);
-      }
-      xhr.upload.onprogress = (event) => {
-        if (event.lengthComputable){
-          const loaded = Math.min(totalSize || event.total, loadedOffset + event.loaded);
-          const total = totalSize || event.total;
-          const percent = total > 0 ? Math.round((loaded / total) * 100) : 0;
-          if (typeof statusCb === "function"){
-            statusCb({
-              phase: "progress",
-              fileName,
-              displayPath,
-              itemId,
-              loaded,
-              total,
-              percent
-            });
-          }
-        }
-      };
-      xhr.onerror = () => {
-        if (typeof statusCb === "function"){
-          statusCb({ phase: "error", fileName, displayPath, itemId, error: "Network error" });
-        }
-        reject(new Error("Upload failed (network error)"));
-      };
-      xhr.onload = () => {
-        if (xhr.status >= 200 && xhr.status < 300){
-          if (typeof progressCb === "function"){
-            progressCb();
-          }
-          resolve();
-        }else{
-          if (typeof statusCb === "function"){
-            statusCb({ phase: "error", fileName, displayPath, itemId, error: `Upload failed (${xhr.status})` });
-          }
-          reject(new Error(`Upload failed (${xhr.status})`));
-        }
-      };
-      xhr.send(blob);
-    });
-  }
-
-  async function uploadFileDirect({ targetUrl, file, authHeader, progressCb, statusCb, displayPath, itemId, fileName }){
-    await uploadBlobWithProgress({
-      url: targetUrl,
-      blob: file,
-      authHeader,
-      statusCb,
-      progressCb: () => {
-        if (typeof progressCb === "function"){
-          progressCb(file.name);
-        }
-      },
-      fileName,
-      displayPath,
-      itemId,
-      loadedOffset: 0,
-      totalSize: Number(file?.size) || 0
-    });
-    if (typeof statusCb === "function"){
-      statusCb({ phase: "done", fileName, displayPath, itemId });
-    }
-  }
-
-  /**
-   * Upload a file using Nextcloud chunked upload v2.
-   * @param {object} options
-   * @returns {Promise<void>}
-   */
-  async function uploadFileChunked({ uploadRoot, targetUrl, file, authHeader, progressCb, statusCb, displayPath, itemId, fileName }){
-    const totalSize = Number(file?.size) || 0;
-    const chunkSize = getChunkSize(totalSize);
-    const chunkCount = Math.ceil(totalSize / chunkSize);
-    if (chunkCount > CHUNK_UPLOAD_MAX_CHUNKS){
-      throw new Error("Upload failed (too many chunks)");
-    }
-
-    const uploadFolderUrl = `${uploadRoot}/${encodeURIComponent(buildChunkUploadId())}`;
-    let cleanupRequired = false;
-    await createChunkUploadFolder({ uploadFolderUrl, targetUrl, authHeader });
-    cleanupRequired = true;
-    try{
-      for (let index = 0; index < chunkCount; index++){
-        const start = index * chunkSize;
-        const end = Math.min(totalSize, start + chunkSize);
-        const chunkName = String(index + 1).padStart(5, "0");
-        const chunk = file.slice(start, end, file.type || "application/octet-stream");
-        await uploadBlobWithProgress({
-          url: `${uploadFolderUrl}/${chunkName}`,
-          blob: chunk,
-          authHeader,
-          headers: {
-            "Destination": targetUrl,
-            "OC-Total-Length": String(totalSize)
-          },
-          statusCb,
-          fileName,
-          displayPath,
-          itemId,
-          loadedOffset: start,
-          totalSize
-        });
-      }
-
-      await moveChunkedUpload({ uploadFolderUrl, targetUrl, authHeader, totalSize });
-      cleanupRequired = false;
-      if (typeof progressCb === "function"){
-        progressCb(file.name);
-      }
-      if (typeof statusCb === "function"){
-        statusCb({ phase: "done", fileName, displayPath, itemId });
-      }
-    }catch(error){
-      if (cleanupRequired){
-        await cleanupChunkUploadFolder({ uploadFolderUrl, authHeader });
-      }
-      throw error;
-    }
-  }
-
-  async function uploadFile({ davRoot, uploadRoot, relativeFolder, fileName, file, authHeader, progressCb, statusCb, displayPath, itemId, debugOpts }){
-    const relativePath = joinRelativePath(relativeFolder, fileName);
-    const targetUrl = davRoot + "/" + encodePath(relativePath);
-    const useChunked = shouldUseChunkedUpload(file);
-    if (typeof statusCb === "function"){
-      statusCb({ phase: "start", fileName, displayPath, itemId });
-    }
-    logDebug(debugOpts, "upload:method", {
-      file: fileName,
-      bytes: Number(file?.size) || 0,
-      method: useChunked ? "chunked-v2" : "put"
-    });
-    if (useChunked){
-      await uploadFileChunked({
-        uploadRoot,
-        targetUrl,
-        file,
-        authHeader,
-        progressCb,
-        statusCb,
-        displayPath,
-        itemId,
-        fileName
-      });
-      return;
-    }
-    await uploadFileDirect({
-      targetUrl,
-      file,
-      authHeader,
-      progressCb,
-      statusCb,
-      displayPath,
-      itemId,
-      fileName
-    });
-  }
-
   function buildPermissionMask(perms){
     let mask = 0;
     if (perms?.read) mask |= PERMISSION_FLAGS.read;
@@ -616,60 +235,6 @@
       mask = PERMISSION_FLAGS.read;
     }
     return mask;
-  }
-
-  /**
-   * Create a Nextcloud share via the documented OCS create endpoint.
-   * @param {string} baseUrl
-   * @param {string} relativeFolder
-   * @param {string} authHeader
-   * @param {object} perms
-   * @param {string} password
-   * @param {string} expireDate
-   * @param {boolean} publicUpload
-   * @param {string} label
-   * @returns {Promise<{url:string,token:string,id:string}>}
-   */
-  async function requestShare(baseUrl, relativeFolder, authHeader, perms, password, expireDate, publicUpload, label){
-    const url = baseUrl.replace(/\/+$/, "") + "/ocs/v2.php/apps/files_sharing/api/v1/shares";
-    const params = new URLSearchParams();
-    params.append("path", "/" + normalizeRelativePath(relativeFolder));
-    params.append("shareType", "3");
-    params.append("permissions", String(buildPermissionMask(perms)));
-    if (password){
-      params.append("password", password);
-    }
-    if (expireDate){
-      params.append("expireDate", expireDate);
-    }
-    if (publicUpload){
-      params.append("publicUpload", "true");
-    }
-    if (label){
-      params.append("label", label);
-    }
-    const response = await NCOcs.ocsRequest({
-      url,
-      method: "POST",
-      headers: {
-        "Authorization": authHeader,
-        "OCS-APIREQUEST": "true",
-        "Accept": "application/json",
-        "Content-Type": "application/x-www-form-urlencoded"
-      },
-      body: params
-    });
-    const raw = response.raw || "";
-    const data = response.data;
-    if (!response.ok){
-      const detail = data?.ocs?.meta?.message || raw || `HTTP ${response.status}`;
-      throw new Error(detail);
-    }
-    return {
-      url: data?.ocs?.data?.url || "",
-      token: data?.ocs?.data?.token || "",
-      id: data?.ocs?.data?.id || ""
-    };
   }
 
   /**
@@ -704,11 +269,10 @@
       },
       body: payload
     });
-    const raw = response.raw || "";
-    const data = response.data;
-    if (!response.ok){
-      const detail = data?.ocs?.meta?.message || raw || `HTTP ${response.status}`;
-      throw new Error(detail);
+    if (!NCOcs.isExplicitSuccess(response)){
+      throw new Error(
+        NCOcs.getFailureMessage(response, `HTTP ${response.status || 0}`)
+      );
     }
   }
 
@@ -733,7 +297,7 @@
       }
       return bufferToBase64(await response.arrayBuffer());
     }catch(error){
-      console.error(getSharingRuntimePrefix(), "asset base64 failed", assetPath, error?.message || error);
+      logInternalError(`asset base64 failed (${assetPath})`, error);
       return "";
     }
   }
@@ -744,42 +308,6 @@
     }
     cachedHeaderBase64 = await loadAssetBase64("ui/assets/header-solid-blue-164x48.png");
     return cachedHeaderBase64;
-  }
-
-  /**
-   * Check if the share folder already exists in WebDAV.
-   * @param {{shareName:string,basePath:string,shareDate?:Date}} options
-   * @returns {Promise<{exists:boolean,folderInfo:object}>}
-   */
-  async function checkShareFolderAvailability({ shareName, basePath, shareDate } = {}){
-    const opts = await NCCore.getOpts();
-    if (!opts.baseUrl || !opts.user || !opts.appPass){
-      throw new Error(i18n("error_credentials_missing"));
-    }
-    await ensureHostPermission(opts.baseUrl);
-    const userId = await NCCore.getCurrentUserId(opts);
-    const info = buildShareFolderInfo(basePath || await getFileLinkBasePath(), shareName, shareDate ? new Date(shareDate) : new Date());
-    const authHeader = NCOcs.buildAuthHeader(opts.user, opts.appPass);
-    const davBase = opts.baseUrl.replace(/\/+$/, "");
-    const davRoot = `${davBase}/remote.php/dav/files/${encodeURIComponent(userId)}`;
-    logDebug(opts, "availability:check", {
-      shareName,
-      basePath: basePath || "",
-      relativeFolder: info.relativeFolder
-    });
-    const exists = await pathExists({
-      davRoot,
-      relativePath: info.relativeFolder,
-      authHeader
-    });
-    logDebug(opts, "availability:result", {
-      relativeFolder: info.relativeFolder,
-      exists
-    });
-    return {
-      exists,
-      folderInfo: info
-    };
   }
 
   /**
@@ -905,8 +433,9 @@
    */
   function htmlToPlainTextOrThrow(html){
     if (typeof NCHtmlSanitizer?.htmlToPlainText !== "function"){
-      console.error(getSharingRuntimePrefix(), "html->plaintext converter unavailable");
-      throw new Error("sharing_template_plaintext_converter_unavailable");
+      const error = new Error("sharing_template_plaintext_converter_unavailable");
+      logInternalError("html->plaintext converter unavailable", error);
+      throw error;
     }
     return normalizePlainTextBlock(NCHtmlSanitizer.htmlToPlainText(String(html || "")));
   }
@@ -928,8 +457,9 @@
    */
   function createTemplateParser(){
     if (typeof DOMParser !== "function"){
-      console.error(getSharingRuntimePrefix(), "DOMParser unavailable for template pruning");
-      throw new Error("share_template_parser_unavailable");
+      const error = new Error("share_template_parser_unavailable");
+      logInternalError("DOMParser unavailable for template pruning", error);
+      throw error;
     }
     try{
       return new DOMParser();
@@ -1005,8 +535,9 @@
       && typeof NCHtmlSanitizer.sanitizeShareTemplateHtml === "function"){
       return NCHtmlSanitizer.sanitizeShareTemplateHtml(html);
     }
-    console.error(getSharingRuntimePrefix(), "custom share template sanitizer unavailable");
-    throw new Error("share_template_sanitizer_unavailable");
+    const error = new Error("share_template_sanitizer_unavailable");
+    logInternalError("custom share template sanitizer unavailable", error);
+    throw error;
   }
 
   /**
@@ -1373,107 +904,158 @@
     if (!opts.baseUrl || !opts.user || !opts.appPass){
       throw new Error(i18n("error_credentials_missing"));
     }
+    NCFileLinkDav.throwIfAborted(request?.signal);
     await ensureHostPermission(opts.baseUrl);
-    const userId = await NCCore.getCurrentUserId(opts);
-    const basePathSetting = request?.basePath && request.basePath.trim()
+    NCFileLinkDav.throwIfAborted(request?.signal);
+    const requestOptions = {
+      ...opts,
+      signal: request?.signal || null
+    };
+    const capabilities = await NCCore.getRequiredCapabilities(requestOptions);
+    const userId = await NCCore.getCurrentUserId(requestOptions);
+    const rawBasePath = request?.basePath && request.basePath.trim()
       ? request.basePath.trim()
       : (await getFileLinkBasePath());
+    const basePathSetting = sanitizeRelativeDir(rawBasePath)
+      || sanitizeRelativeDir(DEFAULT_BASE_PATH);
     const shareDate = request?.shareDate ? new Date(request.shareDate) : new Date();
-    const folderInfo = request?.folderInfo
-      ? request.folderInfo
-      : buildShareFolderInfo(basePathSetting, request?.shareName, shareDate);
-    const relativeBase = folderInfo.relativeBase;
-    const relativeFolder = folderInfo.relativeFolder;
     const authHeader = NCOcs.buildAuthHeader(opts.user, opts.appPass);
     const davBase = opts.baseUrl.replace(/\/+$/, "");
     const davRoot = `${davBase}/remote.php/dav/files/${encodeURIComponent(userId)}`;
     const uploadRoot = `${davBase}/remote.php/dav/uploads/${encodeURIComponent(userId)}`;
-    logDebug(opts, "folders:ensure", { relativeBase, relativeFolder });
-    const baseExists = relativeBase
-      ? await pathExists({
-        davRoot,
-        relativePath: relativeBase,
-        authHeader
-      })
-      : false;
-    await ensureFolderExists(davRoot, relativeFolder, authHeader, {
-      knownExistingPrefix: baseExists ? relativeBase : ""
-    });
-    const ensuredUploadFolders = new Set([relativeFolder]);
+    const bulkUrl = `${davBase}/remote.php/dav/bulk`;
     const noteEnabled = !!request?.noteEnabled;
     const noteValue = noteEnabled ? String(request?.note || "").trim() : "";
-    request.note = noteValue;
-    request.noteEnabled = noteEnabled;
-    const normalizedShareName = sanitizeShareName(request?.shareName) || folderInfo.folderName;
-
-    const onProgress = typeof request?.onProgress === "function" ? request.onProgress : null;
     const statusCallback = typeof request?.onUploadStatus === "function" ? request.onUploadStatus : null;
-    const files = Array.isArray(request?.files) ? request.files : [];
-    if (files.length){
-      let uploaded = 0;
-      for (const item of files){
-        const displayPath = item.displayPath || item.file?.name || "";
-        const sanitizedFileName = sanitizeFileName(item.renamedName || item.file?.name || "File");
-        const relativeDir = sanitizeRelativeDir(item.relativeDir || "");
-        const targetFolder = relativeDir ? joinRelativePath(relativeFolder, relativeDir) : relativeFolder;
-        if (relativeDir && !ensuredUploadFolders.has(targetFolder)){
-          await ensureFolderExists(davRoot, targetFolder, authHeader, {
-            knownExistingPrefix: relativeFolder
-          });
-          ensuredUploadFolders.add(targetFolder);
-        }
-        logDebug(opts, "upload:start", { file: sanitizedFileName, folder: targetFolder });
-        await uploadFile({
-          davRoot,
-          relativeFolder: targetFolder,
-          fileName: sanitizedFileName,
-          file: item.file,
-          authHeader,
-          uploadRoot,
-          displayPath,
-          itemId: item.id,
-          debugOpts: opts,
-          statusCb: statusCallback,
-          progressCb: () => {
-            uploaded++;
-            if (onProgress){
-              onProgress({ type: "upload", current: uploaded, total: files.length, fileName: displayPath || sanitizedFileName });
-            }
-          }
-        });
-        logDebug(opts, "upload:done", { file: sanitizedFileName });
+    const sourceItems = Array.isArray(request?.files) ? request.files : [];
+    const files = sourceItems.map((item, index) => {
+      const sourceFile = item?.file;
+      if (!sourceFile || typeof sourceFile.slice !== "function"){
+        throw new Error(i18n("sharing_status_error"));
       }
+      const fileName = sanitizeFileName(item.renamedName || sourceFile.name || "File");
+      return {
+        itemId: item.id || `file-${index + 1}`,
+        sourceFile,
+        fileName,
+        displayPath: item.displayPath || sourceFile.name || fileName,
+        relativeDir: sanitizeRelativeDir(item.relativeDir || ""),
+        size: Number(sourceFile.size) || 0,
+        lastModified: Number(sourceFile.lastModified) || Date.now(),
+        contentType: sourceFile.type || "application/octet-stream"
+      };
+    });
+    const baseShareName = sanitizeShareName(request?.shareName) || sanitizeShareName(i18n("sharing_share_default"));
+    const candidateLimit = request?.attachmentMode ? 1000 : 1;
+    const rootCandidates = Array.from({ length: candidateLimit }, (_, suffix) => {
+      const shareName = suffix === 0 ? baseShareName : `${baseShareName}_${suffix}`;
+      return {
+        shareName,
+        folderInfo: buildShareFolderInfo(basePathSetting, shareName, shareDate)
+      };
+    });
+    let preparedRoot = null;
+    const buildTrackedRoot = (root) => {
+      const cleanupResolution = root?.cleanupResolution || null;
+      return Object.freeze({
+        ...root,
+        cleanupTarget: Object.freeze({
+          url: NCFileLinkDav.buildFileUrl(davRoot, root.folderInfo.relativeFolder),
+          authHeader,
+          baseUrl: opts.baseUrl,
+          relativeFolder: root.folderInfo.relativeFolder,
+          reservationUrl: String(cleanupResolution?.reservationUrl || ""),
+          targetUrl: String(cleanupResolution?.targetUrl || "")
+        })
+      });
+    };
+    try{
+      const transfer = await NCFileLinkUpload.prepareAndUpload({
+        files,
+        bulkSupported: capabilities.bulkUploadSupported,
+        fixedRequestCount: normalizeRelativePath(basePathSetting).split("/").filter(Boolean).length + 2,
+        davRoot,
+        uploadRoot,
+        bulkUrl,
+        basePath: basePathSetting,
+        rootCandidates,
+        authHeader,
+        signal: request?.signal || null,
+        log: (...args) => logDebug(opts, ...args),
+        onStatus: statusCallback,
+        collisionMessage: i18n("sharing_error_folder_exists"),
+        onRootCreated: async (root) => {
+          preparedRoot = buildTrackedRoot(root);
+          if (typeof request?.onRootCreated === "function"){
+            await request.onRootCreated(preparedRoot);
+          }
+        }
+      });
+      preparedRoot = preparedRoot || buildTrackedRoot(transfer.root);
+      const relativeFolder = preparedRoot.folderInfo.relativeFolder;
+      const normalizedShareName = preparedRoot.shareName;
+      const share = await NCFileLinkShare.create({
+        baseUrl: opts.baseUrl,
+        relativeFolder,
+        authHeader,
+        permissionMask: buildPermissionMask(request.permissions),
+        password: request.passwordEnabled ? (request.password || "") : "",
+        expireDate: request.expireEnabled ? (request.expireDate || "") : "",
+        label: normalizedShareName,
+        note: noteValue,
+        signal: request?.signal || null
+      });
+      logDebug(opts, "share:created", { shareId: share.id || "" });
+
+      const resultPayload = {
+        shareUrl: share.url,
+        shareToken: share.token || "",
+        password: request.passwordEnabled ? (request.password || "") : "",
+        expireDate: request.expireEnabled ? (request.expireDate || "") : "",
+        permissions: request.permissions,
+        folderInfo: preparedRoot.folderInfo,
+        note: noteValue,
+        noteEnabled,
+        shareId: share.id || "",
+        label: normalizedShareName
+      };
+      logDebug(opts, "createFileLink:done", {
+        shareId: share.id || "",
+        files: files.length
+      });
+      return {
+        shareUrl: share.url,
+        shareInfo: resultPayload
+      };
+    }catch(error){
+      if (preparedRoot?.folderInfo?.relativeFolder){
+        let cleaned = false;
+        try{
+          await NCFileLinkDav.deleteTrackedRoot({
+            url: preparedRoot.cleanupTarget?.url
+              || NCFileLinkDav.buildFileUrl(davRoot, preparedRoot.folderInfo.relativeFolder),
+            reservationUrl: preparedRoot.cleanupTarget?.reservationUrl || "",
+            targetUrl: preparedRoot.cleanupTarget?.targetUrl || "",
+            authHeader,
+            log: (...args) => logDebug(opts, ...args)
+          });
+          cleaned = true;
+        }catch(cleanupError){
+          logInternalError("Share root cleanup failed", cleanupError);
+        }
+        if (cleaned){
+          await NCFileLinkShare.clearIndeterminate({
+            baseUrl: opts.baseUrl,
+            relativeFolder: preparedRoot.folderInfo.relativeFolder,
+            authHeader
+          });
+        }
+        if (typeof request?.onRootCleanup === "function"){
+          await request.onRootCleanup({ root: preparedRoot, cleaned });
+        }
+      }
+      throw error;
     }
-
-    const share = await requestShare(
-      opts.baseUrl,
-      relativeFolder,
-      authHeader,
-      request.permissions,
-      request.passwordEnabled ? (request.password || "") : "",
-      request.expireEnabled ? (request.expireDate || "") : "",
-      !!request.permissions?.create,
-      normalizedShareName);
-    logDebug(opts, "share:created", { url: share.url });
-
-    const resultPayload = {
-      shareUrl: share.url,
-      shareToken: share.token || "",
-      password: request.passwordEnabled ? (request.password || "") : "",
-      expireDate: request.expireEnabled ? (request.expireDate || "") : "",
-      permissions: request.permissions,
-      folderInfo,
-      note: noteValue,
-      noteEnabled,
-      shareId: share.id || "",
-      label: normalizedShareName
-    };
-    logDebug(opts, "createFileLink:done", { shareUrl: share.url });
-
-    return {
-      shareUrl: share.url,
-      shareInfo: resultPayload
-    };
   }
 
   async function getFileLinkBasePath(){
@@ -1530,8 +1112,11 @@
     const authHeader = NCOcs.buildAuthHeader(opts.user, opts.appPass);
     const davRoot = `${opts.baseUrl.replace(/\/+$/, "")}/remote.php/dav/files/${encodeURIComponent(userId)}`;
     logDebug(opts, "folders:delete", { relativeFolder: folderInfo.relativeFolder });
-    await deleteRemotePath(davRoot, folderInfo.relativeFolder, authHeader);
-    return true;
+    return NCFileLinkDav.deleteRemotePath({
+      url: NCFileLinkDav.buildFileUrl(davRoot, folderInfo.relativeFolder),
+      authHeader,
+      log: (...args) => logDebug(opts, ...args)
+    });
   }
 
   const api = {
@@ -1541,7 +1126,6 @@
     buildPlainTextBlock,
     getFileLinkBasePath,
     buildShareFolderInfo,
-    checkShareFolderAvailability,
     sanitizeShareName,
     sanitizeFileName,
     sanitizeRelativeDir,

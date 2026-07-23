@@ -701,6 +701,21 @@
   "sharing_status_uploading_bulk": {
     "message": "Nahrávají se soubory..."
   },
+  "sharing_status_scanning": {
+    "message": "Prohledávání souborů a složek..."
+  },
+  "sharing_status_preparing_folders": {
+    "message": "Příprava složek ($1 / $2)..."
+  },
+  "sharing_status_uploading_summary": {
+    "message": "Nahrávání souborů ($1 / $2) — $3 / $4 — $5"
+  },
+  "nextcloud_minimum_version_required": {
+    "message": "NC Connector vyžaduje Nextcloud 32 nebo novější. Zjištěná verze: $1"
+  },
+  "sharing_insufficient_storage": {
+    "message": "Nextcloud nemá pro toto nahrávání dostatek volného úložného prostoru."
+  },
   "sharing_message_invalid_share_name": {
     "message": "Zadejte název sdílení."
   },
@@ -966,6 +981,6 @@
     "message": "Aktualizujte prosím backend NC Connector. Tato verze backendu zatím nepodporuje centrální e-mailové podpisy."
   },
   "sharing_status_speed_kbps": {
-    "message": "Rychlost: $1 KB/s"
+    "message": "$1 KB/s"
   }
 }
