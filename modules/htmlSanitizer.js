@@ -438,10 +438,6 @@
     return report;
   }
 
-  function normalizeAnchorTargets(html){
-    return normalizeAnchorTargetsWithReport(html).html;
-  }
-
   /**
    * Sanitize backend-provided rich HTML.
    * @param {string} value

@@ -17,10 +17,11 @@
 ## DOMPurify
 
 - Package: `dompurify`
-- Version: `3.4.11`
-- Source: https://registry.npmjs.org/dompurify/-/dompurify-3.4.11.tgz
+- Version: `3.4.12`
+- Source: https://registry.npmjs.org/dompurify/-/dompurify-3.4.12.tgz
 - Upstream repository: https://github.com/cure53/DOMPurify
-- Included file: `vendor/purify.js` (browser distribution from `dist/purify.js`)
+- Included file: `vendor/purify.js` (unchanged UMD browser distribution from `dist/purify.js`)
+- SHA-256: `0CB2FF0EB405F7D675FFF04AE98ED277BB9FB10D3DF33F29AA8BE398E6E9F1B2`
 - License: Apache-2.0 OR MPL-2.0
 - Usage in this add-on:
   - Client-side sanitization of backend-provided Talk invitation HTML
@@ -32,6 +33,12 @@
     - `modules/ncSharing.js`
     - `modules/bgSignature.js`
     - `ui/talkDialog.js`
+- Module-format review:
+  - The unchanged UMD browser distribution is loaded as a local ordered script
+    before `modules/htmlSanitizer.js` in the background, options page, Talk
+    dialog, and Sharing wizard.
+  - It exposes only the local `DOMPurify` runtime; no remote module or script is
+    loaded.
 
 ## SparkMD5
 
