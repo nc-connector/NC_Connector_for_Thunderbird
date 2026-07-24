@@ -111,8 +111,10 @@ Top-level:
 Key files you’ll touch most:
 - `modules/bgState.js` — shared runtime state, startup initialization, and `[NCBG]` log helper
 - `modules/bgComposeAttachments.js` — compose attachment automation, threshold prompts, and sharing-launch context handling
+- `modules/bgShareCleanupStore.js` — versioned, secret-free persistence and bounded retry for wizard/compose cleanup ownership
 - `modules/bgComposeShareCleanup.js` — compose-tab and wizard-window remote cleanup lifecycle
 - `modules/bgComposeShareInsert.js` — mode-aware share-block insertion (HTML vs plain-text compose)
+- `modules/bgComposeFinalize.js` — background-owned atomic finalize transaction and rollback
 - `modules/bgComposePasswordDispatch.js` — separate-password-mail dispatch and follow-up compose handling
 - `modules/bgFileLinkUpload.js` — background-owned FileLink upload sessions, cancellation, and cleanup handoff
 - `modules/fileLinkUploadPolicy.js` — upload-mode thresholds, batching, concurrency, and retry limits
@@ -121,11 +123,14 @@ Key files you’ll touch most:
 - `modules/fileLinkBulkUpload.js` — Nextcloud DAV bulk multipart construction, MD5 calculation, and response handling
 - `modules/fileLinkUpload.js` — root reservation plus Direct, Chunked, and Bulk orchestration
 - `modules/fileLinkShare.js` — public-share creation and ambiguous-response recovery
+- `modules/fileQueuePathConflicts.js` — linear-time exact/prefix conflict detection for upload queues
 - `modules/passwordPolicyRuntime.js` — background password-policy fetch/generate helper for wizard requests
 - `modules/bgCompose.js` — compose/window/tab listener wiring
 - `modules/bgSignature.js` — central backend email-signature policy orchestration for compose windows
 - `ui/signatureCompose.js` — compose-script DOM bridge for managed signature cleanup/insertion
 - `modules/bgCalendarLifecycle.js` — calendar wizard context and editor-close cleanup lifecycle helpers
+- `modules/bgCalendarState.js` — serialized, storage-first room metadata and event-token mapping
+- `modules/bgCalendarDeparture.js` — persistent post-delegation departure retry state
 - `modules/bgCalendar.js` — `ncCalToolbar` integration, room metadata mapping, and persisted calendar monitoring sync
 - `modules/bgRouter.js` — `runtime.onMessage` dispatcher for Talk/Sharing/Options/UI bridge contracts
 - `modules/policyState.js` — shared helpers for normalized backend policy status objects
@@ -585,17 +590,57 @@ We use `returnFormat: "ical"` so our parsing logic stays consistent.
 
 On create/update (`handleCalendarItemUpsert` in `modules/bgCalendar.js`):
 - Cancel pending unsaved-editor cleanup when the stored event contains the matching `X-NCTALK-TOKEN`.
+- Serialize and coalesce work per event so a newer calendar revision cannot be
+  overwritten by an older asynchronous handler.
+- Assign one monotonic generation across the event lifecycle. Delayed upserts,
+  retries, moves, removals, and moderator-departure work must still own that
+  generation immediately before mutating local or remote state.
+- Persist room metadata and event-token mappings through serialized, storage-first
+  mutation queues. A rejected `storage.local.set()` is propagated and does not
+  commit a divergent in-memory value.
 - Keep room meta in sync:
   - lobby timer updates when event time changes
   - store token ↔ event mapping
 - Trigger invitee sync if enabled (`ADD-USERS` and/or `ADD-GUESTS`)
 - Trigger delegation flow if pending (`DELEGATE-READY`)
 - If `X-NCTALK-TOKEN` is missing in the event payload, processing is skipped fail-closed (no token recovery from cached mapping).
+- Resolve the canonical Nextcloud user ID before ownership decisions. The
+  configured login may be an email alias and is not used as a room-ownership ID.
+- A system-addressbook lookup failure is not interpreted as "unknown guest".
+  Guest/user synchronization stops fail-closed and a bounded, deduplicated
+  in-memory retry is scheduled for explicitly transient failures. A newer event
+  revision supersedes an older retry; event removal cancels it.
+- An event that is already linked through `X-NCTALK-TOKEN` cannot create a
+  second room from the editor. The existing room remains authoritative.
+- Moderator delegation is a two-phase transition: promote the target first,
+  persist a departure-prepared marker and the canonical delegated state into the
+  calendar item, and only then let the previous moderator leave the room.
+  Self-delegation never leaves the room. The prepared/pending departure state is
+  persistent and restartable; transient failures use the bounded 2/5/10/30/60
+  second schedule, while an older generation cannot overwrite a newer event.
+
+The `X-NCTALK-*` properties are intentionally portable synchronization metadata,
+not a device-local authenticity marker. A user may operate several Thunderbird
+installations with the same Nextcloud account; every such installation must be
+able to update or delete the linked meeting. Consequently, a locally generated
+secret or installation marker must not gate this flow. Nextcloud remains the
+authorization boundary for every room mutation, while canonical user IDs and
+the stored delegate state determine whether this client should perform the
+operation.
 
 On remove:
 - Existing saved-event room deletion follows the resolved `talkDeleteRoomOnEventDelete` default: local when present and editable, otherwise the active backend default; a locked backend value always wins.
 - The removed event must have a trusted token mapping created from NC Connector `X-NCTALK-*` properties. Tokens derived from generic `LOCATION` or `URL` fields are never accepted as ownership proof.
-- If moderation was delegated, deletion may fail (403). This is expected and should be handled gracefully.
+- Deletion waits briefly for calendar move events to settle. If another event
+  mapping still references the same room, the room is retained.
+- A new reference aborts an in-flight room delete. Immediately before deletion
+  and local mapping removal, runtime rechecks the current generation and all
+  remaining token references; mapping removal is token-conditional.
+- Transient room-delete failures retain a bounded persistent retry record
+  (2/5/10/30/60 seconds). Retry mutations are serialized and storage-first.
+  A definitive authorization failure such as `403` ends network retries but
+  retains an exhausted evidence record plus room metadata; this is expected
+  after moderator delegation and must not be reported as a successful delete.
 
 ### 9.3 Orphan-room prevention
 
@@ -603,6 +648,14 @@ Orphan prevention is handled by:
 - `browser.ncCalToolbar.onTrackedEditorClosed` (editor discarded or superseded)
 - `browser.calendar.items.onCreated/onUpdated` with matching `X-NCTALK-TOKEN` as the persistence signal
 - background cleanup maps keyed by room token + editor reference
+- revision-safe hydration of persisted room metadata, event-token mappings,
+  departure records, and cleanup state before calendar listeners mutate them
+
+`experiments/ncCalToolbar/parent.js` treats registration as a transaction.
+Partially applied window properties are rolled back if a later setter fails.
+Shutdown marks the bridge inactive before listeners and observers are removed,
+guards late callbacks, and invalidates Thunderbird's startup cache after
+experiment teardown so stale privileged modules are not reused.
 
 ---
 
@@ -664,26 +717,43 @@ Attachment mode specifics:
   - manual mode stops on an existing share-folder name
   - attachment mode tries its fixed numbered folder-name candidates
 - Share cleanup rules:
-  - cleanup is armed in background for every share created and prepared for insertion into the same compose tab
-  - arming compose cleanup transfers ownership from the wizard entry before the UI continues with insertion and password-dispatch registration
-  - cleanup for the complete set is cleared only after successful `compose.onAfterSend` (`sendNow`/`sendLater` with message id)
-  - if the compose tab is closed without successful send, background deletes every tracked share folder on the server
+  - every created share first has background-owned wizard cleanup; finalize transfers that exact ownership to the compose draft
+  - one `sharing:finalizeRenderedShare` call runs a background transaction: resolve draft group, stage cleanup ownership, stage the optional password dispatch, apply the body/header mutation, then commit
+  - send is blocked while this transaction is active
+  - a stage failure or popup/tab close rolls back the exact insertion and password registration and restores the previous cleanup owner; incomplete rollback taints the lifecycle and remains fail-closed
+  - cleanup for the complete set is cleared after successful `compose.onAfterSend`; a missing `headerMessageId` is diagnostic only and does not turn a successful `sendNow` or `sendLater` event into failure
+  - if an unsaved compose tab closes without successful send, background deletes every tracked share folder on the server
   - when send is still pending at tab-close time, cleanup delete is delayed by a short grace timer to avoid send/close races
   - wizard-side cleanup is armed by window id in background; if the sharing wizard closes before finalize, background deletes the remote folder on `windows.onRemoved`
-  - finalize explicitly clears the wizard cleanup entry before closing the popup
   - an upload Port disconnect or wizard-window removal aborts active requests before cleanup starts
   - cleanup entries carry a generation ID so a delayed retry cannot delete a newer share registered for the same wizard window
   - failed deletes are retried after 2, 5, 10, 30, and 60 seconds; roots already removed from a multi-share draft are dropped from the retry set
+  - versioned cleanup records survive background/Thunderbird restart. They contain only the exact Nextcloud base URL, canonical user ID, and remote cleanup paths; credentials, passwords, recipients, and rendered message bodies are never persisted in this store
+  - a retry rehydrates current credentials only after the configured base URL and canonical user ID match the stored owner. Exhausted records remain retained for diagnostics and are not silently reset
+  - `onBeforeSend` persists a conservative `send_pending` state before allowing
+    Thunderbird to continue. A restart in this uncertain transport window
+    retains the share; only confirmed `onAfterSend` removes the cleanup record
+- Saved drafts:
+  - finalize adds an opaque `X-NC-Connector-Share-Draft` group header. The header is only a reference; the versioned local cleanup record remains the authority
+  - `compose.onAfterSave` is serialized with any active finalize transaction. A save observed before insertion or after rollback is ignored; a save observed after insertion is committed only if finalize commits
+  - reopening a draft is allowed only when exactly one valid marker resolves to a saved local record in the same Thunderbird profile. Missing, conflicting, tainted, or incomplete state blocks send
+  - saved drafts retain their remote shares when the compose tab closes. Because the add-on has no message-deletion permission/event, deleting a saved draft outside compose cannot trigger immediate remote cleanup; administrators may need to remove an orphan after verifying it is unused
+  - adding another share to an already saved draft marks an unsaved delta without
+    making the previously saved baseline deletable. Discard/crash retains the
+    complete group conservatively; the new unused share can become an orphan,
+    but the link still present in the stored draft is never deleted
+  - Thunderbird templates containing an NC Connector share are unsupported. Saving as template records that state and blocks both the template and messages instantiated from it
+  - password-dispatch payloads are deliberately not persisted. Before a password-protected share draft can close, background captures the current envelope and opens explicit manual password drafts. Failed or incomplete handoff remains queued and blocks sending the main draft
 - Password separation:
   - Option + wizard toggle can send the password in a dedicated follow-up mail.
   - This toggle is only active when password protection is enabled.
   - Password delivery defaults to plain text. With backend policy, `share_send_password_mode=secrets` switches follow-up mails to Nextcloud Secrets links.
   - If the backend reports Secrets as unavailable (`share_send_password_mode=null`) or link creation fails, the add-on falls back to plain text and warns the user.
   - Main compose block omits the inline password and shows a dedicated hint when enabled.
-  - Background tracks live sender switches on `compose.onIdentityChanged`, captures the final main-mail envelope on `compose.onBeforeSend`, and dispatches password-only mail on `compose.onAfterSend`.
+  - Background tracks live sender switches on `compose.onIdentityChanged`, captures the final main-mail envelope on `compose.onBeforeSend`, and reacts to the confirmed result on `compose.onAfterSend`.
   - If Thunderbird closes the compose tab while send is still pending, the password-dispatch queue stays alive for the same grace timer as share cleanup. A later successful `onAfterSend` still sends the follow-up; without send confirmation the queue is cleared after the timer.
   - The primary-mail sender is resolved via Thunderbird compose details plus `accountsRead` identity lookup; the password follow-up must use the same Thunderbird identity as the main mail.
-  - Plain-text follow-up mails use the captured `To`/`Cc`/`Bcc` envelope from the primary mail.
+  - Plain-text follow-up mails use the captured `To`/`Cc`/`Bcc` envelope from the primary mail. Canonical recipient deduplication is global across the envelope with precedence `To`, then `Cc`, then `Bcc`.
   - Before auto-send, background parses string recipients with `messengerUtilities.parseMailboxString(...)` and compares `To`, `Cc`, and `Bcc` separately. Contact and mailing-list references keep their opaque IDs.
   - Secrets mode creates one one-time Secrets link per recipient and preserves `Bcc` separation.
   - Secrets are titled `NCC <share label>` when a label exists, otherwise `NCC share password`.
@@ -691,8 +761,10 @@ Attachment mode specifics:
   - Backend custom password templates (`language_share_html_block=custom` + `share_password_template`) are sanitized in the render path before follow-up registration; rich HTML uses `NCSharing.buildHtmlBlock(...)`, plain text uses `NCSharing.buildPlainTextBlock(...)`, and missing sanitizer or empty sanitized output aborts finalize (fail-closed).
   - Follow-up mail delivery mode mirrors the source compose mode (`isPlainText` / `deliveryFormat`) captured from compose details and refreshed on `compose.onBeforeSend`.
   - Follow-up registration now requires both pre-rendered HTML and pre-rendered plain text; when follow-up is plain text, background uses the provided plain-text block and frames it with a fixed 50-character `#` border.
-  - Dispatch path: first warm the freshly created password compose tab until Thunderbird exposes the complete expected recipient envelope, repeat the full comparison after a short settle tick, then send with the same `sendNow`/`sendLater` mode as the confirmed primary mail.
-  - An empty or mismatching envelope and any readiness timeout stop auto-send. As with unresolved sender identity or send failure, background opens a prefilled compose draft as explicit manual fallback.
+  - For confirmed `sendNow`, the dispatch path first warms the freshly created password compose tab until Thunderbird exposes the complete expected recipient envelope, waits for the applicable backend signature, repeats the identity/recipient/subject comparison after a short settle tick, and then sends with `sendNow`.
+  - For `sendLater`, Thunderbird confirms only that the main mail reached the Outbox, not that it has actually left it. NC Connector therefore never queues or sends the password automatically. It opens an explicitly marked password draft that the user sends manually only after the main mail was delivered. The primary share is committed as soon as Thunderbird confirms Outbox queueing.
+  - An empty or mismatching envelope and any readiness timeout stop auto-send. As with unresolved sender identity or send failure, background keeps or opens a single prefilled compose draft as explicit manual fallback.
+  - If a send request times out while Thunderbird's original Promise is still unresolved, its state remains pending. NC Connector continues observing that same compose operation and does not open a second, potentially duplicate password draft.
   - After confirmed primary send, unexpected password-dispatch errors also open manual fallback drafts from the queued payload instead of only notifying.
   - If a manual fallback draft was opened, a dedicated desktop notification tells the user to send the password mail manually.
   - Once the primary mail was sent, password-follow-up problems must never delete the committed remote share.
@@ -702,13 +774,12 @@ Attachment mode specifics:
 
 ### 10.2 Inserting share blocks into compose (mode-aware)
 
-The sharing wizard sends:
-- `browser.runtime.sendMessage({ type: "sharing:armComposeShareCleanup", payload: { tabId, folderInfo, ... } })`
-- `browser.runtime.sendMessage({ type: "sharing:insertRenderedBlock", payload: { tabId, html, plainText } })`
+The sharing wizard sends one transaction request:
+- `browser.runtime.sendMessage({ type: "sharing:finalizeRenderedShare", payload: { tabId, wizardWindowId, cleanup, passwordDispatch, html, plainText } })`
 
 Background:
-- arms compose-share cleanup before insertion (for unsent-tab cleanup handling)
-- routes `sharing:insertRenderedBlock` through `modules/bgComposeShareInsert.js`.
+- stages/commits cleanup and optional password dispatch through `modules/bgComposeFinalize.js`
+- routes the reversible body/header mutation through `modules/bgComposeShareInsert.js`
 - receives pre-rendered share HTML from `NCSharing.buildHtmlBlock(...)`.
 - receives pre-rendered share plain text from `NCSharing.buildPlainTextBlock(...)`.
 - requires both render variants as part of the runtime message rules.
@@ -751,6 +822,13 @@ Runtime rules:
 - Signature cleanup is limited to the author area before Thunderbird's quoted-message block; quoted sender signatures are left untouched.
 - The compose bridge adds one managed blank line after the backend signature and restores the initial cursor to the author area when Thunderbird has not marked the draft as modified.
 - After initial insertion, the compose bridge watches the author area for two seconds and reuses the same replacement path only if Thunderbird appends a file-based or Signature Switch signature late. The observer disconnects after that short settling window instead of remaining active for the lifetime of the compose window.
+- Opening a saved draft without an NC Connector signature marker never inserts a
+  backend signature implicitly. An explicit non-matching-to-matching identity
+  change may insert it once in the author area before quoted content. Existing
+  managed markers can still be updated or removed according to current policy.
+- The background does not clear Thunderbird's `isModified` flag after signature
+  work. Separate password compose windows wait for a signature acknowledgement
+  before their final pre-send verification.
 - Non-matching sender identities are left untouched so Thunderbird identity signatures or Signature Switch can continue to manage those identities.
 - Share, Talk, and email-signature policies are evaluated per backend policy domain. A backend payload without `policy.email_signature` disables only central email signatures and shows the backend-update hint; Share/Talk policy remains active when their domains are present.
 - The signature settings surface stays disabled until the backend endpoint is available, the current user has an active assigned seat, and the `email_signature` policy domain exists. Backend/seat hint text reuses the existing policy messages.
@@ -890,7 +968,7 @@ Cancellation starts when:
 - Thunderbird reports the wizard window removed
 - a newer upload replaces the same wizard session
 
-The background waits for active workers to settle before root cleanup. A result that can no longer be delivered to the wizard triggers immediate remote cleanup. Cleanup records have a generation ID, so a delayed delete retry applies only to the record that scheduled it. Failed deletes are retried after 2, 5, 10, 30, and 60 seconds. Compose cleanup tracks every share block inserted into the same draft, deletes all of them when the unsent draft closes, and clears the complete set only after Thunderbird confirms a successful send.
+The background waits for active workers to settle before root cleanup. A result that can no longer be delivered to the wizard triggers immediate remote cleanup. Cleanup records have a generation ID, so a delayed delete retry applies only to the record that scheduled it. Failed deletes are retried after 2, 5, 10, 30, and 60 seconds. Compose cleanup tracks every share block inserted into the same draft, deletes all of them when an unsaved draft closes, retains them for a successfully saved draft, and clears the complete set only after Thunderbird confirms a successful send.
 
 `modules/fileLinkUploadProgress.js` sends UI summaries at most every 100 ms and debug summaries at most every five seconds. Per-file changes are grouped into one `items` event. A summary contains completed/total files, loaded/total bytes, and bytes per second. This avoids progress-message and console growth proportional to raw XHR progress callbacks.
 
@@ -952,6 +1030,17 @@ Event ↔ token mapping:
 - Used for trusted ownership checks on event deletion and for diagnostics.
 - Deletion uses only mappings marked as `source: "x-nctalk"`. Legacy mappings without a source are ignored fail-closed because older builds could also store tokens from ordinary `LOCATION`/`URL` fields.
 
+Delegation departure state:
+- Stored as generation-bound prepared/pending fields inside `nctalkRoomMeta`.
+- Contains the leave operation required to finish a moderator handoff after
+  calendar write-back or restart, without introducing a second source of truth.
+
+Share cleanup groups:
+- Key: `nccShareCleanupGroupsV1`
+- Versioned wizard/compose ownership records with remote cleanup descriptors,
+  save/template/password-handoff flags, and retry state.
+- The schema rejects credential, password, HTML, plain-text, and body fields.
+
 ---
 
 ## 12. Runtime messaging contracts
@@ -983,13 +1072,10 @@ Talk wizard:
 - `talk:releaseContext`
 
 Sharing wizard:
-- `sharing:insertRenderedBlock`
-- `sharing:armComposeShareCleanup`
-- `sharing:clearWizardRemoteCleanup`
 - `sharing:getLaunchContext`
 - `sharing:resolveAttachmentPrompt`
 - `sharing:checkAttachmentAutomationAllowed`
-- `sharing:registerSeparatePasswordDispatch`
+- `sharing:finalizeRenderedShare`
 
 FileLink upload uses the named runtime Port `nc-filelink-upload` instead of one long-lived `runtime.sendMessage()` call:
 
@@ -1039,6 +1125,23 @@ Authentication aliases and DAV identities are intentionally kept separate. Basic
 
 All endpoint interaction lives in the shared modules (`modules/ocs.js`, `modules/nccore.js`, `modules/policyRuntime.js`, `modules/talkcore.js`, `modules/talkAddressbook.js`, `modules/ncSharing.js`, `modules/ncSecrets.js`).
 
+Login Flow start/poll, backend-policy fetches, Talk/CardDAV control requests,
+and their response-body reads use bounded deadlines. Login Flow polling also has
+an overall deadline. Timeout errors are explicit and raw credential response
+bodies are never returned or logged. The central log context redacts credentials,
+authorization values, cookies, tokens, password-like fields, recipient/email
+identifiers, and user-scoped DAV/Talk paths before output. Background debug
+logging has no raw fallback when the redactor is unavailable.
+
+Managed Nextcloud URL reads distinguish absence from failure. Firefox and
+Thunderbird reject `storage.managed.get()` with `Managed storage manifest not
+found` when no native manifest or `3rdparty` policy exists; this documented
+unmanaged state resolves to an empty policy. Other read failures remain
+fail-closed: options hydrate existing local credentials for visibility but block
+Save, Test, and Login Flow for that run, while background routing refuses to
+fall back to a local URL. A successful managed-policy result already obtained in
+the same run is not overwritten by a later failure.
+
 ---
 
 ## 14. Packaging & release checklist
@@ -1054,24 +1157,21 @@ Before you ship:
 6. Run Thunderbird's review linter against a clean add-on folder payload:
    - `npm run test:webext-linter`
    - the script installs only the current `main` package from `thunderbird/webext-linter` before each run; no pinned or legacy linter is used as a fallback.
+   - root-level npm overrides keep the linter's ZIP and URI parser dependencies
+     on the audited `adm-zip >= 0.6.0` and `fast-uri >= 3.1.4` versions; the
+     dependency check resolves the packages from the installed linter itself
+     before any add-on archive is inspected.
    - the linter already covers generic review rules such as unsafe dynamic HTML writes, manifest/path issues, permissions, vendor files, and Thunderbird API version checks.
-7. GitHub Actions runs the review checks as separate jobs on pushes, pull requests, and manual workflow runs:
-   - calendar room cleanup
-   - iCal contract
-   - share plaintext contract
-   - policy contract
-   - policy editability
-   - password delivery contract
-   - password policy runtime
-   - URL subfolder contract
-   - FileLink upload planning, DAV protocol, progress, and cleanup lifecycle
-   - signature compose settling
-   - Nextcloud user ID check
-   - i18n locale parity
-   - i18n placeholder check
-   - i18n key usage
-   - release consistency
-   - Thunderbird webext-linter
+7. GitHub Actions runs two jobs on pushes, pull requests, and manual workflow runs:
+   - the complete `npm run test:review` aggregate, so every check registered in
+     `tools/check-review-clean.js` is covered automatically, including FileLink,
+     calendar, compose/password, policy, documentation-link, localization, and
+     release-consistency checks
+   - the Thunderbird webext-linter after installing the current upstream `main`
+     package
+   Do not duplicate the aggregate's individual scripts in the workflow. Keeping
+   one authoritative check list prevents newly added review checks from being
+   omitted in CI.
 8. Sanity check:
    - add-on installs on Thunderbird ESR 140 through ESR 153
    - button is present in dialog + tab editor by default

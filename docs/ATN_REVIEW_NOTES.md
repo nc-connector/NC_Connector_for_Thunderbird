@@ -31,9 +31,13 @@ is intentionally minimal:
 - tracked lifecycle via `ncCalToolbar.onTrackedEditorClosed`
 
 All business logic stays in the background runtime modules (`modules/bgState.js`,
-`modules/bgComposeAttachments.js`, `modules/bgComposeShareCleanup.js`, `modules/bgComposeShareInsert.js`, `modules/bgComposePasswordDispatch.js`, `modules/passwordPolicyRuntime.js`,
-`modules/bgCompose.js`, `modules/bgCalendarLifecycle.js`, `modules/bgCalendar.js`, `modules/talkAddressbook.js`,
-`modules/talkcore.js`, `modules/bgRouter.js`) and uses calendar APIs only
+`modules/bgComposeAttachments.js`, `modules/bgShareCleanupStore.js`,
+`modules/bgComposeShareCleanup.js`, `modules/bgComposeShareInsert.js`,
+`modules/bgComposeFinalize.js`, `modules/bgComposePasswordDispatch.js`,
+`modules/passwordPolicyRuntime.js`, `modules/bgCompose.js`,
+`modules/bgCalendarLifecycle.js`, `modules/bgCalendarState.js`,
+`modules/bgCalendarDeparture.js`, `modules/bgCalendar.js`,
+`modules/talkAddressbook.js`, `modules/talkcore.js`, `modules/bgRouter.js`) and uses calendar APIs only
 for persisted monitoring (`browser.calendar.items.onCreated/onUpdated/onRemoved`).
 
 ---
@@ -47,9 +51,13 @@ for persisted monitoring (`browser.calendar.items.onCreated/onUpdated/onRemoved`
 5) Event move/delete handling remains driven by official calendar item events.
 6) Talk/Sharing wizard windows use best-effort focus retries after popup creation; focus requests remain non-fatal due to OS/window-manager policy.
 7) Lobby timer updates consume `X-NCTALK-START` as source value; on calendar upserts, `DTSTART` is parsed through the shared iCal rules and synchronized back into `X-NCTALK-START`.
-8) Existing saved-event Talk room deletion is opt-in only and requires trusted NC Connector `X-NCTALK-*` metadata.
+8) Existing saved-event Talk room deletion is opt-in only and requires portable NC Connector `X-NCTALK-*` metadata; these fields deliberately work across Thunderbird installations using the same authorized Nextcloud account.
 9) Generic Talk links in `LOCATION` or `URL` fields are deliberately ignored for room-deletion ownership.
 10) FileLink upload sessions stay in background while the Sharing wizard owns a named runtime Port; disconnect or window removal aborts the session and starts remote cleanup.
+11) Share finalization is one background-owned transaction. A partial cleanup,
+password-dispatch, header, or body mutation cannot be exposed as committed.
+12) Versioned cleanup records contain remote ownership descriptors only. They do
+not persist credentials, passwords, recipients, or rendered message bodies.
 
 ---
 
@@ -85,11 +93,21 @@ for persisted monitoring (`browser.calendar.items.onCreated/onUpdated/onRemoved`
   replace or generate again.
   The existing manual Generate button remains independent of this default.
 - Talk room deletion for existing saved calendar events is disabled by default and can be enabled locally or locked by backend policy via `talk_delete_room_on_event_delete`.
-  - the event must have trusted NC Connector `X-NCTALK-*` metadata written by Thunderbird/Outlook integration
+  - the event must have NC Connector `X-NCTALK-*` metadata written by Thunderbird/Outlook integration; no device-local marker is required because the metadata is intentionally cross-device
   - generic Talk URLs copied into event `LOCATION` or `URL` fields are not parsed as ownership proof
   - old cached mappings without trusted source metadata are ignored and cleared instead of deleting a room
   - cleanup for a room created in an unsaved and then discarded event editor remains active independently
   - save-button events do not clear pending cleanup because Thunderbird can still reject the save; a matching persisted calendar item clears it
+  - event-move handling waits briefly and retains a room while another event mapping still references the same token
+  - transient delete failures keep serialized, storage-first bounded retry state; authorization failures after moderator handoff stop network retries but retain exhausted evidence and room metadata
+- Calendar/Talk synchronization is revision-safe and identity-safe:
+  - persisted background state is hydrated before listener mutations and one event-wide monotonic generation supersedes older asynchronous work, including retries, moves, deletion, and moderator departure
+  - room metadata and event-token mappings use serialized, storage-first writes; a rejected write is propagated without committing a divergent in-memory value
+  - canonical Nextcloud user IDs, not login aliases, drive ownership comparisons
+  - system-addressbook failures stop participant synchronization fail-closed and use bounded deduplicated retry for marked transient errors
+  - existing linked events cannot create a second Talk room
+  - moderator handoff promotes, persists prepared/delegated iCalendar state, and then performs the expected previous-moderator leave; self-delegation never leaves; transient departure failures survive restart with bounded retry
+  - a new event reference aborts in-flight room deletion; the final generation/reference check and token-conditional mapping cleanup prevent stale removal
 - Separate-password follow-up dispatch remains restricted to backend endpoint, active assigned seat, and enabled password protection.
   - `overlicensed=true` makes the seat unusable, keeps all policy domains inactive, shows the license warning, and blocks background dispatch registration before compose access
   - the options/UI toggle surface is only functional when those runtime conditions are met
@@ -97,16 +115,28 @@ for persisted monitoring (`browser.calendar.items.onCreated/onUpdated/onRemoved`
   - live sender switches are tracked on `compose.onIdentityChanged`, and the final primary-mail envelope is captured on `compose.onBeforeSend`
   - plain password follow-up uses the captured primary-mail recipient envelope
   - auto-send parses string recipients with `messengerUtilities.parseMailboxString(...)`, compares `To`/`Cc`/`Bcc` separately including opaque contact/list IDs, and repeats the full comparison after the settle tick
-  - empty, mismatching, or timed-out recipient readiness never reaches `compose.sendMessage()` and opens the existing manual fallback
+  - recipient deduplication is canonical across the complete envelope with `To` → `Cc` → `Bcc` precedence
+  - confirmed `sendNow` waits for backend-signature acknowledgement and then rechecks sender, recipients, and subject before auto-send
+  - `sendLater` never auto-sends the password because Thunderbird confirms only Outbox queueing; it opens a clearly marked draft for manual sending after the main mail actually leaves the Outbox
+  - empty or mismatching recipient readiness never reaches `compose.sendMessage()` and opens the existing manual fallback
+  - an unresolved send timeout keeps the original compose operation pending and does not open a duplicate fallback
   - Secrets-link delivery creates one one-time Secrets link per recipient and keeps `Bcc` separation intact
   - if Secrets is unavailable or link creation fails, Thunderbird falls back to plain delivery and warns the user
   - if sender identity cannot be resolved cleanly, or if auto-send fails, the add-on opens an explicit manual fallback draft instead of attempting an unsafe partial send
   - after the primary mail was sent, password-follow-up problems never delete the committed share
+  - `sharing:finalizeRenderedShare` owns cleanup transfer, optional password registration, opaque draft header, and reversible body insertion as one transaction; send is blocked until commit or complete rollback
+  - a timeout or window/tab close waits for the currently running stage before exact rollback; an incomplete rollback remains tainted and fail-closed
+  - compose cleanup tracks multiple distinct shares in one draft and clears the complete set after a successful `onAfterSend`; `headerMessageId` is diagnostic, not an additional success requirement
+  - `onBeforeSend` persists `send_pending`; a crash before the confirmed result retains the share instead of recovering an active record as deletable
+  - saved drafts retain their remote shares and rehydrate only when one opaque marker resolves to the matching local versioned record; missing/conflicting/tainted records block send
+  - unsaved shares added to a previously saved draft cannot make that stored baseline deletable; discard/crash conservatively retains the complete resource group
+  - password payloads are not stored with draft cleanup. Saving a separate-password draft creates explicit manual password drafts; incomplete handoff is retained and blocks main-draft send
+  - Thunderbird templates containing a share and messages instantiated from them are deliberately blocked
 - Backend-provided rich HTML is sanitized client-side before use:
   - Talk HTML policy template (`talk_invitation_template`)
   - Share HTML policy templates (`share_html_block_template_v2` with `share_html_block_template` fallback, and `share_password_template`)
   - Email signature HTML policy template (`email_signature_template`)
-  - bundled sanitizer: `DOMPurify 3.4.11` documented in `VENDOR.md`
+  - bundled sanitizer: `DOMPurify 3.4.12` documented in `VENDOR.md`
 - Follow-up for the previous `ui/signatureCompose.js` `innerHTML` review finding:
   - email signature HTML is still sanitized in background before it reaches the compose script
   - the compose bridge no longer assigns dynamic HTML with `innerHTML`
@@ -114,6 +144,8 @@ for persisted monitoring (`browser.calendar.items.onCreated/onUpdated/onRemoved`
   - signature change detection serializes managed signature child nodes with `XMLSerializer`
   - a bounded two-second observer repeats the same replacement path when Thunderbird or Signature Switch inserts a matching local signature after compose initialization; it then disconnects
   - background queues identity changes per compose tab and rechecks the current identity plus its email immediately before each signature write
+  - opening a markerless saved draft does not insert a backend signature; an explicit non-matching-to-matching identity change may insert once before quoted content
+  - signature work does not reset Thunderbird's `isModified` flag
 - Backend policy availability is evaluated per policy domain. Older backend
   payloads without `policy.email_signature` disable only central email
   signatures with an update hint; Share/Talk policy domains remain active when
@@ -149,6 +181,10 @@ for persisted monitoring (`browser.calendar.items.onCreated/onUpdated/onRemoved`
   background->experiment boundary (`modules/bgRouter.js`).
 - Startup retry in `ncCalToolbar` uses an XPCOM one-shot timer instead of a
   bare global `setTimeout` in the experiment parent context.
+- `ncCalToolbar.updateCurrent` records each property applied before a later
+  setter failure and rolls those writes back atomically. Experiment shutdown
+  marks the bridge inactive, removes observers/listeners, guards late callbacks,
+  and invalidates the startup cache.
 - Remaining timer usage is limited to normal popup/background lifecycle helpers
   plus the upstream `experiments/calendar/**` code that is shipped unmodified;
   the privileged experiment-parent startup path no longer relies on a bare
@@ -172,6 +208,16 @@ for persisted monitoring (`browser.calendar.items.onCreated/onUpdated/onRemoved`
   `/ocs/v2.php/cloud/user`. Missing canonical IDs fail explicitly instead of
   treating an email login alias as a filesystem path ID.
 - Password-policy generator URLs are resolved against the normalized Nextcloud base and accepted only for the same origin. A different origin is rejected before any Basic Auth request and uses local password generation.
+- Login Flow start/poll, backend-policy, Talk, and CardDAV control paths have
+  bounded request/body-read deadlines. Credential response bodies are never
+  returned or logged, and shared log formatting redacts authentication material,
+  recipients, user identifiers, and user-scoped DAV/Talk paths without a raw
+  background fallback.
+- The documented `Managed storage manifest not found` rejection represents a
+  normal profile without enterprise policy and resolves to an empty managed
+  setup. Other `storage.managed` failures stay fail-closed: background URL
+  selection does not fall back to local state, and options show existing local
+  credentials read-only while blocking Save/Test/Login Flow for that run.
 
 ### Nextcloud 32 FileLink upload
 
