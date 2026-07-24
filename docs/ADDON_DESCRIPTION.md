@@ -11,7 +11,7 @@ This add-on integrates Nextcloud Talk and Nextcloud Sharing into Thunderbird.
 - Debug logging across UI/background/experiment layers
 
 ## Architecture
-- modules/*: core logic for OCS requests, auth, Talk, Sharing, i18n, and split background orchestration (`bgState`, `bgComposeAttachments`, `bgComposeShareCleanup`, `bgComposePasswordDispatch`, `bgCompose`, `bgCalendar`, `bgRouter`)
+- modules/*: core logic for OCS requests, auth, Talk, Sharing, i18n, atomic compose finalization, persistent cleanup, and split background orchestration
 - `modules/hostPermissions.js`: centralized optional-host-permission gate reused by core/talk/sharing runtime modules
 - ui/*: HTML/JS dialogs and helpers (options, sharing wizard, talk dialog, popup sizing, DOM i18n)
 - experiments/calendar/*: Thunderbird calendar experiment API (items CRUD + item lifecycle events) used “as-is”
@@ -24,7 +24,7 @@ Calendar integration (high level):
   - provide stable click context + iCal snapshot (`editorId`)
   - provide stable editor-targeted read/write (`getCurrent` / `updateCurrent`)
   - signal tracked editor close state (`onTrackedEditorClosed`)
-- All Talk/Sharing control logic remains in the WebExtension background runtime modules (`modules/bgState.js`, `modules/bgComposeAttachments.js`, `modules/bgComposeShareCleanup.js`, `modules/bgComposePasswordDispatch.js`, `modules/bgCompose.js`, `modules/bgCalendar.js`, `modules/bgRouter.js`).
+- All Talk/Sharing control logic remains in WebExtension background runtime modules; the calendar experiment does not perform network or business logic.
 - Persistent monitoring (lobby updates, delete-room-on-event-delete, delegation flow, participant auto-add) uses `browser.calendar.items.*` from `experiments/calendar` (unchanged).
 
 Data flow:
@@ -44,7 +44,9 @@ Data flow:
 - Applies defaults for share name, permissions, password, and expiry date
 - Honors Nextcloud password policies (min length + same-origin generator API with secure local fallback)
 - Sends the share label during OCS create and updates mutable metadata like note afterwards via the documented OCS update endpoint
-- Arms compose-share cleanup in background and removes the remote share folder if compose is closed without successful send
+- Finalizes cleanup ownership, optional password dispatch, draft marker, and share-block insertion as one reversible background transaction
+- Tracks every share in one compose message, retains successfully saved drafts, and persistently retries cleanup for unsent/abandoned shares
+- Reopened share drafts are accepted only with their matching local lifecycle record; copied/incomplete drafts and Thunderbird templates containing a share are blocked
 - Handles duplicate names and remote path conflicts; surfaces errors from DAV/OCS
 - Optional separate password delivery for shares:
   - default + wizard toggle: "send password in separate email"
@@ -52,7 +54,8 @@ Data flow:
   - delivery mode can be plain text or a Nextcloud Secrets link when backend policy enables it
   - Secrets mode creates one one-time link per recipient and falls back to plain text with a warning if Secrets is unavailable
   - main share block hides inline password and shows a separate-password notice
-  - password-only follow-up mail is sent after the main compose message is sent (auto-send with timeout guard + manual fallback draft on send failure)
+  - after confirmed immediate send, the password-only follow-up can be sent automatically; when the main message is queued in the Outbox, a clearly marked password draft is opened for manual sending only after the main message was actually delivered
+  - saving the main message creates explicit manual password drafts; incomplete handoff blocks the main draft instead of persisting password payloads
   - auto-send compares the complete `To`/`Cc`/`Bcc` envelope before sending and opens the manual fallback on mismatch or timeout
   - successful password-mail delivery triggers a desktop success notification
   - once the primary mail was sent, password-follow-up problems never delete the committed remote share
@@ -89,20 +92,29 @@ Data flow:
   - lobby updates when the event time changes
   - optionally delete linked rooms when saved NC Connector events are removed
   - delegation + participant auto-add triggered by calendar item updates
-- Saved-event room deletion is opt-in only and requires trusted NC Connector `X-NCTALK-*` metadata; generic Talk links in `LOCATION` or `URL` are ignored.
+- Saved-event room deletion is opt-in only and requires portable NC Connector `X-NCTALK-*` metadata; generic Talk links in `LOCATION` or `URL` are ignored.
+- Moving an event keeps a room that is still referenced by the destination event,
+  while temporary synchronization and room-cleanup failures use bounded retry.
+- Event-wide generations, storage-first state writes, reference rechecks, and
+  restartable moderator-departure state prevent stale asynchronous work from
+  overwriting or deleting a newer meeting state.
+- Existing linked events cannot create a second Talk room. Moderator handoff
+  promotes and persists the new moderator before the previous moderator leaves.
 - Cleans up newly created rooms when the editor is closed without saving; only a stored calendar item with matching `X-NCTALK-TOKEN` cancels this cleanup
 
 ### Logging and Debug
 - Enable debug mode in options to log detailed traces
 - Logs appear with channels [NCBG], [NCUI][Talk], [NCUI][Sharing], [NCUI][Options], [NCUI][OpenUrlFallback], and `[ncCalToolbar]`
 - Background logs include OCS/DAV status and metadata decisions (only when debug is enabled)
+- Central redaction removes credentials, tokens, recipients, user identifiers,
+  and user-scoped DAV/Talk paths before background output
 - Attachment automation logs include:
   - threshold evaluation + decisions in `[NCBG]`
   - attachment wizard/prompt flow in `[NCUI][Sharing]`
 
 ## Compatibility and Requirements
 - Thunderbird ESR 140 through 153 (strict_min_version 140.0, strict_max_version 153.*)
-- Nextcloud with OCS endpoints enabled and Talk installed
+- Nextcloud 32 or newer with OCS endpoints enabled; Talk is required for Talk and calendar features
 - File sharing via DAV and OCS (remote.php and files_sharing API)
 - App password or Login Flow v2 for authentication
 - Permissions: storage (options, metadata), compose (UI integration), optional host access per configured Nextcloud origin for API and login flow

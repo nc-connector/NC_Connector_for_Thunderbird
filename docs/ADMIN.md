@@ -135,6 +135,8 @@ Manual shares always insert the share page. Attachment automation can insert eit
 
 When NC Connector owns the attachment workflow, disable Thunderbird's competing large-attachment prompt through enterprise policy. See [Attachment policy example](#63-attachment-policy-example).
 
+Do not use **Save as Template** for a message that contains an NC Connector share. Thunderbird templates can create independent messages without a reliable share lifecycle; NC Connector therefore blocks sending such templates and messages created from them.
+
 ### 4.3 Talk and system address book
 
 Talk user search, moderator selection, and participant controls require the Nextcloud system address book.
@@ -176,7 +178,7 @@ Operational rules:
 - an unavailable or unusable seat disables backend-only functions
 - each policy domain is evaluated separately; a missing signature policy does not disable Share or Talk policies
 
-Separate password delivery is available only with a reachable backend and usable assigned seat. The password follow-up is sent only after Thunderbird confirms that the primary message was sent. If automatic follow-up delivery fails, NC Connector opens a prepared draft for manual sending. A follow-up failure after primary-message delivery does not delete the committed share.
+Separate password delivery is available only with a reachable backend and usable assigned seat. After **Send now**, the password follow-up is sent only after Thunderbird confirms that the primary message was sent. After **Send later**, NC Connector opens a clearly marked password draft instead of sending it automatically; the user sends that draft manually only after the main message has actually left the Outbox. If automatic follow-up delivery fails, NC Connector keeps or opens a prepared draft for manual sending. A follow-up failure after primary-message delivery does not delete the committed share.
 
 ### 4.5 Debug logging
 
@@ -206,16 +208,29 @@ Closing the Sharing wizard or canceling an active upload stops pending transfer 
 After a share is inserted into a compose window:
 
 - every share inserted into the same draft is tracked
-- closing the draft without a confirmed send removes all of its tracked share folders
+- closing an unsaved draft without a confirmed send removes all of its tracked share folders
+- closing a successfully saved draft retains its shares so the draft can be reopened
 - a successful **Send now** or **Send later** keeps all shares from that message
 - a close event while Thunderbird is still finalizing send uses a short grace period before cleanup
 - password-follow-up errors after successful primary send do not remove the share
 
 Chunked transfer also uses a temporary collection below `/remote.php/dav/uploads/<user-id>/`. NC Connector deletes this collection after a failed or canceled transfer when the server remains reachable. Nextcloud removes a chunk collection after 24 hours without activity. This server-side expiry does not apply to completed FileLink share folders.
 
-If Thunderbird or the client device terminates abruptly, a share-folder cleanup request may not reach Nextcloud. Administrators can identify and remove stale folders below the configured FileLink base directory after confirming that no sent message still depends on the share.
+Pending cleanup survives a Thunderbird or device restart and resumes when the same Nextcloud account is configured and reachable. NC Connector never applies an old cleanup record to a different Nextcloud URL or user. After the bounded retries are exhausted, administrators can identify and remove stale folders below the configured FileLink base directory after confirming that no sent or saved message still depends on the share.
 
-### 5.3 Retries and server throttling
+If Thunderbird terminates while the final send result is still uncertain, NC Connector keeps the share. Retaining a possibly unused folder is safer than deleting a link from a message that may already have been sent.
+
+### 5.3 Saved drafts
+
+An NC Connector share draft must be reopened and sent from the same Thunderbird profile that created it. The profile stores the local ownership record required to distinguish a valid saved draft from copied or incomplete content. If that record or the draft marker is missing or inconsistent, sending is blocked; create a new message and share the files again.
+
+When a user adds another share to an already saved draft and then discards those unsaved changes, NC Connector conservatively retains both the original and the new share. This prevents deletion of the link still stored in the earlier draft version, but the newly created folder may require manual orphan cleanup.
+
+For a share with separate password delivery, saving the main draft opens prepared password drafts for manual delivery. NC Connector does not persist the password payload in its cleanup record. If Thunderbird cannot create all required password drafts, the main draft remains blocked until saving is retried successfully or the share is recreated.
+
+Deleting a saved message directly from the Drafts folder is not exposed to NC Connector as a compose-close event. Its remote share can therefore remain in Nextcloud. Include the configured FileLink base directory in periodic orphan review and remove a folder only after confirming that no saved or sent message uses it.
+
+### 5.4 Retries and server throttling
 
 Short-lived lock, rate-limit, gateway, and service-unavailable responses are retried for requests that can be repeated safely. A valid `Retry-After` value is honored up to 30 seconds.
 
@@ -307,6 +322,17 @@ Thunderbird's `3rdparty.Extensions` policy can prefill and lock the public Nextc
 ```
 
 Credentials remain in each Thunderbird profile. The managed policy does not distribute usernames or app passwords.
+
+No `3rdparty.Extensions` entry is required for an unmanaged installation.
+Thunderbird's documented “Managed storage manifest not found” result is treated
+as the normal absence of an enterprise policy; the add-on then loads the local
+profile settings.
+
+If Thunderbird cannot read managed extension policy, NC Connector blocks
+connection changes and connection tests for that run instead of silently using
+a locally stored URL. Existing local credentials remain stored and visible but
+cannot be used or overwritten from that failed settings session. Check
+`about:policies`, correct the policy error, and restart Thunderbird.
 
 ### 6.5 Rollout verification
 
@@ -414,7 +440,14 @@ A collision check and folder reservation happen on the server. Avoid deleting an
 5. Wait for the bounded cleanup retries after 2, 5, 10, 30, and 60 seconds.
 6. Remove the stale share and folder in Nextcloud after verifying ownership and message state.
 
-### 8.7 Public Talk links work only with `/index.php/`
+### 8.7 A saved share draft cannot be sent
+
+1. Confirm that the draft was opened in the Thunderbird profile that created the share.
+2. Save it again and check whether required manual password drafts open.
+3. Do not use a Thunderbird template containing an NC Connector share.
+4. If NC Connector still blocks sending, create a new message and create the share again. Do not copy only the visible share block into another message.
+
+### 8.8 Public Talk links work only with `/index.php/`
 
 This is a Pretty URL fault. Follow [Nextcloud Pretty URLs](#11-nextcloud-pretty-urls). Do not change the NC Connector base URL to include `/index.php`.
 

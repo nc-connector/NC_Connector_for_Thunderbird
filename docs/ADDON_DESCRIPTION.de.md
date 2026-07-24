@@ -11,7 +11,7 @@ Dieses Add-on integriert Nextcloud Talk und Nextcloud-Freigaben in Thunderbird.
 - Debug-Logging über UI, Background und Experiment
 
 ## Architektur
-- modules/*: Kernlogik für OCS-Requests, Auth, Talk, Freigabe, i18n und gesplittete Background-Orchestrierung (`bgState`, `bgComposeAttachments`, `bgComposeShareCleanup`, `bgComposePasswordDispatch`, `bgCompose`, `bgCalendar`, `bgRouter`)
+- modules/*: Kernlogik für OCS-Requests, Auth, Talk, Freigabe, i18n, atomaren Compose-Abschluss, persistentes Cleanup und gesplittete Background-Orchestrierung
 - `modules/hostPermissions.js`: zentralisierte Optional-Host-Permission-Logik, wiederverwendet von Core/Talk/Freigabe-Laufzeitmodulen
 - ui/*: HTML/JS-Dialoge und Helfer (Optionen, Freigabe-Wizard, Talk Dialog, Popup Sizing, DOM i18n)
 - experiments/calendar/*: Thunderbird Kalender-Experiment-API (Items CRUD + Lifecycle-Events) wird “as-is” genutzt
@@ -24,7 +24,7 @@ Kalender-Integration (high level):
   - stabilen Klick-Kontext + iCal-Snapshot liefern (`editorId`)
   - stabilen editor-targeted Read/Write-Pfad bereitstellen (`getCurrent` / `updateCurrent`)
   - tracked Editor-Close-Signale liefern (`onTrackedEditorClosed`)
-- Die komplette Talk/Freigabe-Logik bleibt in den WebExtension-Background-Laufzeitmodulen (`modules/bgState.js`, `modules/bgComposeAttachments.js`, `modules/bgComposeShareCleanup.js`, `modules/bgComposePasswordDispatch.js`, `modules/bgCompose.js`, `modules/bgCalendar.js`, `modules/bgRouter.js`).
+- Die komplette Talk-/Freigabe-Logik bleibt in WebExtension-Background-Laufzeitmodulen; das Kalender-Experiment enthält keine Netzwerk- oder Geschäftslogik.
 - Persistentes Monitoring (Lobby-Updates, optionales Löschen verknüpfter Räume für gespeicherte NC Connector Termine, Delegation, Teilnehmer-Auto-Add) läuft über `browser.calendar.items.*` aus `experiments/calendar` (unverändert).
 
 Datenfluss:
@@ -44,13 +44,16 @@ Datenfluss:
 - Setzt Defaults für Share-Name, Rechte, Passwort und Ablaufdatum
 - Berücksichtigt Nextcloud Passwort-Policy (Mindestlänge + Generator-API nur auf derselben Origin mit sicherer lokaler Erzeugung als Fallback)
 - Sendet das Share-Label bereits beim OCS-Create und aktualisiert veränderliche Metadaten wie die Notiz danach über den dokumentierten OCS-Update-Endpunkt
-- Armierung eines Compose-Cleanup im Background; bei geschlossenem Compose ohne erfolgreichen Versand wird der Remote-Share-Ordner entfernt
+- Cleanup-Besitz, optionaler Passwortauftrag, Entwurfsmarker und Einfügen des Freigabeblocks werden als eine rückrollbare Background-Transaktion abgeschlossen
+- Alle Freigaben einer Nachricht werden gemeinsam verfolgt; erfolgreich gespeicherte Entwürfe bleiben erhalten und Cleanup für ungesendete/verwaiste Freigaben wird persistent begrenzt wiederholt
+- Wiedergeöffnete Freigabeentwürfe benötigen ihren passenden lokalen Lifecycle-Datensatz; kopierte/unvollständige Entwürfe und Thunderbird-Vorlagen mit Freigabe werden gesperrt
 - Behandelt doppelte Namen und Remote-Konflikte; Fehlerpfade aus DAV/OCS
 - Optionaler separater Passwortversand für Freigaben:
   - Default + Wizard-Toggle: "Passwort separat senden"
   - nur aktiv, wenn Passwortschutz aktiv ist
   - Hauptmail blendet das Inline-Passwort aus und zeigt einen Hinweis auf die separate Passwortmail
-  - Passwort-Only-Follow-up wird nach Versand der Hauptmail gesendet (Auto-Send mit Timeout-Guard; bei Sendefehler mit manuellem Fallback-Entwurf)
+  - nach bestätigtem Sofortversand kann die separate Passwortmail automatisch gesendet werden; liegt die Hauptmail im Postausgang, wird ein deutlich gekennzeichneter Passwortentwurf geöffnet, der erst nach dem tatsächlichen Versand der Hauptmail manuell gesendet wird
+  - beim Speichern der Hauptmail werden explizite manuelle Passwortentwürfe erstellt; ein unvollständiger Übergabevorgang sperrt die Hauptmail, statt Passwortinhalte zu persistieren
   - Auto-Send vergleicht vor dem Versand den vollständigen `To`-/`Cc`-/`Bcc`-Umschlag und öffnet bei Abweichung oder Timeout den manuellen Fallback
   - bei erfolgreichem Passwortversand wird eine Desktop-Erfolgsmeldung angezeigt
   - sobald die Hauptmail gesendet wurde, löschen Probleme beim Passwort-Follow-up niemals die bereits freigegebene Remote-Freigabe
@@ -87,20 +90,32 @@ Datenfluss:
   - Lobby-Updates bei Termin-Verschiebung
   - optionales Löschen verknüpfter Räume bei gelöschten gespeicherten NC Connector Terminen
   - Delegation + Teilnehmer-Auto-Add über Kalender-Item-Updates
-- Das Löschen verknüpfter Räume bei gespeicherten Terminen ist opt-in und benötigt vertrauenswürdige NC Connector `X-NCTALK-*`-Metadaten; generische Talk-Links in `LOCATION` oder `URL` werden ignoriert.
+- Das Löschen verknüpfter Räume bei gespeicherten Terminen ist opt-in und benötigt portable NC Connector `X-NCTALK-*`-Metadaten; generische Talk-Links in `LOCATION` oder `URL` werden ignoriert.
+- Beim Verschieben eines Termins bleibt ein Raum erhalten, wenn der Zieltermin
+  weiterhin auf ihn verweist. Temporäre Synchronisations- und
+  Raum-Bereinigungsfehler werden begrenzt erneut versucht.
+- Terminweite Generationen, Storage-first-Schreibvorgänge, erneute
+  Referenzprüfungen und ein nach Neustart fortsetzbarer Moderator-Abgang
+  verhindern, dass veraltete asynchrone Arbeit einen neueren Terminstand
+  überschreibt oder löscht.
+- Für bereits verknüpfte Termine kann kein zweiter Talk-Raum erstellt werden.
+  Bei der Moderatorübergabe wird der neue Moderator zuerst befördert und
+  gespeichert, bevor der vorherige Moderator den Raum verlässt.
 - Räumt neu erstellte Räume auf, wenn der Editor ohne Speichern geschlossen wird; nur ein gespeicherter Termin mit passendem `X-NCTALK-TOKEN` hebt diese Bereinigung auf
 
 ### Logging und Debug
 - Debug-Modus in den Optionen aktiviert detaillierte Logs
 - Log-Kanäle: [NCBG], [NCUI][Talk], [NCUI][Sharing], [NCUI][Options], [NCUI][OpenUrlFallback] und `[ncCalToolbar]`
 - Background-Logs enthalten OCS/DAV-Status und Metadaten-Entscheidungen (nur wenn Debug aktiv ist)
+- Die zentrale Redaction entfernt Zugangsdaten, Token, Empfänger,
+  Benutzerkennungen und benutzerbezogene DAV-/Talk-Pfade vor der Ausgabe
 - Attachment-Flow liefert zusätzliche Debug-Spuren:
   - Grenzwert-Prüfung und Benutzerentscheidung in `[NCBG]`
   - Prompt/Wizard-Ablauf im Attachment-Mode in `[NCUI][Sharing]`
 
 ## Kompatibilität und Anforderungen
 - Thunderbird ESR 140 bis 153 (strict_min_version 140.0, strict_max_version 153.*)
-- Nextcloud mit aktivierten OCS-Endpunkten und Talk
+- Nextcloud 32 oder neuer mit aktivierten OCS-Endpunkten; Talk wird für Talk- und Kalenderfunktionen benötigt
 - Dateifreigabe via DAV und OCS (remote.php und files_sharing API)
 - App-Passwort oder Login Flow v2 für Auth
 - Permissions: storage (Optionen, Metadaten), compose (UI-Integration), optionale Host-Permissions pro konfigurierte Nextcloud-Instanz
