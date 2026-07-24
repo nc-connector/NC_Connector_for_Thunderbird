@@ -227,7 +227,7 @@ not persist credentials, passwords, recipients, or rendered message bodies.
   - Direct PUT for files up to and including 20 MiB
   - Nextcloud chunked upload v2 for larger files
   - DAV Bulk only for a sufficiently large small-file set with at least 20 percent fewer calculated requests
-- Direct PUT uses the documented `X-NC-WebDAV-AutoMkcol` header.
+- Direct PUT uses the server-recognized `X-NC-WebDAV-Auto-Mkcol` header. The protocol check covers a single-file nested directory, where this header creates the missing parent path.
 - The final share root is reserved through a unique staging collection and `MOVE` with `Overwrite: F`. A target collision is decided by Nextcloud without an earlier check/create race.
 - Final MOVE requests are not repeated blindly. Unclear root and chunk-finalization results are resolved with exact DAV probes.
 - Replay-safe requests use at most three attempts for transport failures or HTTP `408`, `423`, `429`, `502`, `503`, and `504`; `Retry-After` is capped at 30 seconds.

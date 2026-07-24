@@ -56,7 +56,7 @@ Keep these request properties intact:
 - `Destination`
 - `Overwrite`
 - `OCS-APIRequest`
-- `X-NC-WebDAV-AutoMkcol`
+- `X-NC-WebDAV-Auto-Mkcol` (including the hyphen before `Mkcol`)
 - `OC-Total-Length`
 - multipart part headers used by Nextcloud DAV bulk upload
 
@@ -405,7 +405,7 @@ Checks:
 
 1. Identify the HTTP status in the client and server logs.
 2. Confirm that the proxy permits DAV `MOVE` and `DELETE`.
-3. Confirm that the proxy forwards `Destination`, `Overwrite`, and `X-NC-WebDAV-AutoMkcol`.
+3. Confirm that the proxy forwards `Destination`, `Overwrite`, and `X-NC-WebDAV-Auto-Mkcol`. Keep the hyphen before `Mkcol`; Nextcloud uses this header to create a selected single-file directory during Direct upload.
 4. Compare the proxy timeout with the duration of the failing request.
 5. Check Nextcloud background load, PHP workers, database locks, and storage latency.
 

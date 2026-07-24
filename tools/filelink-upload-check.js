@@ -179,7 +179,7 @@ async function run(){
   }
   assert(bulkFailure?.ncBulkPath === destinationPath, "A failed bulk part must identify its exact destination");
 
-  assert(dav.AUTO_MKCOL_HEADER === "X-NC-WebDAV-AutoMkcol", "NC32 AutoMkcol header spelling must match the server API");
+  assert(dav.AUTO_MKCOL_HEADER === "X-NC-WebDAV-Auto-Mkcol", "NC32 Auto-Mkcol header spelling must match the server implementation");
   assert(dav.parseRetryAfter("12", 0) === 12000, "Retry-After seconds must be parsed");
   assert(dav.parseRetryAfter("999", 0) === 30000, "Retry-After must be capped at 30 seconds");
 

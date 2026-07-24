@@ -538,9 +538,9 @@ async function checkDirectAndChunkRequests(){
     "Direct transfer must encode its final DAV path"
   );
   assert(
-    xhrCalls[0].options.headers["X-NC-WebDAV-AutoMkcol"] === "1"
+    xhrCalls[0].options.headers["X-NC-WebDAV-Auto-Mkcol"] === "1"
       && !Object.prototype.hasOwnProperty.call(xhrCalls[0].options.headers, "Destination"),
-    "Direct PUT must use the Nextcloud AutoMkcol header without a chunk Destination"
+    "Direct PUT must use the Nextcloud Auto-Mkcol header without a chunk Destination"
   );
   assert(xhrCalls[0].body === directFile.sourceFile, "Direct retries must rebuild from the source Blob");
 
@@ -582,7 +582,7 @@ async function checkDirectAndChunkRequests(){
     xhrCalls.every(({ options }) =>
       options.headers.Destination?.endsWith("/NC%20Connector/Share/large.bin")
       && options.headers["OC-Total-Length"] === String(chunkedFile.size)
-      && !Object.prototype.hasOwnProperty.call(options.headers, "X-NC-WebDAV-AutoMkcol")
+      && !Object.prototype.hasOwnProperty.call(options.headers, "X-NC-WebDAV-Auto-Mkcol")
     ),
     "Every chunk PUT must carry Destination and total length without the Direct header"
   );

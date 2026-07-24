@@ -6,7 +6,7 @@
 (function(global){
   'use strict';
 
-  const AUTO_MKCOL_HEADER = "X-NC-WebDAV-AutoMkcol";
+  const AUTO_MKCOL_HEADER = "X-NC-WebDAV-Auto-Mkcol";
   const UPLOAD_TIMEOUT_MS = 300000;
   const CONTROL_REQUEST_TIMEOUT_MS = 60000;
   const CLEANUP_TIMEOUT_MS = 10000;

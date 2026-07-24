@@ -879,7 +879,7 @@ Directory planning creates:
 - every directory needed by chunked or Bulk destinations
 - only shared parent paths for Direct files
 
-Direct PUT sends `X-NC-WebDAV-AutoMkcol: 1`, using the Nextcloud 32 header spelling. This lets Nextcloud create a missing path for an individual Direct destination without one `MKCOL` per unique single-file directory.
+Direct PUT sends `X-NC-WebDAV-Auto-Mkcol: 1`, matching the header checked by Nextcloud's `UploadAutoMkcolPlugin`. This lets Nextcloud create a missing path for an individual Direct destination without one `MKCOL` per unique single-file directory. The Nextcloud 32 developer manual currently omits the hyphen before `Mkcol`; client code follows the server implementation.
 
 #### Root reservation and collision handling
 
