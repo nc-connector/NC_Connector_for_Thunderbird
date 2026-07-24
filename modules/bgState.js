@@ -12,11 +12,16 @@
 
 const ROOM_META_KEY = "nctalkRoomMeta";
 const EVENT_TOKEN_MAP_KEY = "nctalkEventTokenMap";
+const ROOM_DELETE_RETRY_KEY = "nctalkRoomDeleteRetry";
+const COMPOSE_SHARE_DRAFT_HEADER = "X-NCC-Share-Draft";
+const COMPOSE_SHARE_DRAFT_ID_PATTERN = /^[A-Za-z0-9_-]{16,80}$/;
 let DEBUG_ENABLED = false;
 let ROOM_META = {};
 let EVENT_TOKEN_MAP = {};
-const TALK_POPUP_WIDTH = 540;
-const TALK_POPUP_HEIGHT = 860;
+let ROOM_DELETE_RETRY = {};
+let ROOM_META_STORAGE_REVISION = 0;
+let EVENT_TOKEN_MAP_STORAGE_REVISION = 0;
+let ROOM_DELETE_RETRY_STORAGE_REVISION = 0;
 const SHARING_POPUP_WIDTH = 660;
 const SHARING_POPUP_HEIGHT = 760;
 const ATTACHMENT_PROMPT_WIDTH = 560;
@@ -38,27 +43,48 @@ const SHARING_WIZARD_CLEANUP_BY_WINDOW = new Map();
 const ATTACHMENT_DEFAULT_THRESHOLD_MB = NCSharingStorage.DEFAULT_ATTACHMENT_THRESHOLD_MB;
 const COMPOSE_SHARE_CLEANUP_SEND_GRACE_MS = 15000;
 const ROOM_CLEANUP_DELETE_DELAY_MS = 15 * 1000;
+const ROOM_DELETE_RETRY_DELAYS_MS = [2000, 5000, 10000, 30000, 60000];
 const POPUP_FOCUS_RETRY_DELAYS_MS = [0, 120, 450];
 const ROOM_CLEANUP_BY_TOKEN = new Map();
 const ROOM_CLEANUP_BY_EDITOR = new Map();
-const INVITEE_SYNC_IN_FLIGHT = new Set();
-const DELEGATION_IN_FLIGHT = new Set();
+const ROOM_DELETE_RETRY_TIMER_BY_TOKEN = new Map();
 const SHARING_KEYS = NCSharingStorage?.SHARING_KEYS || {};
 const bgShortId = NCTalkTextUtils.shortId;
 const normalizeAttachmentThresholdMb = NCSharingStorage.normalizeAttachmentThresholdMb;
 
+function normalizeBackgroundRecordMap(value){
+  return value && typeof value === "object" && !Array.isArray(value)
+    ? value
+    : {};
+}
+
 /**
  * Hydrate runtime state once when the background scripts load.
  */
-(async () => {
+const BG_STATE_READY = (async () => {
   try{
     if (NCSharingStorage?.migrateLegacySharingKeys){
       await NCSharingStorage.migrateLegacySharingKeys();
     }
-    const stored = await browser.storage.local.get(["debugEnabled", ROOM_META_KEY, EVENT_TOKEN_MAP_KEY]);
+    const roomMetaRevision = ROOM_META_STORAGE_REVISION;
+    const eventTokenRevision = EVENT_TOKEN_MAP_STORAGE_REVISION;
+    const roomDeleteRetryRevision = ROOM_DELETE_RETRY_STORAGE_REVISION;
+    const stored = await browser.storage.local.get([
+      "debugEnabled",
+      ROOM_META_KEY,
+      EVENT_TOKEN_MAP_KEY,
+      ROOM_DELETE_RETRY_KEY
+    ]);
     DEBUG_ENABLED = !!stored.debugEnabled;
-    ROOM_META = stored[ROOM_META_KEY] || {};
-    EVENT_TOKEN_MAP = stored[EVENT_TOKEN_MAP_KEY] || {};
+    if (ROOM_META_STORAGE_REVISION === roomMetaRevision){
+      ROOM_META = normalizeBackgroundRecordMap(stored[ROOM_META_KEY]);
+    }
+    if (EVENT_TOKEN_MAP_STORAGE_REVISION === eventTokenRevision){
+      EVENT_TOKEN_MAP = normalizeBackgroundRecordMap(stored[EVENT_TOKEN_MAP_KEY]);
+    }
+    if (ROOM_DELETE_RETRY_STORAGE_REVISION === roomDeleteRetryRevision){
+      ROOM_DELETE_RETRY = normalizeBackgroundRecordMap(stored[ROOM_DELETE_RETRY_KEY]);
+    }
     if (DEBUG_ENABLED){
       try{
         const manifest = browser.runtime.getManifest();
@@ -77,6 +103,7 @@ const normalizeAttachmentThresholdMb = NCSharingStorage.normalizeAttachmentThres
     }
   }catch(error){
     console.error("[NCBG] startup init failed", error);
+    throw error;
   }
 })();
 
@@ -89,10 +116,16 @@ browser.storage.onChanged.addListener((changes, area) => {
     DEBUG_ENABLED = !!changes.debugEnabled.newValue;
   }
   if (Object.prototype.hasOwnProperty.call(changes, ROOM_META_KEY)){
-    ROOM_META = changes[ROOM_META_KEY].newValue || {};
+    ROOM_META_STORAGE_REVISION += 1;
+    ROOM_META = normalizeBackgroundRecordMap(changes[ROOM_META_KEY].newValue);
   }
   if (Object.prototype.hasOwnProperty.call(changes, EVENT_TOKEN_MAP_KEY)){
-    EVENT_TOKEN_MAP = changes[EVENT_TOKEN_MAP_KEY].newValue || {};
+    EVENT_TOKEN_MAP_STORAGE_REVISION += 1;
+    EVENT_TOKEN_MAP = normalizeBackgroundRecordMap(changes[EVENT_TOKEN_MAP_KEY].newValue);
+  }
+  if (Object.prototype.hasOwnProperty.call(changes, ROOM_DELETE_RETRY_KEY)){
+    ROOM_DELETE_RETRY_STORAGE_REVISION += 1;
+    ROOM_DELETE_RETRY = normalizeBackgroundRecordMap(changes[ROOM_DELETE_RETRY_KEY].newValue);
   }
 });
 function L(...a){
@@ -103,9 +136,15 @@ function L(...a){
 function logBackgroundDebugLine(prefix, ...args){
   if (!DEBUG_ENABLED) return;
   try{
-    console.log(prefix, ...args);
+    if (typeof globalThis.NCLogContext?.redactSensitiveLogValue !== "function"){
+      throw new Error("background_log_redactor_unavailable");
+    }
+    const safeArgs = args.map((value) => {
+      return globalThis.NCLogContext.redactSensitiveLogValue(value);
+    });
+    console.log(prefix, ...safeArgs);
   }catch(error){
-    console.error("[NCBG] debug log failed", error);
+    console.error("[NCBG] debug log redaction failed");
   }
 }
 
@@ -121,6 +160,27 @@ function waitMs(delayMs){
   return new Promise((resolve) => {
     setTimeout(resolve, delay);
   });
+}
+
+function createSecureRuntimeId(){
+  if (globalThis.crypto?.randomUUID){
+    return globalThis.crypto.randomUUID();
+  }
+  if (typeof globalThis.crypto?.getRandomValues !== "function"){
+    throw new Error("secure_random_unavailable");
+  }
+  const bytes = new Uint8Array(16);
+  globalThis.crypto.getRandomValues(bytes);
+  bytes[6] = (bytes[6] & 0x0f) | 0x40;
+  bytes[8] = (bytes[8] & 0x3f) | 0x80;
+  const hex = [...bytes].map((value) => value.toString(16).padStart(2, "0")).join("");
+  return [
+    hex.slice(0, 8),
+    hex.slice(8, 12),
+    hex.slice(12, 16),
+    hex.slice(16, 20),
+    hex.slice(20)
+  ].join("-");
 }
 
 /**

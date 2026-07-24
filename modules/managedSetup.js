@@ -60,6 +60,27 @@ const NCManagedSetup = (() => {
     return values || {};
   }
 
+  function createManagedSetupReadError(error){
+    const localizedMessage = globalThis.browser?.i18n?.getMessage?.("options_status_load_failed")
+      || "Settings could not be loaded.";
+    const failure = new Error(localizedMessage);
+    failure.name = "ManagedSetupReadError";
+    failure.code = "managed_setup_read_failed";
+    const loggedError = new Error("Managed setup policy read failed.");
+    loggedError.name = failure.name;
+    const prefix = globalThis.NCLogContext?.resolveAddonLogPrefix?.("ManagedSetup")
+      || "[NCBG]";
+    globalThis.NCLogContext?.safeConsoleError?.(
+      prefix,
+      "managed setup policy read failed",
+      loggedError,
+      {
+        errorName: String(error?.name || "Error")
+      }
+    );
+    return failure;
+  }
+
   async function read(){
     const managedStorage = globalThis.browser?.storage?.managed;
     if (!managedStorage?.get){
@@ -69,7 +90,7 @@ const NCManagedSetup = (() => {
     try{
       values = await managedStorage.get(MANAGED_KEYS);
     }catch(error){
-      return emptyPolicy();
+      throw createManagedSetupReadError(error);
     }
     const policyValues = unwrapValues(values);
     const nextcloudUrl = normalizeNextcloudUrl(firstValue(policyValues, ["NextcloudUrl", "nextcloudUrl", "baseUrl"]));

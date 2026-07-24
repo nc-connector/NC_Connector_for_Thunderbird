@@ -12,6 +12,7 @@
     { suffix: "/ui/openurlfallback.html", label: "OpenUrlFallback" },
     { suffix: "/options.html", label: "Options" }
   ]);
+  const SENSITIVE_LOG_KEY = /(?:actor(?:id)?|apppass|authorization|cookie|credential|delegate(?:id)?|email|fromemail|identity(?:id)?|loginname|mailbox|passphrase|password|recipient|searchterm|secret|token|user(?:id|name)?)/i;
 
   /**
    * Return the normalized current document pathname when available.
@@ -71,6 +72,78 @@
     return "[NCBG]";
   }
 
+  function redactSensitiveText(value){
+    return String(value ?? "")
+      .replace(/\bBasic\s+[A-Za-z0-9+/=]+/gi, "Basic [redacted]")
+      .replace(/\b(?:Set-Cookie|Cookie)\s*:\s*[^\r\n]*/gi, "Cookie: [redacted]")
+      .replace(/\b[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}\b/gi, "[email redacted]")
+      .replace(/(\/(?:s|call)\/)[^/?#\s]+/gi, "$1[redacted]")
+      .replace(
+        /(\/remote\.php\/dav\/(?:files|uploads)\/)[^/?#\s]+/gi,
+        "$1[redacted]"
+      )
+      .replace(
+        /(\/remote\.php\/dav\/addressbooks\/users\/)[^/?#\s]+/gi,
+        "$1[redacted]"
+      )
+      .replace(
+        /(\/ocs\/v2\.php\/apps\/spreed\/api\/v\d+\/room\/)[^/?#\s]+/gi,
+        "$1[redacted]"
+      )
+      .replace(
+        /(\/apps\/secrets\/share\/)[^/?#\s]+(?:#[^\s]*)?/gi,
+        "$1[redacted]"
+      )
+      .replace(
+        /((?:appPass|appPassword|app_password|authorization|cookie|credential|loginName|passphrase|password|pollToken|secret|token|userName)\s*["']?\s*[:=]\s*)(?:"[^"]*"|'[^']*'|[^,\s}&]+)/gi,
+        "$1[redacted]"
+      )
+      .replace(
+        /([?&](?:appPass|appPassword|app_password|authorization|cookie|credential|loginName|passphrase|password|pollToken|secret|token|userName)=)[^&#\s]+/gi,
+        "$1[redacted]"
+      );
+  }
+
+  function redactSensitiveLogValue(value, key = "", seen = new WeakSet()){
+    if (SENSITIVE_LOG_KEY.test(String(key || ""))){
+      return "[redacted]";
+    }
+    if (value == null || typeof value === "number" || typeof value === "boolean"){
+      return value;
+    }
+    if (typeof value === "string"){
+      return redactSensitiveText(value);
+    }
+    if (
+      value instanceof Error
+      || Object.prototype.toString.call(value) === "[object Error]"
+      || (
+        typeof value?.name === "string"
+        && typeof value?.message === "string"
+        && Object.keys(value).length === 0
+      )
+    ){
+      const safeError = new Error(redactSensitiveText(value.message || String(value)));
+      safeError.name = String(value.name || "Error");
+      return safeError;
+    }
+    if (typeof value !== "object"){
+      return redactSensitiveText(value);
+    }
+    if (seen.has(value)){
+      return "[circular]";
+    }
+    seen.add(value);
+    if (Array.isArray(value)){
+      return value.map((entry) => redactSensitiveLogValue(entry, "", seen));
+    }
+    const sanitized = {};
+    for (const [entryKey, entryValue] of Object.entries(value)){
+      sanitized[entryKey] = redactSensitiveLogValue(entryValue, entryKey, seen);
+    }
+    return sanitized;
+  }
+
   function writeFallbackConsoleError(prefix, scope, reportedError, loggingErrorMessage){
     try{
       console.error(
@@ -86,14 +159,25 @@
   }
 
   function safeConsoleError(prefix, scope, reportedError, details = undefined){
+    let safeError;
+    let safeDetails;
     try{
-      if (details !== undefined){
-        console.error(prefix, scope, reportedError, details);
+      safeError = redactSensitiveLogValue(reportedError);
+      safeDetails = details === undefined
+        ? undefined
+        : redactSensitiveLogValue(details);
+    }catch(error){
+      safeError = new Error("Log details could not be sanitized.");
+      safeDetails = undefined;
+    }
+    try{
+      if (safeDetails !== undefined){
+        console.error(prefix, scope, safeError, safeDetails);
         return;
       }
-      console.error(prefix, scope, reportedError);
+      console.error(prefix, scope, safeError);
     }catch(error){
-      writeFallbackConsoleError(prefix, scope, reportedError, error?.message || String(error));
+      writeFallbackConsoleError(prefix, scope, safeError, error?.message || String(error));
     }
   }
 
@@ -103,6 +187,8 @@
     isAddonUiPath,
     isKnownUiRuntime,
     resolveAddonLogPrefix,
+    redactSensitiveText,
+    redactSensitiveLogValue,
     safeConsoleError
   };
 })(typeof window !== "undefined" ? window : (typeof globalThis !== "undefined" ? globalThis : this));

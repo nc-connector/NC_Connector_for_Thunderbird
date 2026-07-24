@@ -20,15 +20,16 @@ const NCCore = (() => {
   const capabilitiesInflight = new Map();
   const CAPABILITIES_CACHE_MS = 5 * 60 * 1000;
   const MINIMUM_NEXTCLOUD_MAJOR = 32;
+  const LOGIN_FLOW_REQUEST_TIMEOUT_MS = 60000;
 
   function logNCCoreError(scope, error, details = undefined){
     globalThis.NCLogContext.safeConsoleError(resolveLogPrefix(), scope, error, details);
   }
 
-  function createLoginFlowError(){
-    const fallback = typeof bgI18n === "function"
+  function createLoginFlowError(message = ""){
+    const fallback = globalThis.NCLogContext.redactSensitiveText(message || (typeof bgI18n === "function"
       ? bgI18n("options_loginflow_failed")
-      : "Login flow failed.";
+      : "Login flow failed."));
     const error = new Error(fallback || "Login flow failed.");
     error.ncLoginFlowFatal = true;
     return error;
@@ -39,13 +40,13 @@ const NCCore = (() => {
   }
 
   function createCurrentUserIdError(code, message){
-    const error = new Error(message || bgI18n("options_test_failed"));
+    const error = new Error(globalThis.NCLogContext.redactSensitiveText(message || bgI18n("options_test_failed")));
     error.ncCurrentUserIdCode = code || "identity";
     return error;
   }
 
   function createCapabilitiesError(code, message, status = 0){
-    const error = new Error(message || bgI18n("options_test_failed"));
+    const error = new Error(globalThis.NCLogContext.redactSensitiveText(message || bgI18n("options_test_failed")));
     error.ncCapabilitiesCode = code || "http";
     error.status = Number(status) || 0;
     return error;
@@ -156,7 +157,7 @@ const NCCore = (() => {
       data = raw ? JSON.parse(raw) : null;
     }catch(error){
       logNCCoreError("capabilities json parse failed", error, {
-        responseSample: String(raw || "").slice(0, 160)
+        responseLength: String(raw || "").length
       });
     }
     if (response.status === 401 || response.status === 403){
@@ -164,7 +165,7 @@ const NCCore = (() => {
       throw createCapabilitiesError("auth", detail, response.status);
     }
     if (!response.ok){
-      const detail = data?.ocs?.meta?.message || raw || (response.status + " " + response.statusText);
+      const detail = data?.ocs?.meta?.message || (response.status + " " + response.statusText);
       throw createCapabilitiesError("http", detail, response.status);
     }
     const meta = data?.ocs?.meta;
@@ -340,7 +341,7 @@ const NCCore = (() => {
       data = raw ? JSON.parse(raw) : null;
     }catch(error){
       logNCCoreError("current user id json parse failed", error, {
-        responseSample: String(raw || "").slice(0, 160)
+        responseLength: String(raw || "").length
       });
     }
 
@@ -348,7 +349,7 @@ const NCCore = (() => {
       throw createCurrentUserIdError("auth", bgI18n("options_test_failed_auth"));
     }
     if (!response.ok){
-      const detail = data?.ocs?.meta?.message || raw || (response.status + " " + response.statusText);
+      const detail = data?.ocs?.meta?.message || (response.status + " " + response.statusText);
       throw createCurrentUserIdError("http", detail);
     }
 
@@ -469,20 +470,42 @@ const NCCore = (() => {
       "Content-Type": "application/json"
     };
     const body = JSON.stringify({ name: DEVICE_NAME });
-    const res = await fetch(url, { method:"POST", headers, body });
-    const raw = await res.text().catch((error) => {
-      logNCCoreError("login flow start response read failed", error);
-      return "";
-    });
+    let res;
+    let raw = "";
+    try{
+      const result = await NCOcs.runWithTimeout(async (requestSignal) => {
+        const response = await fetch(url, {
+          method: "POST",
+          headers,
+          body,
+          signal: requestSignal
+        });
+        const responseText = await response.text();
+        return { response, raw: responseText };
+      });
+      res = result.response;
+      raw = result.raw;
+    }catch(error){
+      logNCCoreError("login flow start request failed", error, {
+        base: normalized
+      });
+      throw createLoginFlowError();
+    }
     let data = null;
     try{
       data = raw ? JSON.parse(raw) : null;
     }catch(error){
-      logNCCoreError("login flow start json parse failed", error, { responseSample: String(raw || "").slice(0, 160) });
+      logNCCoreError("login flow start json parse failed", error, {
+        responseLength: String(raw || "").length
+      });
     }
     if (!res.ok){
-      const detail = data?.ocs?.meta?.message || raw || (res.status + " " + res.statusText);
-      throw new Error(detail || bgI18n("options_loginflow_failed"));
+      logNCCoreError("login flow start rejected", new Error("HTTP " + res.status), {
+        base: normalized,
+        status: res.status,
+        statusText: res.statusText
+      });
+      throw createLoginFlowError();
     }
     const loginUrl = data?.login;
     const poll = data?.poll || {};
@@ -523,24 +546,39 @@ const NCCore = (() => {
     while (Date.now() < deadline){
       try{
         const payload = JSON.stringify({ token: pollToken, deviceName: DEVICE_NAME });
-        const res = await fetch(pollEndpoint, { method:"POST", headers, body: payload });
+        const remainingMs = Math.max(1, deadline - Date.now());
+        const result = await NCOcs.runWithTimeout(async (requestSignal) => {
+          const response = await fetch(pollEndpoint, {
+            method: "POST",
+            headers,
+            body: payload,
+            signal: requestSignal
+          });
+          const responseText = await response.text();
+          return { response, raw: responseText };
+        }, {
+          timeoutMs: Math.min(LOGIN_FLOW_REQUEST_TIMEOUT_MS, remainingMs)
+        });
+        const res = result.response;
+        const raw = result.raw;
         if (res.status === 404){
-          await delay(intervalMs);
+          await delayUntilNextPoll(intervalMs, deadline);
           continue;
         }
-        const raw = await res.text().catch((error) => {
-          logNCCoreError("login flow poll response read failed", error);
-          return "";
-        });
         let data = null;
         try{
           data = raw ? JSON.parse(raw) : null;
         }catch(error){
-          logNCCoreError("login flow poll json parse failed", error, { responseSample: String(raw || "").slice(0, 160) });
+          logNCCoreError("login flow poll json parse failed", error, {
+            responseLength: String(raw || "").length
+          });
         }
         if (!res.ok){
-          const detail = data?.ocs?.meta?.message || raw || (res.status + " " + res.statusText);
-          throw new Error(detail || bgI18n("options_loginflow_failed"));
+          logNCCoreError("login flow poll rejected", new Error("HTTP " + res.status), {
+            status: res.status,
+            statusText: res.statusText
+          });
+          throw createLoginFlowError();
         }
         const appPassword = data?.appPassword || data?.token || data?.ocs?.data?.appPassword || data?.ocs?.data?.token;
         const loginName = data?.loginName || data?.ocs?.data?.loginName;
@@ -553,24 +591,25 @@ const NCCore = (() => {
         };
       }catch(error){
         if (error?.ncLoginFlowFatal){
-          console.error(resolveLogPrefix(), "login flow poll fatal error", error);
           logNCCoreError("login flow poll fatal error", error);
           throw error;
         }
-        if (error && error.statusCode === 404){
-          await delay(intervalMs);
-          continue;
-        }
-        console.error(resolveLogPrefix(), "login flow poll failed", error);
         logNCCoreError("login flow poll failed", error);
-        throw error;
+        throw createLoginFlowError();
       }
     }
     throw createLoginFlowError();
   }
 
-  function delay(ms){
-    return new Promise((resolve) => setTimeout(resolve, Math.max(ms || 0, 50)));
+  async function delayUntilNextPoll(intervalMs, deadline){
+    const remainingMs = Math.max(0, deadline - Date.now());
+    if (!remainingMs){
+      return;
+    }
+    const requestedDelay = Math.max(Number(intervalMs) || 0, 50);
+    await new Promise((resolve) => {
+      setTimeout(resolve, Math.min(requestedDelay, remainingMs));
+    });
   }
 
   async function getOpts(){
@@ -594,11 +633,7 @@ const NCCore = (() => {
       ? NCManagedSetup.emptyPolicy()
       : null;
     if (typeof NCManagedSetup !== "undefined" && NCManagedSetup?.read){
-      try{
-        managedSetup = await NCManagedSetup.read();
-      }catch(error){
-        logNCCoreError("managed setup policy read failed", error);
-      }
+      managedSetup = await NCManagedSetup.read();
     }
     const baseUrl = typeof NCManagedSetup !== "undefined" && NCManagedSetup?.resolveBaseUrl
       ? NCManagedSetup.resolveBaseUrl(stored.baseUrl || "", managedSetup)

@@ -131,15 +131,18 @@ const NCPolicyRuntime = (() => {
   }
 
   async function fetchStatusEndpoint(endpointUrl, trimmedUser, password){
-    const response = await fetch(endpointUrl, {
-      method: "GET",
-      headers: {
-        "Authorization": NCOcs.buildAuthHeader(trimmedUser, password),
-        "Accept": "application/json"
-      }
+    return NCOcs.runWithTimeout(async (requestSignal) => {
+      const response = await fetch(endpointUrl, {
+        method: "GET",
+        headers: {
+          "Authorization": NCOcs.buildAuthHeader(trimmedUser, password),
+          "Accept": "application/json"
+        },
+        signal: requestSignal
+      });
+      const raw = await response.text();
+      return { response, raw };
     });
-    const raw = await response.text().catch(() => "");
-    return { response, raw };
   }
 
   function parseStatusPayload(raw){

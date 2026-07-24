@@ -320,6 +320,7 @@ let talkAddressbookLockDetail = "";
 let managedSetupPolicy = typeof NCManagedSetup !== "undefined" && NCManagedSetup?.emptyPolicy
   ? NCManagedSetup.emptyPolicy()
   : null;
+let managedSetupPolicyReady = false;
 let emailSignatureStoredState = {
   hasOnCompose: false,
   hasOnReply: false,
@@ -554,18 +555,19 @@ function getAdminControlledHint(){
 async function refreshManagedSetupPolicy(){
   if (typeof NCManagedSetup === "undefined" || !NCManagedSetup?.read){
     managedSetupPolicy = null;
+    managedSetupPolicyReady = true;
     return managedSetupPolicy;
   }
-  try{
-    managedSetupPolicy = await NCManagedSetup.read();
-  }catch(error){
-    globalThis.NCLogContext.safeConsoleError(OPTIONS_LOG_PREFIX, "managed setup policy read failed", error);
-    managedSetupPolicy = NCManagedSetup.emptyPolicy();
-  }
+  const policy = await NCManagedSetup.read();
+  managedSetupPolicy = policy;
+  managedSetupPolicyReady = true;
   return managedSetupPolicy;
 }
 
 function getEffectiveBaseUrl(localBaseUrl){
+  if (!managedSetupPolicyReady){
+    return "";
+  }
   if (typeof NCManagedSetup === "undefined" || !NCManagedSetup?.resolveBaseUrl){
     return String(localBaseUrl || "").trim();
   }
@@ -1249,6 +1251,9 @@ async function openLoginUrl(url){
  * @returns {Promise<void>}
  */
 async function save(){
+  if (!managedSetupPolicyReady){
+    throw new Error(i18n("options_status_load_failed"));
+  }
   const baseUrl = getEffectiveBaseUrl(baseUrlInput.value.trim());
   if (baseUrlInput && isManagedBaseUrlLocked()){
     baseUrlInput.value = baseUrl;
@@ -1520,6 +1525,7 @@ if (userInput){
 load().catch((error) => {
   globalThis.NCLogContext.safeConsoleError(OPTIONS_LOG_PREFIX, "options load failed", error);
   showStatus(error?.message || i18n("options_status_load_failed"), true);
+  updateAuthModeUI();
 });
 
 window.addEventListener("focus", async () => {
@@ -1677,6 +1683,7 @@ function setAuthMode(mode){
 function updateAuthModeUI(){
   const mode = getSelectedAuthMode();
   const manual = mode === "manual";
+  const managedSetupUnavailable = !managedSetupPolicyReady;
   const managedBaseUrlLocked = isManagedBaseUrlLocked();
   const hasBaseUrl = !!getEffectiveBaseUrl(baseUrlInput?.value || "");
   const hasUser = !!String(userInput?.value || "").trim();
@@ -1699,22 +1706,22 @@ function updateAuthModeUI(){
     }
   }
   if (authBlock){
-    authBlock.disabled = !hasBaseUrl || loginFlowInProgress;
-    authBlock.classList.toggle("is-disabled", !hasBaseUrl);
+    authBlock.disabled = managedSetupUnavailable || !hasBaseUrl || loginFlowInProgress;
+    authBlock.classList.toggle("is-disabled", managedSetupUnavailable || !hasBaseUrl);
   }
   authRadios.forEach((radio) => {
-    radio.disabled = !hasBaseUrl || loginFlowInProgress;
+    radio.disabled = managedSetupUnavailable || !hasBaseUrl || loginFlowInProgress;
   });
-  if (userInput) userInput.disabled = !hasBaseUrl || !manual || loginFlowInProgress;
-  if (appPassInput) appPassInput.disabled = !hasBaseUrl || !manual || loginFlowInProgress;
+  if (userInput) userInput.disabled = managedSetupUnavailable || !hasBaseUrl || !manual || loginFlowInProgress;
+  if (appPassInput) appPassInput.disabled = managedSetupUnavailable || !hasBaseUrl || !manual || loginFlowInProgress;
   if (loginFlowButton){
-    loginFlowButton.disabled = loginFlowInProgress || !hasBaseUrl || mode !== "loginFlow";
+    loginFlowButton.disabled = managedSetupUnavailable || loginFlowInProgress || !hasBaseUrl || mode !== "loginFlow";
   }
   if (testButton){
-    testButton.disabled = loginFlowInProgress || !hasConnectionSettings;
+    testButton.disabled = managedSetupUnavailable || loginFlowInProgress || !hasConnectionSettings;
   }
   if (saveButton){
-    saveButton.disabled = loginFlowInProgress || !hasConnectionSettings;
+    saveButton.disabled = managedSetupUnavailable || loginFlowInProgress || !hasConnectionSettings;
   }
 }
 
@@ -1905,6 +1912,11 @@ function updateAttachmentThresholdState(){
 if (loginFlowButton){
   loginFlowButton.addEventListener("click", async () => {
     if (loginFlowButton.disabled || loginFlowInProgress) return;
+    if (!managedSetupPolicyReady){
+      showStatus(i18n("options_status_load_failed"), true, true);
+      updateAuthModeUI();
+      return;
+    }
     const baseUrl = baseUrlInput.value.trim();
     if (!baseUrl){
       showStatus(i18n("options_loginflow_missing"), true);
@@ -1958,6 +1970,12 @@ if (loginFlowButton){
  * @returns {Promise<object>}
  */
 async function runConnectionTest({ showMissing = true } = {}){
+  if (!managedSetupPolicyReady){
+    if (showMissing){
+      showStatus(i18n("options_status_load_failed"), true, true);
+    }
+    return { ok:false, skipped:true, reason:"managed_setup_unavailable" };
+  }
   const baseUrl = baseUrlInput.value.trim();
   const user = userInput.value.trim();
   const appPass = appPassInput.value;

@@ -65,7 +65,8 @@ function loadPolicyRuntime(payload){
       requireOriginPermission: async () => true
     },
     NCOcs: {
-      buildAuthHeader: () => "Basic test"
+      buildAuthHeader: () => "Basic test",
+      runWithTimeout: (callback) => callback(undefined)
     },
     NCLogContext: {
       safeConsoleError: () => {}

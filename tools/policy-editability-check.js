@@ -342,6 +342,7 @@ function verifyConsumerGuards(){
   const talk = readText("ui/talkDialog.js");
   const sharingWizard = readText("ui/nextcloudSharingWizard.js");
   const sharing = readText("modules/ncSharing.js");
+  const composeFinalize = readText("modules/bgComposeFinalize.js");
   const passwordDispatch = readText("modules/bgComposePasswordDispatch.js");
   const composeAttachments = readText("modules/bgComposeAttachments.js");
   const calendar = readText("modules/bgCalendar.js");
@@ -447,11 +448,16 @@ function verifyConsumerGuards(){
     count(sharingWizard, "policyEditableShare: state.policy.active ? state.policy.editable : null") >= 4,
     "Sharing wizard must pass editability metadata to upload, rendering, and password dispatch"
   );
-  const registerPasswordDispatch = functionBody(sharingWizard, "registerSeparatePasswordDispatch");
   assertCode(
-    registerPasswordDispatch,
-    "policyEditableShare: payload?.policyEditableShare && typeof payload.policyEditableShare === \"object\" ? payload.policyEditableShare : null",
-    "Sharing wizard must forward language editability metadata in the password-dispatch message"
+    finalizeShare,
+    "policyEditableShare: state.policy.active ? state.policy.editable : null",
+    "Sharing wizard must forward language editability metadata in the finalize transaction"
+  );
+  const finalizeTransaction = functionBody(composeFinalize, "handleSharingFinalizeTransaction");
+  assertCode(
+    finalizeTransaction,
+    "registerSeparatePasswordMailDispatch( tabId, passwordDispatch, { policyStatus } )",
+    "The finalize transaction must register the prepared password-mail dispatch"
   );
   const storePasswordDispatch = functionBody(passwordDispatch, "registerSeparatePasswordMailDispatch");
   assertCode(

@@ -47,6 +47,7 @@ function createCoreHarness(responses, { backgroundLogger = true } = {}){
     },
     NCLogContext: {
       resolveAddonLogPrefix: () => "[TEST]",
+      redactSensitiveText: (value) => String(value ?? ""),
       safeConsoleError: () => {}
     },
     bgI18n: (key) => key,
