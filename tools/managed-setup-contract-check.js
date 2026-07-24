@@ -66,6 +66,19 @@ async function checkManagedStorageStates(){
   const emptyPolicy = await empty.managedSetup.read();
   assert(emptyPolicy.hasNextcloudUrl === false, "An empty managed storage result remains a valid empty state");
 
+  const notConfigured = createManagedSetupHarness(async () => {
+    throw new Error("Managed storage manifest not found");
+  });
+  const notConfiguredPolicy = await notConfigured.managedSetup.read();
+  assert(
+    notConfiguredPolicy.hasNextcloudUrl === false,
+    "A missing managed-storage manifest must remain a valid unmanaged state"
+  );
+  assert(
+    notConfigured.logs.length === 0,
+    "The normal unmanaged state must not emit a policy-read error"
+  );
+
   const valid = createManagedSetupHarness(async () => ({
     NextcloudUrl: "https://managed.example.test/nextcloud/",
     NextcloudUrlLocked: true
@@ -167,6 +180,17 @@ async function checkCoreAndOptionsFailClosed(){
   assert(
     optionsSource.includes("showStatus(error?.message || i18n(\"options_status_load_failed\"), true);\n  updateAuthModeUI();"),
     "A failed initial options load must refresh the disabled control state"
+  );
+  const loadStart = optionsSource.indexOf("async function load(){");
+  const loadEnd = optionsSource.indexOf("async function save()", loadStart);
+  const loadSource = optionsSource.slice(loadStart, loadEnd);
+  const hydrateCredentials = loadSource.indexOf("if (stored.user) userInput.value = stored.user;");
+  const readManagedPolicy = loadSource.indexOf("await refreshManagedSetupPolicy();");
+  assert(
+    hydrateCredentials >= 0
+      && readManagedPolicy >= 0
+      && hydrateCredentials < readManagedPolicy,
+    "Options must hydrate stored credentials before a managed-policy failure can abort loading"
   );
 }
 

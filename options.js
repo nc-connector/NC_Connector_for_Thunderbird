@@ -932,11 +932,15 @@ async function load(){
     EMAIL_SIGNATURE_KEYS.onReply,
     EMAIL_SIGNATURE_KEYS.onForward
   ]);
+  // Hydrate local credentials before the managed-policy read. A genuine
+  // policy backend failure still keeps all actions fail-closed, but must not
+  // make existing local settings look as if they had been deleted.
+  if (stored.baseUrl) baseUrlInput.value = stored.baseUrl;
+  if (stored.user) userInput.value = stored.user;
+  if (stored.appPass) appPassInput.value = stored.appPass;
   await refreshManagedSetupPolicy();
   const effectiveBaseUrl = getEffectiveBaseUrl(stored.baseUrl || "");
   if (effectiveBaseUrl) baseUrlInput.value = effectiveBaseUrl;
-  if (stored.user) userInput.value = stored.user;
-  if (stored.appPass) appPassInput.value = stored.appPass;
   document.getElementById("debugEnabled").checked = !!stored.debugEnabled;
   if (sharingBaseInput){
     sharingBaseInput.value = stored[SHARING_KEYS.basePath] || DEFAULT_SHARING_BASE;

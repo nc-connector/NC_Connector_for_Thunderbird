@@ -81,6 +81,14 @@ const NCManagedSetup = (() => {
     return failure;
   }
 
+  function isManagedStorageNotConfigured(error){
+    const message = String(error?.message || error || "")
+      .trim()
+      .replace(/[.!]+$/, "")
+      .toLowerCase();
+    return message === "managed storage manifest not found";
+  }
+
   async function read(){
     const managedStorage = globalThis.browser?.storage?.managed;
     if (!managedStorage?.get){
@@ -90,6 +98,12 @@ const NCManagedSetup = (() => {
     try{
       values = await managedStorage.get(MANAGED_KEYS);
     }catch(error){
+      // Firefox and Thunderbird reject storage.managed.get() when no native
+      // manifest or 3rdparty enterprise policy exists (Bug 1868153). This is
+      // the normal unmanaged state, not a failed policy read.
+      if (isManagedStorageNotConfigured(error)){
+        return emptyPolicy();
+      }
       throw createManagedSetupReadError(error);
     }
     const policyValues = unwrapValues(values);
