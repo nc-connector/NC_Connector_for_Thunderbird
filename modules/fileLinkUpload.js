@@ -8,23 +8,6 @@
 
   const FOLDER_STATUS_INTERVAL_MS = 100;
 
-  function buildUploadId(){
-    if (global.crypto && typeof global.crypto.randomUUID === "function"){
-      return `ncconnector-${global.crypto.randomUUID()}`;
-    }
-    return `ncconnector-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 14)}`;
-  }
-
-  function getSourceBlob(file){
-    const source = file?.sourceFile;
-    if (!source || typeof source.slice !== "function"){
-      throw NCFileLinkDav.createTechnicalError(
-        "Upload failed (file data unavailable)"
-      );
-    }
-    return source;
-  }
-
   function emitItemProgress(progress, file, loaded){
     const safeLoaded = Math.min(file.size, Math.max(0, Number(loaded) || 0));
     const percent = file.size > 0
@@ -120,7 +103,7 @@
           "Content-Type": file.contentType || "application/octet-stream",
           [NCFileLinkDav.AUTO_MKCOL_HEADER]: "1"
         },
-        createBody: async () => getSourceBlob(file),
+        createBody: async () => NCFileLinkDav.getSourceBlob(file),
         signal,
         operation: "direct_put",
         log,
@@ -240,7 +223,7 @@
       NCFileLinkDav.joinPath(file.relativeDir, file.fileName)
     );
     const targetUrl = NCFileLinkDav.buildFileUrl(davRoot, targetPath);
-    const uploadFolderUrl = `${String(uploadRoot || "").replace(/\/+$/, "")}/${encodeURIComponent(buildUploadId())}`;
+    const uploadFolderUrl = `${String(uploadRoot || "").replace(/\/+$/, "")}/${encodeURIComponent(NCFileLinkDav.createFileLinkId())}`;
     const chunkSize = NCFileLinkUploadPolicy.getChunkSize(file.size);
     const chunkCount = Math.ceil(file.size / chunkSize);
     if (chunkCount > NCFileLinkUploadPolicy.MAX_CHUNK_COUNT){
@@ -271,7 +254,11 @@
         const start = index * chunkSize;
         const end = Math.min(file.size, start + chunkSize);
         const chunkName = String(index + 1).padStart(5, "0");
-        const chunk = getSourceBlob(file).slice(start, end, file.contentType || "application/octet-stream");
+        const chunk = NCFileLinkDav.getSourceBlob(file).slice(
+          start,
+          end,
+          file.contentType || "application/octet-stream"
+        );
         await NCFileLinkDav.xhrWithRetry({
           method: "PUT",
           url: `${uploadFolderUrl}/${chunkName}`,
@@ -356,7 +343,7 @@
     const relativeBase = list[0]?.folderInfo?.relativeBase || "";
     const reservationPath = NCFileLinkDav.joinPath(
       relativeBase,
-      `_${buildUploadId()}`
+      `_${NCFileLinkDav.createFileLinkId()}`
     );
     const reservationUrl = NCFileLinkDav.buildFileUrl(davRoot, reservationPath);
     let reservationPresent = true;

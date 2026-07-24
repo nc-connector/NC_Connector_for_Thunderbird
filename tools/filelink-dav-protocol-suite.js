@@ -363,6 +363,117 @@ async function checkMoveRecovery(){
   assert(resolvedCollision === false, "Present source and target must resolve as collision");
 }
 
+async function checkConcurrentRootReservations(){
+  const reservationIds = [
+    "00000000-0000-4000-8000-000000000001",
+    "00000000-0000-4000-8000-000000000002"
+  ];
+  const context = createUploadContext({
+    crypto: {
+      randomUUID: () => reservationIds.shift()
+    }
+  });
+  loadUploadModules(context, [
+    "modules/fileLinkUploadPolicy.js",
+    "modules/fileLinkDav.js",
+    "modules/fileLinkUpload.js"
+  ]);
+  const collections = new Set();
+  const requests = [];
+  const collectionBody = "<d:multistatus xmlns:d=\"DAV:\"><d:response><d:propstat><d:prop><d:resourcetype><d:collection/></d:resourcetype></d:prop></d:propstat></d:response></d:multistatus>";
+  context.fetch = async (url, options) => {
+    const request = {
+      url,
+      method: options.method,
+      destination: options.headers?.Destination || "",
+      status: 0
+    };
+    requests.push(request);
+    if (options.method === "MKCOL"){
+      request.status = collections.has(url) ? 405 : 201;
+      if (request.status === 201){
+        collections.add(url);
+      }
+      return makeDavResponse(request.status);
+    }
+    if (options.method === "MOVE"){
+      assert(options.headers.Overwrite === "F", "Concurrent root MOVE must reject overwrites");
+      await Promise.resolve();
+      if (collections.has(request.destination)){
+        request.status = 412;
+        return makeDavResponse(412);
+      }
+      assert(collections.has(url), "Concurrent root MOVE source must exist");
+      collections.delete(url);
+      collections.add(request.destination);
+      request.status = 201;
+      return makeDavResponse(201);
+    }
+    if (options.method === "PROPFIND"){
+      request.status = collections.has(url) ? 207 : 404;
+      return makeDavResponse(request.status, {
+        body: request.status === 207 ? collectionBody : ""
+      });
+    }
+    if (options.method === "DELETE"){
+      request.status = collections.delete(url) ? 204 : 404;
+      return makeDavResponse(request.status);
+    }
+    throw new Error(`Unexpected concurrent reservation request: ${options.method} ${url}`);
+  };
+
+  const candidate = {
+    shareName: "Share",
+    folderInfo: {
+      relativeBase: "NC Connector",
+      relativeFolder: "NC Connector/20260723_Share",
+      folderName: "20260723_Share"
+    }
+  };
+  const reserve = () => context.NCFileLinkUpload.reserveRoot({
+    davRoot: "https://cloud.example.test/remote.php/dav/files/user",
+    candidates: [candidate],
+    authHeader: "Basic test",
+    collisionMessage: "collision"
+  });
+  const results = await Promise.allSettled([reserve(), reserve()]);
+  assert(
+    results.filter((result) => result.status === "fulfilled").length === 1
+      && results.filter((result) => result.status === "rejected").length === 1,
+    "Concurrent reservations for one target must produce one owner and one collision"
+  );
+  assert(
+    results.find((result) => result.status === "rejected")?.reason?.message === "collision",
+    "The losing regular share reservation must report the configured collision"
+  );
+
+  const moves = requests.filter((request) => request.method === "MOVE");
+  const reservationSources = moves.map((request) => request.url);
+  assert(
+    moves.length === 2 && new Set(reservationSources).size === 2,
+    "Concurrent regular shares must use separate server-side reservations"
+  );
+  assert(
+    new Set(moves.map((request) => request.destination)).size === 1,
+    "Concurrent regular shares must compete for the same requested target"
+  );
+  const winningMove = moves.find((request) => request.status === 201);
+  const losingMove = moves.find((request) => request.status === 412);
+  assert(winningMove && losingMove, "The server must accept one MOVE and reject one with HTTP 412");
+
+  const deletes = requests.filter((request) => request.method === "DELETE");
+  assert(
+    deletes.length === 1 && deletes[0].url === losingMove.url,
+    "Collision cleanup must delete only the losing reservation"
+  );
+  assert(
+    collections.has(winningMove.destination)
+      && !collections.has(winningMove.url)
+      && !collections.has(losingMove.url),
+    "Collision cleanup must retain the winning target and remove both reservation paths"
+  );
+}
+
 async function checkDirectAndChunkRequests(){
   const context = createUploadContext();
   loadUploadModules(context, [
@@ -733,6 +844,7 @@ async function runDavProtocolChecks(){
   await checkRetryRules();
   await checkRequestTimeoutsAndAbort();
   await checkMoveRecovery();
+  await checkConcurrentRootReservations();
   await checkDirectAndChunkRequests();
   await checkRootReservationCleanup();
   await checkBulkQuota();

@@ -12,6 +12,21 @@
   const CLEANUP_TIMEOUT_MS = 10000;
   const RESPONSE_LIFETIMES = new WeakMap();
 
+  function createFileLinkId(){
+    if (global.crypto && typeof global.crypto.randomUUID === "function"){
+      return `ncconnector-${global.crypto.randomUUID()}`;
+    }
+    return `ncconnector-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 14)}`;
+  }
+
+  function getSourceBlob(file){
+    const source = file?.sourceFile;
+    if (!source || typeof source.slice !== "function"){
+      throw createTechnicalError("Upload failed (file data unavailable)");
+    }
+    return source;
+  }
+
   function normalizeRelativePath(value){
     return String(value || "")
       .replace(/\\/g, "/")
@@ -747,6 +762,8 @@
     AUTO_MKCOL_HEADER,
     CONTROL_REQUEST_TIMEOUT_MS,
     CLEANUP_TIMEOUT_MS,
+    createFileLinkId,
+    getSourceBlob,
     normalizeRelativePath,
     joinPath,
     buildFileUrl,

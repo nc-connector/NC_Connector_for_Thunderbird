@@ -8,30 +8,13 @@
 
   const HASH_READ_SIZE_BYTES = 2 * 1024 * 1024;
 
-  function createBoundary(){
-    if (global.crypto && typeof global.crypto.randomUUID === "function"){
-      return `ncconnector-${global.crypto.randomUUID()}`;
-    }
-    return `ncconnector-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 14)}`;
-  }
-
-  function getSourceBlob(file){
-    const source = file?.sourceFile;
-    if (!source || typeof source.slice !== "function"){
-      throw NCFileLinkDav.createTechnicalError(
-        "Upload failed (file data unavailable)"
-      );
-    }
-    return source;
-  }
-
   async function calculateMd5(file, signal){
     if (typeof global.SparkMD5?.ArrayBuffer !== "function"){
       throw NCFileLinkDav.createTechnicalError(
         "Upload failed (MD5 component unavailable)"
       );
     }
-    const source = getSourceBlob(file);
+    const source = NCFileLinkDav.getSourceBlob(file);
     const hasher = new global.SparkMD5.ArrayBuffer();
     try{
       for (let offset = 0; offset < file.size; offset += HASH_READ_SIZE_BYTES){
@@ -66,7 +49,12 @@
     return NCFileLinkDav.joinPath(file?.relativeDir || "", file?.fileName || "File");
   }
 
-  function buildMultipartDescriptor({ batch, shareRoot, checksums, boundary = createBoundary() } = {}){
+  function buildMultipartDescriptor({
+    batch,
+    shareRoot,
+    checksums,
+    boundary = NCFileLinkDav.createFileLinkId()
+  } = {}){
     const encoder = new TextEncoder();
     const parts = [];
     const ranges = [];
@@ -100,7 +88,7 @@
       parts.push(header);
       byteOffset += encoder.encode(header).byteLength;
       const dataStart = byteOffset;
-      parts.push(getSourceBlob(file));
+      parts.push(NCFileLinkDav.getSourceBlob(file));
       byteOffset += file.size;
       const dataEnd = byteOffset;
       parts.push("\r\n");
