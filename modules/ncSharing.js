@@ -838,18 +838,29 @@
       { label: labels.write || i18n("sharing_permission_write"), enabled: !!safePerms.write },
       { label: labels.delete || i18n("sharing_permission_delete"), enabled: !!safePerms.delete }
     ];
-    const cells = entries.map((entry) => {
-      const color = entry.enabled ? "#0082C9" : "#c62828";
-      return `<td style="padding:0 18px 6px 0;">
-        <span style="display:inline-flex;align-items:center;">
-          <span style="display:inline-flex;align-items:center;justify-content:center;width:16px;height:16px;border:1px solid ${color};color:${color};font-size:13px;font-weight:700;">
-            ${entry.enabled ? "&#10003;" : "&#10007;"}
-          </span>
-          <span style="padding-left:6px;font-weight:600;">${escapeHtml(entry.label)}</span>
-        </span>
+    const cells = entries.map((entry, index) => {
+      const color = entry.enabled ? "#0082c9" : "#c62828";
+      const padding = index === entries.length - 1 ? "0" : "0 12px 0 0";
+      return `<td nowrap="nowrap" valign="middle" style="padding: ${padding}; white-space: nowrap; vertical-align: middle;">
+        <table role="presentation" border="0" cellspacing="0" cellpadding="0" style="border-collapse: collapse; width: auto; margin: 0;">
+          <tbody>
+            <tr>
+              <td width="14" height="14" valign="middle" style="width: 14px; height: 14px; padding: 0; vertical-align: middle;">
+                <table role="presentation" border="0" cellspacing="0" cellpadding="0" width="14" height="14" style="border-collapse: collapse; width: 14px; height: 14px; margin: 0;">
+                  <tbody>
+                    <tr>
+                      <td width="14" height="14" align="center" valign="middle" style="width: 14px; height: 14px; border: 1px solid ${color}; color: ${color}; font-size: 11px; font-weight: 700; line-height: 14px; padding: 0; text-align: center; vertical-align: middle;">${entry.enabled ? "&#10003;" : "&#10007;"}</td>
+                    </tr>
+                  </tbody>
+                </table>
+              </td>
+              <td nowrap="nowrap" valign="middle" style="padding-left: 5px; white-space: nowrap; font-weight: 600; vertical-align: middle;">${escapeHtml(entry.label)}</td>
+            </tr>
+          </tbody>
+        </table>
       </td>`;
     }).join("");
-    return `<table style="border-collapse:collapse;"><tr>${cells}</tr></table>`;
+    return `<table role="presentation" border="0" cellspacing="0" cellpadding="0" style="border-collapse: collapse; width: auto; margin: 0;"><tbody><tr>${cells}</tr></tbody></table>`;
   }
 
   function buildZipDownloadUrl(shareUrl, shareToken){
