@@ -27,6 +27,44 @@ function logTalkCoreError(scope, error, details = undefined){
   globalThis.NCLogContext.safeConsoleError(resolveTalkCoreLogPrefix(), scope, error, details);
 }
 
+function getTalkOcsData(response){
+  return response?.data?.ocs?.data ?? null;
+}
+
+function getTalkOcsFailureDetail(response){
+  return NCOcs.getFailureMessage(
+    response,
+    response?.status
+      ? `HTTP ${response.status} ${response.statusText || ""}`.trim()
+      : ""
+  );
+}
+
+function makeTalkOcsError(messageKey, response){
+  const detail = getTalkOcsFailureDetail(response);
+  const error = localizedError(messageKey, detail ? [detail] : []);
+  error.status = Number(response?.status) || 0;
+  error.response = response?.raw || "";
+  error.meta = response?.meta || response?.data?.ocs?.meta || null;
+  error.payload = getTalkOcsData(response);
+  return error;
+}
+
+function isTalkOcsSuccess(response){
+  return NCOcs.isExplicitSuccess(response);
+}
+
+async function requestTalkOcs({ url, method = "GET", headers, body, signal } = {}){
+  return NCOcs.ocsRequest({
+    url,
+    method,
+    headers,
+    body,
+    signal,
+    acceptJson: true
+  });
+}
+
 /**
  * Ensure optional host permission exists for the given base URL.
  * @param {string} baseUrl
@@ -142,30 +180,16 @@ function parseMajorVersion(value){
 async function requestTalkCapabilities(url, headers){
   try{
     L("request talk capabilities", { url });
-    const res = await fetch(url, { method:"GET", headers });
-    L("talk capabilities status", { status: res.status, ok: res.ok });
-    const raw = await res.text();
-    let data = null;
-    try{
-      data = raw ? JSON.parse(raw) : null;
-    }catch(error){
-      logTalkCoreError("talk capabilities json parse failed", error, {
-        responseSample: String(raw || "").slice(0, 160)
-      });
-    }
-    if (res.status === 404){
+    const response = await requestTalkOcs({ url, method:"GET", headers });
+    L("talk capabilities status", { status: response.status, ok: response.ok });
+    if (response.status === 404){
       return { supported:null, reason:"Talk capabilities endpoint returned HTTP 404." };
     }
-    if (!res.ok){
-      const meta = data?.ocs?.meta || {};
-      const detailParts = [];
-      if (meta.message && meta.message !== meta.status) detailParts.push(meta.message);
-      if (meta.status && meta.status !== meta.statuscode) detailParts.push(meta.status);
-      if (meta.statuscode) detailParts.push("HTTP " + meta.statuscode);
-      if (res.status) detailParts.push("HTTP " + res.status + " " + res.statusText);
-      const detail = detailParts.filter(Boolean).join(" / ") || raw || ("HTTP " + res.status + " " + res.statusText);
+    if (!isTalkOcsSuccess(response)){
+      const detail = getTalkOcsFailureDetail(response);
       return { supported:null, reason:"Talk capabilities request failed: " + detail };
     }
+    const data = response.data;
     const spreedCaps = data?.ocs?.data?.spreed ?? data?.ocs?.data ?? data?.spreed ?? null;
     const parsed = parseEventSupportFlag(spreedCaps);
     if (parsed.status === true){
@@ -463,24 +487,20 @@ async function createTalkPublicRoom({
     body.objectId = String(objectId).trim();
   }
 
-  const res = await fetch(createUrl, { method:"POST", headers, body: JSON.stringify(body) });
-  L("create attempt status", { includeEvent, status: res.status, ok: res.ok });
-  const raw = await res.text();
-  let data = null;
-  try{
-    data = raw ? JSON.parse(raw) : null;
-  }catch(error){
-    logTalkCoreError("room create json parse failed", error, {
-      includeEvent,
-      responseSample: String(raw || "").slice(0, 160)
-    });
-  }
-  if (!res.ok){
+  const response = await requestTalkOcs({
+    url: createUrl,
+    method:"POST",
+    headers,
+    body: JSON.stringify(body)
+  });
+  L("create attempt status", { includeEvent, status: response.status, ok: response.ok });
+  const data = response.data;
+  if (!isTalkOcsSuccess(response)){
     const meta = data?.ocs?.meta || {};
-    const payload = data?.ocs?.data || {};
+    const payload = getTalkOcsData(response) || {};
     L("create attempt failure", {
       includeEvent,
-      status: res.status,
+      status: response.status,
       meta: meta?.message || null,
       error: payload?.error || null
     });
@@ -492,12 +512,12 @@ async function createTalkPublicRoom({
     if (payload.error) parts.push(payload.error);
     if (Array.isArray(payload.errors)) parts.push(...payload.errors);
     if (meta.statuscode) parts.push("Status code " + meta.statuscode);
-    if (res.status) parts.push("HTTP " + res.status + " " + res.statusText);
-    const detail = parts.filter(Boolean).join(" / ") || raw || (res.status + " " + res.statusText);
+    if (response.status) parts.push("HTTP " + response.status + " " + response.statusText);
+    const detail = parts.filter(Boolean).join(" / ") || getTalkOcsFailureDetail(response);
     const error = localizedError("error_ocs", [detail]);
     error.fatal = true;
-    error.status = res.status;
-    error.response = raw;
+    error.status = response.status;
+    error.response = response.raw;
     error.meta = meta;
     error.payload = payload;
     throw error;
@@ -526,14 +546,16 @@ async function createTalkPublicRoom({
         lobbyPayload.timer = Math.floor(timerVal);
       }
       L("set lobby payload", lobbyPayload);
-      const lobbyRes = await fetch(lobbyUrl, { method:"PUT", headers, body: JSON.stringify(lobbyPayload) });
-      if (!lobbyRes.ok){
-        const lobbyText = await lobbyRes.text().catch((error) => {
-          logTalkCoreError("lobby response read failed", error);
-          return "";
-        });
-        L("lobby set failed", lobbyRes.status, lobbyRes.statusText, lobbyText);
-        throw localizedError("error_lobby_set_failed", [lobbyText || (lobbyRes.status + " " + lobbyRes.statusText)]);
+      const lobbyResponse = await requestTalkOcs({
+        url: lobbyUrl,
+        method:"PUT",
+        headers,
+        body: JSON.stringify(lobbyPayload)
+      });
+      if (!isTalkOcsSuccess(lobbyResponse)){
+        const detail = getTalkOcsFailureDetail(lobbyResponse);
+        L("lobby set failed", lobbyResponse.status, lobbyResponse.statusText, detail);
+        throw makeTalkOcsError("error_lobby_set_failed", lobbyResponse);
       }
       L("lobby set success", {
         token: shortToken(token),
@@ -550,9 +572,23 @@ async function createTalkPublicRoom({
   if (enableListable){
     try{
       const listableUrl = base + "/ocs/v2.php/apps/spreed/api/v4/room/" + token + "/listable";
-      const listableRes = await fetch(listableUrl, { method:"PUT", headers, body: JSON.stringify({ scope: listableScope }) });
-      if (!listableRes.ok){
-        L("listable set failed status", listableRes.status, listableRes.statusText);
+      const listableResponse = await requestTalkOcs({
+        url: listableUrl,
+        method:"PUT",
+        headers,
+        body: JSON.stringify({ scope: listableScope })
+      });
+      if (!isTalkOcsSuccess(listableResponse)){
+        const error = makeTalkOcsError("error_ocs", listableResponse);
+        L(
+          "listable set failed status",
+          listableResponse.status,
+          listableResponse.statusText,
+          getTalkOcsFailureDetail(listableResponse)
+        );
+        logTalkCoreError("listable update failed", error, {
+          token: shortToken(token)
+        });
       }else{
         L("listable set success", {
           token: shortToken(token),
@@ -570,9 +606,23 @@ async function createTalkPublicRoom({
   if (allowDescriptionUpdate && finalDescription && finalDescription !== cleanedDescription){
     try{
       const descUrl = base + "/ocs/v2.php/apps/spreed/api/v4/room/" + token + "/description";
-      const descRes = await fetch(descUrl, { method:"PUT", headers, body: JSON.stringify({ description: finalDescription }) });
-      if (!descRes.ok){
-        L("description set failed status", descRes.status, descRes.statusText);
+      const descriptionResponse = await requestTalkOcs({
+        url: descUrl,
+        method:"PUT",
+        headers,
+        body: JSON.stringify({ description: finalDescription })
+      });
+      if (!isTalkOcsSuccess(descriptionResponse)){
+        const error = makeTalkOcsError("error_ocs", descriptionResponse);
+        L(
+          "description set failed status",
+          descriptionResponse.status,
+          descriptionResponse.statusText,
+          getTalkOcsFailureDetail(descriptionResponse)
+        );
+        logTalkCoreError("description update failed", error, {
+          token: shortToken(token)
+        });
       }else{
         L("description update success", { token: shortToken(token) });
       }
@@ -628,12 +678,17 @@ async function updateTalkLobby({ token, enableLobby, startTimestamp } = {}){
   }
   if (!enableLobby) delete payload.timer;
   L("update lobby payload", payload);
-  const res = await fetch(lobbyUrl, { method:"PUT", headers, body: JSON.stringify(payload) });
-  if (!res.ok) {
-    if (res.status === 403) {
+  const response = await requestTalkOcs({
+    url: lobbyUrl,
+    method:"PUT",
+    headers,
+    body: JSON.stringify(payload)
+  });
+  if (!isTalkOcsSuccess(response)) {
+    if (response.status === 403) {
       throw localizedError("error_lobby_no_permission");
     }
-    throw localizedError("error_lobby_update_failed", [res.status]);
+    throw makeTalkOcsError("error_lobby_update_failed", response);
   }
   L("update lobby success", {
     token: shortToken(token),
@@ -645,7 +700,7 @@ async function updateTalkLobby({ token, enableLobby, startTimestamp } = {}){
 /**
  * Delete a Talk room via OCS; 404 is treated as success.
  */
-async function deleteTalkRoom({ token } = {}){
+async function deleteTalkRoom({ token, signal } = {}){
   if (!token) throw localizedError("error_room_token_missing");
   const { baseUrl, user, appPass } = await getOpts();
   if (!baseUrl || !user || !appPass) throw localizedError("error_credentials_missing");
@@ -655,34 +710,23 @@ async function deleteTalkRoom({ token } = {}){
   const base = baseUrl.replace(/\/$/,"");
   const url = base + "/ocs/v2.php/apps/spreed/api/v4/room/" + encodeURIComponent(token);
   L("delete talk room request", { token: shortToken(token) });
-  const res = await fetch(url, { method:"DELETE", headers });
-  const raw = await res.text().catch((error) => {
-    logTalkCoreError("delete room response read failed", error);
-    return "";
+  const response = await requestTalkOcs({
+    url,
+    method:"DELETE",
+    headers,
+    signal
   });
-  let data = null;
-  try{
-    data = raw ? JSON.parse(raw) : null;
-  }catch(error){
-    logTalkCoreError("delete room json parse failed", error, {
-      responseSample: String(raw || "").slice(0, 160)
-    });
-  }
-  L("delete talk room status", { token: shortToken(token), status: res.status, ok: res.ok });
-  if (res.status === 404){
+  L("delete talk room status", {
+    token: shortToken(token),
+    status: response.status,
+    ok: response.ok
+  });
+  if (response.status === 404){
     L("delete talk room already removed", { token: shortToken(token) });
     return true;
   }
-  if (!res.ok){
-    const meta = data?.ocs?.meta || {};
-    const payload = data?.ocs?.data || {};
-    const parts = [];
-    if (meta.message && meta.message !== meta.status) parts.push(meta.message);
-    if (payload.error) parts.push(payload.error);
-    if (meta.statuscode) parts.push("Status code " + meta.statuscode);
-    if (res.status) parts.push("HTTP " + res.status + " " + res.statusText);
-    const detail = parts.filter(Boolean).join(" / ") || raw || (res.status + " " + res.statusText);
-    throw localizedError("error_room_delete_failed", [detail]);
+  if (!isTalkOcsSuccess(response)){
+    throw makeTalkOcsError("error_room_delete_failed", response);
   }
   L("delete talk room success", { token: shortToken(token) });
   return true;
@@ -703,29 +747,33 @@ async function getTalkRoomParticipants({ token } = {}){
   const headers = { "OCS-APIRequest": "true", "Authorization": auth, "Accept":"application/json" };
   const base = baseUrl.replace(/\/$/,"");
   const infoUrl = base + "/ocs/v2.php/apps/spreed/api/v4/room/" + encodeURIComponent(token) + "/participants?includeStatus=true";
-  const res = await fetch(infoUrl, { method:"GET", headers });
-  const raw = await res.text();
-  let data = null;
-  try{
-    data = raw ? JSON.parse(raw) : null;
-  }catch(error){
-    logTalkCoreError("participants json parse failed", error, {
-      responseSample: String(raw || "").slice(0, 160)
-    });
-  }
-  if (res.status === 404){
+  const response = await requestTalkOcs({ url: infoUrl, method:"GET", headers });
+  if (response.status === 404){
     return [];
   }
-  if (!res.ok){
-    const meta = data?.ocs?.meta || {};
-    const detail = meta.message || raw || (res.status + " " + res.statusText);
-    throw localizedError("error_ocs", [detail]);
+  if (!isTalkOcsSuccess(response)){
+    throw makeTalkOcsError("error_ocs", response);
   }
-  const participants = data?.ocs?.data;
+  const participants = getTalkOcsData(response);
   const list = Array.isArray(participants) ? participants : [];
   L("get room participants result", { token: shortToken(token), count: list.length });
   return list;
 }
+
+function findTalkParticipant(participants, actorId){
+  const target = String(actorId || "").trim().toLowerCase();
+  if (!target){
+    return null;
+  }
+  return (participants || []).find((participant) => {
+    return String(participant?.actorId || "").trim().toLowerCase() === target;
+  }) || null;
+}
+
+function isTalkModeratorParticipant(participant){
+  return [1, 2, 6].includes(Number(participant?.participantType));
+}
+
 /**
  * Add a user to the Talk room via the OCS API.
  */
@@ -749,30 +797,31 @@ async function addTalkParticipant({ token, actorId, source = "users" } = {}){
   const base = baseUrl.replace(/\/$/,"");
   const url = base + "/ocs/v2.php/apps/spreed/api/v4/room/" + encodeURIComponent(token) + "/participants";
   const body = { newParticipant: actorId, source: source || "users" };
-  const res = await fetch(url, { method:"POST", headers, body: JSON.stringify(body) });
-  const raw = await res.text().catch((error) => {
-    logTalkCoreError("add participant response read failed", error);
-    return "";
+  const response = await requestTalkOcs({
+    url,
+    method:"POST",
+    headers,
+    body: JSON.stringify(body)
   });
-  let json = null;
-  try{
-    json = raw ? JSON.parse(raw) : null;
-  }catch(error){
-    logTalkCoreError("add participant json parse failed", error, {
-      responseSample: String(raw || "").slice(0, 160)
-    });
-  }
-  if (!res.ok && res.status !== 409){
-    const meta = json?.ocs?.meta || {};
-    const detail = meta.message || raw || (res.status + " " + res.statusText);
-    throw localizedError("error_participant_add_failed", [detail]);
+  if (!isTalkOcsSuccess(response)){
+    if (response.status === 409){
+      const participants = await getTalkRoomParticipants({ token });
+      const existing = findTalkParticipant(participants, actorId);
+      if (existing){
+        L("add participant conflict verified", {
+          token: shortToken(token),
+          actor: String(actorId).trim()
+        });
+        return existing;
+      }
+    }
+    throw makeTalkOcsError("error_participant_add_failed", response);
   }
   L("add participant result", {
     token: shortToken(token),
-    status: res.status,
-    conflict: res.status === 409
+    status: response.status
   });
-  const added = json?.ocs?.data;
+  const added = getTalkOcsData(response);
   return added || null;
 }
 /**
@@ -797,28 +846,32 @@ async function promoteTalkModerator({ token, attendeeId } = {}){
   const base = baseUrl.replace(/\/$/,"");
   const url = base + "/ocs/v2.php/apps/spreed/api/v4/room/" + encodeURIComponent(token) + "/moderators";
   const body = { attendeeId };
-  const res = await fetch(url, { method:"POST", headers, body: JSON.stringify(body) });
-  if (!res.ok && res.status !== 409){
-    const raw = await res.text().catch((error) => {
-      logTalkCoreError("promote moderator response read failed", error);
-      return "";
-    });
-    let json = null;
-    try{
-      json = raw ? JSON.parse(raw) : null;
-    }catch(error){
-      logTalkCoreError("promote moderator json parse failed", error, {
-        responseSample: String(raw || "").slice(0, 160)
+  const response = await requestTalkOcs({
+    url,
+    method:"POST",
+    headers,
+    body: JSON.stringify(body)
+  });
+  if (!isTalkOcsSuccess(response)){
+    if (response.status === 409){
+      const participants = await getTalkRoomParticipants({ token });
+      const promoted = participants.find((participant) => {
+        return Number(participant?.attendeeId) === attendeeId
+          && isTalkModeratorParticipant(participant);
       });
+      if (promoted){
+        L("promote moderator conflict verified", {
+          token: shortToken(token),
+          attendeeId
+        });
+        return true;
+      }
     }
-    const meta = json?.ocs?.meta || {};
-    const detail = meta.message || raw || (res.status + " " + res.statusText);
-    throw localizedError("error_moderator_set_failed", [detail]);
+    throw makeTalkOcsError("error_moderator_set_failed", response);
   }
   L("promote moderator success", {
     token: shortToken(token),
-    status: res.status,
-    conflict: res.status === 409
+    status: response.status
   });
   return true;
 }
@@ -839,60 +892,54 @@ async function leaveTalkRoom({ token } = {}){
   };
   const base = baseUrl.replace(/\/$/,"");
   const url = base + "/ocs/v2.php/apps/spreed/api/v4/room/" + encodeURIComponent(token) + "/participants/self";
-  const res = await fetch(url, { method:"DELETE", headers });
-  if (!res.ok && res.status !== 404){
-    const raw = await res.text().catch((error) => {
-      logTalkCoreError("leave room response read failed", error);
-      return "";
-    });
-    let json = null;
-    try{
-      json = raw ? JSON.parse(raw) : null;
-    }catch(error){
-      logTalkCoreError("leave room json parse failed", error, {
-        responseSample: String(raw || "").slice(0, 160)
-      });
-    }
-    const meta = json?.ocs?.meta || {};
-    const detail = meta.message || raw || (res.status + " " + res.statusText);
-    throw localizedError("error_leave_failed", [detail]);
+  const response = await requestTalkOcs({ url, method:"DELETE", headers });
+  if (response.status !== 404 && !isTalkOcsSuccess(response)){
+    throw makeTalkOcsError("error_leave_failed", response);
   }
-  L("leave room success", { token: shortToken(token), status: res.status });
+  L("leave room success", { token: shortToken(token), status: response.status });
   return true;
 }
 /**
  * Delegate moderation to another user, optionally leaving the room.
  */
-async function delegateRoomModerator({ token, newModerator } = {}){
+async function delegateRoomModerator({ token, newModerator, leaveSelf = true } = {}){
   if (!token || !newModerator) throw localizedError("error_delegation_data_missing");
-  const { user } = await getOpts();
+  const opts = await getOpts();
   const targetId = String(newModerator).trim();
   if (!targetId) throw localizedError("error_moderator_target_missing");
-  const currentUser = (user || "").trim();
+  const currentUser = await NCCore.getCurrentUserId(opts);
   L("delegate moderator request", {
     token: shortToken(token),
     target: targetId,
     currentUser
   });
-  await addTalkParticipant({ token, actorId: targetId, source: "users" });
-  const participants = await getTalkRoomParticipants({ token });
-  const match = participants.find((p) => {
-    if (!p) return false;
-    const actor = (p.actorId || "").trim().toLowerCase();
-    return actor === targetId.toLowerCase();
-  });
+  let participants = await getTalkRoomParticipants({ token });
+  let match = findTalkParticipant(participants, targetId);
+  if (!match){
+    await addTalkParticipant({ token, actorId: targetId, source: "users" });
+    participants = await getTalkRoomParticipants({ token });
+    match = findTalkParticipant(participants, targetId);
+  }
   if (!match){
     throw localizedError("error_participant_not_found");
   }
-  await promoteTalkModerator({ token, attendeeId: match.attendeeId });
-  const loweredUser = currentUser.toLowerCase();
-  if (loweredUser && loweredUser !== targetId.toLowerCase()){
+  if (!isTalkModeratorParticipant(match)){
+    await promoteTalkModerator({ token, attendeeId: match.attendeeId });
+    participants = await getTalkRoomParticipants({ token });
+    match = findTalkParticipant(participants, targetId);
+    if (!isTalkModeratorParticipant(match)){
+      throw localizedError("error_moderator_set_failed");
+    }
+  }
+  const loweredUser = String(currentUser || "").trim().toLowerCase();
+  const shouldLeaveSelf = !!(loweredUser && loweredUser !== targetId.toLowerCase());
+  if (leaveSelf && shouldLeaveSelf){
     await leaveTalkRoom({ token });
     L("delegate moderator completed", { token: shortToken(token), delegate: targetId, leftSelf: true });
-    return { leftSelf: true, delegate: targetId };
+    return { leftSelf: true, shouldLeaveSelf, delegate: targetId };
   }
   L("delegate moderator completed", { token: shortToken(token), delegate: targetId, leftSelf: false });
-  return { leftSelf: false, delegate: targetId };
+  return { leftSelf: false, shouldLeaveSelf, delegate: targetId };
 }
 
 /**

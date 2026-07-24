@@ -186,11 +186,33 @@ browser.runtime.onMessage.addListener((msg, sender) => {
     }
   }
   if (msg.type === "talk:createRoom"){
+    const contextId = readMessageContextId(msg);
+    if (!contextId){
+      return { ok:false, error: bgI18n("talk_error_context_id_missing") };
+    }
+    const context = getCalendarWizardContext(contextId);
+    if (!context){
+      return { ok:false, error: bgI18n("talk_error_context_reference") };
+    }
+    if (context.roomCreateInProgress){
+      return { ok:false, error: bgI18n("talk_error_existing_room_linked") };
+    }
+    context.roomCreateInProgress = true;
     try{
+      const hydrated = await hydrateTalkWizardContextFromEditor(context.editorId, contextId);
+      if (!hydrated){
+        return { ok:false, error: bgI18n("talk_error_snapshot_failed") };
+      }
+      refreshCalendarWizardContextSnapshot(context);
+      if (context.metadata?.token){
+        return { ok:false, error: bgI18n("talk_error_existing_room_linked") };
+      }
       const result = await NCTalkCore.createTalkPublicRoom(msg.payload);
       return { ok:true, result };
     }catch(error){
       return messageError("talk:createRoom", error);
+    }finally{
+      context.roomCreateInProgress = false;
     }
   }
   if (msg.type === "talk:deleteRoom"){

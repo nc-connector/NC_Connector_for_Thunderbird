@@ -10,6 +10,18 @@
  * main calendar synchronization flow.
  */
 
+const TALK_ROOM_DELETE_ACTIVE_BY_TOKEN = new Map();
+let ROOM_DELETE_RETRY_MUTATION_CHAIN = Promise.resolve();
+
+function enqueueRoomDeleteRetryMutation(callback){
+  const operation = ROOM_DELETE_RETRY_MUTATION_CHAIN.then(async () => {
+    await BG_STATE_READY;
+    return callback();
+  });
+  ROOM_DELETE_RETRY_MUTATION_CHAIN = operation.catch(() => {});
+  return operation;
+}
+
 function makeRoomCleanupEditorKey(editorId){
   if (typeof editorId !== "string"){
     return "";
@@ -23,10 +35,18 @@ function makeRoomCleanupEditorKey(editorId){
 
 function removeRoomCleanupEntry(token, reason = ""){
   if (!token) return;
+  if (reason === "calendar_item_persisted"){
+    cancelActiveTalkRoomDelete(token, reason);
+  }
   const entry = ROOM_CLEANUP_BY_TOKEN.get(token);
   if (!entry){
+    if (reason === "calendar_item_persisted"){
+      void clearTalkRoomDeleteRetry(token, reason)
+        .catch((error) => console.error("[NCBG] persisted room delete cancellation failed", error));
+    }
     return;
   }
+  entry.scheduleNonce = (Number(entry.scheduleNonce) || 0) + 1;
   if (entry.timerId){
     try{
       clearTimeout(entry.timerId);
@@ -39,7 +59,300 @@ function removeRoomCleanupEntry(token, reason = ""){
   if (entry.editorKey && ROOM_CLEANUP_BY_EDITOR.get(entry.editorKey) === token){
     ROOM_CLEANUP_BY_EDITOR.delete(entry.editorKey);
   }
+  if (reason === "calendar_item_persisted"){
+    void clearTalkRoomDeleteRetry(token, reason)
+      .catch((error) => console.error("[NCBG] persisted room delete cancellation failed", error));
+  }
   L("room cleanup cleared", { token: shortToken(token), reason: reason || "" });
+}
+
+async function persistTalkRoomDeleteRetry(record){
+  const token = typeof record?.token === "string" ? record.token.trim() : "";
+  if (!token){
+    return null;
+  }
+  return enqueueRoomDeleteRetryMutation(async () => {
+    const persistedRecord = Object.assign({}, record, {
+      token,
+      updated: Date.now()
+    });
+    const next = Object.assign({}, ROOM_DELETE_RETRY, {
+      [token]: persistedRecord
+    });
+    await browser.storage.local.set({ [ROOM_DELETE_RETRY_KEY]: next });
+    ROOM_DELETE_RETRY = next;
+    return persistedRecord;
+  });
+}
+
+async function clearTalkRoomDeleteRetry(token, reason = ""){
+  const normalizedToken = typeof token === "string" ? token.trim() : "";
+  if (!normalizedToken){
+    return;
+  }
+  const removed = await enqueueRoomDeleteRetryMutation(async () => {
+    if (!ROOM_DELETE_RETRY[normalizedToken]){
+      return false;
+    }
+    const next = Object.assign({}, ROOM_DELETE_RETRY);
+    delete next[normalizedToken];
+    await browser.storage.local.set({ [ROOM_DELETE_RETRY_KEY]: next });
+    ROOM_DELETE_RETRY = next;
+    return true;
+  });
+  const timerId = ROOM_DELETE_RETRY_TIMER_BY_TOKEN.get(normalizedToken);
+  if (timerId){
+    clearTimeout(timerId);
+    ROOM_DELETE_RETRY_TIMER_BY_TOKEN.delete(normalizedToken);
+  }
+  if (!removed){
+    return;
+  }
+  L("room delete retry cleared", {
+    token: shortToken(normalizedToken),
+    reason: reason || ""
+  });
+}
+
+function scheduleTalkRoomDeleteRetryTimer(record){
+  const token = typeof record?.token === "string" ? record.token.trim() : "";
+  if (!token || ROOM_DELETE_RETRY_TIMER_BY_TOKEN.has(token)){
+    return;
+  }
+  const delayMs = Math.max(0, Number(record.nextAttemptAt) - Date.now());
+  const timerId = setTimeout(() => {
+    ROOM_DELETE_RETRY_TIMER_BY_TOKEN.delete(token);
+    void runTalkRoomDeleteRetry(token)
+      .catch((error) => console.error("[NCBG] room delete retry runner failed", error));
+  }, delayMs);
+  ROOM_DELETE_RETRY_TIMER_BY_TOKEN.set(token, timerId);
+  const cleanupEntry = ROOM_CLEANUP_BY_TOKEN.get(token);
+  if (cleanupEntry){
+    cleanupEntry.timerId = timerId;
+  }
+  L("room delete retry scheduled", {
+    token: shortToken(token),
+    attempt: Number(record.attempts) || 0,
+    delayMs,
+    reason: record.reason || ""
+  });
+}
+
+async function armTalkRoomDeleteRetry({
+  token,
+  reason = "",
+  delayMs = 0,
+  calendarId = "",
+  itemId = "",
+  cleanupGuard = null
+} = {}){
+  const normalizedToken = typeof token === "string" ? token.trim() : "";
+  if (!normalizedToken){
+    return;
+  }
+  await BG_STATE_READY;
+  if (
+    cleanupGuard
+    && (
+      ROOM_CLEANUP_BY_TOKEN.get(normalizedToken) !== cleanupGuard.entry
+      || cleanupGuard.entry.scheduleNonce !== cleanupGuard.scheduleNonce
+    )
+  ){
+    return;
+  }
+  const existing = ROOM_DELETE_RETRY[normalizedToken] || {};
+  const nextAttemptAt = Date.now() + Math.max(0, Number(delayMs) || 0);
+  const record = {
+    token: normalizedToken,
+    reason: reason || existing.reason || "",
+    attempts: Number(existing.attempts) || 0,
+    nextAttemptAt,
+    calendarId: calendarId || existing.calendarId || "",
+    itemId: itemId || existing.itemId || "",
+    created: Number(existing.created) || Date.now()
+  };
+  const persistedRecord = await persistTalkRoomDeleteRetry(record);
+  if (
+    cleanupGuard
+    && (
+      ROOM_CLEANUP_BY_TOKEN.get(normalizedToken) !== cleanupGuard.entry
+      || cleanupGuard.entry.scheduleNonce !== cleanupGuard.scheduleNonce
+    )
+  ){
+    await clearTalkRoomDeleteRetry(normalizedToken, "stale_cleanup_schedule");
+    return;
+  }
+  scheduleTalkRoomDeleteRetryTimer(persistedRecord);
+}
+
+function readTalkDeleteErrorStatus(error){
+  const status = Number(error?.status);
+  return Number.isInteger(status) ? status : 0;
+}
+
+function cancelActiveTalkRoomDelete(token, reason = ""){
+  const normalizedToken = typeof token === "string" ? token.trim() : "";
+  const active = normalizedToken
+    ? TALK_ROOM_DELETE_ACTIVE_BY_TOKEN.get(normalizedToken)
+    : null;
+  if (!active){
+    return false;
+  }
+  active.cancelReason = reason || "calendar_reference_created";
+  try{
+    active.controller.abort();
+  }catch(error){
+    console.error("[NCBG] active room delete cancellation failed", error);
+  }
+  L("active room delete canceled", {
+    token: shortToken(normalizedToken),
+    reason: active.cancelReason
+  });
+  return true;
+}
+
+function isTalkRoomDeleteCanceledForReference(active){
+  return !!active?.cancelReason;
+}
+
+async function finishTalkRoomDelete(record, reason){
+  const token = record.token;
+  await clearTalkRoomDeleteRetry(token, reason);
+  if (typeof hasTrustedEventTokenReference === "function" && hasTrustedEventTokenReference(token)){
+    removeRoomCleanupEntry(token, "token_referenced_before_local_cleanup");
+    L("room delete local cleanup skipped (token referenced)", {
+      token: shortToken(token),
+      reason
+    });
+    return false;
+  }
+  removeRoomCleanupEntry(token, reason);
+  await deleteRoomMeta(token);
+  if (record.calendarId && record.itemId){
+    await removeEventTokenEntryIfToken(record.calendarId, record.itemId, token);
+  }
+  return true;
+}
+
+async function retainTalkRoomDeleteEvidence(record, {
+  reason,
+  status = 0
+} = {}){
+  const token = typeof record?.token === "string" ? record.token.trim() : "";
+  if (!token){
+    return false;
+  }
+  const attempts = (Number(record.attempts) || 0) + 1;
+  await persistTalkRoomDeleteRetry(Object.assign({}, record, {
+    attempts,
+    nextAttemptAt: 0,
+    exhausted: true,
+    terminalReason: reason || "delete_not_completed",
+    terminalStatus: Number(status) || 0
+  }));
+  removeRoomCleanupEntry(token, reason || "delete_evidence_retained");
+  L("room delete evidence retained", {
+    token: shortToken(token),
+    attempts,
+    reason: reason || "",
+    status: Number(status) || 0
+  });
+  return true;
+}
+
+async function runTalkRoomDeleteRetry(token){
+  await BG_STATE_READY;
+  const record = ROOM_DELETE_RETRY[token];
+  if (!record){
+    return;
+  }
+  const cleanupEntry = ROOM_CLEANUP_BY_TOKEN.get(token);
+  if (cleanupEntry){
+    cleanupEntry.timerId = null;
+  }
+  if (typeof hasTrustedEventTokenReference === "function" && hasTrustedEventTokenReference(token)){
+    await clearTalkRoomDeleteRetry(token, "token_still_referenced");
+    removeRoomCleanupEntry(token, "token_still_referenced");
+    return;
+  }
+  const active = {
+    controller: new AbortController(),
+    cancelReason: ""
+  };
+  TALK_ROOM_DELETE_ACTIVE_BY_TOKEN.set(token, active);
+  try{
+    // Register the abort handle before the final reference check. A calendar
+    // upsert that arrives while the HTTP request is in flight can then cancel
+    // the request instead of merely clearing its persisted retry record.
+    if (typeof hasTrustedEventTokenReference === "function" && hasTrustedEventTokenReference(token)){
+      cancelActiveTalkRoomDelete(token, "token_referenced_before_delete");
+      await clearTalkRoomDeleteRetry(token, "token_still_referenced");
+      removeRoomCleanupEntry(token, "token_still_referenced");
+      return;
+    }
+    L("room delete attempt", {
+      token: shortToken(token),
+      attempt: (Number(record.attempts) || 0) + 1,
+      reason: record.reason || ""
+    });
+    await NCTalkCore.deleteTalkRoom({
+      token,
+      signal: active.controller.signal
+    });
+    await finishTalkRoomDelete(record, "delete_success");
+  }catch(error){
+    if (isTalkRoomDeleteCanceledForReference(active)){
+      await clearTalkRoomDeleteRetry(token, active.cancelReason);
+      removeRoomCleanupEntry(token, active.cancelReason);
+      return;
+    }
+    const status = readTalkDeleteErrorStatus(error);
+    if (status === 403){
+      L("room delete no longer permitted", { token: shortToken(token) });
+      await retainTalkRoomDeleteEvidence(record, {
+        reason: "delete_forbidden",
+        status
+      });
+      return;
+    }
+    const attempts = (Number(record.attempts) || 0) + 1;
+    console.error("[NCBG] room delete failed", {
+      token: shortToken(token),
+      attempt: attempts,
+      status,
+      error: error?.message || String(error)
+    });
+    if (attempts > ROOM_DELETE_RETRY_DELAYS_MS.length){
+      await persistTalkRoomDeleteRetry(Object.assign({}, record, {
+        attempts,
+        nextAttemptAt: 0,
+        exhausted: true
+      }));
+      L("room delete retries exhausted", { token: shortToken(token), attempts });
+      return;
+    }
+    const retryRecord = Object.assign({}, record, {
+      attempts,
+      nextAttemptAt: Date.now() + ROOM_DELETE_RETRY_DELAYS_MS[attempts - 1],
+      exhausted: false
+    });
+    await persistTalkRoomDeleteRetry(retryRecord);
+    scheduleTalkRoomDeleteRetryTimer(retryRecord);
+  }finally{
+    if (TALK_ROOM_DELETE_ACTIVE_BY_TOKEN.get(token) === active){
+      TALK_ROOM_DELETE_ACTIVE_BY_TOKEN.delete(token);
+    }
+  }
+}
+
+async function resumeTalkRoomDeleteRetries(){
+  await BG_STATE_READY;
+  for (const record of Object.values(ROOM_DELETE_RETRY)){
+    if (!record?.token || record.exhausted === true){
+      continue;
+    }
+    scheduleTalkRoomDeleteRetryTimer(record);
+  }
 }
 
 /**
@@ -61,31 +374,12 @@ function scheduleRoomCleanupDelete(token, reason = "", delayMs = ROOM_CLEANUP_DE
   entry.scheduleNonce = (Number(entry.scheduleNonce) || 0) + 1;
   const scheduleNonce = entry.scheduleNonce;
   const delay = Math.max(0, Number(delayMs) || 0);
-  entry.timerId = setTimeout(() => {
-    (async () => {
-      const current = ROOM_CLEANUP_BY_TOKEN.get(token);
-      if (!current){
-        return;
-      }
-      if (current !== entry || current.scheduleNonce !== scheduleNonce){
-        L("room cleanup skipped (stale timer)", {
-          token: shortToken(token),
-          reason: reason || ""
-        });
-        return;
-      }
-      current.timerId = null;
-      removeRoomCleanupEntry(token, `delete:${reason || ""}`);
-      try{
-        L("room cleanup delete", { token: shortToken(token), reason: reason || "" });
-        await NCTalkCore.deleteTalkRoom({ token });
-        await deleteRoomMeta(token);
-      }catch(error){
-        console.error("[NCBG] room cleanup delete failed", error);
-      }
-    })().catch((error) => console.error("[NCBG] room cleanup delete failed", error));
-  }, delay);
-  L("room cleanup scheduled", { token: shortToken(token), delayMs: delay, reason: reason || "" });
+  void armTalkRoomDeleteRetry({
+    token,
+    reason: `editor_${reason || "discarded"}`,
+    delayMs: delay,
+    cleanupGuard: { entry, scheduleNonce }
+  }).catch((error) => console.error("[NCBG] room cleanup scheduling failed", error));
 }
 
 /**
@@ -210,7 +504,7 @@ function readCalendarSnapshotLiveEvent(snapshot){
 }
 
 /**
- * Merge event fields without erasing existing values with empty snapshot data.
+ * Apply editor fields, including deliberate empty values.
  * @param {object} base
  * @param {object} update
  * @returns {object}
@@ -218,7 +512,7 @@ function readCalendarSnapshotLiveEvent(snapshot){
 function mergeCalendarEventFields(base, update){
   const merged = Object.assign({}, base || {});
   for (const key of ["title", "location", "description", "descriptionHtml"]){
-    if (typeof update?.[key] === "string" && update[key]){
+    if (typeof update?.[key] === "string"){
       merged[key] = update[key];
     }
   }
@@ -229,21 +523,6 @@ function mergeCalendarEventFields(base, update){
     merged.endTimestamp = Math.floor(update.endTimestamp);
   }
   return merged;
-}
-
-function calendarSnapshotHasContent(snapshot){
-  if (calendarSnapshotHasIcal(snapshot)){
-    return true;
-  }
-  const event = readCalendarSnapshotLiveEvent(snapshot);
-  return !!(
-    event.title ||
-    event.location ||
-    event.description ||
-    event.descriptionHtml ||
-    isCalendarSnapshotTimestamp(event.startTimestamp) ||
-    isCalendarSnapshotTimestamp(event.endTimestamp)
-  );
 }
 
 /**

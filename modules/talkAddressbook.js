@@ -132,18 +132,11 @@ function parseSystemAddressbook(data){
       })
       .filter(Boolean);
 
-    if (!emails.length){
-      continue;
-    }
-
     const preferred = emails.find((entry) => {
       const scope = String(entry.params["X-NC-SCOPE"] || "").toLowerCase();
       return scope === "v2-federated";
-    }) || emails[0];
+    }) || emails[0] || null;
     const email = String(preferred?.value || "").trim();
-    if (!email){
-      continue;
-    }
 
     const photoProp = card.getFirstProperty("photo");
     let photo = null;
@@ -156,7 +149,7 @@ function parseSystemAddressbook(data){
         mime: photoParams.TYPE || photoParams.MEDIATYPE || ""
       };
     }
-    const label = (fn || nickname || displayName || email || uid).trim() || email;
+    const label = (fn || nickname || displayName || email || uid).trim() || uid;
     const avatar = photo ? createPhotoDataUrl(photo) : null;
     contacts.push({
       id: uid,
@@ -246,22 +239,25 @@ async function getSystemAddressbookContacts(force = false){
   L("system addressbook fetch", { base, userId, force: !!force });
   // Access to the server-side system addressbook (CardDAV) requires remote.php permission.
   const addressUrl = base + "/remote.php/dav/addressbooks/users/" + encodeURIComponent(userId) + "/z-server-generated--system/?export";
-  const res = await fetch(addressUrl, {
-    method: "GET",
-    headers: {
-      "Authorization": auth,
-      "Accept": "text/directory",
-      "Cache-Control": "no-cache"
-    }
-  });
-  if (!res.ok){
-    const text = await res.text().catch((error) => {
-      logTalkCoreError("system addressbook response read failed", error);
-      return "";
+  const { response, raw } = await NCOcs.runWithTimeout(async (signal) => {
+    const response = await fetch(addressUrl, {
+      method: "GET",
+      headers: {
+        "Authorization": auth,
+        "Accept": "text/directory",
+        "Cache-Control": "no-cache"
+      },
+      signal
     });
-    throw localizedError("error_system_addressbook_failed", [text || (res.status + " " + res.statusText)]);
+    const raw = await response.text();
+    return { response, raw };
+  });
+  if (!response.ok){
+    throw localizedError(
+      "error_system_addressbook_failed",
+      [raw || (response.status + " " + response.statusText)]
+    );
   }
-  const raw = await res.text();
   const contacts = parseSystemAddressbook(raw);
   L("system addressbook fetched", { count: contacts.length, force: !!force });
   SYSTEM_ADDRESSBOOK_CACHE.contacts = contacts;

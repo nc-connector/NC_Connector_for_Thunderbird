@@ -625,6 +625,10 @@
       state.event = response.event || {};
       const defaults = await loadTalkDefaults();
       applyDefaultsToUi(defaults, state.event, state.metadata);
+      if (state.metadata?.token){
+        okBtn.disabled = true;
+        setMessage(t("talk_error_existing_room_linked"), true);
+      }
       popupSizer?.scheduleSizeUpdate();
     }catch(error){
       logUiError("load snapshot failed", error);
@@ -766,6 +770,10 @@
     if (state.busy){
       return;
     }
+    if (state.metadata?.token){
+      setMessage(t("talk_error_existing_room_linked"), true);
+      return;
+    }
     logDebug("handleOk start", {
       contextId: state.contextId || ""
     });
@@ -784,6 +792,7 @@
       const payload = buildCreatePayload();
       const response = await browser.runtime.sendMessage({
         type: "talk:createRoom",
+        contextId: state.contextId,
         payload
       });
       if (!response?.ok){

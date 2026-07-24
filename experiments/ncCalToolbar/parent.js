@@ -175,6 +175,7 @@ this.ncCalToolbar = class extends ExtensionAPI {
    * Register window listeners and initialize existing windows.
    */
   onStartup() {
+    this._shutdownStarted = false;
     this._listenerId = "ext-ncCalToolbar-" + this.extension.id;
     this._listenerRegistered = false;
     this._startupRetryCount = 0;
@@ -186,7 +187,14 @@ this.ncCalToolbar = class extends ExtensionAPI {
   /**
    * Unregister listeners and cleanup injected UI/hooks.
    */
-  onShutdown() {
+  onShutdown(isAppShutdown) {
+    this._shutdownStarted = true;
+    this._clearStartupRetryTimer();
+    this._startupRetryPending = false;
+    this._startupRetryCount = 0;
+    if (isAppShutdown) {
+      return;
+    }
     const extensionSupport = this._getExtensionSupport();
     if (this._listenerId && this._listenerRegistered && extensionSupport) {
       extensionSupport.unregisterWindowListener(this._listenerId);
@@ -200,15 +208,19 @@ this.ncCalToolbar = class extends ExtensionAPI {
     if (this._listenerId) {
       this._listenerId = null;
     }
-    this._clearStartupRetryTimer();
-    this._startupRetryPending = false;
-    this._startupRetryCount = 0;
     const openWindows = extensionSupport?.openWindows || [];
     for (const window of openWindows) {
       try {
         this._restoreMessengerHook(window);
       } catch (error) {
         this._logError("shutdown: restore messenger hook failed", error, {
+          href: window?.location?.href || "",
+        });
+      }
+      try {
+        this._removeDialogReleaseListener(window);
+      } catch (error) {
+        this._logError("shutdown: dialog release cleanup failed", error, {
           href: window?.location?.href || "",
         });
       }
@@ -246,6 +258,11 @@ this.ncCalToolbar = class extends ExtensionAPI {
       this._editorBridge.clear();
       this._editorBridge = null;
     }
+    try {
+      Services.obs.notifyObservers(null, "startupcache-invalidate");
+    } catch (error) {
+      this._logError("shutdown: startup cache invalidation failed", error);
+    }
   }
 
   /**
@@ -273,7 +290,7 @@ this.ncCalToolbar = class extends ExtensionAPI {
    * Avoids intermittent startup crashes when the global is not yet initialized.
    */
   _registerWindowListenerWhenReady() {
-    if (this._listenerRegistered || !this._listenerId) {
+    if (this._shutdownStarted || this._listenerRegistered || !this._listenerId) {
       return;
     }
     this._clearStartupRetryTimer();
@@ -381,6 +398,9 @@ this.ncCalToolbar = class extends ExtensionAPI {
    * @returns {EditorContextBridge}
    */
   _bridge() {
+    if (this._shutdownStarted && !this._editorBridge) {
+      throw new ExtensionError("ncCalToolbar is shutting down");
+    }
     if (!this._editorBridge) {
       this._editorBridge = getEditorBridge(this.extension);
     }
@@ -599,7 +619,7 @@ this.ncCalToolbar = class extends ExtensionAPI {
    * @param {string} editorId
    */
   _ensureDialogReleaseListener(window, editorId) {
-    if (!window || !editorId) {
+    if (this._shutdownStarted || !window || !editorId) {
       return;
     }
     if (!this._dialogReleaseByWindow) {
@@ -609,10 +629,7 @@ this.ncCalToolbar = class extends ExtensionAPI {
     if (previous?.editorId === editorId) {
       return;
     }
-    if (previous?.onUnload) {
-      window.removeEventListener("unload", previous.onUnload, true);
-      this._bridge().releaseEditorId(previous.editorId);
-    }
+    this._removeDialogReleaseListener(window);
     const onUnload = () => {
       this._bridge().releaseEditorId(editorId);
       window.removeEventListener("unload", onUnload, true);
@@ -620,6 +637,22 @@ this.ncCalToolbar = class extends ExtensionAPI {
     };
     window.addEventListener("unload", onUnload, true);
     this._dialogReleaseByWindow.set(window, { editorId, onUnload });
+  }
+
+  /**
+   * Remove one dialog release listener and release its editor id.
+   * @param {Window} window
+   */
+  _removeDialogReleaseListener(window) {
+    const entry = this._dialogReleaseByWindow?.get(window) || null;
+    if (!entry) {
+      return;
+    }
+    window.removeEventListener("unload", entry.onUnload, true);
+    this._dialogReleaseByWindow.delete(window);
+    if (entry.editorId) {
+      this._bridge().releaseEditorId(entry.editorId);
+    }
   }
 
   /**
@@ -951,7 +984,7 @@ this.ncCalToolbar = class extends ExtensionAPI {
    * @param {Window} window
    */
   _ensureWindow(window) {
-    if (!window || !window.location) {
+    if (this._shutdownStarted || !window || !window.location) {
       return;
     }
     if (window.location.href.startsWith(MESSENGER_URL)) {
@@ -999,6 +1032,9 @@ this.ncCalToolbar = class extends ExtensionAPI {
    * @param {Window} window
    */
   _ensureButton(window) {
+    if (this._shutdownStarted) {
+      return;
+    }
     const toolbarId = this._toolbarId(window);
     if (!toolbarId) {
       return;
@@ -1006,12 +1042,7 @@ this.ncCalToolbar = class extends ExtensionAPI {
     const toolbar = window.document.getElementById(toolbarId);
     if (!toolbar) {
       if ((window.location?.href || "").startsWith(EVENT_DIALOG_URL)) {
-        const observer = new window.MutationObserver(() => {
-          observer.disconnect();
-          this._ensureButton(window);
-        });
-        observer.observe(window.document.documentElement, { childList: true, subtree: true });
-        window.setTimeout(() => observer.disconnect(), 5000);
+        this._waitForCalendarItemActionButton(window);
       }
       return;
     }
@@ -1019,15 +1050,11 @@ this.ncCalToolbar = class extends ExtensionAPI {
     const button = window.document.getElementById(buttonId);
     if (!button) {
       if ((window.location?.href || "").startsWith(EVENT_DIALOG_URL)) {
-        const observer = new window.MutationObserver(() => {
-          observer.disconnect();
-          this._ensureButton(window);
-        });
-        observer.observe(window.document.documentElement, { childList: true, subtree: true });
-        window.setTimeout(() => observer.disconnect(), 5000);
+        this._waitForCalendarItemActionButton(window);
       }
       return;
     }
+    this._clearCalendarItemActionButtonWait(window);
 
     if (!this._commandBindingByWindow) {
       this._commandBindingByWindow = new WeakMap();
@@ -1041,6 +1068,9 @@ this.ncCalToolbar = class extends ExtensionAPI {
     }
 
     const onCommand = () => {
+      if (this._shutdownStarted) {
+        return;
+      }
       const click = this._clickContext(window);
       if (!click) {
         console.error("[ncCalToolbar] click ignored: could not resolve editor context");
@@ -1068,10 +1098,56 @@ this.ncCalToolbar = class extends ExtensionAPI {
   }
 
   /**
+   * Wait briefly for the native calendar item action button.
+   * @param {Window} window
+   */
+  _waitForCalendarItemActionButton(window) {
+    if (this._shutdownStarted) {
+      return;
+    }
+    if (!this._buttonWaitByWindow) {
+      this._buttonWaitByWindow = new WeakMap();
+    }
+    if (this._buttonWaitByWindow.has(window)) {
+      return;
+    }
+    const observer = new window.MutationObserver(() => {
+      this._clearCalendarItemActionButtonWait(window);
+      if (!this._shutdownStarted) {
+        this._ensureButton(window);
+      }
+    });
+    const onUnload = () => this._clearCalendarItemActionButtonWait(window);
+    observer.observe(window.document.documentElement, { childList: true, subtree: true });
+    window.addEventListener("unload", onUnload, true);
+    const timerId = window.setTimeout(
+      () => this._clearCalendarItemActionButtonWait(window),
+      5000
+    );
+    this._buttonWaitByWindow.set(window, { observer, onUnload, timerId });
+  }
+
+  /**
+   * Disconnect a pending button observer and its lifecycle hooks.
+   * @param {Window} window
+   */
+  _clearCalendarItemActionButtonWait(window) {
+    const state = this._buttonWaitByWindow?.get(window) || null;
+    if (!state) {
+      return;
+    }
+    this._buttonWaitByWindow.delete(window);
+    state.observer.disconnect();
+    window.clearTimeout(state.timerId);
+    window.removeEventListener("unload", state.onUnload, true);
+  }
+
+  /**
    * Remove button command listener from one window.
    * @param {Window} window
    */
   _removeButton(window) {
+    this._clearCalendarItemActionButtonWait(window);
     const binding = this._commandBindingByWindow?.get(window) || null;
     if (binding?.button && binding?.onCommand) {
       binding.button.removeEventListener("command", binding.onCommand);
@@ -1103,6 +1179,9 @@ this.ncCalToolbar = class extends ExtensionAPI {
    * @param {object} snapshot
    */
   _emitClicked(snapshot) {
+    if (this._shutdownStarted) {
+      return;
+    }
     for (const listener of this._clickedListeners || []) {
       try {
         listener(snapshot);
@@ -1136,6 +1215,9 @@ this.ncCalToolbar = class extends ExtensionAPI {
    * @param {object} info
    */
   _emitEditorClosed(info) {
+    if (this._shutdownStarted) {
+      return;
+    }
     for (const listener of this._editorClosedListeners || []) {
       try {
         listener(info);
@@ -1367,12 +1449,17 @@ this.ncCalToolbar = class extends ExtensionAPI {
    * @param {number} delayMs
    */
   _scheduleStartupRetry(delayMs) {
+    if (this._shutdownStarted) {
+      return;
+    }
     try {
       const timer = Cc["@mozilla.org/timer;1"].createInstance(Ci.nsITimer);
       timer.initWithCallback(() => {
         this._startupRetryTimer = null;
         this._startupRetryPending = false;
-        this._registerWindowListenerWhenReady();
+        if (!this._shutdownStarted) {
+          this._registerWindowListenerWhenReady();
+        }
       }, delayMs, Ci.nsITimer.TYPE_ONE_SHOT);
       this._startupRetryTimer = timer;
     } catch (error) {
@@ -1536,10 +1623,10 @@ this.ncCalToolbar = class extends ExtensionAPI {
    * Apply iCal property updates to the edited item.
    * @param {object} item
    * @param {object} properties
+   * @param {string[]} appliedNames
    * @returns {string[]}
    */
-  _applyProperties(item, properties) {
-    const names = [];
+  _applyProperties(item, properties, appliedNames = []) {
     for (const [name, value] of Object.entries(properties || {})) {
       if (!name || typeof name !== "string") {
         throw new ExtensionError("Property names must be non-empty strings");
@@ -1554,13 +1641,13 @@ this.ncCalToolbar = class extends ExtensionAPI {
         } else {
           item.setProperty(name, String(value));
         }
-        names.push(name);
+        appliedNames.push(name);
       } catch (error) {
         this._logError("property update failed", error, { property: name });
         throw new ExtensionError(`Could not update property ${name}`);
       }
     }
-    return names;
+    return appliedNames;
   }
 
   /**
@@ -1723,6 +1810,11 @@ this.ncCalToolbar = class extends ExtensionAPI {
                   html: String(item.descriptionHTML ?? ""),
                 }
               : null;
+          // Snapshot every native property before mutating editor fields. A
+          // native getter can fail independently of the writable UI controls;
+          // taking this snapshot first preserves updateCurrent's all-or-nothing
+          // contract without requiring a rollback from an incomplete snapshot.
+          const beforeProps = this._snapshotProperties(item, properties);
           const appliedFields = { title: false, location: false, description: false };
 
           try {
@@ -1770,10 +1862,9 @@ this.ncCalToolbar = class extends ExtensionAPI {
             throw error;
           }
 
-          const beforeProps = this._snapshotProperties(item, properties);
-          let appliedProps = [];
+          const appliedProps = [];
           try {
-            appliedProps = this._applyProperties(item, properties);
+            this._applyProperties(item, properties, appliedProps);
           } catch (error) {
             this._logError("updateCurrent property write failed", error, {
               editorId,

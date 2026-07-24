@@ -101,11 +101,11 @@ async function hydrateTalkWizardContextFromEditor(editorId, contextId){
     const getCurrentApi = browser.ncCalToolbar?.getCurrent;
     if (typeof getCurrentApi !== "function"){
       console.error("[NCBG] ncCalToolbar.getCurrent missing");
-      return;
+      return false;
     }
     const context = getCalendarWizardContext(contextId);
     if (!context){
-      return;
+      return false;
     }
     const currentSnapshot = await getCurrentApi({
       returnFormat: "ical",
@@ -113,7 +113,7 @@ async function hydrateTalkWizardContextFromEditor(editorId, contextId){
     });
     if (!currentSnapshot){
       console.error("[NCBG] ncCalToolbar.onClicked missing snapshot");
-      return;
+      return false;
     }
     mergeCalendarSnapshotIntoWizardContext(context, currentSnapshot);
     refreshCalendarWizardContextSnapshot(context);
@@ -127,8 +127,10 @@ async function hydrateTalkWizardContextFromEditor(editorId, contextId){
       calendarId: context.item?.calendarId || "",
       itemId: context.item?.id || ""
     });
+    return true;
   }catch(error){
     console.error("[NCBG] ncCalToolbar snapshot hydration failed", error);
+    return false;
   }
 }
 
@@ -147,111 +149,6 @@ browser.ncCalToolbar?.onTrackedEditorClosed?.addListener((event) => {
 // for stable editor context, snapshot, and editor-targeted write-back.
 
 /**
- * Merge and persist room metadata for a Talk token.
- * @param {string} token
- * @param {object} data
- * @returns {Promise<void>}
- */
-async function setRoomMeta(token, data = {}){
-  if (!token) return;
-  const next = Object.assign({}, ROOM_META[token], data, { updated: Date.now() });
-  ROOM_META[token] = next;
-  try{
-    await browser.storage.local.set({ [ROOM_META_KEY]: ROOM_META });
-  }catch(error){
-    console.error("[NCBG] setRoomMeta", error);
-  }
-}
-
-async function deleteRoomMeta(token){
-  if (!token || !ROOM_META[token]) return;
-  delete ROOM_META[token];
-  try{
-    await browser.storage.local.set({ [ROOM_META_KEY]: ROOM_META });
-  }catch(error){
-    console.error("[NCBG] deleteRoomMeta", error);
-  }
-}
-
-function getRoomMeta(token){
-  if (!token) return null;
-  return ROOM_META[token] || null;
-}
-
-function makeEventMapKey(calendarId, itemId){
-  if (!calendarId || !itemId){
-    return "";
-  }
-  return `${calendarId}::${itemId}`;
-}
-
-/**
- * Lookup a stored token mapping for a calendar item.
- * @param {string} calendarId
- * @param {string} itemId
- * @returns {{token:string,url?:string,source?:string,updated?:number}|null}
- */
-function getEventTokenEntry(calendarId, itemId){
-  const key = makeEventMapKey(calendarId, itemId);
-  if (!key) return null;
-  return EVENT_TOKEN_MAP[key] || null;
-}
-
-/**
- * Return true only for mappings written from NC Connector iCalendar metadata.
- * Legacy mappings without a source are not trusted because older builds also
- * stored tokens discovered from ordinary LOCATION/URL fields.
- * @param {{source?:string}|null} entry
- * @returns {boolean}
- */
-function isTrustedEventTokenEntry(entry){
-  return entry?.source === "x-nctalk";
-}
-
-/**
- * Persist the token mapping for a calendar item.
- * @param {string} calendarId
- * @param {string} itemId
- * @param {{token:string,url?:string,source?:string}} entry
- * @returns {Promise<void>}
- */
-async function setEventTokenEntry(calendarId, itemId, entry){
-  const key = makeEventMapKey(calendarId, itemId);
-  if (!key || !entry?.token){
-    return;
-  }
-  const next = Object.assign({}, EVENT_TOKEN_MAP, {
-    [key]: {
-      token: entry.token,
-      url: entry.url || "",
-      source: entry.source || "x-nctalk",
-      updated: Date.now()
-    }
-  });
-  EVENT_TOKEN_MAP = next;
-  try{
-    await browser.storage.local.set({ [EVENT_TOKEN_MAP_KEY]: next });
-  }catch(error){
-    console.error("[NCBG] event token map save failed", error);
-  }
-}
-
-async function removeEventTokenEntry(calendarId, itemId){
-  const key = makeEventMapKey(calendarId, itemId);
-  if (!key || !EVENT_TOKEN_MAP[key]){
-    return;
-  }
-  const next = Object.assign({}, EVENT_TOKEN_MAP);
-  delete next[key];
-  EVENT_TOKEN_MAP = next;
-  try{
-    await browser.storage.local.set({ [EVENT_TOKEN_MAP_KEY]: next });
-  }catch(error){
-    console.error("[NCBG] event token map remove failed", error);
-  }
-}
-
-/**
  * Build a standard runtime message error response and log the root cause.
  * @param {string} type
  * @param {any} error
@@ -259,15 +156,15 @@ async function removeEventTokenEntry(calendarId, itemId){
  */
 
 async function applyCalendarLobbyUpdate(payload = {}){
+  await BG_STATE_READY;
   const token = payload?.token;
   if (!token){
     return { ok:false, error: bgI18n("error_room_token_missing") };
   }
   const meta = getRoomMeta(token) || {};
-  const { user: currentUserRaw } = await NCCore.getOpts();
+  const { raw: currentUserRaw, normalized: currentUser } = await getCanonicalCalendarUserId();
   const delegateIdRaw = (payload?.delegateId ?? meta.delegateId ?? "").trim();
   const delegateTarget = delegateIdRaw.toLowerCase();
-  const currentUser = (currentUserRaw || "").trim().toLowerCase();
   const delegated = payload?.delegated === true || meta.delegated === true;
   const incomingStart = typeof payload?.startTimestamp === "number" ? payload.startTimestamp : null;
   const metaStart = typeof meta.startTimestamp === "number" ? meta.startTimestamp : null;
@@ -336,23 +233,31 @@ async function applyCalendarLobbyUpdate(payload = {}){
  * @returns {Promise<{ok:boolean,skipped?:boolean,reason?:string,error?:string,result?:object}>}
  */
 async function applyCalendarDelegation(payload = {}){
+  await BG_STATE_READY;
   const token = payload?.token;
   const delegateId = payload?.delegateId;
   if (!token || !delegateId){
     return { ok:false, error: bgI18n("error_delegation_data_missing") };
   }
-  const { user } = await NCCore.getOpts();
+  const { normalized: currentNorm } = await getCanonicalCalendarUserId();
   const targetNorm = String(delegateId).trim().toLowerCase();
-  const currentNorm = (user || "").trim().toLowerCase();
   if (targetNorm === currentNorm){
     L("calendar delegation skipped (same user)", { token: shortToken(token), delegate: delegateId });
-    return { ok:false, skipped:true, reason:"sameUser" };
+    return {
+      ok:true,
+      skipped:true,
+      reason:"sameUser",
+      result: {
+        leftSelf: false,
+        shouldLeaveSelf: false,
+        delegate: delegateId
+      }
+    };
   }
-  const result = await NCTalkCore.delegateRoomModerator({ token, newModerator: delegateId });
-  await setRoomMeta(token, {
-    delegated: true,
-    delegateId,
-    delegateName: payload?.delegateName || delegateId
+  const result = await NCTalkCore.delegateRoomModerator({
+    token,
+    newModerator: delegateId,
+    leaveSelf: false
   });
   return { ok:true, result };
 }
@@ -456,6 +361,23 @@ async function extractIcalAttendees(ical){
   return Array.from(seen.values());
 }
 
+function isRetryableTalkCalendarError(error){
+  const status = Number(error?.status) || 0;
+  return status === 0
+    || status === 408
+    || status === 423
+    || status === 429
+    || (status >= 500 && status <= 599);
+}
+
+function createCalendarRetryableError(message, cause, code){
+  const error = new Error(message);
+  error.cause = cause;
+  error.ncCalendarRetryable = true;
+  error.ncCalendarRetryCode = code || "";
+  return error;
+}
+
 /**
  * Add calendar attendees to a Talk room.
  * @param {{token:string,ical:string,addUsers?:boolean,addGuests?:boolean}} payload
@@ -476,12 +398,17 @@ async function addInviteesToTalkRoom({ token, ical, addUsers = true, addGuests =
   }
   let contacts = [];
   try{
-    if (typeof NCTalkCore?.getSystemAddressbookContacts === "function"){
-      contacts = await NCTalkCore.getSystemAddressbookContacts(false);
+    if (typeof NCTalkCore?.getSystemAddressbookContacts !== "function"){
+      throw new Error("Talk addressbook API unavailable");
     }
+    contacts = await NCTalkCore.getSystemAddressbookContacts(false);
   }catch(error){
     console.error("[NCBG] system addressbook lookup failed", error);
-    contacts = [];
+    throw createCalendarRetryableError(
+      "Talk participant classification failed because the system addressbook is unavailable",
+      error,
+      "addressbook"
+    );
   }
   const emailToUserId = new Map();
   for (const contact of contacts){
@@ -493,6 +420,7 @@ async function addInviteesToTalkRoom({ token, ical, addUsers = true, addGuests =
   }
   let added = 0;
   let failed = 0;
+  let retryableFailed = 0;
   let users = 0;
   let emails = 0;
   let skippedUsers = 0;
@@ -520,6 +448,9 @@ async function addInviteesToTalkRoom({ token, ical, addUsers = true, addGuests =
       added += 1;
     }catch(error){
       failed += 1;
+      if (isRetryableTalkCalendarError(error)){
+        retryableFailed += 1;
+      }
       console.error("[NCBG] add participant failed", {
         actor: actorId,
         source,
@@ -539,7 +470,13 @@ async function addInviteesToTalkRoom({ token, ical, addUsers = true, addGuests =
     added,
     failed
   });
-  return { ok: failed === 0, total: attendees.length, added, failed };
+  return {
+    ok: failed === 0,
+    total: attendees.length,
+    added,
+    failed,
+    retryableFailed
+  };
 }
 
 function parseBooleanProp(value){
@@ -689,6 +626,7 @@ async function updateCalendarItemProps(item, updates){
  */
 async function handleCalendarItemUpsert(item){
   try{
+    await BG_STATE_READY;
     if (!item || item.type !== "event"){
       return;
     }
@@ -708,6 +646,11 @@ async function handleCalendarItemUpsert(item){
     // Only a calendar event carrying the connector token proves that the
     // editor contents were accepted and stored by Thunderbird.
     removeRoomCleanupEntry(meta.token, "calendar_item_persisted");
+    await setEventTokenEntry(item.calendarId, item.id, {
+      token: meta.token,
+      url: meta.url,
+      source: "x-nctalk"
+    });
     const persistedMeta = getRoomMeta(meta.token) || {};
     if (meta.lobbyEnabled == null && typeof persistedMeta.lobbyEnabled === "boolean"){
       meta.lobbyEnabled = persistedMeta.lobbyEnabled;
@@ -756,8 +699,6 @@ async function handleCalendarItemUpsert(item){
         meta.startTimestamp = null;
       }
     }
-    await setEventTokenEntry(item.calendarId, item.id, { token: meta.token, url: meta.url, source: "x-nctalk" });
-
     if (meta.lobbyEnabled !== false){
       if (typeof meta.startTimestamp === "number"){
         await applyCalendarLobbyUpdate({
@@ -801,8 +742,7 @@ async function handleCalendarItemUpsert(item){
         let canSync = true;
         const delegateIdRaw = (meta.delegateId || "").trim();
         if (meta.delegated === true && delegateIdRaw){
-          const { user: currentUserRaw } = await NCCore.getOpts();
-          const currentUser = (currentUserRaw || "").trim().toLowerCase();
+          const { raw: currentUserRaw, normalized: currentUser } = await getCanonicalCalendarUserId();
           const delegateId = delegateIdRaw.toLowerCase();
           if (currentUser && delegateId && currentUser !== delegateId){
             // After delegation the current user may no longer moderate the room.
@@ -816,49 +756,85 @@ async function handleCalendarItemUpsert(item){
           }
         }
         if (canSync){
-          if (INVITEE_SYNC_IN_FLIGHT.has(meta.token)){
-            L("invitee sync skipped (inflight)", { token: shortToken(meta.token) });
-          }else{
-            INVITEE_SYNC_IN_FLIGHT.add(meta.token);
-            try{
-              await addInviteesToTalkRoom({
-                token: meta.token,
-                ical: icalPayload,
-                addUsers: meta.addUsers === true,
-                addGuests: meta.addGuests === true
-              });
-            }finally{
-              INVITEE_SYNC_IN_FLIGHT.delete(meta.token);
+          const inviteeResult = await addInviteesToTalkRoom({
+            token: meta.token,
+            ical: icalPayload,
+            addUsers: meta.addUsers === true,
+            addGuests: meta.addGuests === true
+          });
+          if (!inviteeResult.ok){
+            const message =
+              `Talk invitee synchronization failed for ${inviteeResult.failed} participant(s)`;
+            if (inviteeResult.retryableFailed > 0){
+              throw createCalendarRetryableError(message, null, "talk_participant");
             }
+            throw new Error(message);
           }
         }
       }catch(error){
         console.error("[NCBG] add invitees failed", error);
+        throw error;
       }
     }
 
     if (meta.delegateId && meta.delegated !== true){
       if (meta.delegateReady === true){
-        if (DELEGATION_IN_FLIGHT.has(meta.token)){
-          L("calendar delegation skipped (inflight)", { token: shortToken(meta.token) });
-        }else{
-          DELEGATION_IN_FLIGHT.add(meta.token);
-          try{
-            const result = await applyCalendarDelegation({
-              token: meta.token,
+        try{
+          const result = await applyCalendarDelegation({
+            token: meta.token,
+            delegateId: meta.delegateId,
+            delegateName: meta.delegateName || meta.delegateId
+          });
+          if (result?.ok){
+            const currentDepartureMeta = getRoomMeta(meta.token) || {};
+            const shouldLeaveSelf = result.result?.shouldLeaveSelf === true;
+            const departureGeneration =
+              (Number(currentDepartureMeta.departureRetryGeneration) || 0) + 1;
+            await setRoomMeta(meta.token, {
               delegateId: meta.delegateId,
-              delegateName: meta.delegateName || meta.delegateId
+              delegateName: meta.delegateName || meta.delegateId,
+              departurePrepared: true,
+              departureShouldLeaveSelf: shouldLeaveSelf,
+              departurePending: false,
+              departureRetryGeneration: departureGeneration,
+              departureRetryAttempts: 0,
+              departureNextAttemptAt: 0,
+              departureRetryExhausted: false,
+              departureCompleted: false,
+              departureCalendarId: String(item.calendarId || ""),
+              departureItemId: String(item.id || "")
             });
-            if (result?.ok){
-              await updateCalendarItemProps(item, {
-                "X-NCTALK-DELEGATED": "TRUE",
-                "X-NCTALK-DELEGATE-READY": null
+            const localUpdated = await updateCalendarItemProps(item, {
+              "X-NCTALK-DELEGATED": "TRUE",
+              "X-NCTALK-DELEGATE-READY": null
+            });
+            if (!localUpdated){
+              console.error("[NCBG] calendar delegation retained owner: local event update failed", {
+                token: shortToken(meta.token)
               });
+              throw createCalendarRetryableError(
+                "Calendar delegation write-back failed.",
+                null,
+                "calendar_writeback"
+              );
             }
-          }catch(error){
-            console.error("[NCBG] calendar delegation failed", error);
-          }finally{
-            DELEGATION_IN_FLIGHT.delete(meta.token);
+            await activatePreparedCalendarDeparture({
+              token: meta.token,
+              generation: departureGeneration,
+              shouldLeaveSelf
+            });
+          }
+        }catch(error){
+          console.error("[NCBG] calendar delegation failed", error);
+          if (error?.ncCalendarRetryable === true){
+            throw error;
+          }
+          if (isRetryableTalkCalendarError(error)){
+            throw createCalendarRetryableError(
+              error?.message || "Calendar delegation failed.",
+              error,
+              "talk_delegation"
+            );
           }
         }
       }else{
@@ -867,9 +843,23 @@ async function handleCalendarItemUpsert(item){
           delegate: meta.delegateId || ""
         });
       }
+    }else if (meta.delegated === true && meta.delegateId){
+      if (persistedMeta.departurePending === true){
+        ensureCalendarDepartureRetry(meta.token);
+      }else if (persistedMeta.departurePrepared === true){
+        await activatePreparedCalendarDeparture({
+          token: meta.token,
+          generation: Math.max(
+            0,
+            Number(persistedMeta.departureRetryGeneration) || 0
+          ),
+          shouldLeaveSelf: persistedMeta.departureShouldLeaveSelf === true
+        });
+      }
     }
   }catch(error){
     console.error("[NCBG] calendar item upsert failed", error);
+    throw error;
   }
 }
 
@@ -915,6 +905,7 @@ async function isSavedEventRoomDeleteEnabled(){
  */
 async function handleCalendarItemRemoved(calendarId, id){
   try{
+    await BG_STATE_READY;
     const entry = getEventTokenEntry(calendarId, id);
     if (!entry?.token){
       return;
@@ -935,44 +926,261 @@ async function handleCalendarItemRemoved(calendarId, id){
       return;
     }
     const token = entry.token;
+    if (hasTrustedEventTokenReferenceExcept(token, calendarId, id)){
+      await removeEventTokenEntry(calendarId, id);
+      L("calendar item removed: room retained by another event mapping", {
+        token: shortToken(token),
+        calendarId,
+        itemId: id
+      });
+      return;
+    }
     const meta = getRoomMeta(token) || {};
     const delegateIdRaw = typeof meta.delegateId === "string" ? meta.delegateId.trim() : "";
     if (meta.delegated === true && delegateIdRaw){
       try{
-        const { user: currentUserRaw } = await NCCore.getOpts();
-        const currentUser = (currentUserRaw || "").trim().toLowerCase();
+        const { raw: currentUserRaw, normalized: currentUser } = await getCanonicalCalendarUserId();
         const delegateId = delegateIdRaw.toLowerCase();
-        if (currentUser && delegateId && currentUser !== delegateId){
+        if (!currentUser){
+          throw new Error("Canonical Nextcloud user id is unavailable.");
+        }
+        if (delegateId && currentUser !== delegateId){
+          await removeEventTokenEntry(calendarId, id);
           L("calendar item removed: skip room delete (delegated)", {
             token: shortToken(token),
             delegate: delegateIdRaw,
             currentUser: currentUserRaw || ""
           });
           await deleteRoomMeta(token);
-          await removeEventTokenEntry(calendarId, id);
           return;
         }
       }catch(error){
         console.error("[NCBG] delegated room ownership check failed", error);
+        throw createCalendarRetryableError(
+          "Delegated room ownership could not be verified.",
+          error,
+          "room_delete_owner"
+        );
       }
     }
-
-    try{
-      await NCTalkCore.deleteTalkRoom({ token });
-    }catch(error){
-      const msg = error?.message || String(error);
-      if (/\b403\b/.test(msg)){
-        L("calendar item removed: room delete forbidden", { token: shortToken(token) });
-      }else{
-        console.error("[NCBG] calendar item removed: room delete failed", error);
-      }
-    }finally{
-      await deleteRoomMeta(token);
-      await removeEventTokenEntry(calendarId, id);
-    }
+    // Persist the deletion intent before dropping the only durable link from
+    // the calendar item to its Talk token. If storage rejects the write, the
+    // operation queue can retry with the original mapping still intact.
+    await armTalkRoomDeleteRetry({
+      token,
+      reason: "saved_event_removed",
+      delayMs: ROOM_CLEANUP_DELETE_DELAY_MS,
+      calendarId,
+      itemId: id
+    });
+    await removeEventTokenEntry(calendarId, id);
   }catch(error){
     console.error("[NCBG] calendar item removed handler failed", error);
+    if (error?.ncCalendarRetryable === true){
+      throw error;
+    }
+    if (isRetryableTalkCalendarError(error)){
+      throw createCalendarRetryableError(
+        error?.message || "Calendar item removal cleanup failed.",
+        error,
+        "room_delete_schedule"
+      );
+    }
+    throw error;
   }
+}
+
+const CALENDAR_OPERATION_QUEUE = [];
+const CALENDAR_PENDING_OPERATION_BY_EVENT_KEY = new Map();
+const CALENDAR_OPERATION_RETRY_BY_KEY = new Map();
+const CALENDAR_EVENT_GENERATION_BY_KEY = new Map();
+const CALENDAR_OPERATION_RETRY_DELAYS_MS = [2000, 5000, 10000];
+let CALENDAR_OPERATION_QUEUE_RUNNING = false;
+
+function makeCalendarOperationKey(kind, calendarId, itemId){
+  const eventKey = makeEventMapKey(calendarId, itemId);
+  return eventKey ? `${kind}:${eventKey}` : "";
+}
+
+function bumpCalendarEventGeneration(eventKey){
+  if (!eventKey){
+    return 0;
+  }
+  const generation = (Number(CALENDAR_EVENT_GENERATION_BY_KEY.get(eventKey)) || 0) + 1;
+  CALENDAR_EVENT_GENERATION_BY_KEY.set(eventKey, generation);
+  return generation;
+}
+
+function isCurrentCalendarEventGeneration(eventKey, generation){
+  return !!eventKey
+    && Number(generation) > 0
+    && CALENDAR_EVENT_GENERATION_BY_KEY.get(eventKey) === generation;
+}
+
+function cancelCalendarOperationRetry(eventKey, reason){
+  const retry = eventKey ? CALENDAR_OPERATION_RETRY_BY_KEY.get(eventKey) : null;
+  if (!retry){
+    return;
+  }
+  clearTimeout(retry.timerId);
+  CALENDAR_OPERATION_RETRY_BY_KEY.delete(eventKey);
+  L("calendar operation retry canceled", {
+    kind: retry.kind || "",
+    key: retry.key || eventKey,
+    reason: reason || ""
+  });
+}
+
+function scheduleCalendarOperationRetry(entry, error){
+  if (
+    !entry.eventKey
+    || !isCurrentCalendarEventGeneration(entry.eventKey, entry.generation)
+    || CALENDAR_PENDING_OPERATION_BY_EVENT_KEY.has(entry.eventKey)
+  ){
+    return false;
+  }
+  const attempt = (Number(entry.retryAttempt) || 0) + 1;
+  if (attempt > CALENDAR_OPERATION_RETRY_DELAYS_MS.length){
+    L("calendar operation retries exhausted", {
+      kind: entry.kind,
+      key: entry.key,
+      attempts: attempt - 1,
+      code: error?.ncCalendarRetryCode || ""
+    });
+    return false;
+  }
+  cancelCalendarOperationRetry(entry.eventKey, "reschedule");
+  const delayMs = CALENDAR_OPERATION_RETRY_DELAYS_MS[attempt - 1];
+  const timerId = setTimeout(() => {
+    CALENDAR_OPERATION_RETRY_BY_KEY.delete(entry.eventKey);
+    if (!isCurrentCalendarEventGeneration(entry.eventKey, entry.generation)){
+      L("calendar operation retry skipped (superseded)", {
+        kind: entry.kind,
+        key: entry.key,
+        generation: entry.generation
+      });
+      return;
+    }
+    void enqueueCalendarOperation(entry.kind, entry.payload, {
+      isRetry: true,
+      retryAttempt: attempt,
+      generation: entry.generation
+    }).catch((retryError) => {
+      console.error("[NCBG] calendar operation retry failed", retryError);
+    });
+  }, delayMs);
+  CALENDAR_OPERATION_RETRY_BY_KEY.set(entry.eventKey, {
+    timerId,
+    attempt,
+    kind: entry.kind,
+    payload: entry.payload,
+    key: entry.key,
+    generation: entry.generation
+  });
+  L("calendar operation retry scheduled", {
+    kind: entry.kind,
+    key: entry.key,
+    attempt,
+    delayMs,
+    code: error?.ncCalendarRetryCode || ""
+  });
+  return true;
+}
+
+function enqueueCalendarOperation(kind, payload, options = {}){
+  const calendarId = payload?.calendarId;
+  const itemId = payload?.id;
+  const eventKey = makeEventMapKey(calendarId, itemId);
+  const key = makeCalendarOperationKey(kind, calendarId, itemId);
+  const isRetry = options.isRetry === true;
+  const generation = isRetry
+    ? Number(options.generation) || 0
+    : bumpCalendarEventGeneration(eventKey);
+  if (isRetry && !isCurrentCalendarEventGeneration(eventKey, generation)){
+    L("calendar operation retry ignored (superseded)", {
+      kind,
+      calendarId,
+      itemId,
+      generation
+    });
+    return Promise.resolve();
+  }
+  if (!isRetry){
+    cancelCalendarOperationRetry(
+      eventKey,
+      kind === "remove" ? "item_removed" : "newer_upsert"
+    );
+  }
+  return new Promise((resolve, reject) => {
+    const pending = eventKey
+      ? CALENDAR_PENDING_OPERATION_BY_EVENT_KEY.get(eventKey)
+      : null;
+    if (pending?.kind === kind){
+      pending.payload = payload;
+      pending.generation = generation;
+      if (!isRetry){
+        pending.retryAttempt = 0;
+      }
+      pending.waiters.push({ resolve, reject });
+      L("calendar operation coalesced", { kind, calendarId, itemId });
+      return;
+    }
+    const entry = {
+      kind,
+      key,
+      eventKey,
+      generation,
+      payload,
+      retryAttempt: Number(options.retryAttempt) || 0,
+      waiters: [{ resolve, reject }]
+    };
+    CALENDAR_OPERATION_QUEUE.push(entry);
+    if (eventKey){
+      CALENDAR_PENDING_OPERATION_BY_EVENT_KEY.set(eventKey, entry);
+    }
+    void drainCalendarOperationQueue();
+  });
+}
+
+async function drainCalendarOperationQueue(){
+  if (CALENDAR_OPERATION_QUEUE_RUNNING){
+    return;
+  }
+  CALENDAR_OPERATION_QUEUE_RUNNING = true;
+  try{
+    while (CALENDAR_OPERATION_QUEUE.length){
+      const entry = CALENDAR_OPERATION_QUEUE.shift();
+      if (
+        entry.eventKey
+        && CALENDAR_PENDING_OPERATION_BY_EVENT_KEY.get(entry.eventKey) === entry
+      ){
+        CALENDAR_PENDING_OPERATION_BY_EVENT_KEY.delete(entry.eventKey);
+      }
+      try{
+        if (entry.kind === "upsert"){
+          await handleCalendarItemUpsert(entry.payload);
+        }else{
+          await handleCalendarItemRemoved(entry.payload.calendarId, entry.payload.id);
+        }
+        entry.waiters.forEach(({ resolve }) => resolve());
+      }catch(error){
+        if (error?.ncCalendarRetryable === true){
+          scheduleCalendarOperationRetry(entry, error);
+        }
+        entry.waiters.forEach(({ reject }) => reject(error));
+      }
+    }
+  }finally{
+    CALENDAR_OPERATION_QUEUE_RUNNING = false;
+  }
+}
+
+function queueCalendarItemUpsert(item){
+  return enqueueCalendarOperation("upsert", item || {});
+}
+
+function queueCalendarItemRemoved(calendarId, id){
+  return enqueueCalendarOperation("remove", { calendarId, id });
 }
 
 /**
@@ -983,19 +1191,23 @@ function startCalendarMonitor(){
     console.warn("[NCBG] calendar experiment not available");
     return;
   }
-  browser.calendar.items.onCreated.addListener(handleCalendarItemUpsert, { returnFormat: "ical" });
-  browser.calendar.items.onUpdated.addListener(handleCalendarItemUpsert, { returnFormat: "ical" });
-  browser.calendar.items.onRemoved.addListener(handleCalendarItemRemoved);
+  browser.calendar.items.onCreated.addListener(queueCalendarItemUpsert, { returnFormat: "ical" });
+  browser.calendar.items.onUpdated.addListener(queueCalendarItemUpsert, { returnFormat: "ical" });
+  browser.calendar.items.onRemoved.addListener(queueCalendarItemRemoved);
 }
 
 // *** IMPORTANT: initialize calendar monitor on startup ***
 /**
  * Register persisted calendar item monitoring once at background startup.
  */
-(async () => {
-  try{
-    startCalendarMonitor();
-  }catch(error){
-    console.error("[NCBG] calendar monitor init error", error);
-  }
-})();
+try{
+  startCalendarMonitor();
+  void BG_STATE_READY
+    .then(() => Promise.all([
+      resumeTalkRoomDeleteRetries(),
+      resumeCalendarDepartureRetries()
+    ]))
+    .catch((error) => console.error("[NCBG] calendar retry init failed", error));
+}catch(error){
+  console.error("[NCBG] calendar monitor init error", error);
+}
