@@ -672,6 +672,7 @@ Entry point:
 
 Responsibilities:
 - The sharing wizard collects files and starts a named `runtime.connect()` Port.
+- Before manual mode leaves step 1, it asks background to `PROPFIND` the exact share root and remains on step 1 when that root already exists.
 - `modules/bgFileLinkUpload.js` owns the upload, abort controller, share-folder cleanup handoff, and result delivery for the lifetime of that Port.
 - Shared FileLink modules perform DAV/OCS work in the background context.
 - Public-link share creation follows the documented OCS rules: `label` is sent during create, and mutable metadata such as `note` is updated later via form-encoded OCS update arguments.
@@ -714,7 +715,8 @@ Attachment mode specifics:
 - Upload uniqueness behavior:
   - local duplicate target paths are resolved before upload (rename prompt)
   - no per-file remote preflight checks are executed for queue entries in a newly reserved share folder
-  - manual mode stops on an existing share-folder name
+  - manual mode probes its exact share root before leaving step 1 and stops there on an existing folder
+  - upload still reserves the root atomically because the target can appear after the preflight
   - attachment mode tries its fixed numbered folder-name candidates
 - Share cleanup rules:
   - every created share first has background-owned wizard cleanup; finalize transfers that exact ownership to the compose draft
@@ -880,6 +882,8 @@ Directory planning creates:
 Direct PUT sends `X-NC-WebDAV-AutoMkcol: 1`, using the Nextcloud 32 header spelling. This lets Nextcloud create a missing path for an individual Direct destination without one `MKCOL` per unique single-file directory.
 
 #### Root reservation and collision handling
+
+Manual wizard mode sends `sharing:checkFolderExists` before leaving step 1. Background resolves the configured login to the canonical Nextcloud UID, builds the target through the same `modules/ncSharing.js` path/date/name rules used by upload, and probes that target with a depth-zero DAV `PROPFIND`. A present target keeps the wizard on step 1 with the localized collision message. Attachment automation skips this preflight because numbered target selection belongs to its upload flow.
 
 `modules/fileLinkUpload.js` reserves the share root in two steps:
 
@@ -1072,6 +1076,7 @@ Talk wizard:
 - `talk:releaseContext`
 
 Sharing wizard:
+- `sharing:checkFolderExists`
 - `sharing:getLaunchContext`
 - `sharing:resolveAttachmentPrompt`
 - `sharing:checkAttachmentAutomationAllowed`

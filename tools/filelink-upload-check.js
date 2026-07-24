@@ -205,10 +205,35 @@ async function run(){
 
   const wizardSource = readText("ui/nextcloudSharingWizard.js");
   const sharingSource = readText("modules/ncSharing.js");
+  const routerSource = readText("modules/bgRouter.js");
   const uploadSource = readText("modules/fileLinkUpload.js");
   assert(wizardSource.includes("browser.runtime.connect({ name: 'nc-filelink-upload' })"), "Wizard must hand FileLink work to the background");
   assert(!wizardSource.includes("NCSharing.createFileLink({"), "Wizard must not own network transfers");
-  assert(!wizardSource.includes("checkShareFolderAvailability"), "Root PROPFIND preflight must be removed");
+  assert(
+    wizardSource.includes('type: "sharing:checkFolderExists"'),
+    "Wizard step one must request a background folder collision preflight"
+  );
+  assert(
+    /if\s*\(!\(await preflightShareFolder\(\)\)\)\s*\{\s*return;\s*\}/.test(wizardSource),
+    "Wizard step one must not advance when folder preflight rejects the target"
+  );
+  assert(
+    /if\s*\(response\.exists\)\s*\{\s*setMessage\(i18n\('sharing_error_folder_exists'\), 'error'\);\s*return false;\s*\}/.test(wizardSource),
+    "Existing manual targets must keep the localized collision error in step one"
+  );
+  assert(
+    !wizardSource.includes("NCFileLinkDav.probePath"),
+    "Wizard must not perform DAV network access directly"
+  );
+  assert(
+    routerSource.includes('if (msg.type === "sharing:checkFolderExists")'),
+    "Background router must own the wizard folder collision preflight"
+  );
+  assert(
+    sharingSource.includes("async function checkFileLinkFolderExists(request)")
+      && sharingSource.includes("NCFileLinkDav.probePath({"),
+    "Manual folder collision preflight must reuse the central DAV probe"
+  );
   assert(!sharingSource.includes("publicUpload\", \"true"), "Share creation must not add a second permissions mode");
   assert(uploadSource.includes("NCFileLinkUploadPolicy.MAX_PARALLEL_REQUESTS"), "Transfer pool must use the shared worker limit");
 

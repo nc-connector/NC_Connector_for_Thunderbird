@@ -83,6 +83,7 @@
       attachmentLinkTarget: NCSharingStorage.DEFAULT_ATTACHMENT_LINK_TARGET
     },
     passwordPolicy: null,
+    shareFolderCheckInProgress: false,
     uploadInProgress: false,
     uploadCompleted: false,
     uploadResult: null,
@@ -320,6 +321,7 @@
     dom.shareName.addEventListener('input', () => {
       resetShareContext();
       invalidateUpload();
+      setMessage('');
       log('shareName changed', dom.shareName.value);
     });
     [dom.permCreate, dom.permWrite, dom.permDelete].forEach((checkbox) => {
@@ -905,7 +907,9 @@
   }
 
   function updateButtons(){
-    const busy = state.uploadInProgress || state.finalizeInProgress;
+    const busy = state.shareFolderCheckInProgress
+      || state.uploadInProgress
+      || state.finalizeInProgress;
     dom.cancelBtn.disabled = state.finalizeInProgress;
     if (state.mode === "attachments"){
       dom.backBtn.style.visibility = 'hidden';
@@ -939,12 +943,15 @@
     if (state.mode === "attachments"){
       return;
     }
-    if (state.uploadInProgress){
+    if (state.shareFolderCheckInProgress || state.uploadInProgress){
       return;
     }
     if (state.currentStep === 1){
       if (!getSanitizedShareName()){
         setMessage(i18n('sharing_message_invalid_share_name'), 'error');
+        return;
+      }
+      if (!(await preflightShareFolder())){
         return;
       }
     }
@@ -963,6 +970,57 @@
     }
     if (state.currentStep < TOTAL_STEPS){
       updateStep(state.currentStep + 1);
+    }
+  }
+
+  /**
+   * Check the exact manual share target before leaving wizard step one.
+   * The upload path repeats an atomic reservation to close the race window.
+   * @returns {Promise<boolean>}
+   */
+  async function preflightShareFolder(){
+    const shareContext = getShareContext();
+    if (!shareContext){
+      setMessage(i18n('sharing_message_invalid_share_name'), 'error');
+      return false;
+    }
+    const snapshot = {
+      shareName: shareContext.sanitizedName,
+      shareDate: shareContext.shareDate.toISOString(),
+      basePath: state.basePath
+    };
+    state.shareFolderCheckInProgress = true;
+    updateButtons();
+    try{
+      const response = await browser.runtime.sendMessage({
+        type: "sharing:checkFolderExists",
+        payload: snapshot
+      });
+      const currentContext = getShareContext();
+      const inputUnchanged = currentContext
+        && currentContext.sanitizedName === snapshot.shareName
+        && currentContext.shareDate.toISOString() === snapshot.shareDate
+        && state.basePath === snapshot.basePath;
+      if (!inputUnchanged){
+        return false;
+      }
+      if (!response?.ok){
+        setMessage(response?.error || i18n('sharing_status_error'), 'error');
+        return false;
+      }
+      if (response.exists){
+        setMessage(i18n('sharing_error_folder_exists'), 'error');
+        return false;
+      }
+      setMessage('');
+      return true;
+    }catch(error){
+      logUiError("share folder preflight failed", error);
+      setMessage(error?.message || i18n('sharing_status_error'), 'error');
+      return false;
+    }finally{
+      state.shareFolderCheckInProgress = false;
+      updateButtons();
     }
   }
 

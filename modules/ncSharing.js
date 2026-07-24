@@ -891,16 +891,13 @@
   }
 
   /**
-   * Create a Nextcloud share, upload files, and return HTML output.
+   * Resolve the authenticated DAV target shared by wizard preflight and upload.
+   * @param {object} opts
    * @param {object} request
-   * @returns {Promise<{shareUrl:string, shareInfo:object}>}
+   * @param {{requireCapabilities?:boolean}} options
+   * @returns {Promise<object>}
    */
-  async function createFileLink(request){
-    const opts = await NCCore.getOpts();
-    logDebug(opts, "createFileLink:start", {
-      shareName: request?.shareName || "",
-      files: Array.isArray(request?.files) ? request.files.length : 0
-    });
+  async function resolveFileLinkDavContext(opts, request, { requireCapabilities = false } = {}){
     if (!opts.baseUrl || !opts.user || !opts.appPass){
       throw new Error(i18n("error_credentials_missing"));
     }
@@ -911,7 +908,9 @@
       ...opts,
       signal: request?.signal || null
     };
-    const capabilities = await NCCore.getRequiredCapabilities(requestOptions);
+    const capabilities = requireCapabilities
+      ? await NCCore.getRequiredCapabilities(requestOptions)
+      : null;
     const userId = await NCCore.getCurrentUserId(requestOptions);
     const rawBasePath = request?.basePath && request.basePath.trim()
       ? request.basePath.trim()
@@ -921,9 +920,68 @@
     const shareDate = request?.shareDate ? new Date(request.shareDate) : new Date();
     const authHeader = NCOcs.buildAuthHeader(opts.user, opts.appPass);
     const davBase = opts.baseUrl.replace(/\/+$/, "");
-    const davRoot = `${davBase}/remote.php/dav/files/${encodeURIComponent(userId)}`;
-    const uploadRoot = `${davBase}/remote.php/dav/uploads/${encodeURIComponent(userId)}`;
-    const bulkUrl = `${davBase}/remote.php/dav/bulk`;
+    return {
+      capabilities,
+      basePathSetting,
+      shareDate,
+      authHeader,
+      davRoot: `${davBase}/remote.php/dav/files/${encodeURIComponent(userId)}`,
+      uploadRoot: `${davBase}/remote.php/dav/uploads/${encodeURIComponent(userId)}`,
+      bulkUrl: `${davBase}/remote.php/dav/bulk`
+    };
+  }
+
+  /**
+   * Check whether the exact manual FileLink target already exists.
+   * Upload still reserves the target atomically to protect against races.
+   * @param {object} request
+   * @returns {Promise<boolean>}
+   */
+  async function checkFileLinkFolderExists(request){
+    const opts = await NCCore.getOpts();
+    const context = await resolveFileLinkDavContext(opts, request);
+    const folderInfo = buildShareFolderInfo(
+      context.basePathSetting,
+      request?.shareName,
+      context.shareDate
+    );
+    logDebug(opts, "folders:preflight", {
+      relativeFolder: folderInfo.relativeFolder
+    });
+    const probe = await NCFileLinkDav.probePath({
+      url: NCFileLinkDav.buildFileUrl(context.davRoot, folderInfo.relativeFolder),
+      authHeader: context.authHeader,
+      signal: request?.signal || null,
+      log: (...args) => logDebug(opts, ...args)
+    });
+    return probe.exists;
+  }
+
+  /**
+   * Create a Nextcloud share, upload files, and return HTML output.
+   * @param {object} request
+   * @returns {Promise<{shareUrl:string, shareInfo:object}>}
+   */
+  async function createFileLink(request){
+    const opts = await NCCore.getOpts();
+    logDebug(opts, "createFileLink:start", {
+      shareName: request?.shareName || "",
+      files: Array.isArray(request?.files) ? request.files.length : 0
+    });
+    const davContext = await resolveFileLinkDavContext(
+      opts,
+      request,
+      { requireCapabilities: true }
+    );
+    const {
+      capabilities,
+      basePathSetting,
+      shareDate,
+      authHeader,
+      davRoot,
+      uploadRoot,
+      bulkUrl
+    } = davContext;
     const noteEnabled = !!request?.noteEnabled;
     const noteValue = noteEnabled ? String(request?.note || "").trim() : "";
     const statusCallback = typeof request?.onUploadStatus === "function" ? request.onUploadStatus : null;
@@ -1122,6 +1180,7 @@
   const api = {
     DEFAULT_BASE_PATH,
     createFileLink,
+    checkFileLinkFolderExists,
     buildHtmlBlock,
     buildPlainTextBlock,
     getFileLinkBasePath,

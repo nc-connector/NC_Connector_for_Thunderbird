@@ -78,6 +78,7 @@ function createCoreHarness(responses, { backgroundLogger = true } = {}){
 function createSharingHarness(){
   const requests = [];
   const transferCalls = [];
+  const davProbes = [];
   const credentials = {
     baseUrl: "https://cloud.example.test/nextcloud",
     user: "login@example.test",
@@ -189,6 +190,10 @@ function createSharingHarness(){
         }
       },
       buildFileUrl: (root, path) => `${root}/${path}`,
+      probePath: async (options) => {
+        davProbes.push(options);
+        return { exists: false, collection: false, contentLength: null };
+      },
       deleteBestEffort: async () => true,
       deleteRemotePath: async () => true
     },
@@ -213,7 +218,7 @@ function createSharingHarness(){
   loadScript("modules/shareTemplateContract.js", context);
   loadScript("modules/textUtils.js", context);
   loadScript("modules/ncSharing.js", context);
-  return { context, requests, transferCalls, credentials };
+  return { context, requests, transferCalls, davProbes, credentials };
 }
 
 async function expectRejected(callback, label){
@@ -401,6 +406,36 @@ async function run(){
   assert(missingResult.ok === false && missingResult.code === "identity", "Missing ocs.data.id must fail without falling back to email");
 
   const sharing = createSharingHarness();
+  const preflightRequest = {
+    shareName: "Customer",
+    basePath: "Team Shares",
+    shareDate: new Date("2026-07-16T12:00:00Z").toISOString()
+  };
+  const folderExists = await sharing.context.NCSharing.checkFileLinkFolderExists(
+    preflightRequest
+  );
+  assert(folderExists === false, "A missing manual share folder must pass preflight");
+  assert(sharing.davProbes.length === 1, "Manual share preflight should issue one DAV probe");
+  assert(
+    sharing.davProbes[0].url.endsWith(
+      "/remote.php/dav/files/canonical-user/Team Shares/20260716_Customer"
+    ),
+    "Manual share preflight must probe the same canonical UID, base path, date, and sanitized name used by upload"
+  );
+  assert(
+    sharing.davProbes[0].authHeader
+      === "Basic " + Buffer.from("login@example.test:app-password").toString("base64"),
+    "Manual share preflight must authenticate with the configured login"
+  );
+  sharing.context.NCFileLinkDav.probePath = async () => ({
+    exists: true,
+    collection: true,
+    contentLength: null
+  });
+  assert(
+    await sharing.context.NCSharing.checkFileLinkFolderExists(preflightRequest),
+    "An existing manual share folder must fail wizard preflight"
+  );
   await sharing.context.NCSharing.createFileLink({
     shareName: "Customer",
     basePath: "Team Shares",

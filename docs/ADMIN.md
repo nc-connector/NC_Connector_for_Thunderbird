@@ -427,9 +427,9 @@ Free or extend storage, then start the upload again. Do not instruct users to ke
 
 ### 8.5 Folder name collision
 
-Manual sharing stops when the target share folder already exists. Choose another share name. Attachment automation may use the next numbered name.
+When a user selects **Next** in the first step of manual sharing, NC Connector checks the exact target folder. If it already exists, the wizard stays on the first step and asks for another share name. Attachment automation may use the next numbered name.
 
-A collision check and folder reservation happen on the server. Avoid deleting an existing folder solely because its name matches; it may belong to an earlier sent message.
+The upload repeats the collision decision with an atomic server-side folder reservation. This protects against a folder being created after the first-step check. Avoid deleting an existing folder solely because its name matches; it may belong to an earlier sent message.
 
 ### 8.6 Cleanup did not complete
 

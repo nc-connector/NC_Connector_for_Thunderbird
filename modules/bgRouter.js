@@ -498,6 +498,32 @@ browser.runtime.onMessage.addListener((msg, sender) => {
       return { ok:false, error: error?.message || bgI18n("options_loginflow_failed") };
     }
   }
+  if (msg.type === "sharing:checkFolderExists"){
+    try{
+      const shareName = typeof msg.payload?.shareName === "string"
+        ? msg.payload.shareName.trim()
+        : "";
+      if (!shareName){
+        return { ok:false, error: bgI18n("sharing_message_invalid_share_name") };
+      }
+      const exists = await NCSharing.checkFileLinkFolderExists({
+        shareName,
+        basePath: typeof msg.payload?.basePath === "string"
+          ? msg.payload.basePath
+          : "",
+        shareDate: typeof msg.payload?.shareDate === "string"
+          ? msg.payload.shareDate
+          : ""
+      });
+      return { ok:true, exists };
+    }catch(error){
+      console.error("[NCBG] sharing:checkFolderExists", error);
+      return {
+        ok:false,
+        error: error?.ncUserMessage || error?.message || bgI18n("sharing_status_error")
+      };
+    }
+  }
   if (msg.type === "sharing:getLaunchContext"){
     try{
       const contextId = typeof msg.payload?.contextId === "string" ? msg.payload.contextId.trim() : "";
