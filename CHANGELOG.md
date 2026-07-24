@@ -4,6 +4,27 @@ All notable changes to **NC Connector for Thunderbird** will be documented in th
 
 This project targets **Thunderbird ESR 140** through **ESR 153**.
 
+## 3.3.0
+
+### Added
+- FileLink uploads now automatically choose parallel direct uploads, Nextcloud chunked upload v2, or DAV bulk upload when beneficial, with progress for folder preparation, completed files, transferred bytes, and current transfer rate.
+- Attachment automation can insert either a direct ZIP download or the standard Nextcloud share page, with localized share wording and tooltips matching the selected target.
+
+### Changed
+- Nextcloud 32 or newer is now required.
+- Password-protected Talk defaults now start with a generated password that users can replace or generate again.
+- Bundled DOMPurify was updated to 3.4.12.
+
+### Fixed
+- Editable backend policy fields now retain valid local values, while administrator-locked values remain enforced.
+- Password generation rejects server endpoints outside the configured Nextcloud origin and uses local generation instead.
+- Backend signatures recheck the active sender identity immediately before insertion or replacement, preventing identity-switch races.
+- Separate password delivery validates the complete final To/Cc/Bcc envelope; Send Later creates a manual password draft instead of sending it before the primary message leaves the Outbox.
+- Talk rooms are considered saved only after a matching calendar item is persisted; cleanup and moderator handoff now recover from transient failures or restarts without deleting rooms still referenced by an event.
+- Share finalization and draft cleanup now survive background or Thunderbird restarts, and uncertain send results retain the share instead of risking a broken link in an already-sent message.
+- Overlicensed seats can no longer use backend-only password delivery.
+- Managed-policy failures no longer silently bypass administrator settings, network requests use bounded deadlines, and sensitive diagnostic values are redacted.
+
 ## 3.2.3
 
 ### Added

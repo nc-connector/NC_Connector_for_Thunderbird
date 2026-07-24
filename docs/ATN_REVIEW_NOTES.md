@@ -1,8 +1,8 @@
-# Reviewer Notes - 3.2.3
+# Reviewer Notes - 3.3.0
 NC Connector for Thunderbird (`{4a35421f-0906-439c-bff2-8eef39e2baee}`)
 
 This document summarizes the currently implemented reviewer-relevant behavior
-for add-on version 3.2.3.
+for add-on version 3.3.0.
 
 ---
 
@@ -61,7 +61,7 @@ not persist credentials, passwords, recipients, or rendered message bodies.
 
 ---
 
-## Reviewer Alignment Notes (3.2.3)
+## Reviewer Alignment Notes (3.3.0)
 
 - Core rules are explicit; fallback behavior is bounded and logged instead of relying on silent heuristics.
 - `strict_min_version` is set to `140.0`. The add-on uses Thunderbird APIs added after ESR 115, including `browser.messengerUtilities.parseMailboxString(...)`, and targets the supported ESR 140 through ESR 153 range.

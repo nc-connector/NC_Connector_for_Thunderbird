@@ -36,7 +36,7 @@ function createStateHarness(storageGet){
     browser: {
       runtime: {
         getManifest(){
-          return { version: "3.2.3" };
+          return { version: "3.3.0" };
         }
       },
       storage: {
