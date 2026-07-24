@@ -1,15 +1,28 @@
 {
   "private": true,
+  "overrides": {
+    "adm-zip": "0.6.0",
+    "fast-uri": "3.1.4"
+  },
   "scripts": {
     "test": "npm run test:review && npm run test:webext-linter",
     "test:review": "node tools/check-review-clean.js",
     "test:ical-contract": "node tools/ical-contract-check.js",
     "test:calendar-room-cleanup": "node tools/calendar-room-cleanup-check.js",
+    "test:calendar-talk-reliability": "node tools/calendar-talk-reliability-check.js",
     "test:share-plaintext-contract": "node tools/share-plaintext-contract-check.js",
     "test:policy-contract": "node tools/policy-contract-check.js",
     "test:policy-editability": "node tools/policy-editability-check.js",
     "test:password-delivery-contract": "node tools/password-delivery-contract-check.js",
+    "test:password-dispatch-regression": "node tools/password-dispatch-regression-check.js",
+    "test:compose-send-lifecycle": "node tools/compose-send-lifecycle-check.js",
+    "test:sharing-finalize-lifecycle": "node tools/sharing-finalize-lifecycle-check.js",
     "test:password-policy-runtime": "node tools/password-policy-runtime-check.js",
+    "test:login-network-security": "node tools/login-network-security-check.js",
+    "test:policy-network-timeout": "node tools/policy-network-timeout-check.js",
+    "test:managed-setup-contract": "node tools/managed-setup-contract-check.js",
+    "test:vendor-security": "node tools/vendor-security-check.js",
+    "test:background-state-security": "node tools/background-state-security-check.js",
     "test:url-subfolder-contract": "node tools/url-subfolder-contract-check.js",
     "test:filelink-upload": "node tools/filelink-upload-check.js",
     "test:filelink-policy": "node tools/filelink-policy-check.js",
@@ -17,12 +30,15 @@
     "test:filelink-lifecycle": "node tools/filelink-lifecycle-check.js",
     "test:signature-compose-settle": "node tools/signature-compose-settle-check.js",
     "test:nextcloud-user-id-contract": "node tools/nextcloud-user-id-contract-check.js",
+    "test:admin-links": "node tools/admin-link-check.js",
+    "test:ci-coverage": "node tools/ci-test-coverage-check.js",
     "test:i18n-locale-parity": "node tools/i18n-locale-parity-check.js",
     "test:i18n-no-english-placeholders": "node tools/i18n-no-english-placeholders-check.js",
     "test:i18n-key-usage": "node tools/i18n-key-usage-check.js",
     "test:release-consistency": "node tools/release-consistency-check.js",
-    "test:webext-linter": "npm run webext-linter:update && npm run webext-linter:check",
+    "test:webext-linter": "npm run webext-linter:update && npm run webext-linter:audit && npm run webext-linter:check",
     "webext-linter:update": "npm install --no-save --no-package-lock --prefer-online https://github.com/thunderbird/webext-linter/archive/refs/heads/main.tar.gz",
+    "webext-linter:audit": "node tools/webext-linter-dependency-check.js",
     "webext-linter:check": "node tools/webext-linter-check.js"
   }
 }
