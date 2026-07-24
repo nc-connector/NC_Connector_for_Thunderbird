@@ -215,6 +215,9 @@
   "talk_error_event_context_missing": {
     "message": "無法建立事件 Talk 會議室，因為開啟的事件沒有開始時間。請檢查事件編輯器後再試一次。"
   },
+  "talk_error_existing_room_linked": {
+    "message": "此事件已連結至一個 Nextcloud Talk 房間。請使用現有房間，不要再建立新的房間。"
+  },
   "talk_section_settings": {
     "message": "Talk 設定"
   },
@@ -623,6 +626,18 @@
   "sharing_error_insert_failed": {
     "message": "無法將分享插入郵件。"
   },
+  "sharing_error_insert_failed_close": {
+    "message": "無法安全完成分享。請關閉分享視窗，並在重試前檢查郵件。"
+  },
+  "sharing_saved_template_unsupported": {
+    "message": "包含 NC Connector 分享的郵件無法儲存或作為 Thunderbird 範本傳送。請建立新郵件並重新分享檔案。"
+  },
+  "sharing_saved_draft_state_unavailable": {
+    "message": "此草稿的 Nextcloud 分享狀態在目前的 Thunderbird 設定檔中無法使用或不一致。傳送已遭封鎖。請建立新郵件並重新分享檔案。"
+  },
+  "sharing_password_handoff_incomplete": {
+    "message": "無法準備所有獨立的密碼草稿。主草稿的傳送已遭封鎖。請再次儲存以重試，或重新建立分享。"
+  },
   "sharing_html_password_label": {
     "message": "密碼"
   },
@@ -749,6 +764,9 @@
   "sharing_prompt_rename_duplicate": {
     "message": "檔案 \"$1\" 已存在於佇列中。請輸入新名稱。"
   },
+  "sharing_prompt_rename_file_directory_conflict": {
+    "message": "檔案「$1」與佇列中的資料夾路徑衝突。請輸入新名稱。"
+  },
   "sharing_message_rename_cancelled": {
     "message": "由於未提供替代名稱，上傳已取消。"
   },
@@ -842,6 +860,9 @@
   "sharing_password_mail_subject_with_label": {
     "message": "共享連結密碼：$1"
   },
+  "sharing_password_mail_send_later_notice": {
+    "message": "重要：請務必等到佇列中的主要郵件確實寄出後，再手動寄送此密碼郵件。"
+  },
   "options_sharing_permissions_tooltip_title": {
     "message": "🛡️預設權限"
   },
@@ -906,13 +927,19 @@
     "message": "密碼郵件已傳送給 $1 位收件人。"
   },
   "sharing_password_mail_notify_failure": {
-    "message": "向 $1 位收件人自動傳送密碼郵件失敗。已開啟手動草稿。"
+    "message": "向 $1 位收件人自動傳送密碼失敗。請手動傳送已準備的草稿；如果沒有出現草稿，請重新建立分享。"
   },
   "sharing_password_mail_notify_manual_required": {
     "message": "密碼郵件自動傳送失敗。請使用已開啟的草稿手動傳送密碼郵件。"
   },
   "sharing_password_mail_notify_manual_required_select_sender": {
     "message": "密碼郵件自動傳送失敗。如有需要，請在已開啟的草稿中選擇寄件者，再手動傳送密碼郵件。"
+  },
+  "sharing_password_mail_notify_send_later_manual_required": {
+    "message": "主要郵件位於寄件匣。已開啟一封寄給 $1 位收件者的密碼郵件草稿。請僅在主要郵件確實寄出後，才手動寄送該草稿。"
+  },
+  "sharing_password_mail_notify_send_pending": {
+    "message": "自動寄送密碼郵件給 $1 位收件者的作業仍在等待確認。請檢查已開啟的密碼郵件撰寫視窗，請勿重複寄送。"
   },
   "sharing_password_secrets_fallback_warning": {
     "message": "Nextcloud Secrets 無法使用。密碼將以純文字形式透過單獨郵件傳送。"

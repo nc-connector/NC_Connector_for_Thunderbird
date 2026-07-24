@@ -215,6 +215,9 @@
   "talk_error_event_context_missing": {
     "message": "Não foi possível criar uma sala Talk de evento porque o evento aberto não tem hora de início. Verifique o editor do evento e tente novamente."
   },
+  "talk_error_existing_room_linked": {
+    "message": "Este evento já está associado a uma sala do Nextcloud Talk. Utilize a sala existente em vez de criar outra."
+  },
   "talk_section_settings": {
     "message": "Definições do Talk"
   },
@@ -623,6 +626,18 @@
   "sharing_error_insert_failed": {
     "message": "Não foi possível inserir a partilha na mensagem."
   },
+  "sharing_error_insert_failed_close": {
+    "message": "Não foi possível concluir a partilha em segurança. Feche a janela de partilha e verifique a mensagem antes de tentar novamente."
+  },
+  "sharing_saved_template_unsupported": {
+    "message": "As mensagens com uma partilha do NC Connector não podem ser guardadas nem enviadas como modelos do Thunderbird. Crie uma nova mensagem e partilhe novamente os ficheiros."
+  },
+  "sharing_saved_draft_state_unavailable": {
+    "message": "O estado da partilha do Nextcloud para este rascunho não está disponível ou é inconsistente neste perfil do Thunderbird. O envio está bloqueado. Crie uma nova mensagem e partilhe novamente os ficheiros."
+  },
+  "sharing_password_handoff_incomplete": {
+    "message": "Não foi possível preparar todos os rascunhos de palavra-passe separados. O envio do rascunho principal está bloqueado. Guarde-o novamente para tentar outra vez ou recrie a partilha."
+  },
   "sharing_html_password_label": {
     "message": "Palavra-passe"
   },
@@ -749,6 +764,9 @@
   "sharing_prompt_rename_duplicate": {
     "message": "O ficheiro \"$1\" já existe na fila. Introduza um novo nome."
   },
+  "sharing_prompt_rename_file_directory_conflict": {
+    "message": "O ficheiro «$1» entra em conflito com o caminho de uma pasta na fila. Introduza um novo nome."
+  },
   "sharing_message_rename_cancelled": {
     "message": "Upload cancelado porque não foi fornecido um nome de substituição."
   },
@@ -842,6 +860,9 @@
   "sharing_password_mail_subject_with_label": {
     "message": "Palavra-passe da ligação partilhada: $1"
   },
+  "sharing_password_mail_send_later_notice": {
+    "message": "Importante: envie manualmente este e-mail com a palavra-passe apenas quando o e-mail principal em fila tiver sido efetivamente enviado."
+  },
   "options_sharing_permissions_tooltip_title": {
     "message": "🛡️ Permissões padrão"
   },
@@ -906,13 +927,19 @@
     "message": "E-mail da palavra-passe enviado para $1 destinatario(s)."
   },
   "sharing_password_mail_notify_failure": {
-    "message": "O envio automatico do e-mail da palavra-passe falhou para $1 destinatario(s). Foi aberto um rascunho manual."
+    "message": "A entrega automática da palavra-passe falhou para $1 destinatário(s). Envie manualmente qualquer rascunho preparado; se nenhum aparecer, recrie a partilha."
   },
   "sharing_password_mail_notify_manual_required": {
     "message": "O envio automatico do e-mail da palavra-passe falhou. Envie manualmente o e-mail da palavra-passe usando o rascunho aberto."
   },
   "sharing_password_mail_notify_manual_required_select_sender": {
     "message": "O envio automatico do e-mail da palavra-passe falhou. Se necessario, selecione um remetente no rascunho aberto e envie manualmente o e-mail da palavra-passe."
+  },
+  "sharing_password_mail_notify_send_later_manual_required": {
+    "message": "O e-mail principal encontra-se na Caixa de saída. Foi aberto um rascunho do e-mail com a palavra-passe (destinatários: $1). Envie-o manualmente apenas quando o e-mail principal tiver sido efetivamente enviado."
+  },
+  "sharing_password_mail_notify_send_pending": {
+    "message": "O envio automático da palavra-passe continua a aguardar confirmação (destinatários: $1). Verifique a janela de composição já aberta para o e-mail com a palavra-passe e não envie uma segunda cópia."
   },
   "sharing_password_secrets_fallback_warning": {
     "message": "O Nextcloud Secrets não está disponível. A palavra-passe será enviada num e-mail separado em texto simples."

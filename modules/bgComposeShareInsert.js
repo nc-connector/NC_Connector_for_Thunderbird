@@ -344,55 +344,215 @@ function insertSharingBlockSegment(currentBody, blockHtml){
   return segment + body;
 }
 
-/**
- * Runtime message handler for `sharing:insertRenderedBlock`.
- * @param {{tabId?:number|string,html?:string,plainText?:string}} payload
- * @returns {Promise<{ok:boolean,error?:string}>}
- */
-async function handleSharingInsertHtmlMessage(payload = {}){
+function normalizeComposeCustomHeaders(value){
+  const headers = [];
+  for (const header of Array.isArray(value) ? value : []){
+    const name = String(header?.name || "").trim();
+    const headerValue = String(header?.value ?? "");
+    if (name){
+      headers.push({ name, value: headerValue });
+    }
+  }
+  return headers;
+}
+
+function composeCustomHeadersEqual(left, right){
+  const leftHeaders = normalizeComposeCustomHeaders(left);
+  const rightHeaders = normalizeComposeCustomHeaders(right);
+  return leftHeaders.length === rightHeaders.length
+    && leftHeaders.every((header, index) => {
+      return header.name === rightHeaders[index].name
+        && header.value === rightHeaders[index].value;
+    });
+}
+
+function getComposeShareDraftIds(customHeaders){
+  return normalizeComposeCustomHeaders(customHeaders)
+    .filter((header) => header.name.toLowerCase() === COMPOSE_SHARE_DRAFT_HEADER.toLowerCase())
+    .map((header) => header.value)
+    .filter((value) => COMPOSE_SHARE_DRAFT_ID_PATTERN.test(value));
+}
+
+function createComposeShareDraftGroupId(){
+  return createSecureRuntimeId();
+}
+
+function resolveComposeShareDraftGroupId(customHeaders, requestedGroupId = ""){
+  const existingIds = [...new Set(getComposeShareDraftIds(customHeaders))];
+  if (existingIds.length > 1){
+    throw new Error("compose_share_draft_marker_conflict");
+  }
+  const requested = String(requestedGroupId || "").trim();
+  if (requested && !COMPOSE_SHARE_DRAFT_ID_PATTERN.test(requested)){
+    throw new Error("compose_share_draft_marker_invalid");
+  }
+  if (requested && existingIds.length && existingIds[0] !== requested){
+    throw new Error("compose_share_draft_marker_mismatch");
+  }
+  return requested || existingIds[0] || createComposeShareDraftGroupId();
+}
+
+function setComposeShareDraftHeader(customHeaders, draftGroupId){
+  const filtered = normalizeComposeCustomHeaders(customHeaders).filter((header) => {
+    return header.name.toLowerCase() !== COMPOSE_SHARE_DRAFT_HEADER.toLowerCase();
+  });
+  filtered.push({
+    name: COMPOSE_SHARE_DRAFT_HEADER,
+    value: draftGroupId
+  });
+  return filtered;
+}
+
+function removeComposeShareDraftHeaders(customHeaders){
+  return normalizeComposeCustomHeaders(customHeaders).filter((header) => {
+    return header.name.toLowerCase() !== COMPOSE_SHARE_DRAFT_HEADER.toLowerCase();
+  });
+}
+
+async function resolveSharingInsertDraftGroupId(tabId){
+  const normalizedTabId = Number(tabId);
+  if (!Number.isInteger(normalizedTabId) || normalizedTabId <= 0){
+    throw new Error("invalid_tab_id");
+  }
+  const details = await browser.compose.getComposeDetails(normalizedTabId);
+  return resolveComposeShareDraftGroupId(details?.customHeaders);
+}
+
+async function prepareSharingInsertMutation(payload = {}, options = {}){
   const tabId = Number(payload?.tabId);
   const html = String(payload?.html || "").trim();
   const plainText = String(payload?.plainText || "").trim();
   if (!Number.isInteger(tabId) || tabId <= 0 || !html || !plainText){
-    return { ok:false, error: "tab/html/plainText missing" };
+    throw new Error("tab/html/plainText missing");
   }
-
   const details = await browser.compose.getComposeDetails(tabId);
   const insertionMode = resolveSharingInsertMode(details);
+  const addDraftMarker = options.addDraftMarker === true;
+  const draftGroupId = addDraftMarker
+    ? resolveComposeShareDraftGroupId(details?.customHeaders, options.draftGroupId)
+    : "";
+  const applyDetails = {};
+  const rollbackDetails = {};
+  let bodyField = "";
+  let insertedSegment = "";
 
   if (insertionMode.usePlainText){
     const plainBlock = finalizeSharingInsertPlainText(plainText);
     if (insertionMode.editorIsPlainText){
-      const currentPlainText = String(details?.plainTextBody || "");
-      const newPlainText = `${plainBlock}\n\n${currentPlainText}`;
-      await browser.compose.setComposeDetails(tabId, {
-        plainTextBody: newPlainText,
-        isPlainText: true
-      });
+      bodyField = "plainTextBody";
+      rollbackDetails.plainTextBody = String(details?.plainTextBody || "");
+      insertedSegment = `${plainBlock}\n\n`;
+      applyDetails.plainTextBody = `${insertedSegment}${rollbackDetails.plainTextBody}`;
+      applyDetails.isPlainText = true;
     }else{
       const plainHtml = buildSharingInsertPlainHtml(plainBlock);
-      const newBody = insertSharingBlockSegment(String(details?.body || ""), plainHtml);
-      await browser.compose.setComposeDetails(tabId, { body: newBody, isPlainText: false });
+      bodyField = "body";
+      rollbackDetails.body = String(details?.body || "");
+      insertedSegment = `<br>${plainHtml}<br><br>`;
+      applyDetails.body = insertSharingBlockSegment(rollbackDetails.body, plainHtml);
+      applyDetails.isPlainText = false;
     }
-    L("sharing:insertRenderedBlock converted to plaintext", {
-      tabId,
+  }else{
+    bodyField = "body";
+    rollbackDetails.body = String(details?.body || "");
+    insertedSegment = `<br>${html}<br><br>`;
+    applyDetails.body = insertSharingBlockSegment(rollbackDetails.body, html);
+    applyDetails.isPlainText = false;
+  }
+  if (addDraftMarker){
+    rollbackDetails.customHeaders = normalizeComposeCustomHeaders(details?.customHeaders);
+    applyDetails.customHeaders = setComposeShareDraftHeader(details?.customHeaders, draftGroupId);
+  }
+  return {
+    tabId,
+    htmlLength: html.length,
+    draftGroupId,
+    insertionMode,
+    bodyField,
+    insertedSegment,
+    applyDetails,
+    rollbackDetails,
+    attempted: false,
+    applied: false
+  };
+}
+
+async function applySharingInsertMutation(mutation){
+  if (!mutation || !Number.isInteger(mutation.tabId)){
+    throw new Error("sharing_insert_mutation_invalid");
+  }
+  mutation.attempted = true;
+  await browser.compose.setComposeDetails(mutation.tabId, mutation.applyDetails);
+  mutation.applied = true;
+  const insertionMode = mutation.insertionMode;
+  L(
+    insertionMode.usePlainText
+      ? "sharing:insertRenderedBlock converted to plaintext"
+      : "sharing:insertRenderedBlock kept html",
+    {
+      tabId: mutation.tabId,
       reason: insertionMode.reason,
       editorMode: insertionMode.editorIsPlainText ? "plain" : "html",
       deliveryFormat: insertionMode.deliveryFormat || "",
-      inputHtmlLength: html.length,
-      plainTextLength: plainBlock.length
-    });
-    return { ok:true };
-  }
+      inputHtmlLength: mutation.htmlLength,
+      hasDraftMarker: !!mutation.draftGroupId
+    }
+  );
+}
 
-  const newBody = insertSharingBlockSegment(String(details?.body || ""), html);
-  L("sharing:insertRenderedBlock kept html", {
-    tabId,
-    reason: insertionMode.reason,
-    editorMode: "html",
-    deliveryFormat: insertionMode.deliveryFormat || "",
-    inputHtmlLength: html.length
-  });
-  await browser.compose.setComposeDetails(tabId, { body: newBody, isPlainText: false });
-  return { ok:true };
+async function rollbackSharingInsertMutation(mutation){
+  if (!mutation?.attempted || !Number.isInteger(mutation.tabId)){
+    return true;
+  }
+  try{
+    const details = await browser.compose.getComposeDetails(mutation.tabId);
+    const rollbackDetails = {};
+    let rollbackComplete = true;
+    const bodyField = String(mutation.bodyField || "");
+    if (bodyField){
+      const currentBody = String(details?.[bodyField] || "");
+      const appliedBody = String(mutation.applyDetails?.[bodyField] || "");
+      const originalBody = String(mutation.rollbackDetails?.[bodyField] || "");
+      if (currentBody === appliedBody){
+        rollbackDetails[bodyField] = originalBody;
+      }else if (currentBody === originalBody){
+        // The compose API did not apply this part of the mutation.
+      }else{
+        const segment = String(mutation.insertedSegment || "");
+        const firstIndex = segment ? currentBody.indexOf(segment) : -1;
+        const lastIndex = segment ? currentBody.lastIndexOf(segment) : -1;
+        if (firstIndex >= 0 && firstIndex === lastIndex){
+          rollbackDetails[bodyField] = currentBody.slice(0, firstIndex)
+            + currentBody.slice(firstIndex + segment.length);
+        }else{
+          rollbackComplete = false;
+        }
+      }
+    }
+    if (mutation.draftGroupId){
+      const currentHeaders = normalizeComposeCustomHeaders(details?.customHeaders);
+      const appliedHeaders = mutation.applyDetails?.customHeaders;
+      const originalHeaders = mutation.rollbackDetails?.customHeaders;
+      if (composeCustomHeadersEqual(currentHeaders, appliedHeaders)){
+        if (!composeCustomHeadersEqual(appliedHeaders, originalHeaders)){
+          rollbackDetails.customHeaders = normalizeComposeCustomHeaders(
+            originalHeaders
+          );
+        }
+      }else if (!composeCustomHeadersEqual(currentHeaders, originalHeaders)){
+        rollbackComplete = false;
+      }
+    }
+    if (Object.keys(rollbackDetails).length){
+      await browser.compose.setComposeDetails(mutation.tabId, rollbackDetails);
+    }
+    mutation.applied = false;
+    return rollbackComplete;
+  }catch(error){
+    console.error("[NCBG] sharing compose insertion rollback failed", {
+      tabId: mutation.tabId,
+      error: error?.message || String(error)
+    });
+    return false;
+  }
 }

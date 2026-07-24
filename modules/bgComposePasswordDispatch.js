@@ -10,7 +10,9 @@
  */
 const PASSWORD_MAIL_AUTO_SEND_TIMEOUT_MS = 20000;
 const PASSWORD_MAIL_COMPOSE_READY_RETRY_DELAYS_MS = [0, 150, 300, 500, 800, 1200];
+const PASSWORD_MAIL_RECOVERY_RETRY_DELAYS_MS = [2000, 5000, 10000];
 const PASSWORD_MAIL_DISPATCH_CLEAR_TIMER_BY_TAB = new Map();
+const PASSWORD_MAIL_RECOVERY_BY_SOURCE_TAB = new Map();
 
 /**
  * Normalize compose recipients for beginNew/sendMessage.
@@ -89,6 +91,20 @@ function countUniquePasswordDispatchRecipients(queue){
     }
   }
   return keys.size;
+}
+
+function passwordDispatchRegistrationKey(dispatch){
+  const shareId = String(dispatch?.shareId || "").trim();
+  const shareUrl = String(dispatch?.shareUrl || "").trim();
+  if (shareId || shareUrl){
+    return `share:${shareUrl}|${shareId}`;
+  }
+  const relativeFolder = String(dispatch?.folderInfo?.relativeFolder || "").trim();
+  return relativeFolder ? `folder:${relativeFolder}` : "";
+}
+
+function createPasswordDispatchRegistrationId(){
+  return createSecureRuntimeId();
 }
 
 function normalizeMailboxEmail(value){
@@ -391,6 +407,26 @@ function buildSeparatePasswordMailBodyFields(dispatch){
   };
 }
 
+function addManualPasswordMailNotice(bodyFields, reason){
+  if (!["primary_send_later", "primary_saved_draft"].includes(reason)){
+    return bodyFields;
+  }
+  const noticeKey = reason === "primary_saved_draft"
+    ? "sharing_password_mail_saved_draft_notice"
+    : "sharing_password_mail_send_later_notice";
+  const notice = bgI18n(noticeKey);
+  if (bodyFields?.isPlainText === true){
+    return {
+      isPlainText: true,
+      plainTextBody: `${notice}\n\n${String(bodyFields.plainTextBody || "")}`
+    };
+  }
+  return {
+    isPlainText: false,
+    body: `<p><strong>${NCTalkTextUtils.escapeHtml(notice)}</strong></p>${String(bodyFields?.body || "")}`
+  };
+}
+
 function normalizePasswordMailSendMode(value){
   return String(value || "").trim() === "sendLater" ? "sendLater" : "sendNow";
 }
@@ -402,11 +438,12 @@ function normalizePasswordMailSendMode(value){
  * @param {number} tabId
  * @param {{shareLabel?:string,shareUrl?:string,shareId?:string,folderInfo?:object,password?:string,deliveryMode?:string,secretsExpireDays?:number,renderShareInfo?:object,policyShare?:object,policyEditableShare?:object,html?:string,plainText?:string}} payload
  */
-async function registerSeparatePasswordMailDispatch(tabId, payload = {}){
+async function registerSeparatePasswordMailDispatch(tabId, payload = {}, options = {}){
   if (!Number.isInteger(tabId) || tabId <= 0){
     throw new Error("invalid_tab_id");
   }
-  const policyStatus = await NCPolicyRuntime.getPolicyStatus();
+  const policyStatus = options.policyStatus
+    || await NCPolicyRuntime.getPolicyStatus();
   if (!NCPolicyState.hasSeatEntitlement(policyStatus)){
     L("sharing separate password dispatch blocked", {
       tabId,
@@ -459,6 +496,10 @@ async function registerSeparatePasswordMailDispatch(tabId, payload = {}){
     fromEmail: "",
     created: Date.now()
   };
+  dispatch.dedupKey = passwordDispatchRegistrationKey(dispatch);
+  if (!dispatch.dedupKey){
+    throw new Error("password_dispatch_dedup_key_missing");
+  }
   try{
     const composeDetails = await browser.compose.getComposeDetails(tabId);
     const composeMode = resolvePasswordDispatchComposeMode(composeDetails);
@@ -484,6 +525,26 @@ async function registerSeparatePasswordMailDispatch(tabId, payload = {}){
     });
   }
   const queue = PASSWORD_MAIL_DISPATCH_BY_TAB.get(tabId);
+  if (Array.isArray(queue)){
+    const duplicate = queue.find((entry) => {
+      return String(entry?.dedupKey || passwordDispatchRegistrationKey(entry)).trim()
+        === dispatch.dedupKey;
+    });
+    if (duplicate){
+      L("sharing separate password dispatch registration skipped", {
+        tabId,
+        reason: "share_already_registered",
+        dedupKey: dispatch.dedupKey
+      });
+      return {
+        registrationId: String(duplicate.registrationId || "").trim(),
+        duplicate: true
+      };
+    }
+  }
+  do{
+    dispatch.registrationId = createPasswordDispatchRegistrationId();
+  }while ((queue || []).some((entry) => entry?.registrationId === dispatch.registrationId));
   if (Array.isArray(queue)){
     queue.push(dispatch);
   }else{
@@ -511,6 +572,39 @@ async function registerSeparatePasswordMailDispatch(tabId, payload = {}){
     cc: dispatch.cc.length,
     bcc: dispatch.bcc.length
   });
+  return {
+    registrationId: dispatch.registrationId,
+    duplicate: false
+  };
+}
+
+function unregisterSeparatePasswordMailDispatch(tabId, registrationId, reason = ""){
+  const normalizedTabId = Number(tabId);
+  const normalizedRegistrationId = String(registrationId || "").trim();
+  if (!Number.isInteger(normalizedTabId) || normalizedTabId <= 0 || !normalizedRegistrationId){
+    return false;
+  }
+  const queue = PASSWORD_MAIL_DISPATCH_BY_TAB.get(normalizedTabId);
+  if (!Array.isArray(queue) || !queue.length){
+    return false;
+  }
+  const remaining = queue.filter((dispatch) => {
+    return String(dispatch?.registrationId || "").trim() !== normalizedRegistrationId;
+  });
+  const removed = queue.length - remaining.length;
+  if (remaining.length){
+    PASSWORD_MAIL_DISPATCH_BY_TAB.set(normalizedTabId, remaining);
+  }else{
+    PASSWORD_MAIL_DISPATCH_BY_TAB.delete(normalizedTabId);
+  }
+  L("sharing separate password dispatch unregistered", {
+    tabId: normalizedTabId,
+    registrationId: normalizedRegistrationId,
+    reason: String(reason || ""),
+    removed,
+    queued: remaining.length
+  });
+  return removed > 0;
 }
 
 /**
@@ -797,6 +891,7 @@ async function showPasswordMailSuccessNotification(recipientCount){
 async function showPasswordMailManualRequiredNotification(recipientCount, options = {}){
   const count = Math.max(0, Number(recipientCount) || 0);
   const requireSenderSelection = !!options?.requireSenderSelection;
+  const primarySendLater = options?.primarySendLater === true;
   if (count <= 0){
     return;
   }
@@ -809,9 +904,11 @@ async function showPasswordMailManualRequiredNotification(recipientCount, option
   }
   try{
     const notificationId = `nc-password-mail-manual-${Date.now()}-${Math.floor(Math.random() * 100000)}`;
-    const messageKey = requireSenderSelection
-      ? "sharing_password_mail_notify_manual_required_select_sender"
-      : "sharing_password_mail_notify_manual_required";
+    const messageKey = primarySendLater
+      ? "sharing_password_mail_notify_send_later_manual_required"
+      : (requireSenderSelection
+        ? "sharing_password_mail_notify_manual_required_select_sender"
+        : "sharing_password_mail_notify_manual_required");
     await browser.notifications.create(notificationId, {
       type: "basic",
       title: bgI18n("sharing_password_mail_notify_title"),
@@ -821,12 +918,46 @@ async function showPasswordMailManualRequiredNotification(recipientCount, option
     L("sharing separate password manual-required notification shown", {
       notificationId,
       recipients: count,
-      requireSenderSelection
+      requireSenderSelection,
+      primarySendLater
     });
   }catch(error){
     console.error("[NCBG] sharing separate password manual-required notification failed", {
       recipients: count,
       requireSenderSelection,
+      primarySendLater,
+      error: error?.message || String(error)
+    });
+  }
+}
+
+async function showPasswordMailPendingNotification(recipientCount){
+  const count = Math.max(0, Number(recipientCount) || 0);
+  if (count <= 0){
+    return;
+  }
+  if (typeof browser?.notifications?.create !== "function"){
+    L("sharing separate password pending notification skipped", {
+      reason: "notifications_api_missing",
+      recipients: count
+    });
+    return;
+  }
+  try{
+    const notificationId = `nc-password-mail-pending-${Date.now()}-${Math.floor(Math.random() * 100000)}`;
+    await browser.notifications.create(notificationId, {
+      type: "basic",
+      title: bgI18n("sharing_password_mail_notify_title"),
+      message: bgI18n("sharing_password_mail_notify_send_pending", [String(count)]),
+      iconUrl: browser.runtime.getURL("icons/app-32.png")
+    });
+    L("sharing separate password pending notification shown", {
+      notificationId,
+      recipients: count
+    });
+  }catch(error){
+    console.error("[NCBG] sharing separate password pending notification failed", {
+      recipients: count,
       error: error?.message || String(error)
     });
   }
@@ -866,7 +997,7 @@ async function showPasswordMailFailureNotification(recipientCount){
 
 /**
  * Open a manual password-mail compose fallback.
- * The follow-up targets only the original `To` recipients. When source
+ * The follow-up preserves the original `To`/`Cc`/`Bcc` envelope. When source
  * identity resolution failed, sender selection stays manual.
  * @param {number} sourceTabId
  * @param {object} dispatch
@@ -875,7 +1006,10 @@ async function showPasswordMailFailureNotification(recipientCount){
  * @returns {Promise<number>}
  */
 async function openManualPasswordComposeFallback(sourceTabId, dispatch, failedComposeTabId, reason){
-  const bodyFields = buildSeparatePasswordMailBodyFields(dispatch);
+  const bodyFields = addManualPasswordMailNotice(
+    buildSeparatePasswordMailBodyFields(dispatch),
+    reason
+  );
   const manualComposeDetails = {
     to: dispatch.to,
     cc: dispatch.cc,
@@ -905,38 +1039,34 @@ async function openManualPasswordComposeFallback(sourceTabId, dispatch, failedCo
  * @param {number} composeTabId
  * @param {string} sendMode
  * @param {number} timeoutMs
- * @returns {Promise<void>}
+ * @returns {Promise<{status:string,completion?:Promise<any>}>}
  */
 async function sendComposeWithTimeout(composeTabId, sendMode = "sendNow", timeoutMs = PASSWORD_MAIL_AUTO_SEND_TIMEOUT_MS){
   let timeoutId = null;
-  let timeoutTriggered = false;
   const normalizedSendMode = normalizePasswordMailSendMode(sendMode);
   const sendPromise = browser.compose.sendMessage(composeTabId, { mode: normalizedSendMode });
   try{
-    await Promise.race([
-      sendPromise,
-      new Promise((_, reject) => {
+    const result = await Promise.race([
+      sendPromise.then(() => ({ status: "sent" })),
+      new Promise((resolve) => {
         timeoutId = setTimeout(() => {
-          timeoutTriggered = true;
-          reject(new Error("password_mail_send_timeout"));
+          resolve({ status: "pending" });
         }, Math.max(1000, Number(timeoutMs) || PASSWORD_MAIL_AUTO_SEND_TIMEOUT_MS));
       })
     ]);
+    if (result.status === "sent"){
+      return result;
+    }
+    // A timed-out send cannot be canceled or safely retried. Keep the original
+    // compose tab and observe the same request instead of opening a duplicate.
+    return {
+      status: "pending",
+      completion: sendPromise
+    };
   }finally{
     if (timeoutId){
       clearTimeout(timeoutId);
     }
-    // Prevent late unhandled rejection noise when timeout won the race.
-    sendPromise.catch((error) => {
-      if (!timeoutTriggered){
-        return;
-      }
-      console.error("[NCBG] password mail send late rejection after timeout", {
-        composeTabId,
-        sendMode: normalizedSendMode,
-        error: error?.message || String(error)
-      });
-    });
   }
 }
 
@@ -1060,29 +1190,6 @@ async function waitForComposeAutoSendReady(composeTabId, expected = {}){
 }
 
 /**
- * Manual password fallback compose tabs must not arm share cleanup.
- * The primary mail was already sent at this point, so deleting the share later
- * would break a committed user-visible link.
- * @param {number} sourceTabId
- * @param {number} manualComposeTabId
- * @param {object} dispatch
- * @returns {Promise<void>}
- */
-async function armManualPasswordFallbackCleanup(sourceTabId, manualComposeTabId, dispatch){
-  if (!Number.isInteger(manualComposeTabId) || manualComposeTabId <= 0){
-    return;
-  }
-  L("sharing separate password manual cleanup skipped", {
-    sourceTabId,
-    manualComposeTabId,
-    relativeFolder: String(dispatch?.folderInfo?.relativeFolder || "").trim(),
-    shareId: String(dispatch?.shareId || "").trim(),
-    shareLabel: String(dispatch?.shareLabel || "").trim(),
-    reason: "primary_mail_already_sent"
-  });
-}
-
-/**
  * Log why the share stays after a password-only dispatch failure.
  * The sent message already contains the link.
  * @param {number} sourceTabId
@@ -1106,22 +1213,25 @@ async function logPasswordDispatchShareRetention(sourceTabId, dispatch, reason =
  * @param {Array<object>} queue
  * @param {number} failedComposeTabId
  * @param {string} reason
- * @returns {Promise<{opened:number,failed:number,needsSender:number}>}
+ * @returns {Promise<{opened:number,failed:number,needsSender:number,openedQueue:Array<object>,failedQueue:Array<object>}>}
  */
 async function openManualPasswordFallbackQueue(sourceTabId, queue, failedComposeTabId = 0, reason = ""){
   let opened = 0;
   let failed = 0;
   let needsSender = 0;
+  const openedQueue = [];
+  const failedQueue = [];
   for (const dispatch of Array.isArray(queue) ? queue : []){
     try{
-      const manualComposeTabId = await openManualPasswordComposeFallback(sourceTabId, dispatch, failedComposeTabId, reason);
-      await armManualPasswordFallbackCleanup(sourceTabId, manualComposeTabId, dispatch);
+      await openManualPasswordComposeFallback(sourceTabId, dispatch, failedComposeTabId, reason);
       opened++;
+      openedQueue.push(dispatch);
       if (!String(dispatch?.identityId || "").trim()){
         needsSender++;
       }
     }catch(error){
       failed++;
+      failedQueue.push(dispatch);
       console.error("[NCBG] sharing separate password mail manual fallback failed", {
         sourceTabId,
         failedComposeTabId: Number.isInteger(failedComposeTabId) ? failedComposeTabId : 0,
@@ -1139,7 +1249,13 @@ async function openManualPasswordFallbackQueue(sourceTabId, queue, failedCompose
     failed,
     needsSender
   });
-  return { opened, failed, needsSender };
+  return {
+    opened,
+    failed,
+    needsSender,
+    openedQueue,
+    failedQueue
+  };
 }
 
 function clonePasswordDispatch(dispatch){
@@ -1160,44 +1276,172 @@ function clonePasswordDispatch(dispatch){
   };
 }
 
+function schedulePasswordMailRecoveryRetry(sourceTabId){
+  const entry = PASSWORD_MAIL_RECOVERY_BY_SOURCE_TAB.get(sourceTabId);
+  if (!entry || entry.timerId || !entry.queue.length){
+    return false;
+  }
+  if (entry.attempt >= PASSWORD_MAIL_RECOVERY_RETRY_DELAYS_MS.length){
+    return false;
+  }
+  const delayMs = PASSWORD_MAIL_RECOVERY_RETRY_DELAYS_MS[entry.attempt];
+  entry.timerId = setTimeout(() => {
+    entry.timerId = null;
+    void retryPasswordMailRecoveryQueue(sourceTabId).catch((error) => {
+      console.error("[NCBG] sharing separate password recovery retry failed", {
+        sourceTabId,
+        error: error?.message || String(error)
+      });
+    });
+  }, delayMs);
+  return true;
+}
+
+function retainPasswordMailRecoveryQueue(sourceTabId, queue, reason = ""){
+  const failedQueue = (Array.isArray(queue) ? queue : [])
+    .map(clonePasswordDispatch)
+    .filter(Boolean);
+  if (!failedQueue.length){
+    return false;
+  }
+  const previous = PASSWORD_MAIL_RECOVERY_BY_SOURCE_TAB.get(sourceTabId);
+  if (previous?.timerId){
+    clearTimeout(previous.timerId);
+  }
+  PASSWORD_MAIL_RECOVERY_BY_SOURCE_TAB.set(sourceTabId, {
+    sourceTabId,
+    queue: [
+      ...(Array.isArray(previous?.queue) ? previous.queue : []),
+      ...failedQueue
+    ],
+    reason: String(reason || ""),
+    attempt: Number(previous?.attempt) || 0,
+    timerId: null
+  });
+  schedulePasswordMailRecoveryRetry(sourceTabId);
+  L("sharing separate password recovery retained", {
+    sourceTabId,
+    failed: failedQueue.length,
+    queued: PASSWORD_MAIL_RECOVERY_BY_SOURCE_TAB.get(sourceTabId).queue.length,
+    reason: String(reason || "")
+  });
+  return true;
+}
+
+async function retryPasswordMailRecoveryQueue(sourceTabId){
+  const entry = PASSWORD_MAIL_RECOVERY_BY_SOURCE_TAB.get(sourceTabId);
+  if (!entry || !entry.queue.length){
+    return false;
+  }
+  const pending = entry.queue.slice();
+  const result = await openManualPasswordFallbackQueue(
+    sourceTabId,
+    pending,
+    0,
+    entry.reason || "password_recovery_retry"
+  );
+  if (result.openedQueue.length){
+    const openedRecipients = countUniquePasswordDispatchRecipients(
+      result.openedQueue
+    );
+    await showPasswordMailManualRequiredNotification(
+      openedRecipients || result.openedQueue.length,
+      {
+        requireSenderSelection: result.needsSender > 0,
+        primarySendLater: entry.reason === "primary_send_later"
+      }
+    );
+  }
+  if (!result.failedQueue.length){
+    PASSWORD_MAIL_RECOVERY_BY_SOURCE_TAB.delete(sourceTabId);
+    return true;
+  }
+  entry.queue = result.failedQueue.map(clonePasswordDispatch).filter(Boolean);
+  entry.attempt += 1;
+  if (!schedulePasswordMailRecoveryRetry(sourceTabId)){
+    const failedRecipients = countUniquePasswordDispatchRecipients(entry.queue);
+    await showPasswordMailFailureNotification(
+      failedRecipients || entry.queue.length
+    );
+  }
+  return false;
+}
+
 function isSecretsPasswordDispatch(dispatch){
   return NCSharePasswordDelivery.coerceMode(dispatch?.deliveryMode, NCSharePasswordDelivery.MODE_PLAIN)
     === NCSharePasswordDelivery.MODE_SECRETS;
 }
 
-function addPerRecipientPasswordDispatches(target, source, recipients, field){
+async function addPerRecipientPasswordDispatches(target, source, recipients, field, seen){
   if (!Array.isArray(target) || !source || !Array.isArray(recipients) || !recipients.length){
     return 0;
   }
   let added = 0;
   for (const recipient of recipients){
-    const key = composeRecipientKey(recipient);
-    if (!key){
-      continue;
+    const normalizedRecipients = typeof recipient === "string"
+      ? await parseComposeMailboxEmails(recipient)
+      : [recipient];
+    for (const normalizedRecipient of normalizedRecipients){
+      const key = composeRecipientKey(normalizedRecipient);
+      if (!key || seen.has(key)){
+        continue;
+      }
+      seen.add(key);
+      const clone = clonePasswordDispatch(source);
+      clone.to = field === "to" ? [normalizedRecipient] : [];
+      clone.cc = field === "cc" ? [normalizedRecipient] : [];
+      clone.bcc = field === "bcc" ? [normalizedRecipient] : [];
+      target.push(clone);
+      added++;
     }
-    const clone = clonePasswordDispatch(source);
-    clone.to = field === "to" ? [recipient] : [];
-    clone.cc = field === "cc" ? [recipient] : [];
-    clone.bcc = field === "bcc" ? [recipient] : [];
-    target.push(clone);
-    added++;
   }
   return added;
 }
 
-function expandSeparatePasswordDispatchQueue(queue){
+async function dedupePasswordDispatchRecipients(dispatch){
+  const normalized = clonePasswordDispatch(dispatch);
+  if (!normalized){
+    return null;
+  }
+  const seen = new Set();
+  for (const field of ["to", "cc", "bcc"]){
+    const deduped = [];
+    for (const recipient of normalizeComposeRecipientList(normalized[field])){
+      const values = typeof recipient === "string"
+        ? await parseComposeMailboxEmails(recipient)
+        : [recipient];
+      for (const value of values){
+        const key = composeRecipientKey(value);
+        if (!key || seen.has(key)){
+          continue;
+        }
+        seen.add(key);
+        deduped.push(value);
+      }
+    }
+    normalized[field] = deduped;
+  }
+  return normalized;
+}
+
+async function expandSeparatePasswordDispatchQueue(queue){
   const expanded = [];
   for (const dispatch of Array.isArray(queue) ? queue : []){
-    if (!isSecretsPasswordDispatch(dispatch)){
-      expanded.push(dispatch);
+    const normalized = await dedupePasswordDispatchRecipients(dispatch);
+    if (!normalized){
       continue;
     }
+    if (!isSecretsPasswordDispatch(normalized)){
+      expanded.push(normalized);
+      continue;
+    }
+    const seen = new Set();
     let added = 0;
-    added += addPerRecipientPasswordDispatches(expanded, dispatch, dispatch.to, "to");
-    added += addPerRecipientPasswordDispatches(expanded, dispatch, dispatch.cc, "cc");
-    added += addPerRecipientPasswordDispatches(expanded, dispatch, dispatch.bcc, "bcc");
+    added += await addPerRecipientPasswordDispatches(expanded, normalized, normalized.to, "to", seen);
+    added += await addPerRecipientPasswordDispatches(expanded, normalized, normalized.cc, "cc", seen);
+    added += await addPerRecipientPasswordDispatches(expanded, normalized, normalized.bcc, "bcc", seen);
     if (added === 0){
-      expanded.push(dispatch);
+      expanded.push(normalized);
     }
   }
   return expanded;
@@ -1210,11 +1454,8 @@ function countSecretsPasswordDispatches(queue){
 }
 
 function buildSecretsTitle(dispatch){
-  const folderName = String(dispatch?.folderInfo?.folderName || "").trim();
-  if (!folderName){
-    throw new Error("Secrets title folder name is missing.");
-  }
-  return `NCC ${folderName}`;
+  const shareLabel = String(dispatch?.shareLabel || "").trim();
+  return shareLabel ? `NCC ${shareLabel}` : "NCC share password";
 }
 
 function buildPasswordDeliveryShareInfo(dispatch, deliveryValue){
@@ -1314,12 +1555,77 @@ async function showPasswordSecretsFallbackNotification(){
   }
 }
 
+async function stageSeparatePasswordMailForSendLater(tabId, queue){
+  if (!Array.isArray(queue) || !queue.length){
+    return;
+  }
+  const expandedQueue = await expandSeparatePasswordDispatchQueue(queue);
+  const dispatchQueue = [];
+  let secretsFallbackCount = 0;
+  for (const dispatch of expandedQueue){
+    const prepared = await prepareSecretsPasswordDispatch(dispatch, tabId);
+    dispatchQueue.push(prepared.dispatch);
+    if (prepared.fellBack){
+      secretsFallbackCount++;
+    }
+  }
+  const recipientCount = countUniquePasswordDispatchRecipients(dispatchQueue);
+  const fallbackResult = await openManualPasswordFallbackQueue(
+    tabId,
+    dispatchQueue,
+    0,
+    "primary_send_later"
+  );
+  L("sharing separate password drafts staged for queued primary mail", {
+    sourceTabId: tabId,
+    dispatchCount: dispatchQueue.length,
+    recipients: recipientCount,
+    opened: fallbackResult.opened,
+    failed: fallbackResult.failed,
+    needsSender: fallbackResult.needsSender,
+    secretsFallbackCount
+  });
+  if (secretsFallbackCount > 0){
+    await showPasswordSecretsFallbackNotification();
+  }
+  if (fallbackResult.failed > 0){
+    retainPasswordMailRecoveryQueue(
+      tabId,
+      fallbackResult.failedQueue,
+      "primary_send_later"
+    );
+    const failedRecipients = countUniquePasswordDispatchRecipients(
+      fallbackResult.failedQueue
+    );
+    await showPasswordMailFailureNotification(
+      failedRecipients || fallbackResult.failedQueue.length
+    );
+  }
+  if (fallbackResult.opened > 0){
+    const openedRecipients = countUniquePasswordDispatchRecipients(
+      fallbackResult.openedQueue
+    );
+    await showPasswordMailManualRequiredNotification(
+      openedRecipients || fallbackResult.openedQueue.length,
+      {
+      requireSenderSelection: fallbackResult.needsSender > 0,
+      primarySendLater: true
+      }
+    );
+  }
+  return fallbackResult;
+}
+
 async function sendSeparatePasswordMail(tabId, queue, sendMode = "sendNow"){
   if (!Array.isArray(queue) || !queue.length){
     return;
   }
   const passwordSendMode = normalizePasswordMailSendMode(sendMode);
-  const dispatchQueue = expandSeparatePasswordDispatchQueue(queue);
+  if (passwordSendMode === "sendLater"){
+    await stageSeparatePasswordMailForSendLater(tabId, queue);
+    return;
+  }
+  const dispatchQueue = await expandSeparatePasswordDispatchQueue(queue);
   const queuedSecrets = countSecretsPasswordDispatches(queue);
   if (queuedSecrets > 0){
     L("sharing separate password dispatch queue prepared", {
@@ -1332,12 +1638,25 @@ async function sendSeparatePasswordMail(tabId, queue, sendMode = "sendNow"){
   }
   const recipientCount = countUniquePasswordDispatchRecipients(dispatchQueue);
   if (!recipientCount){
-    await openManualPasswordFallbackQueue(tabId, dispatchQueue, 0, "no_recipients_for_password_mail");
-    await showPasswordMailManualRequiredNotification(dispatchQueue.length, { requireSenderSelection: true });
+    const fallbackResult = await openManualPasswordFallbackQueue(
+      tabId,
+      dispatchQueue,
+      0,
+      "no_recipients_for_password_mail"
+    );
+    if (fallbackResult.failed > 0){
+      await showPasswordMailFailureNotification(dispatchQueue.length);
+    }
+    if (fallbackResult.opened > 0){
+      await showPasswordMailManualRequiredNotification(dispatchQueue.length, {
+        requireSenderSelection: true
+      });
+    }
     return;
   }
   let autoSendFailedCount = 0;
   let autoSendSkippedIdentityCount = 0;
+  let autoSendPendingCount = 0;
   let manualFallbackOpenedCount = 0;
   let manualFallbackFailedCount = 0;
   let manualFallbackNeedsSenderCount = 0;
@@ -1404,6 +1723,23 @@ async function sendSeparatePasswordMail(tabId, queue, sendMode = "sendNow"){
       if (!Number.isInteger(composeTabId) || composeTabId <= 0){
         throw new Error("password_mail_compose_tab_invalid");
       }
+      if (typeof NCEmailSignature === "undefined"
+        || typeof NCEmailSignature.applyAndWait !== "function"){
+        throw new Error("password_mail_signature_runtime_unavailable");
+      }
+      const signatureResult = await NCEmailSignature.applyAndWait(
+        composeTabId,
+        "password_followup"
+      );
+      if (signatureResult?.ok !== true){
+        throw new Error(signatureResult?.error || "password_mail_signature_apply_failed");
+      }
+      L("sharing separate password signature settled", {
+        sourceTabId: tabId,
+        composeTabId,
+        applied: signatureResult.applied === true,
+        result: String(signatureResult.reason || "")
+      });
       await waitForComposeAutoSendReady(composeTabId, {
         identityId: identityResolution.identityId,
         to: dispatch.to,
@@ -1411,7 +1747,35 @@ async function sendSeparatePasswordMail(tabId, queue, sendMode = "sendNow"){
         bcc: dispatch.bcc,
         subject: autoComposeDetails.subject
       });
-      await sendComposeWithTimeout(composeTabId, passwordSendMode, PASSWORD_MAIL_AUTO_SEND_TIMEOUT_MS);
+      const sendResult = await sendComposeWithTimeout(
+        composeTabId,
+        passwordSendMode,
+        PASSWORD_MAIL_AUTO_SEND_TIMEOUT_MS
+      );
+      if (sendResult.status === "pending"){
+        autoSendPendingCount++;
+        const pendingRecipientCount = countUniquePasswordDispatchRecipients([dispatch]) || 1;
+        void sendResult.completion.then(async () => {
+          L("sharing separate password mail pending send completed", {
+            sourceTabId: tabId,
+            composeTabId
+          });
+          await showPasswordMailSuccessNotification(pendingRecipientCount);
+        }).catch(async (error) => {
+          console.error("[NCBG] sharing separate password mail pending send failed", {
+            sourceTabId: tabId,
+            composeTabId,
+            error: error?.message || String(error)
+          });
+          await showPasswordMailFailureNotification(pendingRecipientCount);
+        });
+        L("sharing separate password mail send confirmation pending", {
+          sourceTabId: tabId,
+          composeTabId,
+          sendMode: passwordSendMode
+        });
+        continue;
+      }
       L("sharing separate password mail send done", {
         sourceTabId: tabId,
         composeTabId,
@@ -1425,7 +1789,28 @@ async function sendSeparatePasswordMail(tabId, queue, sendMode = "sendNow"){
         sendMode: passwordSendMode,
         error: error?.message || String(error)
       });
-      if (Number.isInteger(composeTabId) && composeTabId > 0){
+      let fallbackResult = null;
+      try{
+        fallbackResult = await openManualPasswordFallbackQueue(
+          tabId,
+          [dispatch],
+          composeTabId,
+          "auto_send_failed"
+        );
+        manualFallbackOpenedCount += fallbackResult.opened;
+        manualFallbackFailedCount += fallbackResult.failed;
+        manualFallbackNeedsSenderCount += fallbackResult.needsSender;
+      }catch(error){
+        manualFallbackFailedCount++;
+        console.error("[NCBG] sharing separate password fallback queue failed", {
+          sourceTabId: tabId,
+          failedComposeTabId: composeTabId,
+          error: error?.message || String(error)
+        });
+      }
+      if (fallbackResult?.opened > 0
+        && Number.isInteger(composeTabId)
+        && composeTabId > 0){
         try{
           await browser.tabs.remove(composeTabId);
           L("sharing separate password mail failed auto tab removed", {
@@ -1439,23 +1824,18 @@ async function sendSeparatePasswordMail(tabId, queue, sendMode = "sendNow"){
             error: error?.message || String(error)
           });
         }
-      }
-      try{
-        const fallbackResult = await openManualPasswordFallbackQueue(tabId, [dispatch], composeTabId, "auto_send_failed");
-        manualFallbackOpenedCount += fallbackResult.opened;
-        manualFallbackFailedCount += fallbackResult.failed;
-        manualFallbackNeedsSenderCount += fallbackResult.needsSender;
-      }catch(error){
-        manualFallbackFailedCount++;
-        console.error("[NCBG] sharing separate password fallback queue failed", {
+      }else if (Number.isInteger(composeTabId) && composeTabId > 0){
+        L("sharing separate password mail failed auto tab retained", {
           sourceTabId: tabId,
-          failedComposeTabId: composeTabId,
-          error: error?.message || String(error)
+          composeTabId,
+          reason: "manual_replacement_not_opened"
         });
       }
     }
   }
-  if (autoSendFailedCount === 0 && autoSendSkippedIdentityCount === 0){
+  if (autoSendFailedCount === 0
+    && autoSendSkippedIdentityCount === 0
+    && autoSendPendingCount === 0){
     L("sharing separate password mail sent", {
       sourceTabId: tabId,
       dispatchCount: dispatchQueue.length,
@@ -1477,13 +1857,17 @@ async function sendSeparatePasswordMail(tabId, queue, sendMode = "sendNow"){
     secretsFallbackCount,
     manualFallbackOpenedCount,
     manualFallbackFailedCount,
-    manualFallbackNeedsSenderCount
+    manualFallbackNeedsSenderCount,
+    autoSendPendingCount
   });
   if (secretsFallbackCount > 0){
     await showPasswordSecretsFallbackNotification();
   }
-  if (autoSendFailedCount > 0){
+  if (autoSendFailedCount > 0 || manualFallbackFailedCount > 0){
     await showPasswordMailFailureNotification(recipientCount);
+  }
+  if (autoSendPendingCount > 0){
+    await showPasswordMailPendingNotification(recipientCount);
   }
   if (manualFallbackOpenedCount > 0){
     await showPasswordMailManualRequiredNotification(recipientCount, {

@@ -215,6 +215,9 @@
   "talk_error_event_context_missing": {
     "message": "Kan geen event-Talkruimte maken omdat de geopende afspraak geen starttijd heeft. Controleer de afspraakeditor en probeer het opnieuw."
   },
+  "talk_error_existing_room_linked": {
+    "message": "Deze afspraak is al gekoppeld aan een Nextcloud Talk-ruimte. Gebruik de bestaande ruimte in plaats van een nieuwe aan te maken."
+  },
   "talk_section_settings": {
     "message": "Talk-instellingen"
   },
@@ -623,6 +626,18 @@
   "sharing_error_insert_failed": {
     "message": "Kon de share niet in het bericht invoegen."
   },
+  "sharing_error_insert_failed_close": {
+    "message": "De share kon niet veilig worden voltooid. Sluit het deelvenster en controleer het bericht voordat u het opnieuw probeert."
+  },
+  "sharing_saved_template_unsupported": {
+    "message": "Berichten met een NC Connector-share kunnen niet als Thunderbird-sjabloon worden opgeslagen of verzonden. Maak een nieuw bericht en deel de bestanden opnieuw."
+  },
+  "sharing_saved_draft_state_unavailable": {
+    "message": "De status van de Nextcloud-share voor dit concept is in dit Thunderbird-profiel niet beschikbaar of inconsistent. Verzenden is geblokkeerd. Maak een nieuw bericht en deel de bestanden opnieuw."
+  },
+  "sharing_password_handoff_incomplete": {
+    "message": "Niet alle afzonderlijke wachtwoordconcepten konden worden voorbereid. Het verzenden van het hoofdconcept is geblokkeerd. Sla het opnieuw op om het nogmaals te proberen of maak de share opnieuw."
+  },
   "sharing_html_password_label": {
     "message": "Wachtwoord"
   },
@@ -749,6 +764,9 @@
   "sharing_prompt_rename_duplicate": {
     "message": "Het bestand \"$1\" bestaat al in de wachtrij. Voer een nieuwe naam in."
   },
+  "sharing_prompt_rename_file_directory_conflict": {
+    "message": "Het bestand ‘$1’ conflicteert met een mappad in de wachtrij. Voer een nieuwe naam in."
+  },
   "sharing_message_rename_cancelled": {
     "message": "Upload geannuleerd omdat er geen vervangende naam is opgegeven."
   },
@@ -842,6 +860,9 @@
   "sharing_password_mail_subject_with_label": {
     "message": "Wachtwoord voor de deellink: $1"
   },
+  "sharing_password_mail_send_later_notice": {
+    "message": "Belangrijk: verzend deze wachtwoordmail pas handmatig nadat het hoofdbericht in de wachtrij daadwerkelijk is verzonden."
+  },
   "options_sharing_permissions_tooltip_title": {
     "message": "🛡️ Standaardrechten"
   },
@@ -906,13 +927,19 @@
     "message": "Wachtwoordmail verzonden naar $1 ontvanger(s)."
   },
   "sharing_password_mail_notify_failure": {
-    "message": "Automatisch verzenden van de wachtwoordmail is mislukt voor $1 ontvanger(s). Er is een handmatig concept geopend."
+    "message": "Automatische wachtwoordbezorging is mislukt voor $1 ontvanger(s). Verzend een eventueel voorbereid concept handmatig; verschijnt er geen, maak de share opnieuw."
   },
   "sharing_password_mail_notify_manual_required": {
     "message": "Automatisch verzenden van de wachtwoordmail is mislukt. Verzend de wachtwoordmail handmatig via het geopende concept."
   },
   "sharing_password_mail_notify_manual_required_select_sender": {
     "message": "Automatisch verzenden van de wachtwoordmail is mislukt. Selecteer indien nodig een afzender in het geopende concept en verzend de wachtwoordmail handmatig."
+  },
+  "sharing_password_mail_notify_send_later_manual_required": {
+    "message": "Het hoofdbericht staat in Postvak UIT. Er is een concept van de wachtwoordmail geopend (aantal ontvangers: $1). Verzend dit pas handmatig nadat het hoofdbericht daadwerkelijk is verzonden."
+  },
+  "sharing_password_mail_notify_send_pending": {
+    "message": "De automatische bezorging van het wachtwoord is nog in afwachting van bevestiging (aantal ontvangers: $1). Controleer het al geopende opstelvenster van de wachtwoordmail en verzend geen tweede exemplaar."
   },
   "sharing_password_secrets_fallback_warning": {
     "message": "Nextcloud Secrets is niet beschikbaar. Het wachtwoord wordt als aparte e-mail in platte tekst verzonden."

@@ -215,6 +215,9 @@
   "talk_error_event_context_missing": {
     "message": "Es konnte kein Event-Talkraum erstellt werden, weil der geöffnete Termin keine Startzeit liefert. Bitte den Termin-Editor prüfen und erneut versuchen."
   },
+  "talk_error_existing_room_linked": {
+    "message": "Dieser Termin ist bereits mit einem Nextcloud-Talk-Raum verknüpft. Verwenden Sie den vorhandenen Raum, anstatt einen weiteren zu erstellen."
+  },
   "talk_section_settings": {
     "message": "Talk-Einstellungen"
   },
@@ -623,6 +626,18 @@
   "sharing_error_insert_failed": {
     "message": "Freigabe konnte nicht in die Nachricht eingefügt werden."
   },
+  "sharing_error_insert_failed_close": {
+    "message": "Die Freigabe konnte nicht sicher abgeschlossen werden. Schließen Sie das Freigabefenster und prüfen Sie die Nachricht, bevor Sie es erneut versuchen."
+  },
+  "sharing_saved_template_unsupported": {
+    "message": "Nachrichten mit einer NC-Connector-Freigabe können nicht als Thunderbird-Vorlage gespeichert oder gesendet werden. Erstellen Sie eine neue Nachricht und geben Sie die Dateien erneut frei."
+  },
+  "sharing_saved_draft_state_unavailable": {
+    "message": "Der Nextcloud-Freigabestatus dieses Entwurfs ist in diesem Thunderbird-Profil nicht verfügbar oder inkonsistent. Der Versand ist gesperrt. Erstellen Sie eine neue Nachricht und geben Sie die Dateien erneut frei."
+  },
+  "sharing_password_handoff_incomplete": {
+    "message": "Nicht alle separaten Passwortentwürfe konnten vorbereitet werden. Der Versand des Hauptentwurfs ist gesperrt. Speichern Sie ihn erneut, um es nochmals zu versuchen, oder erstellen Sie die Freigabe neu."
+  },
   "sharing_html_password_label": {
     "message": "Passwort"
   },
@@ -749,6 +764,9 @@
   "sharing_prompt_rename_duplicate": {
     "message": "Die Datei \"$1\" ist bereits in der Warteschlange. Bitte neuen Namen eingeben."
   },
+  "sharing_prompt_rename_file_directory_conflict": {
+    "message": "Der Pfad der Datei „$1“ kollidiert mit einem Ordnerpfad in der Warteschlange. Geben Sie einen neuen Namen ein."
+  },
   "sharing_message_rename_cancelled": {
     "message": "Upload abgebrochen, da kein Ersatzname angegeben wurde."
   },
@@ -842,6 +860,9 @@
   "sharing_password_mail_subject_with_label": {
     "message": "Passwort zur Freigabe: $1"
   },
+  "sharing_password_mail_send_later_notice": {
+    "message": "Wichtig: Senden Sie diese Passwort-E-Mail erst dann manuell, wenn die in die Warteschlange gestellte Haupt-E-Mail tatsächlich gesendet wurde."
+  },
   "options_sharing_permissions_tooltip_title": {
     "message": "🛡️ Standard-Berechtigungen"
   },
@@ -906,13 +927,19 @@
     "message": "Passwort-E-Mail wurde an $1 Empfaenger gesendet."
   },
   "sharing_password_mail_notify_failure": {
-    "message": "Automatischer Passwort-Mail-Versand fuer $1 Empfaenger fehlgeschlagen. Eine manuelle Vorlage wurde geoeffnet."
+    "message": "Die automatische Passwortzustellung ist für $1 Empfänger fehlgeschlagen. Senden Sie einen vorhandenen vorbereiteten Entwurf manuell; erscheint keiner, erstellen Sie die Freigabe neu."
   },
   "sharing_password_mail_notify_manual_required": {
     "message": "Automatischer Passwortversand fehlgeschlagen. Bitte senden Sie die Passwort-E-Mail manuell ueber die geoeffnete Vorlage."
   },
   "sharing_password_mail_notify_manual_required_select_sender": {
     "message": "Automatischer Passwortversand fehlgeschlagen. Waehlen Sie bei Bedarf im geoeffneten Entwurf einen Absender und senden Sie die Passwort-E-Mail manuell."
+  },
+  "sharing_password_mail_notify_send_later_manual_required": {
+    "message": "Die Haupt-E-Mail befindet sich im Postausgang. Ein Entwurf für eine Passwort-E-Mail an $1 Empfänger wurde geöffnet. Senden Sie die Passwort-E-Mail erst dann manuell, wenn die Haupt-E-Mail tatsächlich gesendet wurde."
+  },
+  "sharing_password_mail_notify_send_pending": {
+    "message": "Die automatische Passwortzustellung an $1 Empfänger wartet noch auf Bestätigung. Prüfen Sie das bereits geöffnete Fenster zum Verfassen der Passwort-E-Mail und senden Sie keine zweite Kopie."
   },
   "sharing_password_secrets_fallback_warning": {
     "message": "Nextcloud Secrets ist nicht verfügbar. Das Passwort wird als separate E-Mail im Klartext gesendet."

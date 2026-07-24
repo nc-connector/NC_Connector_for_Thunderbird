@@ -215,6 +215,9 @@
   "talk_error_event_context_missing": {
     "message": "No se pudo crear una sala Talk de evento porque el evento abierto no tiene hora de inicio. Revisa el editor del evento e inténtalo de nuevo."
   },
+  "talk_error_existing_room_linked": {
+    "message": "Este evento ya está vinculado a una sala de Nextcloud Talk. Use la sala existente en lugar de crear otra."
+  },
   "talk_section_settings": {
     "message": "Ajustes de Talk"
   },
@@ -623,6 +626,18 @@
   "sharing_error_insert_failed": {
     "message": "No se pudo insertar la compartición en el mensaje."
   },
+  "sharing_error_insert_failed_close": {
+    "message": "No se pudo completar la compartición de forma segura. Cierre la ventana de compartición y revise el mensaje antes de volver a intentarlo."
+  },
+  "sharing_saved_template_unsupported": {
+    "message": "Los mensajes con una compartición de NC Connector no pueden guardarse ni enviarse como plantillas de Thunderbird. Cree un mensaje nuevo y vuelva a compartir los archivos."
+  },
+  "sharing_saved_draft_state_unavailable": {
+    "message": "El estado de la compartición de Nextcloud de este borrador no está disponible o no es coherente en este perfil de Thunderbird. El envío está bloqueado. Cree un mensaje nuevo y vuelva a compartir los archivos."
+  },
+  "sharing_password_handoff_incomplete": {
+    "message": "No se pudieron preparar todos los borradores de contraseña separados. El envío del borrador principal está bloqueado. Guárdelo de nuevo para reintentar o vuelva a crear la compartición."
+  },
   "sharing_html_password_label": {
     "message": "Contraseña"
   },
@@ -749,6 +764,9 @@
   "sharing_prompt_rename_duplicate": {
     "message": "El archivo \"$1\" ya existe en la cola. Introduce un nuevo nombre."
   },
+  "sharing_prompt_rename_file_directory_conflict": {
+    "message": "El archivo «$1» entra en conflicto con la ruta de una carpeta en la cola. Introduzca un nombre nuevo."
+  },
   "sharing_message_rename_cancelled": {
     "message": "La subida se canceló porque no se proporcionó un nombre de reemplazo."
   },
@@ -842,6 +860,9 @@
   "sharing_password_mail_subject_with_label": {
     "message": "Contraseña del enlace compartido: $1"
   },
+  "sharing_password_mail_send_later_notice": {
+    "message": "Importante: envíe manualmente este correo con la contraseña solo después de que el correo principal en cola se haya enviado efectivamente."
+  },
   "options_sharing_permissions_tooltip_title": {
     "message": "🛡️ Permisos predeterminados"
   },
@@ -906,13 +927,19 @@
     "message": "Correo de contrasena enviado a $1 destinatario(s)."
   },
   "sharing_password_mail_notify_failure": {
-    "message": "El envio automatico del correo de contrasena para $1 destinatario(s) fallo. Se abrio un borrador manual."
+    "message": "La entrega automática de la contraseña falló para $1 destinatario(s). Envíe manualmente cualquier borrador preparado; si no aparece ninguno, vuelva a crear la compartición."
   },
   "sharing_password_mail_notify_manual_required": {
     "message": "El envio automatico de la contrasena fallo. Envie manualmente el correo de contrasena usando el borrador abierto."
   },
   "sharing_password_mail_notify_manual_required_select_sender": {
     "message": "El envio automatico del correo de contrasena fallo. Si es necesario, seleccione un remitente en el borrador abierto y envie el correo de contrasena manualmente."
+  },
+  "sharing_password_mail_notify_send_later_manual_required": {
+    "message": "El correo principal está en la Bandeja de salida. Se ha abierto un borrador del correo con la contraseña (destinatarios: $1). Envíelo manualmente solo después de que el correo principal se haya enviado efectivamente."
+  },
+  "sharing_password_mail_notify_send_pending": {
+    "message": "La entrega automática de la contraseña sigue pendiente de confirmación (destinatarios: $1). Compruebe la ventana de redacción ya abierta para el correo con la contraseña y no envíe una segunda copia."
   },
   "sharing_password_secrets_fallback_warning": {
     "message": "Nextcloud Secrets no está disponible. La contraseña se enviará en un correo separado en texto sin formato."

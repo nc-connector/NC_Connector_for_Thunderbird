@@ -215,6 +215,9 @@
   "talk_error_event_context_missing": {
     "message": "開いている予定に開始時刻がないため、イベント用の Talk ルームを作成できませんでした。予定エディターを確認してからもう一度お試しください。"
   },
+  "talk_error_existing_room_linked": {
+    "message": "この予定はすでに Nextcloud Talk ルームにリンクされています。新しいルームを作成せず、既存のルームを使用してください。"
+  },
   "talk_section_settings": {
     "message": "Talk 設定"
   },
@@ -623,6 +626,18 @@
   "sharing_error_insert_failed": {
     "message": "メッセージに共有を挿入できませんでした。"
   },
+  "sharing_error_insert_failed_close": {
+    "message": "共有を安全に完了できませんでした。共有ウィンドウを閉じ、再試行する前にメッセージを確認してください。"
+  },
+  "sharing_saved_template_unsupported": {
+    "message": "NC Connector の共有を含むメッセージは、Thunderbird のテンプレートとして保存または送信できません。新しいメッセージを作成し、ファイルをもう一度共有してください。"
+  },
+  "sharing_saved_draft_state_unavailable": {
+    "message": "この下書きの Nextcloud 共有状態は、この Thunderbird プロファイルでは利用できないか整合していません。送信はブロックされました。新しいメッセージを作成し、ファイルをもう一度共有してください。"
+  },
+  "sharing_password_handoff_incomplete": {
+    "message": "個別のパスワード下書きをすべて準備できませんでした。メインの下書きの送信はブロックされました。もう一度保存して再試行するか、共有を作り直してください。"
+  },
   "sharing_html_password_label": {
     "message": "パスワード"
   },
@@ -749,6 +764,9 @@
   "sharing_prompt_rename_duplicate": {
     "message": "ファイル \"$1\" は既にキューに存在します。新しい名前を入力してください。"
   },
+  "sharing_prompt_rename_file_directory_conflict": {
+    "message": "ファイル「$1」は、キュー内のフォルダーのパスと競合しています。新しい名前を入力してください。"
+  },
   "sharing_message_rename_cancelled": {
     "message": "置換名が指定されなかったため、アップロードはキャンセルされました。"
   },
@@ -842,6 +860,9 @@
   "sharing_password_mail_subject_with_label": {
     "message": "共有リンクのパスワード: $1"
   },
+  "sharing_password_mail_send_later_notice": {
+    "message": "重要：このパスワードメールは、送信待ちのメインメールが実際に送信された後にのみ手動で送信してください。"
+  },
   "options_sharing_permissions_tooltip_title": {
     "message": "🛡️ デフォルトの権限"
   },
@@ -906,13 +927,19 @@
     "message": "$1 件の宛先へパスワードメールを送信しました。"
   },
   "sharing_password_mail_notify_failure": {
-    "message": "$1 件の宛先へのパスワードメール自動送信に失敗しました。手動送信用の下書きが開きました。"
+    "message": "$1 件の宛先へのパスワード自動配信に失敗しました。準備済みの下書きがあれば手動で送信し、表示されない場合は共有を作り直してください。"
   },
   "sharing_password_mail_notify_manual_required": {
     "message": "パスワードメールの自動送信に失敗しました。開かれた下書きを使って手動で送信してください。"
   },
   "sharing_password_mail_notify_manual_required_select_sender": {
     "message": "パスワードメールの自動送信に失敗しました。必要に応じて開いた下書きで送信者を選択し、手動でパスワードメールを送信してください。"
+  },
+  "sharing_password_mail_notify_send_later_manual_required": {
+    "message": "メインメールは送信トレイにあります。$1 件の宛先に送るパスワードメールの下書きを開きました。メインメールが実際に送信された後にのみ、手動で送信してください。"
+  },
+  "sharing_password_mail_notify_send_pending": {
+    "message": "$1 件の宛先へのパスワードメールの自動送信は、まだ確認待ちです。すでに開いているパスワードメールの作成ウィンドウを確認し、2 通目を送信しないでください。"
   },
   "sharing_password_secrets_fallback_warning": {
     "message": "Nextcloud Secrets を利用できません。パスワードはプレーンテキストの別メールで送信されます。"

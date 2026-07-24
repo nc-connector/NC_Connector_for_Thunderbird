@@ -215,6 +215,9 @@
   "talk_error_event_context_missing": {
     "message": "Nelze vytvořit událostní Talk místnost, protože otevřená událost nemá čas začátku. Zkontrolujte editor události a zkuste to znovu."
   },
+  "talk_error_existing_room_linked": {
+    "message": "Tato událost je již propojena s místností Nextcloud Talk. Místo vytváření další použijte stávající místnost."
+  },
   "talk_section_settings": {
     "message": "Nastavení Talk"
   },
@@ -623,6 +626,18 @@
   "sharing_error_insert_failed": {
     "message": "Nepodařilo se vložit sdílení do zprávy."
   },
+  "sharing_error_insert_failed_close": {
+    "message": "Sdílení se nepodařilo bezpečně dokončit. Zavřete okno sdílení a před dalším pokusem zprávu zkontrolujte."
+  },
+  "sharing_saved_template_unsupported": {
+    "message": "Zprávy se sdílením NC Connector nelze uložit ani odeslat jako šablony Thunderbirdu. Vytvořte novou zprávu a soubory znovu nasdílejte."
+  },
+  "sharing_saved_draft_state_unavailable": {
+    "message": "Stav sdílení Nextcloud pro tento koncept není v tomto profilu Thunderbirdu dostupný nebo je nekonzistentní. Odeslání je zablokováno. Vytvořte novou zprávu a soubory znovu nasdílejte."
+  },
+  "sharing_password_handoff_incomplete": {
+    "message": "Nepodařilo se připravit všechny samostatné koncepty s heslem. Odeslání hlavního konceptu je zablokováno. Uložte jej znovu a opakujte pokus, nebo sdílení vytvořte znovu."
+  },
   "sharing_html_password_label": {
     "message": "Heslo"
   },
@@ -749,6 +764,9 @@
   "sharing_prompt_rename_duplicate": {
     "message": "Soubor \"$1\" již existuje ve frontě. Zadejte nový název."
   },
+  "sharing_prompt_rename_file_directory_conflict": {
+    "message": "Soubor „$1“ koliduje s cestou ke složce ve frontě. Zadejte nový název."
+  },
   "sharing_message_rename_cancelled": {
     "message": "Nahrávání bylo zrušeno, protože nebyl zadán náhradní název."
   },
@@ -842,6 +860,9 @@
   "sharing_password_mail_subject_with_label": {
     "message": "Heslo ke sdílenému odkazu: $1"
   },
+  "sharing_password_mail_send_later_notice": {
+    "message": "Důležité: Tento e-mail s heslem odešlete ručně teprve poté, co byl hlavní e-mail zařazený do fronty skutečně odeslán."
+  },
   "options_sharing_permissions_tooltip_title": {
     "message": "🛡️ Výchozí oprávnění"
   },
@@ -906,13 +927,19 @@
     "message": "E-mail s heslem byl odeslan $1 prijemci(um)."
   },
   "sharing_password_mail_notify_failure": {
-    "message": "Automaticke odeslani e-mailu s heslem selhalo pro $1 prijemce. Otevren byl rucni koncept."
+    "message": "Automatické doručení hesla selhalo pro $1 příjemce. Odešlete případný připravený koncept ručně; pokud se žádný neobjeví, vytvořte sdílení znovu."
   },
   "sharing_password_mail_notify_manual_required": {
     "message": "Automaticke odeslani hesla selhalo. Odeslete prosim heslo rucne pomoci otevrene sablony."
   },
   "sharing_password_mail_notify_manual_required_select_sender": {
     "message": "Automaticke odeslani hesla selhalo. Pokud je to potreba, vyberte v otevrenem konceptu odesilatele a odeslete e-mail s heslem rucne."
+  },
+  "sharing_password_mail_notify_send_later_manual_required": {
+    "message": "Hlavní e-mail je ve složce „Pošta k odeslání“. Byl otevřen koncept e-mailu s heslem (počet příjemců: $1). Odešlete jej ručně teprve poté, co byl hlavní e-mail skutečně odeslán."
+  },
+  "sharing_password_mail_notify_send_pending": {
+    "message": "Automatické odeslání hesla stále čeká na potvrzení (počet příjemců: $1). Zkontrolujte již otevřené okno pro psaní e-mailu s heslem a neposílejte další kopii."
   },
   "sharing_password_secrets_fallback_warning": {
     "message": "Nextcloud Secrets není k dispozici. Heslo se odešle jako samostatný e-mail v prostém textu."

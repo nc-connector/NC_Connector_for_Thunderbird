@@ -8,23 +8,193 @@ const {
   createFakeClock
 } = require("./filelink-test-harness");
 
-function createCleanupHarness(deleteRemotePath, overrides = {}){
+const TEST_BASE_URL = "https://cloud.example.test";
+const TEST_USER_ID = "user";
+const TEST_LOGIN = "test-login";
+const TEST_APP_PASSWORD = "test-app-password";
+
+function cloneStorageValue(value){
+  return value === undefined ? undefined : structuredClone(value);
+}
+
+function createStorageArea(initial = {}){
+  const values = cloneStorageValue(initial) || {};
+  return {
+    values,
+    area: {
+      async get(keys){
+        if (keys === undefined || keys === null){
+          return cloneStorageValue(values);
+        }
+        const result = {};
+        if (typeof keys === "string"){
+          result[keys] = cloneStorageValue(values[keys]);
+          return result;
+        }
+        if (Array.isArray(keys)){
+          for (const key of keys){
+            result[key] = cloneStorageValue(values[key]);
+          }
+          return result;
+        }
+        for (const [key, fallback] of Object.entries(keys || {})){
+          result[key] = Object.prototype.hasOwnProperty.call(values, key)
+            ? cloneStorageValue(values[key])
+            : cloneStorageValue(fallback);
+        }
+        return result;
+      },
+      async set(update){
+        for (const [key, value] of Object.entries(update || {})){
+          values[key] = cloneStorageValue(value);
+        }
+      }
+    }
+  };
+}
+
+function normalizeTestBaseUrl(value){
+  const raw = String(value || "").trim();
+  if (!raw){
+    return "";
+  }
+  const parsed = new URL(raw);
+  parsed.search = "";
+  parsed.hash = "";
+  return parsed.toString().replace(/\/+$/, "");
+}
+
+function normalizeTestRelativePath(value){
+  return String(value || "")
+    .replace(/\\/g, "/")
+    .replace(/^\/+|\/+$/g, "");
+}
+
+function buildTestFileUrl(davRoot, relativePath){
+  const encodedPath = normalizeTestRelativePath(relativePath)
+    .split("/")
+    .filter(Boolean)
+    .map((segment) => encodeURIComponent(segment))
+    .join("/");
+  const root = String(davRoot || "").replace(/\/+$/, "");
+  return encodedPath ? `${root}/${encodedPath}` : root;
+}
+
+function createCleanupPayload(name, options = {}){
+  const relativeFolder = options.relativeFolder || `NC Connector/${name}`;
+  const davRoot = `${TEST_BASE_URL}/remote.php/dav/files/${TEST_USER_ID}`;
+  return {
+    tabId: Number(options.tabId) || 0,
+    folderInfo: {
+      relativeFolder,
+      folderName: name
+    },
+    shareId: options.shareId || `share-${name}`,
+    shareLabel: options.shareLabel || name,
+    shareUrl: options.shareUrl || `${TEST_BASE_URL}/s/${name.toLowerCase()}`,
+    cleanupTarget: {
+      url: buildTestFileUrl(davRoot, relativeFolder),
+      authHeader: options.authHeader || "Basic captured-credentials",
+      baseUrl: TEST_BASE_URL,
+      relativeFolder,
+      reservationUrl: options.reservationRelativeFolder
+        ? buildTestFileUrl(davRoot, options.reservationRelativeFolder)
+        : "",
+      targetUrl: options.reservationRelativeFolder
+        ? buildTestFileUrl(davRoot, relativeFolder)
+        : ""
+    }
+  };
+}
+
+function createUploadRoot(name, options = {}){
+  const payload = createCleanupPayload(name, options);
+  return {
+    shareName: name,
+    folderInfo: payload.folderInfo,
+    cleanupTarget: payload.cleanupTarget
+  };
+}
+
+async function armComposeShareForTest(
+  cleanup,
+  tabId,
+  wizardWindowId,
+  name,
+  options = {}
+){
+  const payload = createCleanupPayload(name, {
+    ...options,
+    tabId
+  });
+  await cleanup.context.armSharingWizardRemoteCleanup(wizardWindowId, payload);
+  return cleanup.context.armComposeShareCleanup(tabId, {
+    ...payload,
+    wizardWindowId
+  });
+}
+
+async function flushCleanupPersistence(context){
+  await vm.runInContext(
+    "PERSISTED_SHARE_CLEANUP_READY.then(() => PERSISTED_SHARE_CLEANUP_WRITE_QUEUE)",
+    context
+  );
+  await flushMicrotasks();
+}
+
+async function createCleanupHarness(deleteRemotePath, overrides = {}){
   let cleanupCounter = 0;
+  const nextRuntimeId = () => {
+    cleanupCounter++;
+    return `00000000-0000-4000-8000-${String(cleanupCounter).padStart(12, "0")}`;
+  };
   const wizardEntries = new Map();
   const composeEntries = new Map();
   const clearedIndeterminate = [];
+  const {
+    initialStorage,
+    setTimeout: overrideSetTimeout,
+    clearTimeout: overrideClearTimeout,
+    browser: browserOverrides = {},
+    ...contextOverrides
+  } = overrides;
+  const storage = createStorageArea(initialStorage);
+  const runtimeSetTimeout = overrideSetTimeout || setTimeout;
+  const runtimeClearTimeout = overrideClearTimeout || clearTimeout;
+  const runtimeOverrides = browserOverrides.runtime || {};
   const context = createUploadContext({
     console: {
       log: () => {},
       error: () => {}
     },
     crypto: {
-      randomUUID: () => `cleanup-${++cleanupCounter}`
+      randomUUID: nextRuntimeId
     },
+    structuredClone,
+    COMPOSE_SHARE_DRAFT_ID_PATTERN: /^[A-Za-z0-9_-]{16,80}$/,
+    createSecureRuntimeId: nextRuntimeId,
+    bgShortId: (value, maxLength = 24) => String(value || "").slice(0, maxLength),
     SHARING_WIZARD_CLEANUP_BY_WINDOW: wizardEntries,
     COMPOSE_SHARE_CLEANUP_BY_TAB: composeEntries,
     L: () => {},
+    NCCore: {
+      normalizeBaseUrl: normalizeTestBaseUrl,
+      getOpts: async () => ({
+        baseUrl: TEST_BASE_URL,
+        user: TEST_LOGIN,
+        appPass: TEST_APP_PASSWORD
+      }),
+      getCurrentUserId: async () => TEST_USER_ID
+    },
+    NCHostPermissions: {
+      requireOriginPermission: async () => true
+    },
+    NCOcs: {
+      buildAuthHeader: (user, appPass) => `Basic ${user}:${appPass}`
+    },
     NCFileLinkDav: {
+      normalizeRelativePath: normalizeTestRelativePath,
+      buildFileUrl: buildTestFileUrl,
       deleteRemotePath,
       deleteRootReservation: async () => true,
       async deleteTrackedRoot(options){
@@ -42,21 +212,45 @@ function createCleanupHarness(deleteRemotePath, overrides = {}){
     NCSharing: {
       deleteShareFolder: async () => {}
     },
-    ...overrides
+    browser: {
+      ...browserOverrides,
+      storage: {
+        ...browserOverrides.storage,
+        local: storage.area
+      },
+      runtime: {
+        ...runtimeOverrides,
+        onStartup: {
+          addListener: () => {}
+        }
+      }
+    },
+    setTimeout: () => -1,
+    clearTimeout: () => {},
+    ...contextOverrides
   });
+  loadScript("modules/bgShareCleanupStore.js", context);
+  await vm.runInContext("PERSISTED_SHARE_CLEANUP_READY", context);
+  context.setTimeout = runtimeSetTimeout;
+  context.clearTimeout = runtimeClearTimeout;
+  await vm.runInContext(
+    'resumePersistedShareCleanup("test_background_start", { recoverActive: true })',
+    context
+  );
   loadScript("modules/bgComposeShareCleanup.js", context);
   return {
     context,
     wizardEntries,
     composeEntries,
-    clearedIndeterminate
+    clearedIndeterminate,
+    persisted: storage.values
   };
 }
 
 async function checkCleanupRetry(){
   const clock = createFakeClock(1000);
   let attempts = 0;
-  const cleanup = createCleanupHarness(async () => {
+  const cleanup = await createCleanupHarness(async () => {
     attempts++;
     if (attempts < 3){
       throw new Error("offline");
@@ -66,27 +260,26 @@ async function checkCleanupRetry(){
     setTimeout: clock.setTimeout,
     clearTimeout: clock.clearTimeout
   });
-  await cleanup.context.armComposeShareCleanup(12, {
-    folderInfo: { relativeFolder: "NC Connector/Retry" },
-    cleanupTarget: {
-      url: "https://cloud.example.test/remote.php/dav/files/user/NC%20Connector/Retry",
-      authHeader: "Basic retry"
-    }
-  });
+  await armComposeShareForTest(cleanup, 12, 112, "Retry");
   cleanup.context.scheduleComposeShareCleanupDelete(
     12,
     "compose_closed",
     0
   );
-  await flushMicrotasks();
+  await flushMicrotasks(30);
   assert(attempts === 1, "Compose cleanup must try immediately");
-  assert(clock.pendingCount() === 1, "A temporary cleanup failure must schedule one retry");
+  assert(
+    clock.pendingCount() === 1,
+    `A temporary cleanup failure must schedule one retry (pending: ${clock.pendingCount()}, `
+      + `timer: ${String(cleanup.composeEntries.get(12)?.timerId)}, `
+      + `deleting: ${String(cleanup.composeEntries.get(12)?.deleting)})`
+  );
   clock.advance(2000);
-  await flushMicrotasks();
+  await flushMicrotasks(30);
   assert(attempts === 2, "The first delayed cleanup retry must run");
   assert(clock.pendingCount() === 1, "A second cleanup failure must keep one retry timer");
   clock.advance(5000);
-  await flushMicrotasks();
+  await flushMicrotasks(30);
   assert(attempts === 3, "The second delayed cleanup retry must run");
   assert(!cleanup.composeEntries.has(12), "A successful retry must clear compose cleanup state");
   assert(clock.pendingCount() === 0, "Successful cleanup must leave no retry timer");
@@ -94,7 +287,7 @@ async function checkCleanupRetry(){
   const multiClock = createFakeClock(2000);
   const multiCalls = [];
   let secondShareAttempts = 0;
-  const multiCleanup = createCleanupHarness(async ({ url }) => {
+  const multiCleanup = await createCleanupHarness(async ({ url }) => {
     multiCalls.push(url);
     if (url.endsWith("/Second") && ++secondShareAttempts === 1){
       throw new Error("second share offline");
@@ -104,21 +297,15 @@ async function checkCleanupRetry(){
     setTimeout: multiClock.setTimeout,
     clearTimeout: multiClock.clearTimeout
   });
-  for (const name of ["First", "Second"]){
-    await multiCleanup.context.armComposeShareCleanup(13, {
-      folderInfo: { relativeFolder: `NC Connector/${name}` },
-      cleanupTarget: {
-        url: `https://cloud.example.test/remote.php/dav/files/user/${name}`,
-        authHeader: "Basic multi"
-      }
-    });
-  }
+  await armComposeShareForTest(multiCleanup, 13, 113, "First");
+  await armComposeShareForTest(multiCleanup, 13, 114, "Second");
+  const multiDraftGroupId = multiCleanup.composeEntries.get(13).draftGroupId;
   multiCleanup.context.scheduleComposeShareCleanupDelete(
     13,
     "compose_closed",
     0
   );
-  await flushMicrotasks();
+  await flushMicrotasks(60);
   assert(
     multiCalls.length === 2 && multiClock.pendingCount() === 1,
     "A partial multi-share cleanup failure must schedule one retry"
@@ -128,8 +315,18 @@ async function checkCleanupRetry(){
       && multiCleanup.composeEntries.get(13).entries[0].folderInfo.relativeFolder.endsWith("/Second"),
     "A partial cleanup failure must retain only the unfinished share roots"
   );
+  await flushCleanupPersistence(multiCleanup.context);
+  const persistedAfterPartial = multiCleanup.context.getPersistentShareCleanupGroup(
+    multiDraftGroupId
+  );
+  assert(
+    persistedAfterPartial?.state === "pending"
+      && persistedAfterPartial.resources.length === 1
+      && persistedAfterPartial.resources[0].relativeFolder.endsWith("/Second"),
+    "A partial cleanup failure must persist only the unfinished share root for retry"
+  );
   multiClock.advance(2000);
-  await flushMicrotasks();
+  await flushMicrotasks(40);
   assert(
     multiCalls.length === 3 && multiCalls[2].endsWith("/Second"),
     "A multi-share retry must not revisit a root that was already deleted"
@@ -138,26 +335,23 @@ async function checkCleanupRetry(){
     !multiCleanup.composeEntries.has(13),
     "A completed multi-share retry must clear compose cleanup state"
   );
+  await flushCleanupPersistence(multiCleanup.context);
+  assert(
+    !multiCleanup.context.getPersistentShareCleanupGroup(multiDraftGroupId),
+    "A completed multi-share retry must remove its persistent cleanup group"
+  );
 }
 
 async function checkCleanupGenerations(){
   const deleteCalls = [];
-  const cleanup = createCleanupHarness(async (options) => {
+  const cleanup = await createCleanupHarness(async (options) => {
     deleteCalls.push(options);
     return true;
   });
-  const payload = {
-    folderInfo: {
-      relativeFolder: "NC Connector/Share",
-      folderName: "Share"
-    },
-    cleanupTarget: {
-      url: "https://cloud.example.test/remote.php/dav/files/user/NC%20Connector/Share",
-      authHeader: "Basic original",
-      baseUrl: "https://cloud.example.test",
-      relativeFolder: "NC Connector/Share"
-    }
-  };
+  const payload = createCleanupPayload("Share", {
+    tabId: 17,
+    authHeader: "Basic original"
+  });
   await cleanup.context.armSharingWizardRemoteCleanup(7, payload);
   const firstEntry = cleanup.wizardEntries.get(7);
   payload.cleanupTarget.url = "https://attacker.invalid/replaced";
@@ -180,25 +374,28 @@ async function checkCleanupGenerations(){
   assert(deleteCalls.length === 1, "The current wizard generation must issue one DAV delete");
   assert(
     deleteCalls[0].url === "https://cloud.example.test/remote.php/dav/files/user/NC%20Connector/Share"
-      && deleteCalls[0].authHeader === "Basic original",
-    "Cleanup must use its captured URL and credentials"
+      && deleteCalls[0].authHeader === `Basic ${TEST_LOGIN}:${TEST_APP_PASSWORD}`,
+    "Cleanup must reconstruct the captured resource with current account credentials"
   );
   assert(cleanup.clearedIndeterminate.length === 1, "DAV cleanup must clear matching share recovery state");
+  assert(
+    !JSON.stringify(cleanup.persisted).includes("Basic")
+      && !JSON.stringify(cleanup.persisted).includes(TEST_APP_PASSWORD),
+    "Persistent cleanup state must not contain captured or current credentials"
+  );
 
   let reservationCleanup = null;
   cleanup.context.NCFileLinkDav.deleteRootReservation = async (options) => {
     reservationCleanup = options;
     return "target";
   };
-  await cleanup.context.armSharingWizardRemoteCleanup(9, {
-    folderInfo: { relativeFolder: "NC Connector/Ambiguous" },
-    cleanupTarget: {
-      url: "https://cloud.example.test/remote.php/dav/files/user/NC%20Connector/Ambiguous",
-      authHeader: "Basic ambiguous",
-      reservationUrl: "https://cloud.example.test/remote.php/dav/files/user/NC%20Connector/_stage",
-      targetUrl: "https://cloud.example.test/remote.php/dav/files/user/NC%20Connector/Ambiguous"
-    }
-  });
+  await cleanup.context.armSharingWizardRemoteCleanup(
+    9,
+    createCleanupPayload("Ambiguous", {
+      tabId: 19,
+      reservationRelativeFolder: "NC Connector/_stage"
+    })
+  );
   const reservationEntry = cleanup.wizardEntries.get(9);
   const reservationRemoved = await cleanup.context.deleteSharingWizardRemoteCleanupNow(
     9,
@@ -216,13 +413,10 @@ async function checkCleanupGenerations(){
   cleanup.context.NCFileLinkDav.deleteRemotePath = () => new Promise((resolve) => {
     finishDelete = resolve;
   });
-  await cleanup.context.armSharingWizardRemoteCleanup(8, {
-    folderInfo: { relativeFolder: "NC Connector/Old" },
-    cleanupTarget: {
-      url: "https://cloud.example.test/remote.php/dav/files/user/NC%20Connector/Old",
-      authHeader: "Basic old"
-    }
-  });
+  await cleanup.context.armSharingWizardRemoteCleanup(
+    8,
+    createCleanupPayload("Old", { tabId: 18 })
+  );
   const oldEntry = cleanup.wizardEntries.get(8);
   const deleting = cleanup.context.deleteSharingWizardRemoteCleanupNow(
     8,
@@ -246,13 +440,7 @@ async function checkCleanupGenerations(){
     composeDeleteCount++;
     return true;
   };
-  await cleanup.context.armComposeShareCleanup(11, {
-    folderInfo: { relativeFolder: "NC Connector/Compose" },
-    cleanupTarget: {
-      url: "https://cloud.example.test/remote.php/dav/files/user/NC%20Connector/Compose",
-      authHeader: "Basic compose"
-    }
-  });
+  await armComposeShareForTest(cleanup, 11, 111, "Compose");
   const composeEntry = cleanup.composeEntries.get(11);
   const composeStale = await cleanup.context.deleteComposeShareCleanupNow(
     11,
@@ -261,15 +449,16 @@ async function checkCleanupGenerations(){
   );
   assert(composeStale === false, "A stale compose generation must not report deletion");
   assert(cleanup.composeEntries.get(11) === composeEntry, "A stale compose generation must remain armed");
-  await cleanup.context.armComposeShareCleanup(11, {
-    folderInfo: { relativeFolder: "NC Connector/Compose-2" },
-    cleanupTarget: {
-      url: "https://cloud.example.test/remote.php/dav/files/user/NC%20Connector/Compose-2",
-      authHeader: "Basic compose"
-    }
-  });
+  await armComposeShareForTest(cleanup, 11, 115, "Compose-2");
   const multiShareState = cleanup.composeEntries.get(11);
   assert(multiShareState.entries.length === 2, "One compose tab must retain every inserted share root");
+  const persistedMultiShare = cleanup.context.getPersistentShareCleanupGroup(
+    multiShareState.draftGroupId
+  );
+  assert(
+    persistedMultiShare?.resources?.length === 2,
+    "One compose tab must persist every inserted share root"
+  );
   const multiShareRemoved = await cleanup.context.deleteComposeShareCleanupNow(
     11,
     "compose_closed",
@@ -278,16 +467,15 @@ async function checkCleanupGenerations(){
   assert(multiShareRemoved === true, "Compose cleanup must remove all tracked share roots");
   assert(composeDeleteCount === 2, "Compose cleanup must issue one delete per tracked share");
 
-  await cleanup.context.armSharingWizardRemoteCleanup(10, {
-    folderInfo: { relativeFolder: "NC Connector/Transfer" },
-    cleanupTarget: {
-      url: "https://cloud.example.test/remote.php/dav/files/user/NC%20Connector/Transfer",
-      authHeader: "Basic transfer"
-    }
+  const transferPayload = createCleanupPayload("Transfer", {
+    tabId: 16,
+    authHeader: "Basic transfer"
   });
+  await cleanup.context.armSharingWizardRemoteCleanup(10, transferPayload);
   await cleanup.context.armComposeShareCleanup(16, {
+    ...transferPayload,
     wizardWindowId: 10,
-    folderInfo: { relativeFolder: "NC Connector/Transfer" }
+    folderInfo: transferPayload.folderInfo
   });
   assert(
     !cleanup.wizardEntries.has(10),
@@ -297,7 +485,7 @@ async function checkCleanupGenerations(){
     cleanup.composeEntries.get(16)?.entries?.[0]?.cleanupTarget?.authHeader === "Basic transfer",
     "Compose cleanup must retain the wizard cleanup target during ownership transfer"
   );
-  cleanup.context.clearComposeShareCleanup(16, "test_done");
+  await cleanup.context.commitComposeShareCleanup(16, "test_done");
 }
 
 function createPort(){
@@ -323,37 +511,13 @@ function createPort(){
   };
 }
 
-function createBackgroundHarness({
+async function createBackgroundHarness({
   deleteRemotePath = async () => true,
   createFileLink
 } = {}){
   let connectListener = null;
   let windowRemovedListener = null;
-  const wizardEntries = new Map();
-  const composeEntries = new Map();
-  const context = createUploadContext({
-    console: {
-      log: () => {},
-      error: () => {}
-    },
-    crypto: {
-      randomUUID: () => "cleanup-id"
-    },
-    SHARING_WIZARD_CLEANUP_BY_WINDOW: wizardEntries,
-    COMPOSE_SHARE_CLEANUP_BY_TAB: composeEntries,
-    L: () => {},
-    NCFileLinkDav: {
-      deleteRemotePath,
-      async deleteTrackedRoot(options){
-        return options?.reservationUrl
-          ? this.deleteRootReservation(options)
-          : this.deleteRemotePath(options);
-      },
-      deleteRootReservation: async () => true
-    },
-    NCFileLinkShare: {
-      clearIndeterminate: async () => true
-    },
+  const cleanup = await createCleanupHarness(deleteRemotePath, {
     NCSharing: {
       deleteShareFolder: async () => {},
       createFileLink
@@ -375,11 +539,10 @@ function createBackgroundHarness({
       }
     }
   });
-  loadScript("modules/bgComposeShareCleanup.js", context);
-  loadScript("modules/bgFileLinkUpload.js", context);
+  loadScript("modules/bgFileLinkUpload.js", cleanup.context);
   return {
-    context,
-    wizardEntries,
+    context: cleanup.context,
+    wizardEntries: cleanup.wizardEntries,
     connect: (port) => connectListener(port),
     removeWindow: (windowId) => windowRemovedListener(windowId)
   };
@@ -388,7 +551,7 @@ function createBackgroundHarness({
 async function checkBackgroundAbort(){
   let uploadSignal = null;
   let createCalls = 0;
-  const background = createBackgroundHarness({
+  const background = await createBackgroundHarness({
     createFileLink: async ({ signal }) => {
       createCalls++;
       uploadSignal = signal;
@@ -424,7 +587,7 @@ async function checkBackgroundAbort(){
   );
 
   let blockedCreateCalls = 0;
-  const blocked = createBackgroundHarness({
+  const blocked = await createBackgroundHarness({
     deleteRemotePath: async () => {
       throw new Error("delete failed");
     },
@@ -457,7 +620,7 @@ async function checkBackgroundAbort(){
   );
 
   let cancelSignal = null;
-  const canceled = createBackgroundHarness({
+  const canceled = await createBackgroundHarness({
     createFileLink: async ({ signal }) => {
       cancelSignal = signal;
       return new Promise((resolve, reject) => {
@@ -483,7 +646,7 @@ async function checkBackgroundAbort(){
   assert(cancelSignal?.aborted, "An explicit cancel message must abort the active upload signal");
 
   let removedWindowSignal = null;
-  const removedWindow = createBackgroundHarness({
+  const removedWindow = await createBackgroundHarness({
     createFileLink: async ({ signal }) => {
       removedWindowSignal = signal;
       return new Promise((resolve, reject) => {
@@ -515,8 +678,8 @@ async function checkBackgroundAbort(){
 async function checkSessionReplacement(){
   const sequence = [];
   let callCount = 0;
-  const background = createBackgroundHarness({
-    createFileLink: async ({ signal }) => {
+  const background = await createBackgroundHarness({
+    createFileLink: async ({ signal, onRootCreated }) => {
       callCount++;
       if (callCount === 1){
         sequence.push("first-start");
@@ -530,6 +693,7 @@ async function checkSessionReplacement(){
         });
       }
       sequence.push("second-start");
+      await onRootCreated(createUploadRoot("New"));
       return {
         shareInfo: {
           folderInfo: { relativeFolder: "NC Connector/New" },
@@ -571,7 +735,7 @@ async function checkSessionReplacement(){
 async function checkUndeliveredResultCleanup(){
   const deleteCalls = [];
   let finishUpload;
-  const background = createBackgroundHarness({
+  const background = await createBackgroundHarness({
     deleteRemotePath: async (options) => {
       deleteCalls.push(options);
       return true;
@@ -614,7 +778,7 @@ async function checkUndeliveredResultCleanup(){
       shareUrl: "https://cloud.example.test/s/late"
     }
   });
-  await flushMicrotasks(30);
+  await flushMicrotasks(100);
   assert(deleteCalls.length === 1, "An undelivered completed result must delete its remote root");
   assert(
     deleteCalls[0].url.endsWith("/NC%20Connector/Late"),

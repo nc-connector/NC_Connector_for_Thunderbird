@@ -215,6 +215,9 @@
   "talk_error_event_context_missing": {
     "message": "Não foi possível criar uma sala Talk de evento porque o evento aberto não tem horário de início. Verifique o editor do evento e tente novamente."
   },
+  "talk_error_existing_room_linked": {
+    "message": "Este evento já está vinculado a uma sala do Nextcloud Talk. Use a sala existente em vez de criar outra."
+  },
   "talk_section_settings": {
     "message": "Configurações do Talk"
   },
@@ -623,6 +626,18 @@
   "sharing_error_insert_failed": {
     "message": "Não foi possível inserir o compartilhamento na mensagem."
   },
+  "sharing_error_insert_failed_close": {
+    "message": "Não foi possível concluir o compartilhamento com segurança. Feche a janela de compartilhamento e verifique a mensagem antes de tentar novamente."
+  },
+  "sharing_saved_template_unsupported": {
+    "message": "Mensagens com um compartilhamento do NC Connector não podem ser salvas nem enviadas como modelos do Thunderbird. Crie uma nova mensagem e compartilhe os arquivos novamente."
+  },
+  "sharing_saved_draft_state_unavailable": {
+    "message": "O estado do compartilhamento do Nextcloud para este rascunho está indisponível ou inconsistente neste perfil do Thunderbird. O envio está bloqueado. Crie uma nova mensagem e compartilhe os arquivos novamente."
+  },
+  "sharing_password_handoff_incomplete": {
+    "message": "Não foi possível preparar todos os rascunhos separados de senha. O envio do rascunho principal está bloqueado. Salve-o novamente para tentar outra vez ou recrie o compartilhamento."
+  },
   "sharing_html_password_label": {
     "message": "Senha"
   },
@@ -749,6 +764,9 @@
   "sharing_prompt_rename_duplicate": {
     "message": "O arquivo \"$1\" já existe na fila. Informe um novo nome."
   },
+  "sharing_prompt_rename_file_directory_conflict": {
+    "message": "O arquivo “$1” está em conflito com o caminho de uma pasta na fila. Digite um novo nome."
+  },
   "sharing_message_rename_cancelled": {
     "message": "Envio cancelado porque nenhum nome de substituição foi fornecido."
   },
@@ -842,6 +860,9 @@
   "sharing_password_mail_subject_with_label": {
     "message": "Senha do link compartilhado: $1"
   },
+  "sharing_password_mail_send_later_notice": {
+    "message": "Importante: envie este e-mail com a senha manualmente somente depois que o e-mail principal na fila tiver sido efetivamente enviado."
+  },
   "options_sharing_permissions_tooltip_title": {
     "message": "🛡️ Permissões padrão"
   },
@@ -906,13 +927,19 @@
     "message": "E-mail de senha enviado para $1 destinatario(s)."
   },
   "sharing_password_mail_notify_failure": {
-    "message": "O envio automatico do e-mail de senha falhou para $1 destinatario(s). Um rascunho manual foi aberto."
+    "message": "A entrega automática da senha falhou para $1 destinatário(s). Envie manualmente qualquer rascunho preparado; se nenhum aparecer, recrie o compartilhamento."
   },
   "sharing_password_mail_notify_manual_required": {
     "message": "O envio automatico do e-mail de senha falhou. Envie manualmente o e-mail de senha usando o rascunho aberto."
   },
   "sharing_password_mail_notify_manual_required_select_sender": {
     "message": "O envio automatico do e-mail de senha falhou. Se necessario, selecione um remetente no rascunho aberto e envie manualmente o e-mail de senha."
+  },
+  "sharing_password_mail_notify_send_later_manual_required": {
+    "message": "O e-mail principal está na pasta Saída. Foi aberto um rascunho do e-mail com a senha (destinatários: $1). Envie-o manualmente somente depois que o e-mail principal tiver sido efetivamente enviado."
+  },
+  "sharing_password_mail_notify_send_pending": {
+    "message": "O envio automático da senha ainda aguarda confirmação (destinatários: $1). Verifique a janela de composição já aberta para o e-mail com a senha e não envie uma segunda cópia."
   },
   "sharing_password_secrets_fallback_warning": {
     "message": "O Nextcloud Secrets não está disponível. A senha será enviada em um e-mail separado em texto simples."

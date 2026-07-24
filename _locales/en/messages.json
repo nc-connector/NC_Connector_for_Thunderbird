@@ -215,6 +215,9 @@
   "talk_error_event_context_missing": {
     "message": "Could not create an event Talk room because the open event has no start time. Please check the event editor and try again."
   },
+  "talk_error_existing_room_linked": {
+    "message": "This event is already linked to a Nextcloud Talk room. Use the existing room instead of creating another one."
+  },
   "talk_section_settings": {
     "message": "Talk Settings"
   },
@@ -623,6 +626,18 @@
   "sharing_error_insert_failed": {
     "message": "Could not insert the share into the message."
   },
+  "sharing_error_insert_failed_close": {
+    "message": "Could not complete the share safely. Close the Sharing window and check the message before trying again."
+  },
+  "sharing_saved_template_unsupported": {
+    "message": "Messages with an NC Connector share cannot be saved or sent as Thunderbird templates. Create a new message and share the files again."
+  },
+  "sharing_saved_draft_state_unavailable": {
+    "message": "The Nextcloud share state for this draft is unavailable or inconsistent in this Thunderbird profile. Sending is blocked. Create a new message and share the files again."
+  },
+  "sharing_password_handoff_incomplete": {
+    "message": "Not all separate password drafts could be prepared. Sending the main draft is blocked. Save it again to retry, or recreate the share."
+  },
   "sharing_html_password_label": {
     "message": "Password"
   },
@@ -749,6 +764,9 @@
   "sharing_prompt_rename_duplicate": {
     "message": "The file \"$1\" already exists in the queue. Please enter a new name."
   },
+  "sharing_prompt_rename_file_directory_conflict": {
+    "message": "The file \"$1\" conflicts with a folder path in the queue. Please enter a new name."
+  },
   "sharing_message_rename_cancelled": {
     "message": "Upload cancelled because no replacement name was provided."
   },
@@ -842,6 +860,9 @@
   "sharing_password_mail_subject_with_label": {
     "message": "Password for shared link: $1"
   },
+  "sharing_password_mail_send_later_notice": {
+    "message": "Important: Send this password email manually only after the queued main email has actually been sent."
+  },
   "options_sharing_permissions_tooltip_title": {
     "message": "🛡️ Default permissions"
   },
@@ -906,13 +927,19 @@
     "message": "Password email sent to $1 recipient(s)."
   },
   "sharing_password_mail_notify_failure": {
-    "message": "Automatic password email failed for $1 recipient(s). A manual draft was opened."
+    "message": "Automatic password delivery failed for $1 recipient(s). Send any prepared draft manually; if none appears, recreate the share."
   },
   "sharing_password_mail_notify_manual_required": {
     "message": "Automatic password email failed. Please send the password email manually using the opened draft."
   },
   "sharing_password_mail_notify_manual_required_select_sender": {
     "message": "Automatic password email failed. Please select a sender in the opened draft if needed, then send the password email manually."
+  },
+  "sharing_password_mail_notify_send_later_manual_required": {
+    "message": "The main email is in the Outbox. A password draft for $1 recipient(s) was opened. Send it manually only after the main email has actually been sent."
+  },
+  "sharing_password_mail_notify_send_pending": {
+    "message": "Automatic password delivery for $1 recipient(s) is still awaiting confirmation. Check the existing password compose window and do not send a second copy."
   },
   "sharing_password_secrets_fallback_warning": {
     "message": "Nextcloud Secrets is unavailable. The password will be sent as a separate plaintext email."

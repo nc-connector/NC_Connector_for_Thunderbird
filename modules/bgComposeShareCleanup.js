@@ -43,11 +43,22 @@ function normalizeComposeShareCleanupFolderInfo(folderInfo){
   return Object.freeze(normalized);
 }
 
-function createShareCleanupId(){
-  if (globalThis.crypto?.randomUUID){
-    return globalThis.crypto.randomUUID();
+function composeShareCleanupEntryKey(entry){
+  const shareUrl = String(entry?.shareUrl || "").trim();
+  const shareId = String(entry?.shareId || "").trim();
+  if (shareUrl || shareId){
+    return `share:${shareUrl}|${shareId}`;
   }
-  return `${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 14)}`;
+  const cleanupUrl = String(entry?.cleanupTarget?.url || "").trim();
+  if (cleanupUrl){
+    return `target:${cleanupUrl}`;
+  }
+  const relativeFolder = String(entry?.folderInfo?.relativeFolder || "").trim();
+  return relativeFolder ? `folder:${relativeFolder}` : "";
+}
+
+function createShareCleanupId(){
+  return createSecureRuntimeId();
 }
 
 function normalizeShareCleanupTarget(cleanupTarget){
@@ -85,23 +96,18 @@ function normalizeShareCleanupTarget(cleanupTarget){
   });
 }
 
-async function deleteShareCleanupEntry(entry){
-  if (entry?.cleanupTarget){
-    await NCFileLinkDav.deleteTrackedRoot({
-      url: entry.cleanupTarget.url,
-      reservationUrl: entry.cleanupTarget.reservationUrl,
-      targetUrl: entry.cleanupTarget.targetUrl,
-      authHeader: entry.cleanupTarget.authHeader,
-      log: (...args) => L(...args)
-    });
-    if (entry.cleanupTarget.baseUrl && entry.cleanupTarget.relativeFolder){
-      await NCFileLinkShare.clearIndeterminate({
-        baseUrl: entry.cleanupTarget.baseUrl,
-        relativeFolder: entry.cleanupTarget.relativeFolder,
-        authHeader: entry.cleanupTarget.authHeader
-      });
+async function deleteShareCleanupEntry(entry, groupId = ""){
+  const descriptor = entry?.cleanupDescriptor
+    || createPersistedShareCleanupDescriptor(entry);
+  if (descriptor){
+    await deletePersistedShareCleanupDescriptor(descriptor);
+    if (groupId){
+      await removePersistentShareCleanupDescriptor(groupId, descriptor);
     }
     return;
+  }
+  if (entry?.cleanupTarget){
+    throw new Error("share_cleanup_descriptor_invalid");
   }
   await NCSharing.deleteShareFolder({ folderInfo: entry?.folderInfo });
 }
@@ -154,7 +160,7 @@ async function armSharingWizardRemoteCleanup(windowId, payload = {}){
       throw new Error("previous_cleanup_failed");
     }
   }
-  SHARING_WIZARD_CLEANUP_BY_WINDOW.set(windowId, {
+  const entry = {
     cleanupId: createShareCleanupId(),
     windowId,
     tabId: Number.isInteger(Number(payload.tabId)) ? Number(payload.tabId) : 0,
@@ -165,7 +171,13 @@ async function armSharingWizardRemoteCleanup(windowId, payload = {}){
     cleanupTarget: normalizeShareCleanupTarget(payload.cleanupTarget),
     created: Date.now(),
     retryTimerId: null
-  });
+  };
+  entry.cleanupDescriptor = createPersistedShareCleanupDescriptor(entry);
+  if (!entry.cleanupDescriptor){
+    throw new Error("share_cleanup_descriptor_invalid");
+  }
+  await persistWizardShareCleanupGroup(entry);
+  SHARING_WIZARD_CLEANUP_BY_WINDOW.set(windowId, entry);
   L("sharing wizard cleanup armed", {
     windowId,
     tabId: Number.isInteger(Number(payload.tabId)) ? Number(payload.tabId) : 0,
@@ -188,7 +200,7 @@ async function deleteSharingWizardRemoteCleanupNow(
     return false;
   }
   try{
-    await deleteShareCleanupEntry(entry);
+    await deleteShareCleanupEntry(entry, entry.cleanupId);
     L("sharing wizard cleanup delete done", {
       windowId,
       reason: reason || "",
@@ -226,6 +238,7 @@ function scheduleSharingWizardRemoteCleanupRetry(
       windowId,
       reason: reason || ""
     });
+    void markPersistentShareCleanupExhausted(entry.cleanupId);
     return false;
   }
   entry.retryTimerId = setTimeout(() => {
@@ -302,7 +315,7 @@ function clearComposeShareCleanup(tabId, reason = "", expectedEntry = null){
  * @param {number} tabId
  * @param {{folderInfo?:object,shareId?:string,shareLabel?:string,shareUrl?:string}} payload
  */
-async function armComposeShareCleanup(tabId, payload = {}){
+async function armComposeShareCleanup(tabId, payload = {}, options = {}){
   if (!Number.isInteger(tabId) || tabId <= 0){
     throw new Error("invalid_tab_id");
   }
@@ -311,6 +324,9 @@ async function armComposeShareCleanup(tabId, payload = {}){
     throw new Error("folder_info_missing");
   }
   const wizardWindowId = Number(payload.wizardWindowId);
+  if (!Number.isInteger(wizardWindowId) || wizardWindowId <= 0){
+    throw new Error("wizard_cleanup_window_missing");
+  }
   let previous = COMPOSE_SHARE_CLEANUP_BY_TAB.get(tabId) || null;
   if (previous?.deleting && previous.deletePromise){
     try{
@@ -320,37 +336,96 @@ async function armComposeShareCleanup(tabId, payload = {}){
     }
     previous = COMPOSE_SHARE_CLEANUP_BY_TAB.get(tabId) || null;
   }
-  if (previous?.timerId){
-    clearTimeout(previous.timerId);
-    previous.timerId = null;
+  if (previous?.timerId || previous?.deleting){
+    throw new Error("compose_cleanup_busy");
   }
-  const wizardEntry = Number.isInteger(wizardWindowId)
-    ? SHARING_WIZARD_CLEANUP_BY_WINDOW.get(wizardWindowId)
-    : null;
+  const wizardEntry = SHARING_WIZARD_CLEANUP_BY_WINDOW.get(wizardWindowId);
+  if (!wizardEntry
+    || wizardEntry.tabId !== tabId
+    || wizardEntry.folderInfo?.relativeFolder !== folderInfo.relativeFolder){
+    throw new Error("wizard_cleanup_ownership_mismatch");
+  }
+  for (const field of ["shareId", "shareUrl"]){
+    if (String(payload[field] || "").trim()
+      !== String(wizardEntry[field] || "").trim()){
+      throw new Error("wizard_cleanup_share_mismatch");
+    }
+  }
+  const wizardDescriptor = wizardEntry.cleanupDescriptor
+    || createPersistedShareCleanupDescriptor(wizardEntry);
+  if (!wizardDescriptor){
+    throw new Error("wizard_cleanup_descriptor_invalid");
+  }
   const trackedShare = Object.freeze({
-    folderInfo,
-    shareId: String(payload.shareId || "").trim(),
-    shareLabel: String(payload.shareLabel || "").trim(),
-    shareUrl: String(payload.shareUrl || "").trim(),
-    cleanupTarget: normalizeShareCleanupTarget(payload.cleanupTarget)
-      || wizardEntry?.cleanupTarget
-      || null,
+    folderInfo: wizardEntry.folderInfo,
+    shareId: wizardEntry.shareId,
+    shareLabel: wizardEntry.shareLabel,
+    shareUrl: wizardEntry.shareUrl,
+    cleanupTarget: wizardEntry.cleanupTarget,
+    cleanupDescriptor: wizardDescriptor,
     created: Date.now()
   });
-  const entries = Array.isArray(previous?.entries)
-    ? [...previous.entries, trackedShare]
-    : [trackedShare];
-  COMPOSE_SHARE_CLEANUP_BY_TAB.set(tabId, {
+  const previousEntries = Array.isArray(previous?.entries)
+    ? previous.entries.slice()
+    : [];
+  const trackedKey = composeShareCleanupEntryKey(trackedShare);
+  const existingIndex = trackedKey
+    ? previousEntries.findIndex((entry) => composeShareCleanupEntryKey(entry) === trackedKey)
+    : -1;
+  if (existingIndex >= 0){
+    const existing = previousEntries[existingIndex];
+    previousEntries[existingIndex] = Object.freeze({
+      ...trackedShare,
+      cleanupTarget: trackedShare.cleanupTarget || existing.cleanupTarget || null,
+      cleanupDescriptor: trackedShare.cleanupDescriptor || existing.cleanupDescriptor || null,
+      created: Number(existing.created) || trackedShare.created
+    });
+  }else{
+    previousEntries.push(trackedShare);
+  }
+  const entries = previousEntries;
+  const hasSavedBaseline = previous?.saved === true;
+  const stagedState = {
     cleanupId: createShareCleanupId(),
     tabId,
     entries,
+    draftGroupId: String(
+      options.draftGroupId
+      || payload.draftGroupId
+      || previous?.draftGroupId
+      || createShareCleanupId()
+    ).trim(),
+    saved: hasSavedBaseline,
+    savePendingChanges: hasSavedBaseline,
+    messageIds: hasSavedBaseline
+      ? (Array.isArray(previous?.messageIds) ? previous.messageIds.slice() : [])
+      : [],
+    passwordHandoffRequired: previous?.passwordHandoffRequired === true,
+    passwordHandoffComplete: previous?.passwordHandoffRequired !== true
+      || previous?.passwordHandoffComplete === true,
+    templateUnsupported: previous?.templateUnsupported === true,
+    lifecycleTainted: previous?.lifecycleTainted === true,
     created: Date.now(),
     sendPending: false,
     timerId: null,
     deleting: false,
     deletePromise: null
-  });
-  if (wizardEntry){
+  };
+  if (!stagedState.draftGroupId){
+    throw new Error("compose_share_draft_group_missing");
+  }
+  let persistenceTransition = null;
+  if (options.persist !== false){
+    persistenceTransition = await stagePersistentComposeCleanupGroup(
+      wizardEntry?.cleanupId || "",
+      stagedState.draftGroupId,
+      entries
+    );
+  }
+  COMPOSE_SHARE_CLEANUP_BY_TAB.set(tabId, stagedState);
+  const wizardOwnershipTransferred = !!wizardEntry
+    && options.transferWizardOwnership !== false;
+  if (wizardOwnershipTransferred){
     clearSharingWizardRemoteCleanup(
       wizardWindowId,
       "ownership_transferred_to_compose",
@@ -364,11 +439,89 @@ async function armComposeShareCleanup(tabId, payload = {}){
     shareLabel: String(payload.shareLabel || "").trim(),
     shares: entries.length
   });
+  return {
+    mutationId: createShareCleanupId(),
+    tabId,
+    stagedState,
+    previousState: previous,
+    wizardWindowId: Number.isInteger(wizardWindowId) ? wizardWindowId : 0,
+    wizardEntry,
+    wizardOwnershipTransferred,
+    persistenceTransition
+  };
 }
 
-function setComposeShareCleanupSendPending(tabId, pending, reason = ""){
+function completeComposeShareCleanupArm(mutation, reason = ""){
+  if (!mutation?.wizardEntry || mutation.wizardOwnershipTransferred){
+    return true;
+  }
+  const cleared = clearSharingWizardRemoteCleanup(
+    mutation.wizardWindowId,
+    reason || "ownership_transferred_to_compose",
+    mutation.wizardEntry
+  );
+  if (cleared){
+    mutation.wizardOwnershipTransferred = true;
+  }
+  return cleared;
+}
+
+function rollbackComposeShareCleanupArm(mutation, reason = ""){
+  if (!mutation || COMPOSE_SHARE_CLEANUP_BY_TAB.get(mutation.tabId) !== mutation.stagedState){
+    return false;
+  }
+  if (mutation.previousState){
+    COMPOSE_SHARE_CLEANUP_BY_TAB.set(mutation.tabId, mutation.previousState);
+  }else{
+    COMPOSE_SHARE_CLEANUP_BY_TAB.delete(mutation.tabId);
+  }
+  if (mutation.wizardOwnershipTransferred
+    && mutation.wizardEntry
+    && mutation.wizardWindowId > 0){
+    const currentWizardEntry = SHARING_WIZARD_CLEANUP_BY_WINDOW.get(mutation.wizardWindowId);
+    if (!currentWizardEntry){
+      SHARING_WIZARD_CLEANUP_BY_WINDOW.set(
+        mutation.wizardWindowId,
+        mutation.wizardEntry
+      );
+    }else if (currentWizardEntry !== mutation.wizardEntry){
+      console.error("[NCBG] sharing wizard ownership rollback conflict", {
+        windowId: mutation.wizardWindowId,
+        reason: reason || ""
+      });
+      return false;
+    }
+  }
+  L("compose share cleanup arm rolled back", {
+    tabId: mutation.tabId,
+    reason: reason || "",
+    restoredShares: Array.isArray(mutation.previousState?.entries)
+      ? mutation.previousState.entries.length
+      : 0
+  });
+  return true;
+}
+
+async function restorePersistentWizardCleanupOwnership(mutation){
+  if (!mutation?.persistenceTransition){
+    return;
+  }
+  await rollbackPersistentComposeCleanupGroup(mutation.persistenceTransition);
+}
+
+async function setComposeShareCleanupSendPending(tabId, pending, reason = ""){
   const state = COMPOSE_SHARE_CLEANUP_BY_TAB.get(tabId);
-  if (!state){
+  if (!state?.draftGroupId){
+    return false;
+  }
+  const persisted = await markPersistentComposeSendPending(
+    state.draftGroupId,
+    pending === true
+  );
+  if (!persisted){
+    throw new Error("compose_send_pending_record_missing");
+  }
+  if (COMPOSE_SHARE_CLEANUP_BY_TAB.get(tabId) !== state){
     return false;
   }
   if (state.timerId){
@@ -382,7 +535,7 @@ function setComposeShareCleanupSendPending(tabId, pending, reason = ""){
     }
     state.timerId = null;
   }
-  state.sendPending = !!pending;
+  state.sendPending = pending === true;
   state.sendStateUpdated = Date.now();
   L("compose share cleanup send state updated", {
     tabId,
@@ -390,6 +543,207 @@ function setComposeShareCleanupSendPending(tabId, pending, reason = ""){
     reason: reason || "",
     shares: Array.isArray(state.entries) ? state.entries.length : 0
   });
+  return true;
+}
+
+async function setComposeSharePasswordHandoffState(
+  tabId,
+  required,
+  complete,
+  reason = ""
+){
+  const state = COMPOSE_SHARE_CLEANUP_BY_TAB.get(tabId);
+  if (!state?.draftGroupId){
+    return false;
+  }
+  const previousRequired = state.passwordHandoffRequired === true;
+  const previousComplete = state.passwordHandoffRequired !== true
+    || state.passwordHandoffComplete === true;
+  state.passwordHandoffRequired = required === true;
+  state.passwordHandoffComplete = required !== true || complete === true;
+  try{
+    const persisted = await markPersistentComposePasswordHandoff(
+      state.draftGroupId,
+      state.passwordHandoffRequired,
+      state.passwordHandoffComplete
+    );
+    if (!persisted){
+      throw new Error("compose_password_handoff_record_missing");
+    }
+  }catch(error){
+    state.passwordHandoffRequired = previousRequired;
+    state.passwordHandoffComplete = previousComplete;
+    throw error;
+  }
+  L("compose password handoff state updated", {
+    tabId,
+    required: state.passwordHandoffRequired,
+    complete: state.passwordHandoffComplete,
+    reason: reason || ""
+  });
+  return true;
+}
+
+async function rehydrateComposeShareCleanup(tabId, details = null){
+  if (!Number.isInteger(tabId) || tabId <= 0){
+    return { ok: false, reason: "invalid_tab_id" };
+  }
+  await PERSISTED_SHARE_CLEANUP_READY;
+  const composeDetails = details || await browser.compose.getComposeDetails(tabId);
+  if (String(composeDetails?.type || "") !== "draft"){
+    return { ok: false, reason: "not_saved_draft" };
+  }
+  const draftIds = [...new Set(getComposeShareDraftIds(composeDetails?.customHeaders))];
+  if (draftIds.length !== 1){
+    return {
+      ok: false,
+      reason: draftIds.length ? "draft_marker_conflict" : "draft_marker_missing"
+    };
+  }
+  const draftGroupId = draftIds[0];
+  const persisted = getPersistentShareCleanupGroup(draftGroupId);
+  if (!persisted
+    || persisted.ownerKind !== "compose"
+    || !["saved", "send_pending"].includes(persisted.state)
+    || persisted.saved !== true){
+    return { ok: false, reason: "draft_cleanup_record_missing" };
+  }
+  const entries = getPersistedComposeCleanupEntries(draftGroupId);
+  if (!entries.length){
+    return { ok: false, reason: "draft_cleanup_resources_missing" };
+  }
+  const current = COMPOSE_SHARE_CLEANUP_BY_TAB.get(tabId);
+  if (current?.draftGroupId === draftGroupId){
+    return { ok: true, state: current, rehydrated: false };
+  }
+  if (current){
+    return { ok: false, reason: "draft_cleanup_tab_conflict" };
+  }
+  const state = {
+    cleanupId: createShareCleanupId(),
+    tabId,
+    entries,
+    draftGroupId,
+    saved: true,
+    savePendingChanges: persisted.savePendingChanges === true,
+    messageIds: persisted.messageIds.slice(),
+    passwordHandoffRequired: persisted.passwordHandoffRequired === true,
+    passwordHandoffComplete: persisted.passwordHandoffRequired !== true
+      || persisted.passwordHandoffComplete === true,
+    templateUnsupported: persisted.templateUnsupported === true,
+    lifecycleTainted: persisted.lifecycleTainted === true,
+    created: persisted.created,
+    sendPending: persisted.state === "send_pending"
+      || persisted.sendPending === true,
+    timerId: null,
+    deleting: false,
+    deletePromise: null
+  };
+  COMPOSE_SHARE_CLEANUP_BY_TAB.set(tabId, state);
+  L("compose share cleanup rehydrated", {
+    tabId,
+    draftGroupId: bgShortId(draftGroupId, 24),
+    shares: entries.length
+  });
+  return { ok: true, state, rehydrated: true };
+}
+
+async function markComposeShareCleanupSaved(
+  tabId,
+  saveInfo = {},
+  options = {}
+){
+  const state = COMPOSE_SHARE_CLEANUP_BY_TAB.get(tabId);
+  if (!state?.draftGroupId){
+    return false;
+  }
+  const messageIds = (Array.isArray(saveInfo?.messages) ? saveInfo.messages : [])
+    .map((message) => Number(message?.id))
+    .filter((id) => Number.isInteger(id) && id > 0);
+  const passwordHandoffRequired = options.passwordHandoffRequired === true;
+  const passwordHandoffComplete = passwordHandoffRequired !== true
+    || options.passwordHandoffComplete === true;
+  const templateUnsupported = state.templateUnsupported === true
+    || options.templateUnsupported === true;
+  const persisted = await markPersistentComposeCleanupSaved(
+    state.draftGroupId,
+    messageIds,
+    {
+      passwordHandoffRequired,
+      passwordHandoffComplete,
+      templateUnsupported
+    }
+  );
+  if (!persisted){
+    throw new Error("compose_cleanup_record_missing");
+  }
+  if (COMPOSE_SHARE_CLEANUP_BY_TAB.get(tabId) !== state){
+    return false;
+  }
+  state.saved = true;
+  state.saveOutcomeUncertain = false;
+  state.savePendingChanges = false;
+  state.messageIds = messageIds;
+  state.sendPending = false;
+  state.passwordHandoffRequired = passwordHandoffRequired;
+  state.passwordHandoffComplete = passwordHandoffComplete;
+  state.templateUnsupported = templateUnsupported;
+  L("compose share cleanup marked as saved draft", {
+    tabId,
+    draftGroupId: bgShortId(state.draftGroupId, 24),
+    messages: messageIds.length,
+    shares: state.entries.length
+  });
+  return true;
+}
+
+function detachSavedComposeShareCleanup(tabId, reason = ""){
+  const state = COMPOSE_SHARE_CLEANUP_BY_TAB.get(tabId);
+  if (!state?.saved){
+    return false;
+  }
+  if (state.timerId){
+    clearTimeout(state.timerId);
+    state.timerId = null;
+  }
+  COMPOSE_SHARE_CLEANUP_BY_TAB.delete(tabId);
+  L("saved compose share cleanup detached", {
+    tabId,
+    reason: reason || "",
+    draftGroupId: bgShortId(state.draftGroupId, 24),
+    shares: state.entries.length
+  });
+  return true;
+}
+
+function detachRetainedComposeShareCleanup(tabId, reason = ""){
+  const state = COMPOSE_SHARE_CLEANUP_BY_TAB.get(tabId);
+  if (!state || (!state.saved && !state.saveOutcomeUncertain)){
+    return false;
+  }
+  if (state.timerId){
+    clearTimeout(state.timerId);
+    state.timerId = null;
+  }
+  COMPOSE_SHARE_CLEANUP_BY_TAB.delete(tabId);
+  L("retained compose share cleanup detached", {
+    tabId,
+    reason: reason || "",
+    draftGroupId: bgShortId(state.draftGroupId, 24),
+    saved: state.saved === true,
+    saveOutcomeUncertain: state.saveOutcomeUncertain === true,
+    shares: state.entries.length
+  });
+  return true;
+}
+
+async function commitComposeShareCleanup(tabId, reason = ""){
+  const state = COMPOSE_SHARE_CLEANUP_BY_TAB.get(tabId);
+  if (!state){
+    return false;
+  }
+  await removePersistentShareCleanupGroup(state.draftGroupId);
+  clearComposeShareCleanup(tabId, reason || "committed", state);
   return true;
 }
 
@@ -416,7 +770,7 @@ async function deleteComposeShareCleanupNow(
   const entries = Array.isArray(state.entries) ? state.entries.slice() : [];
   const deletePromise = (async () => {
     for (const entry of entries){
-      await deleteShareCleanupEntry(entry);
+      await deleteShareCleanupEntry(entry, state.draftGroupId);
       if (COMPOSE_SHARE_CLEANUP_BY_TAB.get(tabId) === state){
         state.entries = state.entries.filter((candidate) => candidate !== entry);
       }
@@ -465,6 +819,7 @@ function scheduleComposeShareCleanupRetry(
       tabId,
       reason: reason || ""
     });
+    void markPersistentShareCleanupExhausted(entry.draftGroupId);
     return false;
   }
   entry.timerId = setTimeout(() => {
@@ -523,6 +878,11 @@ function scheduleComposeShareCleanupDelete(tabId, reason = "", delayMs = 0){
     entry.timerId = null;
   }
   const safeDelay = Math.max(0, Number(delayMs) || 0);
+  void markPersistentShareCleanupPending(
+    entry.draftGroupId,
+    reason || "compose_cleanup",
+    { schedule: false, resetAttempts: false }
+  );
   const executeDelete = () => {
     void deleteComposeShareCleanupNow(
       tabId,

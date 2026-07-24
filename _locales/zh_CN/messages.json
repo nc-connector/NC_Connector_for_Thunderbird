@@ -215,6 +215,9 @@
   "talk_error_event_context_missing": {
     "message": "无法创建事件 Talk 房间，因为打开的事件没有开始时间。请检查事件编辑器，然后重试。"
   },
+  "talk_error_existing_room_linked": {
+    "message": "此事件已关联到一个 Nextcloud Talk 房间。请使用现有房间，不要再创建新房间。"
+  },
   "talk_section_settings": {
     "message": "Talk 设置"
   },
@@ -623,6 +626,18 @@
   "sharing_error_insert_failed": {
     "message": "无法将共享插入到邮件中。"
   },
+  "sharing_error_insert_failed_close": {
+    "message": "无法安全完成共享。请关闭共享窗口，并在重试前检查邮件。"
+  },
+  "sharing_saved_template_unsupported": {
+    "message": "包含 NC Connector 共享的邮件无法保存或作为 Thunderbird 模板发送。请新建邮件并重新共享文件。"
+  },
+  "sharing_saved_draft_state_unavailable": {
+    "message": "此草稿的 Nextcloud 共享状态在当前 Thunderbird 配置文件中不可用或不一致。发送已被阻止。请新建邮件并重新共享文件。"
+  },
+  "sharing_password_handoff_incomplete": {
+    "message": "无法准备所有单独的密码草稿。主草稿的发送已被阻止。请再次保存以重试，或重新创建共享。"
+  },
   "sharing_html_password_label": {
     "message": "密码"
   },
@@ -749,6 +764,9 @@
   "sharing_prompt_rename_duplicate": {
     "message": "文件 \"$1\" 已在队列中存在。请输入新名称。"
   },
+  "sharing_prompt_rename_file_directory_conflict": {
+    "message": "文件“$1”与队列中的文件夹路径冲突。请输入新名称。"
+  },
   "sharing_message_rename_cancelled": {
     "message": "由于未提供替代名称，上传已取消。"
   },
@@ -842,6 +860,9 @@
   "sharing_password_mail_subject_with_label": {
     "message": "共享链接密码：$1"
   },
+  "sharing_password_mail_send_later_notice": {
+    "message": "重要：请务必等到队列中的主邮件确实发送完毕后，再手动发送此密码邮件。"
+  },
   "options_sharing_permissions_tooltip_title": {
     "message": "🛡️默认权限"
   },
@@ -906,13 +927,19 @@
     "message": "密码邮件已发送给 $1 位收件人。"
   },
   "sharing_password_mail_notify_failure": {
-    "message": "向 $1 位收件人自动发送密码邮件失败。已打开手动草稿。"
+    "message": "向 $1 位收件人自动发送密码失败。请手动发送已准备的草稿；如果没有出现草稿，请重新创建共享。"
   },
   "sharing_password_mail_notify_manual_required": {
     "message": "密码邮件自动发送失败。请使用已打开的草稿手动发送密码邮件。"
   },
   "sharing_password_mail_notify_manual_required_select_sender": {
     "message": "密码邮件自动发送失败。如有需要，请在已打开的草稿中选择发件人，然后手动发送密码邮件。"
+  },
+  "sharing_password_mail_notify_send_later_manual_required": {
+    "message": "主邮件位于发件箱中。已打开发给 $1 位收件人的密码邮件草稿。请仅在主邮件确实已发送后手动发送该草稿。"
+  },
+  "sharing_password_mail_notify_send_pending": {
+    "message": "向 $1 位收件人自动发送密码邮件的操作仍在等待确认。请检查已打开的密码邮件撰写窗口，请勿重复发送。"
   },
   "sharing_password_secrets_fallback_warning": {
     "message": "Nextcloud Secrets 不可用。密码将以纯文本形式通过单独邮件发送。"

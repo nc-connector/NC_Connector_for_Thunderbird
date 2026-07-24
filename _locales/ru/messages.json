@@ -215,6 +215,9 @@
   "talk_error_event_context_missing": {
     "message": "Не удалось создать комнату Talk для события, потому что у открытого события нет времени начала. Проверьте редактор события и повторите попытку."
   },
+  "talk_error_existing_room_linked": {
+    "message": "Это событие уже связано с комнатой Nextcloud Talk. Используйте существующую комнату вместо создания новой."
+  },
   "talk_section_settings": {
     "message": "Настройки Talk"
   },
@@ -623,6 +626,18 @@
   "sharing_error_insert_failed": {
     "message": "Не удалось вставить общий доступ в сообщение."
   },
+  "sharing_error_insert_failed_close": {
+    "message": "Не удалось безопасно завершить предоставление общего доступа. Закройте окно общего доступа и проверьте сообщение перед повторной попыткой."
+  },
+  "sharing_saved_template_unsupported": {
+    "message": "Сообщения с общим ресурсом NC Connector нельзя сохранять или отправлять как шаблоны Thunderbird. Создайте новое сообщение и предоставьте доступ к файлам заново."
+  },
+  "sharing_saved_draft_state_unavailable": {
+    "message": "Состояние общего доступа Nextcloud для этого черновика недоступно или противоречиво в этом профиле Thunderbird. Отправка заблокирована. Создайте новое сообщение и предоставьте доступ к файлам заново."
+  },
+  "sharing_password_handoff_incomplete": {
+    "message": "Не удалось подготовить все отдельные черновики с паролем. Отправка основного черновика заблокирована. Сохраните его ещё раз для повторной попытки или создайте общий ресурс заново."
+  },
   "sharing_html_password_label": {
     "message": "Пароль"
   },
@@ -749,6 +764,9 @@
   "sharing_prompt_rename_duplicate": {
     "message": "Файл \"$1\" уже существует в очереди. Пожалуйста, введите новое имя."
   },
+  "sharing_prompt_rename_file_directory_conflict": {
+    "message": "Путь к файлу «$1» конфликтует с путём к папке в очереди. Введите новое имя."
+  },
   "sharing_message_rename_cancelled": {
     "message": "Загрузка отменена, потому что не было указано новое имя."
   },
@@ -842,6 +860,9 @@
   "sharing_password_mail_subject_with_label": {
     "message": "Пароль к ссылке общего доступа: $1"
   },
+  "sharing_password_mail_send_later_notice": {
+    "message": "Важно: отправьте это письмо с паролем вручную только после того, как основное письмо из очереди будет фактически отправлено."
+  },
   "options_sharing_permissions_tooltip_title": {
     "message": "🛡️ Разрешения по умолчанию"
   },
@@ -906,13 +927,19 @@
     "message": "Письмо с паролем отправлено $1 получателю(ям)."
   },
   "sharing_password_mail_notify_failure": {
-    "message": "Ne udalos avtomaticheski otpravit pismo s parolem dlya $1 poluchatelya(ey). Otkryt chernovik dlya ruchnoy otpravki."
+    "message": "Не удалось автоматически доставить пароль для $1 получателя(-ей). Отправьте подготовленный черновик вручную; если он не появился, создайте общий ресурс заново."
   },
   "sharing_password_mail_notify_manual_required": {
     "message": "Ne udalos avtomaticheski otpravit pismo s parolem. Otpravte pismo s parolem vruchnuyu iz otkrytogo chernovika."
   },
   "sharing_password_mail_notify_manual_required_select_sender": {
     "message": "Ne udalos avtomaticheski otpravit pismo s parolem. Pri neobkhodimosti vyberite otpravitelya v otkrytom chernovike i otpravte pismo s parolem vruchnuyu."
+  },
+  "sharing_password_mail_notify_send_later_manual_required": {
+    "message": "Основное письмо находится в папке «Исходящие». Открыт черновик письма с паролем (получателей: $1). Отправьте его вручную только после того, как основное письмо будет фактически отправлено."
+  },
+  "sharing_password_mail_notify_send_pending": {
+    "message": "Автоматическая отправка пароля всё ещё ожидает подтверждения (получателей: $1). Проверьте уже открытое окно составления письма с паролем и не отправляйте вторую копию."
   },
   "sharing_password_secrets_fallback_warning": {
     "message": "Nextcloud Secrets недоступен. Пароль будет отправлен отдельным письмом в виде обычного текста."

@@ -215,6 +215,9 @@
   "talk_error_event_context_missing": {
     "message": "Nem sikerült eseményhez kötött Talk-szobát létrehozni, mert a megnyitott eseménynek nincs kezdési ideje. Ellenőrizze az eseményszerkesztőt, majd próbálja újra."
   },
+  "talk_error_existing_room_linked": {
+    "message": "Ez az esemény már össze van kapcsolva egy Nextcloud Talk-szobával. Új létrehozása helyett használja a meglévő szobát."
+  },
   "talk_section_settings": {
     "message": "Talk beállítások"
   },
@@ -623,6 +626,18 @@
   "sharing_error_insert_failed": {
     "message": "Nem sikerült beszúrni a megosztást az üzenetbe."
   },
+  "sharing_error_insert_failed_close": {
+    "message": "A megosztást nem sikerült biztonságosan befejezni. Zárja be a megosztási ablakot, és az újabb próbálkozás előtt ellenőrizze az üzenetet."
+  },
+  "sharing_saved_template_unsupported": {
+    "message": "NC Connector-megosztást tartalmazó üzenet nem menthető és nem küldhető Thunderbird-sablonként. Hozzon létre új üzenetet, és ossza meg újra a fájlokat."
+  },
+  "sharing_saved_draft_state_unavailable": {
+    "message": "A piszkozathoz tartozó Nextcloud-megosztás állapota nem érhető el vagy nem konzisztens ebben a Thunderbird-profilban. A küldés le van tiltva. Hozzon létre új üzenetet, és ossza meg újra a fájlokat."
+  },
+  "sharing_password_handoff_incomplete": {
+    "message": "Nem sikerült minden külön jelszópiszkozatot előkészíteni. A fő piszkozat küldése le van tiltva. Mentse újra az ismételt próbálkozáshoz, vagy hozza létre újra a megosztást."
+  },
   "sharing_html_password_label": {
     "message": "Jelszó"
   },
@@ -749,6 +764,9 @@
   "sharing_prompt_rename_duplicate": {
     "message": "A(z) \"$1\" fájl már szerepel a várólistán. Kérjük, adjon meg új nevet."
   },
+  "sharing_prompt_rename_file_directory_conflict": {
+    "message": "A következő fájl elérési útja ütközik a várólistán lévő egyik mappa elérési útjával: „$1”. Adjon meg új nevet."
+  },
   "sharing_message_rename_cancelled": {
     "message": "A feltöltés megszakadt, mert nem adott meg új nevet."
   },
@@ -842,6 +860,9 @@
   "sharing_password_mail_subject_with_label": {
     "message": "Jelszó a megosztott hivatkozáshoz: $1"
   },
+  "sharing_password_mail_send_later_notice": {
+    "message": "Fontos: Ezt a jelszót tartalmazó e-mailt csak akkor küldje el kézzel, ha a várólistán lévő fő e-mailt már valóban elküldte a rendszer."
+  },
   "options_sharing_permissions_tooltip_title": {
     "message": "🛡️ Alapértelmezett engedélyek"
   },
@@ -906,13 +927,19 @@
     "message": "A jelszo e-mail elkuldve $1 cimzettnek."
   },
   "sharing_password_mail_notify_failure": {
-    "message": "Az automatikus jelszo-e-mail kuldes $1 cimzettnel sikertelen volt. Egy kezi piszkozat megnyilt."
+    "message": "Az automatikus jelszókézbesítés $1 címzettnél sikertelen volt. Küldje el kézzel az előkészített piszkozatot; ha nem jelenik meg ilyen, hozza létre újra a megosztást."
   },
   "sharing_password_mail_notify_manual_required": {
     "message": "Az automatikus jelszo-e-mail kuldes sikertelen volt. Kerjuk, kuldje el kezzel a jelszo e-mailt a megnyitott piszkozatbol."
   },
   "sharing_password_mail_notify_manual_required_select_sender": {
     "message": "Az automatikus jelszo-e-mail kuldes sikertelen volt. Szukseg eseten valasszon feladot a megnyitott piszkozatban, majd kuldje el kezzel a jelszo e-mailt."
+  },
+  "sharing_password_mail_notify_send_later_manual_required": {
+    "message": "A fő e-mail a Postázandó üzenetek mappában van. Megnyílt a $1 címzett számára készült, jelszót tartalmazó e-mail piszkozata. Csak akkor küldje el kézzel, ha a fő e-mailt már valóban elküldte a rendszer."
+  },
+  "sharing_password_mail_notify_send_pending": {
+    "message": "A jelszó automatikus kézbesítése $1 címzett számára még megerősítésre vár. Ellenőrizze a jelszót tartalmazó e-mail már megnyitott szerkesztőablakát, és ne küldjön második példányt."
   },
   "sharing_password_secrets_fallback_warning": {
     "message": "A Nextcloud Secrets nem érhető el. A jelszó külön, egyszerű szövegű e-mailben lesz elküldve."

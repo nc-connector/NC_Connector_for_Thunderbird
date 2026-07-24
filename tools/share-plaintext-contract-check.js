@@ -526,13 +526,13 @@ async function testPlainTextInsertCompactsMarkedRightsSegment(){
     `${RIGHTS_SEGMENT_END}`
   ].join("\n");
 
-  const result = await context.handleSharingInsertHtmlMessage({
+  const mutation = await context.prepareSharingInsertMutation({
     tabId: 7,
     html: "<p>ignored for plaintext compose</p>",
     plainText
   });
+  await context.applySharingInsertMutation(mutation);
 
-  assert(result.ok === true, "Plaintext insert handler should succeed with explicit render variants");
   assert(composeState.setCalls.length === 1, "Plaintext insert must write compose details exactly once");
   const writtenBody = composeState.setCalls[0].details.plainTextBody;
   assert(writtenBody.includes("Permissions: [x] Read | [ ] Write"), "Marked rights segment must compact to one permission line");
@@ -542,12 +542,19 @@ async function testPlainTextInsertCompactsMarkedRightsSegment(){
 
 async function testInsertRejectsMissingPlainTextVariant(){
   const { context } = createHarness();
-  const result = await context.handleSharingInsertHtmlMessage({
-    tabId: 7,
-    html: "<p>share block</p>"
-  });
-  assert(result.ok === false, "Insert handler must reject missing plainText render variant");
-  assert(result.error === "tab/html/plainText missing", "Insert handler should report the explicit missing-variant rule");
+  let message = "";
+  try{
+    await context.prepareSharingInsertMutation({
+      tabId: 7,
+      html: "<p>share block</p>"
+    });
+  }catch(error){
+    message = error?.message || String(error);
+  }
+  assert(
+    message === "tab/html/plainText missing",
+    "Insert mutation must reject a missing plaintext render variant"
+  );
 }
 
 async function run(){

@@ -287,7 +287,11 @@ async function waitForCondition(predicate, failureMessage, timeoutMs = 2000){
   throw new Error(failureMessage);
 }
 
-function createBackgroundSignatureHarness({ initialIdentityId, pauseFirstPing = false }){
+function createBackgroundSignatureHarness({
+  initialIdentityId,
+  composeType = "new",
+  pauseFirstPing = false
+}){
   const tabId = 41;
   const firstPolicyStarted = createDeferred();
   const firstPolicyRelease = createDeferred();
@@ -302,9 +306,11 @@ function createBackgroundSignatureHarness({ initialIdentityId, pauseFirstPing = 
   const errors = [];
   let policyCallCount = 0;
   let pingCallCount = 0;
+  let setComposeDetailsCallCount = 0;
+  let managedSignaturePresent = false;
   let composeDetails = {
     identityId: initialIdentityId,
-    type: "new",
+    type: composeType,
     isModified: false,
     isPlainText: false,
     deliveryFormat: "auto"
@@ -340,6 +346,7 @@ function createBackgroundSignatureHarness({ initialIdentityId, pauseFirstPing = 
       },
       async setComposeDetails(requestedTabId, changes){
         assert(requestedTabId === tabId, "Signature background changed an unexpected compose tab");
+        setComposeDetailsCallCount += 1;
         composeDetails = { ...composeDetails, ...changes };
       }
     },
@@ -385,16 +392,30 @@ function createBackgroundSignatureHarness({ initialIdentityId, pauseFirstPing = 
           return { ok: true };
         }
         if (message?.type === "nc-signature:apply"){
+          let response;
+          if (message.payload?.requireExistingOwnUnchanged === true
+            && !managedSignaturePresent){
+            response = {
+              ok: true,
+              changed: false,
+              managed: false,
+              reason: "own_signature_missing"
+            };
+          }else{
+            managedSignaturePresent = message.payload?.desired === true;
+            response = {
+              ok: true,
+              changed: true,
+              managed: managedSignaturePresent,
+              reason: managedSignaturePresent ? "signature_inserted" : "signature_cleared"
+            };
+          }
           applyMessages.push({
             identityId: composeDetails.identityId,
-            payload: message.payload
+            payload: message.payload,
+            result: response.reason
           });
-          return {
-            ok: true,
-            changed: true,
-            managed: message.payload?.desired === true,
-            reason: message.payload?.desired === true ? "signature_inserted" : "signature_cleared"
-          };
+          return response;
         }
         throw new Error("Unexpected signature tab message");
       }
@@ -457,6 +478,7 @@ function createBackgroundSignatureHarness({ initialIdentityId, pauseFirstPing = 
   };
   vm.createContext(context);
   vm.runInContext(readText("modules/bgSignature.js"), context, { filename: "modules/bgSignature.js" });
+  const signatureRuntime = vm.runInContext("NCEmailSignature", context);
 
   return {
     tabId,
@@ -465,6 +487,12 @@ function createBackgroundSignatureHarness({ initialIdentityId, pauseFirstPing = 
     logs,
     get policyCallCount(){
       return policyCallCount;
+    },
+    get setComposeDetailsCallCount(){
+      return setComposeDetailsCallCount;
+    },
+    applyAndWait(reason){
+      return signatureRuntime.applyAndWait(tabId, reason);
     },
     start(){
       tabCreated.listeners[0]({ id: tabId, type: "messageCompose" });
@@ -506,6 +534,84 @@ function createBackgroundSignatureHarness({ initialIdentityId, pauseFirstPing = 
       tabRemoved.listeners[0](tabId);
     }
   };
+}
+
+async function runDraftAndCompletionChecks(){
+  const matchingDraft = createBackgroundSignatureHarness({
+    initialIdentityId: "seat-identity",
+    composeType: "draft"
+  });
+  const matchingCompletion = matchingDraft.applyAndWait("password_followup");
+  await matchingDraft.waitForFirstPolicyRequest();
+  matchingDraft.releaseFirstPolicy();
+  const matchingResult = await matchingCompletion;
+  assert(matchingResult?.ok === true, "Explicit signature completion should acknowledge success");
+  assert(matchingDraft.applyMessages.length === 1, "Matching draft should inspect its managed signature marker");
+  assert(
+    matchingDraft.applyMessages[0].payload.requireExistingOwnUnchanged === true,
+    "Matching draft must not insert into a markerless reopened draft"
+  );
+  assert(
+    matchingDraft.applyMessages[0].payload.placeCursorAtStart === false,
+    "Reopened drafts must retain their cursor position"
+  );
+  assert(
+    matchingDraft.applyMessages[0].result === "own_signature_missing",
+    "Markerless reopened draft must stay unchanged on open"
+  );
+  matchingDraft.changeIdentity("other-identity");
+  await waitForCondition(
+    () => matchingDraft.logs.some((entry) => {
+      return entry.message === "email signature skipped for non-seat identity"
+        && entry.details.reason === "identity_changed";
+    }),
+    "Markerless draft did not process the non-matching identity"
+  );
+  matchingDraft.changeIdentity("seat-identity");
+  await waitForCondition(
+    () => matchingDraft.applyMessages.some((entry) => {
+      return entry.result === "signature_inserted"
+        && entry.identityId === "seat-identity";
+    }),
+    "Matching identity change did not insert the backend signature"
+  );
+  assert(
+    matchingDraft.applyMessages.filter((entry) => entry.result === "signature_inserted").length === 1,
+    "Matching identity change must insert exactly one backend signature"
+  );
+  const matchingIdentityApply = matchingDraft.applyMessages.find((entry) => {
+    return entry.result === "signature_inserted";
+  });
+  assert(
+    matchingIdentityApply.payload.requireExistingOwnUnchanged === false,
+    "Explicit matching identity change must allow markerless draft insertion"
+  );
+  assert(
+    matchingDraft.setComposeDetailsCallCount === 0,
+    "Signature processing must not clear Thunderbird's modified state"
+  );
+  matchingDraft.close();
+
+  const otherDraft = createBackgroundSignatureHarness({
+    initialIdentityId: "other-identity",
+    composeType: "draft"
+  });
+  const otherCompletion = otherDraft.applyAndWait("password_followup");
+  await otherDraft.waitForFirstPolicyRequest();
+  otherDraft.releaseFirstPolicy();
+  const otherResult = await otherCompletion;
+  assert(otherResult?.ok === true, "Non-matching draft signature cleanup should acknowledge completion");
+  assert(otherDraft.applyMessages.length === 1, "Non-matching draft should inspect and clear a managed marker");
+  assert(
+    otherDraft.applyMessages[0].payload.desired === false
+      && otherDraft.applyMessages[0].payload.clearOwnOnly === true,
+    "Non-matching draft must clear only an unchanged NC Connector signature"
+  );
+  assert(
+    otherDraft.setComposeDetailsCallCount === 0,
+    "Draft cleanup must not clear Thunderbird's modified state"
+  );
+  otherDraft.close();
 }
 
 async function runIdentityChangeRaceChecks(){
@@ -674,6 +780,7 @@ async function run(){
     listener();
   }
   await runIdentityChangeRaceChecks();
+  await runDraftAndCompletionChecks();
   console.log("[OK] signature-compose-settle-check passed");
 }
 

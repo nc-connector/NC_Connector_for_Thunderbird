@@ -565,51 +565,8 @@ browser.runtime.onMessage.addListener((msg, sender) => {
       return { ok:false, error: error?.message || String(error) };
     }
   }
-  if (msg.type === "sharing:registerSeparatePasswordDispatch"){
-    try{
-      const tabId = Number(msg.payload?.tabId);
-      if (!Number.isInteger(tabId) || tabId <= 0){
-        return { ok:false, error: "tab_id_missing" };
-      }
-      await registerSeparatePasswordMailDispatch(tabId, msg.payload || {});
-      return { ok:true };
-    }catch(error){
-      console.error("[NCBG] sharing:registerSeparatePasswordDispatch", error);
-      return { ok:false, error: error?.message || String(error) };
-    }
-  }
-  if (msg.type === "sharing:armComposeShareCleanup"){
-    try{
-      const tabId = Number(msg.payload?.tabId);
-      if (!Number.isInteger(tabId) || tabId <= 0){
-        return { ok:false, error: "tab_id_missing" };
-      }
-      await armComposeShareCleanup(tabId, msg.payload || {});
-      return { ok:true };
-    }catch(error){
-      console.error("[NCBG] sharing:armComposeShareCleanup", error);
-      return { ok:false, error: error?.message || String(error) };
-    }
-  }
-  if (msg.type === "sharing:clearWizardRemoteCleanup"){
-    try{
-      const windowId = Number(msg.payload?.windowId);
-      if (!Number.isInteger(windowId) || windowId <= 0){
-        return { ok:false, error: "window_id_missing" };
-      }
-      clearSharingWizardRemoteCleanup(windowId, "wizard_finalize");
-      return { ok:true };
-    }catch(error){
-      console.error("[NCBG] sharing:clearWizardRemoteCleanup", error);
-      return { ok:false, error: error?.message || String(error) };
-    }
-  }
-  if (msg.type === "sharing:insertRenderedBlock"){
-    try{
-      return await handleSharingInsertHtmlMessage(msg.payload || {});
-    }catch(error){
-      return messageError("sharing:insertRenderedBlock", error);
-    }
+  if (msg.type === "sharing:finalizeRenderedShare"){
+    return handleSharingFinalizeTransaction(msg.payload || {});
   }
   console.error("[NCBG] unknown runtime message type", {
     type: String(msg.type || ""),

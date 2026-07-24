@@ -215,6 +215,9 @@
   "talk_error_event_context_missing": {
     "message": "Nie można utworzyć pokoju Talk dla wydarzenia, ponieważ otwarte wydarzenie nie ma godziny rozpoczęcia. Sprawdź edytor wydarzenia i spróbuj ponownie."
   },
+  "talk_error_existing_room_linked": {
+    "message": "To wydarzenie jest już powiązane z pokojem Nextcloud Talk. Użyj istniejącego pokoju zamiast tworzyć kolejny."
+  },
   "talk_section_settings": {
     "message": "Ustawienia Talk"
   },
@@ -623,6 +626,18 @@
   "sharing_error_insert_failed": {
     "message": "Nie można wstawić udostępnienia do wiadomości."
   },
+  "sharing_error_insert_failed_close": {
+    "message": "Nie udało się bezpiecznie zakończyć udostępniania. Zamknij okno udostępniania i sprawdź wiadomość przed ponowną próbą."
+  },
+  "sharing_saved_template_unsupported": {
+    "message": "Wiadomości z udostępnieniem NC Connector nie można zapisać ani wysłać jako szablonu Thunderbirda. Utwórz nową wiadomość i ponownie udostępnij pliki."
+  },
+  "sharing_saved_draft_state_unavailable": {
+    "message": "Stan udostępnienia Nextcloud dla tej wersji roboczej jest niedostępny lub niespójny w tym profilu Thunderbirda. Wysyłanie jest zablokowane. Utwórz nową wiadomość i ponownie udostępnij pliki."
+  },
+  "sharing_password_handoff_incomplete": {
+    "message": "Nie udało się przygotować wszystkich oddzielnych wersji roboczych z hasłem. Wysłanie głównej wersji roboczej jest zablokowane. Zapisz ją ponownie, aby spróbować jeszcze raz, lub utwórz udostępnienie od nowa."
+  },
   "sharing_html_password_label": {
     "message": "Hasło"
   },
@@ -749,6 +764,9 @@
   "sharing_prompt_rename_duplicate": {
     "message": "Plik \"$1\" już istnieje w kolejce. Wpisz nową nazwę."
   },
+  "sharing_prompt_rename_file_directory_conflict": {
+    "message": "Plik „$1” koliduje ze ścieżką folderu w kolejce. Wprowadź nową nazwę."
+  },
   "sharing_message_rename_cancelled": {
     "message": "Przesyłanie anulowane, ponieważ nie podano nazwy zastępczej."
   },
@@ -842,6 +860,9 @@
   "sharing_password_mail_subject_with_label": {
     "message": "Hasło do udostępnionego linku: $1"
   },
+  "sharing_password_mail_send_later_notice": {
+    "message": "Ważne: Tę wiadomość z hasłem wyślij ręcznie dopiero po faktycznym wysłaniu głównej wiadomości oczekującej w kolejce."
+  },
   "options_sharing_permissions_tooltip_title": {
     "message": "🛡️ Domyślne uprawnienia"
   },
@@ -906,13 +927,19 @@
     "message": "Wiadomosc z haslem wyslana do $1 odbiorcy(ow)."
   },
   "sharing_password_mail_notify_failure": {
-    "message": "Automatyczne wysylanie wiadomosci z haslem nie powiodlo sie dla $1 odbiorcy(ow). Otworzono reczny szkic."
+    "message": "Automatyczne dostarczenie hasła nie powiodło się dla $1 odbiorcy(-ów). Wyślij ręcznie przygotowaną wersję roboczą; jeśli się nie pojawi, utwórz udostępnienie ponownie."
   },
   "sharing_password_mail_notify_manual_required": {
     "message": "Automatyczne wysylanie maila z haslem nie powiodlo sie. Wyslij recznie mail z haslem, korzystajac z otwartego szkicu."
   },
   "sharing_password_mail_notify_manual_required_select_sender": {
     "message": "Automatyczne wysylanie maila z haslem nie powiodlo sie. W razie potrzeby wybierz nadawce w otwartym szkicu i wyslij mail z haslem recznie."
+  },
+  "sharing_password_mail_notify_send_later_manual_required": {
+    "message": "Główna wiadomość znajduje się w folderze Wychodzące. Otwarto szkic wiadomości z hasłem (liczba odbiorców: $1). Wyślij go ręcznie dopiero po faktycznym wysłaniu głównej wiadomości."
+  },
+  "sharing_password_mail_notify_send_pending": {
+    "message": "Automatyczne dostarczenie hasła nadal oczekuje na potwierdzenie (liczba odbiorców: $1). Sprawdź już otwarte okno redagowania wiadomości z hasłem i nie wysyłaj drugiej kopii."
   },
   "sharing_password_secrets_fallback_warning": {
     "message": "Nextcloud Secrets jest niedostępny. Hasło zostanie wysłane jako osobny e-mail zwykłym tekstem."

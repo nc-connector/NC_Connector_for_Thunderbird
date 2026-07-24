@@ -215,6 +215,9 @@
   "talk_error_event_context_missing": {
     "message": "Impossible de créer un salon Talk lié à un événement, car l’événement ouvert n’a pas d’heure de début. Vérifiez l’éditeur d’événement puis réessayez."
   },
+  "talk_error_existing_room_linked": {
+    "message": "Cet événement est déjà lié à une salle Nextcloud Talk. Utilisez la salle existante au lieu d’en créer une autre."
+  },
   "talk_section_settings": {
     "message": "Paramètres Talk"
   },
@@ -623,6 +626,18 @@
   "sharing_error_insert_failed": {
     "message": "Impossible d’insérer le partage dans le message."
   },
+  "sharing_error_insert_failed_close": {
+    "message": "Le partage n’a pas pu être finalisé en toute sécurité. Fermez la fenêtre de partage et vérifiez le message avant de réessayer."
+  },
+  "sharing_saved_template_unsupported": {
+    "message": "Les messages contenant un partage NC Connector ne peuvent pas être enregistrés ni envoyés comme modèles Thunderbird. Créez un nouveau message et partagez à nouveau les fichiers."
+  },
+  "sharing_saved_draft_state_unavailable": {
+    "message": "L’état du partage Nextcloud de ce brouillon est indisponible ou incohérent dans ce profil Thunderbird. L’envoi est bloqué. Créez un nouveau message et partagez à nouveau les fichiers."
+  },
+  "sharing_password_handoff_incomplete": {
+    "message": "Tous les brouillons de mot de passe séparés n’ont pas pu être préparés. L’envoi du brouillon principal est bloqué. Enregistrez-le à nouveau pour réessayer ou recréez le partage."
+  },
   "sharing_html_password_label": {
     "message": "Mot de passe"
   },
@@ -749,6 +764,9 @@
   "sharing_prompt_rename_duplicate": {
     "message": "Le fichier \"$1\" se trouve déjà dans la file d’attente. Veuillez saisir un nouveau nom."
   },
+  "sharing_prompt_rename_file_directory_conflict": {
+    "message": "Le fichier « $1 » entre en conflit avec un chemin de dossier dans la file d’attente. Saisissez un nouveau nom."
+  },
   "sharing_message_rename_cancelled": {
     "message": "Téléversement annulé car aucun nouveau nom n’a été fourni."
   },
@@ -842,6 +860,9 @@
   "sharing_password_mail_subject_with_label": {
     "message": "Mot de passe du lien de partage : $1"
   },
+  "sharing_password_mail_send_later_notice": {
+    "message": "Important : n’envoyez manuellement cet e-mail contenant le mot de passe qu’une fois l’e-mail principal placé dans la file d’attente effectivement envoyé."
+  },
   "options_sharing_permissions_tooltip_title": {
     "message": "🛡️ Autorisations par défaut"
   },
@@ -906,13 +927,19 @@
     "message": "E-mail de mot de passe envoye a $1 destinataire(s)."
   },
   "sharing_password_mail_notify_failure": {
-    "message": "Lenvoi automatique de le-mail de mot de passe a echoue pour $1 destinataire(s). Un brouillon manuel a ete ouvert."
+    "message": "La livraison automatique du mot de passe a échoué pour $1 destinataire(s). Envoyez manuellement tout brouillon préparé ; si aucun n’apparaît, recréez le partage."
   },
   "sharing_password_mail_notify_manual_required": {
     "message": "Echec de lenvoi automatique du mot de passe. Veuillez envoyer manuellement le-mail de mot de passe via le brouillon ouvert."
   },
   "sharing_password_mail_notify_manual_required_select_sender": {
     "message": "Lenvoi automatique du mot de passe a echoue. Si necessaire, selectionnez un expediteur dans le brouillon ouvert puis envoyez manuellement le-mail de mot de passe."
+  },
+  "sharing_password_mail_notify_send_later_manual_required": {
+    "message": "L’e-mail principal se trouve dans le dossier « Messages en attente ». Un brouillon d’e-mail contenant le mot de passe a été ouvert (destinataires : $1). Ne l’envoyez manuellement qu’une fois l’e-mail principal effectivement envoyé."
+  },
+  "sharing_password_mail_notify_send_pending": {
+    "message": "L’envoi automatique du mot de passe est toujours en attente de confirmation (destinataires : $1). Vérifiez la fenêtre de rédaction déjà ouverte pour l’e-mail contenant le mot de passe et n’envoyez pas de second exemplaire."
   },
   "sharing_password_secrets_fallback_warning": {
     "message": "Nextcloud Secrets n’est pas disponible. Le mot de passe sera envoyé dans un e-mail séparé en texte brut."

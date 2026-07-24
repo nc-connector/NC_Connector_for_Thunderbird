@@ -151,7 +151,7 @@ const NCEmailSignature = (() => {
 
   function resolveComposeKind(details){
     const type = String(details?.type || "").trim().toLowerCase();
-    if (type === "new" || type === "reply" || type === "forward"){
+    if (type === "new" || type === "reply" || type === "forward" || type === "draft"){
       return type;
     }
     return "";
@@ -170,6 +170,9 @@ const NCEmailSignature = (() => {
     if (composeKind === "forward"){
       return policy.onForward === true;
     }
+    if (composeKind === "draft"){
+      return true;
+    }
     return false;
   }
 
@@ -177,7 +180,10 @@ const NCEmailSignature = (() => {
     if (!policy?.onCompose){
       return false;
     }
-    return composeKind === "new" || composeKind === "reply" || composeKind === "forward";
+    return composeKind === "new"
+      || composeKind === "reply"
+      || composeKind === "forward"
+      || composeKind === "draft";
   }
 
   function resolvePlainTextMode(details){
@@ -309,20 +315,6 @@ const NCEmailSignature = (() => {
     });
   }
 
-  async function resetModifiedStateIfNeeded(tabId, wasModified, result){
-    if (wasModified || result?.changed !== true){
-      return;
-    }
-    try{
-      await browser.compose.setComposeDetails(tabId, { isModified: false });
-    }catch(error){
-      console.error("[NCBG] email signature modified-state reset failed", {
-        tabId,
-        error: error?.message || String(error)
-      });
-    }
-  }
-
   async function clearOwnSignatureIfUnchanged(tabId, reason, applyRequest){
     const result = await sendSignatureMessage(tabId, {
       desired: false,
@@ -353,7 +345,11 @@ const NCEmailSignature = (() => {
     }
     const details = await readComposeDetails(tabId, reason);
     if (!details){
-      return { completed: true };
+      return {
+        ok: false,
+        completed: true,
+        error: "compose_details_unavailable"
+      };
     }
     if (!isApplyRequestCurrent(tabId, applyState, generation)){
       return { superseded: true };
@@ -366,7 +362,12 @@ const NCEmailSignature = (() => {
         reason,
         composeType: String(details?.type || "")
       });
-      return { completed: true };
+      return {
+        ok: true,
+        completed: true,
+        applied: false,
+        reason: "compose_type_not_managed"
+      };
     }
 
     const policy = resolveSignaturePolicy(status, localOptions);
@@ -379,7 +380,7 @@ const NCEmailSignature = (() => {
       identityId
     };
     if (!policy.active){
-      if (previousState.managed === true){
+      if (previousState.managed === true || composeKind === "draft"){
         const clearResult = await clearOwnSignatureIfUnchanged(tabId, policy.reason, applyRequest);
         if (clearResult?.superseded){
           return clearResult;
@@ -392,7 +393,12 @@ const NCEmailSignature = (() => {
         reason,
         cause: policy.reason
       });
-      return { completed: true };
+      return {
+        ok: true,
+        completed: true,
+        applied: false,
+        reason: policy.reason
+      };
     }
 
     const identityEmail = await resolveIdentityEmail(identityId);
@@ -402,7 +408,8 @@ const NCEmailSignature = (() => {
     if (identityEmail !== policy.userEmail){
       // Only the matching Nextcloud identity owns the managed signature slot.
       // Other Thunderbird identities may use local or Signature Switch signatures.
-      if (reason === "identity_changed" && TAB_STATE.get(tabId)?.matched){
+      if (composeKind === "draft"
+        || (reason === "identity_changed" && TAB_STATE.get(tabId)?.matched)){
         applyRequest.policyEmail = policy.userEmail;
         applyRequest.policyMatch = false;
         const clearResult = await clearOwnSignatureIfUnchanged(tabId, "identity_mismatch", applyRequest);
@@ -419,19 +426,23 @@ const NCEmailSignature = (() => {
         hasIdentityEmail: !!identityEmail,
         hasPolicyEmail: !!policy.userEmail
       });
-      return { completed: true };
+      return {
+        ok: true,
+        completed: true,
+        applied: false,
+        reason: "identity_mismatch"
+      };
     }
 
     const shouldInsert = resolveShouldInsert(policy, composeKind);
     const shouldClearForeign = resolveShouldClearForeign(policy, composeKind);
-    const requireExistingOwnUnchanged = reason === "identity_changed" && previousState.managed === true;
+    const requireExistingOwnUnchanged = (composeKind === "draft" && reason !== "identity_changed")
+      || (reason === "identity_changed" && previousState.managed === true);
     const sanitizedHtml = shouldInsert ? sanitizeSignatureHtml(policy.templateHtml) : "";
     applyRequest.policyEmail = policy.userEmail;
     applyRequest.policyMatch = true;
-    let appliedDetails = details;
     let plainTextMode = false;
     const result = await sendSignatureMessage(tabId, (currentDetails) => {
-      appliedDetails = currentDetails;
       plainTextMode = shouldInsert && resolvePlainTextMode(currentDetails);
       const plainText = plainTextMode ? signatureHtmlToPlainText(sanitizedHtml) : "";
       return {
@@ -442,7 +453,9 @@ const NCEmailSignature = (() => {
         html: sanitizedHtml,
         plainText,
         plainTextMode,
-        placeCursorAtStart: reason === "compose_open" && currentDetails?.isModified !== true,
+        placeCursorAtStart: composeKind !== "draft"
+          && reason === "compose_open"
+          && currentDetails?.isModified !== true,
         debugEnabled: localOptions?.[STORAGE_KEYS.debug] === true
       };
     }, applyRequest);
@@ -454,7 +467,6 @@ const NCEmailSignature = (() => {
     }
     const managed = shouldInsert ? result.managed !== false : false;
     TAB_STATE.set(tabId, { managed, matched: true });
-    await resetModifiedStateIfNeeded(tabId, appliedDetails?.isModified === true, result);
     L("email signature processed", {
       tabId,
       reason,
@@ -465,13 +477,23 @@ const NCEmailSignature = (() => {
       result: String(result.reason || ""),
       plainTextMode
     });
-    return { completed: true };
+    return {
+      ok: true,
+      completed: true,
+      applied: shouldInsert && managed,
+      changed: result.changed === true,
+      reason: String(result.reason || "")
+    };
   }
 
   function scheduleApply(tabId, reason){
     const normalizedTabId = Number(tabId);
     if (!Number.isInteger(normalizedTabId) || normalizedTabId <= 0){
-      return;
+      return Promise.resolve({
+        ok: false,
+        completed: true,
+        error: "invalid_compose_tab_id"
+      });
     }
     const pendingState = APPLY_STATE_BY_TAB.get(normalizedTabId);
     if (pendingState){
@@ -484,14 +506,25 @@ const NCEmailSignature = (() => {
         reason: pendingState.reason,
         generation: pendingState.generation
       });
-      return;
+      return new Promise((resolve) => {
+        pendingState.waiters.push(resolve);
+      });
     }
     const applyState = {
       generation: 1,
-      reason
+      reason,
+      waiters: []
     };
+    const completion = new Promise((resolve) => {
+      applyState.waiters.push(resolve);
+    });
     APPLY_STATE_BY_TAB.set(normalizedTabId, applyState);
     (async () => {
+      let finalResult = {
+        ok: false,
+        completed: true,
+        error: "signature_apply_canceled"
+      };
       try{
         await delay(150);
         while (APPLY_STATE_BY_TAB.get(normalizedTabId) === applyState){
@@ -511,7 +544,13 @@ const NCEmailSignature = (() => {
               reason: currentReason,
               error: error?.message || String(error)
             });
+            result = {
+              ok: false,
+              completed: true,
+              error: error?.message || String(error)
+            };
           }
+          finalResult = result || finalResult;
           if (APPLY_STATE_BY_TAB.get(normalizedTabId) !== applyState){
             return;
           }
@@ -531,8 +570,16 @@ const NCEmailSignature = (() => {
         if (APPLY_STATE_BY_TAB.get(normalizedTabId) === applyState){
           APPLY_STATE_BY_TAB.delete(normalizedTabId);
         }
+        for (const resolve of applyState.waiters.splice(0)){
+          resolve(finalResult);
+        }
       }
     })();
+    return completion;
+  }
+
+  async function applyAndWait(tabId, reason = "explicit"){
+    return scheduleApply(tabId, reason);
   }
 
   async function registerComposeScript(){
@@ -590,6 +637,7 @@ const NCEmailSignature = (() => {
 
   return {
     init,
+    applyAndWait,
     STORAGE_KEYS
   };
 })();

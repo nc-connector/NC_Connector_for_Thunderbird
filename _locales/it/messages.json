@@ -215,6 +215,9 @@
   "talk_error_event_context_missing": {
     "message": "Impossibile creare una stanza Talk evento perché l’evento aperto non ha un orario di inizio. Controlla l’editor dell’evento e riprova."
   },
+  "talk_error_existing_room_linked": {
+    "message": "Questo evento è già collegato a una stanza di Nextcloud Talk. Usa la stanza esistente invece di crearne un’altra."
+  },
   "talk_section_settings": {
     "message": "Impostazioni Talk"
   },
@@ -623,6 +626,18 @@
   "sharing_error_insert_failed": {
     "message": "Impossibile inserire la condivisione nel messaggio."
   },
+  "sharing_error_insert_failed_close": {
+    "message": "Non è stato possibile completare la condivisione in modo sicuro. Chiudere la finestra di condivisione e controllare il messaggio prima di riprovare."
+  },
+  "sharing_saved_template_unsupported": {
+    "message": "I messaggi con una condivisione NC Connector non possono essere salvati o inviati come modelli di Thunderbird. Creare un nuovo messaggio e condividere nuovamente i file."
+  },
+  "sharing_saved_draft_state_unavailable": {
+    "message": "Lo stato della condivisione Nextcloud per questa bozza non è disponibile o non è coerente in questo profilo Thunderbird. L’invio è bloccato. Creare un nuovo messaggio e condividere nuovamente i file."
+  },
+  "sharing_password_handoff_incomplete": {
+    "message": "Non è stato possibile preparare tutte le bozze separate per la password. L’invio della bozza principale è bloccato. Salvarla di nuovo per riprovare oppure ricreare la condivisione."
+  },
   "sharing_html_password_label": {
     "message": "Codice di accesso"
   },
@@ -749,6 +764,9 @@
   "sharing_prompt_rename_duplicate": {
     "message": "Il file \"$1\" esiste già in coda. Inserisci un nuovo nome."
   },
+  "sharing_prompt_rename_file_directory_conflict": {
+    "message": "Il file “$1” è in conflitto con il percorso di una cartella nella coda. Inserisci un nuovo nome."
+  },
   "sharing_message_rename_cancelled": {
     "message": "Upload annullato perché non è stato fornito un nome sostitutivo."
   },
@@ -842,6 +860,9 @@
   "sharing_password_mail_subject_with_label": {
     "message": "Password per link condiviso: $1"
   },
+  "sharing_password_mail_send_later_notice": {
+    "message": "Importante: invia manualmente questa e-mail con la password solo dopo che l’e-mail principale in coda è stata effettivamente inviata."
+  },
   "options_sharing_permissions_tooltip_title": {
     "message": "🛡️ Autorizzazioni predefinite"
   },
@@ -906,13 +927,19 @@
     "message": "E-mail con password inviata a $1 destinatario/i."
   },
   "sharing_password_mail_notify_failure": {
-    "message": "Invio automatico della password fallito per $1 destinatario/i. E stata aperta una bozza manuale."
+    "message": "La consegna automatica della password non è riuscita per $1 destinatario/i. Inviare manualmente l’eventuale bozza preparata; se non compare, ricreare la condivisione."
   },
   "sharing_password_mail_notify_manual_required": {
     "message": "Invio automatico della password non riuscito. Invia manualmente lemail con la password usando la bozza aperta."
   },
   "sharing_password_mail_notify_manual_required_select_sender": {
     "message": "Invio automatico della password non riuscito. Se necessario, seleziona un mittente nella bozza aperta e invia manualmente lemail con la password."
+  },
+  "sharing_password_mail_notify_send_later_manual_required": {
+    "message": "L’e-mail principale è nella Posta in uscita. È stata aperta una bozza dell’e-mail con la password (destinatari: $1). Inviala manualmente solo dopo che l’e-mail principale è stata effettivamente inviata."
+  },
+  "sharing_password_mail_notify_send_pending": {
+    "message": "L’invio automatico della password è ancora in attesa di conferma (destinatari: $1). Controlla la finestra di composizione già aperta per l’e-mail con la password e non inviarne una seconda copia."
   },
   "sharing_password_secrets_fallback_warning": {
     "message": "Nextcloud Secrets non è disponibile. La password verrà inviata in un’e-mail separata in testo semplice."

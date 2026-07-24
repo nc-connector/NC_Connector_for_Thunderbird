@@ -87,6 +87,18 @@
     uploadCompleted: false,
     uploadResult: null,
     uploadPort: null,
+    finalizeStarted: false,
+    finalizeInProgress: false,
+    finalizeRetryAllowed: false,
+    finalizeCloseOnly: false,
+    finalized: false,
+    finalizeProgress: {
+      detailsUpdated: false,
+      composeCleanupArmed: false,
+      blockInserted: false,
+      passwordDispatchRegistered: false,
+      wizardCleanupCleared: false
+    },
     tabId: null,
     launchContextId: null,
     mode: 'default',
@@ -893,25 +905,34 @@
   }
 
   function updateButtons(){
+    const busy = state.uploadInProgress || state.finalizeInProgress;
+    dom.cancelBtn.disabled = state.finalizeInProgress;
     if (state.mode === "attachments"){
       dom.backBtn.style.visibility = 'hidden';
       dom.nextBtn.style.visibility = 'hidden';
       dom.uploadBtn.style.visibility = 'hidden';
       dom.finishBtn.style.visibility = state.currentStep === 3 ? 'visible' : 'hidden';
-      dom.finishBtn.disabled = state.uploadInProgress || (!state.uploadCompleted && state.files.length === 0);
-      dom.removeFileBtn.disabled = !state.selectedFileId || state.uploadInProgress;
+      dom.finishBtn.disabled = busy
+        || (state.finalizeStarted && !state.finalizeRetryAllowed)
+        || state.finalized
+        || (!state.uploadCompleted && state.files.length === 0);
+      dom.removeFileBtn.disabled = state.finalizeStarted || !state.selectedFileId || busy;
       return;
     }
-    dom.backBtn.disabled = state.currentStep === 1 || state.uploadInProgress;
+    dom.backBtn.disabled = state.finalizeStarted || state.currentStep === 1 || busy;
     dom.nextBtn.style.visibility = state.currentStep >= TOTAL_STEPS ? 'hidden' : 'visible';
-    dom.nextBtn.disabled = state.uploadInProgress
+    dom.nextBtn.disabled = state.finalizeStarted
+      || busy
       || (state.currentStep === 1 && !getRawShareName())
       || (state.currentStep === 3 && !state.uploadCompleted && !canSkipUpload());
     dom.uploadBtn.style.visibility = state.currentStep === 3 ? 'visible' : 'hidden';
-    dom.uploadBtn.disabled = state.uploadInProgress || !state.files.length || state.uploadCompleted;
+    dom.uploadBtn.disabled = state.finalizeStarted || busy || !state.files.length || state.uploadCompleted;
     dom.finishBtn.style.visibility = state.currentStep === TOTAL_STEPS ? 'visible' : 'hidden';
-    dom.finishBtn.disabled = !state.uploadCompleted || state.uploadInProgress;
-    dom.removeFileBtn.disabled = !state.selectedFileId || state.uploadInProgress;
+    dom.finishBtn.disabled = !state.uploadCompleted
+      || busy
+      || (state.finalizeStarted && !state.finalizeRetryAllowed)
+      || state.finalized;
+    dom.removeFileBtn.disabled = state.finalizeStarted || !state.selectedFileId || busy;
   }
 
   async function handleNext(){
@@ -1516,11 +1537,24 @@
    * @returns {Promise<void>}
    */
   async function finalizeShare(){
+    if (state.finalized || state.finalizeInProgress){
+      log('Finalize ignored', {
+        finalized: state.finalized,
+        inProgress: state.finalizeInProgress
+      });
+      return;
+    }
     if (!state.uploadCompleted || !state.uploadResult?.shareInfo){
       setMessage(i18n('sharing_error_upload_required'), 'error');
       log('Finalize canceled: upload missing');
       return;
     }
+    state.finalizeStarted = true;
+    state.finalizeInProgress = true;
+    state.finalizeRetryAllowed = false;
+    state.finalizeCloseOnly = false;
+    lockFinalizeInputs();
+    updateButtons();
     const attachmentMode = state.mode === "attachments";
     const attachmentLinkTarget = attachmentMode
       ? NCSharingStorage.normalizeAttachmentLinkTarget(state.defaults.attachmentLinkTarget)
@@ -1539,7 +1573,9 @@
       separatePasswordMail
     });
     try{
-      if (!attachmentMode && typeof NCSharing.updateShareDetails === 'function'){
+      if (!state.finalizeProgress.detailsUpdated
+        && !attachmentMode
+        && typeof NCSharing.updateShareDetails === 'function'){
         await NCSharing.updateShareDetails({
           shareInfo: state.uploadResult.shareInfo,
           noteEnabled,
@@ -1548,6 +1584,7 @@
         state.uploadResult.shareInfo.note = note;
         state.uploadResult.shareInfo.noteEnabled = noteEnabled;
       }
+      state.finalizeProgress.detailsUpdated = true;
       setMessage(i18n('sharing_status_inserting'), 'info');
       const renderOptions = {
         policyShare: state.policy.active ? state.policy.share : null,
@@ -1559,46 +1596,116 @@
         hidePassword: separatePasswordMail,
         showPasswordSeparateHint: separatePasswordMail
       };
-      const html = await NCSharing.buildHtmlBlock(state.uploadResult.shareInfo, renderOptions);
-      const plainText = await NCSharing.buildPlainTextBlock(state.uploadResult.shareInfo, renderOptions);
-      await armComposeShareCleanup({
-        tabId: Number(state.tabId),
-        shareId: state.uploadResult.shareInfo?.shareId || "",
-        shareLabel: state.uploadResult.shareInfo?.label || getSanitizedShareName(),
-        shareUrl: state.uploadResult.shareInfo?.shareUrl || "",
-        folderInfo: state.uploadResult.shareInfo?.folderInfo || null
-      });
-      await insertIntoCompose(html, plainText);
-      if (separatePasswordMail){
+      let html = "";
+      let plainText = "";
+      let passwordMailHtml = "";
+      let passwordMailPlainText = "";
+      if (!state.finalizeProgress.blockInserted){
+        html = await NCSharing.buildHtmlBlock(state.uploadResult.shareInfo, renderOptions);
+        plainText = await NCSharing.buildPlainTextBlock(state.uploadResult.shareInfo, renderOptions);
+      }
+      if (separatePasswordMail && !state.finalizeProgress.passwordDispatchRegistered){
         const passwordRenderOptions = {
           policyShare: state.policy.active ? state.policy.share : null,
           policyEditableShare: state.policy.active ? state.policy.editable : null,
           passwordOnly: true
         };
-        const passwordMailHtml = await NCSharing.buildHtmlBlock(state.uploadResult.shareInfo, passwordRenderOptions);
-        const passwordMailPlainText = await NCSharing.buildPlainTextBlock(state.uploadResult.shareInfo, passwordRenderOptions);
-        await registerSeparatePasswordDispatch({
-          tabId: Number(state.tabId),
-          shareLabel: state.uploadResult.shareInfo?.label || getSanitizedShareName(),
-          shareUrl: state.uploadResult.shareInfo?.shareUrl || "",
-          shareId: state.uploadResult.shareInfo?.shareId || "",
-          folderInfo: state.uploadResult.shareInfo?.folderInfo || null,
-          password: state.uploadResult.shareInfo?.password || "",
-          deliveryMode: getSelectedPasswordDeliveryMode(),
-          secretsExpireDays: NCSharePasswordDelivery.resolveSecretsExpireDays(state.policy.status),
-          renderShareInfo: state.uploadResult.shareInfo,
-          policyShare: state.policy.active ? state.policy.share : null,
-          policyEditableShare: state.policy.active ? state.policy.editable : null,
-          html: passwordMailHtml,
-          plainText: passwordMailPlainText
-        });
+        passwordMailHtml = await NCSharing.buildHtmlBlock(
+          state.uploadResult.shareInfo,
+          passwordRenderOptions
+        );
+        passwordMailPlainText = await NCSharing.buildPlainTextBlock(
+          state.uploadResult.shareInfo,
+          passwordRenderOptions
+        );
       }
-      await clearWizardRemoteCleanup();
+      if (!state.finalizeProgress.blockInserted){
+        await finalizeRenderedShare({
+          tabId: Number(state.tabId),
+          html,
+          plainText,
+          cleanup: {
+            shareId: state.uploadResult.shareInfo?.shareId || "",
+            shareLabel: state.uploadResult.shareInfo?.label || getSanitizedShareName(),
+            shareUrl: state.uploadResult.shareInfo?.shareUrl || "",
+            folderInfo: state.uploadResult.shareInfo?.folderInfo || null
+          },
+          passwordDispatch: separatePasswordMail
+            ? {
+              shareLabel: state.uploadResult.shareInfo?.label || getSanitizedShareName(),
+              shareUrl: state.uploadResult.shareInfo?.shareUrl || "",
+              shareId: state.uploadResult.shareInfo?.shareId || "",
+              folderInfo: state.uploadResult.shareInfo?.folderInfo || null,
+              password: state.uploadResult.shareInfo?.password || "",
+              deliveryMode: getSelectedPasswordDeliveryMode(),
+              secretsExpireDays: NCSharePasswordDelivery.resolveSecretsExpireDays(state.policy.status),
+              renderShareInfo: state.uploadResult.shareInfo,
+              policyShare: state.policy.active ? state.policy.share : null,
+              policyEditableShare: state.policy.active ? state.policy.editable : null,
+              html: passwordMailHtml,
+              plainText: passwordMailPlainText
+            }
+            : null
+        });
+        state.finalizeProgress.composeCleanupArmed = true;
+        state.finalizeProgress.passwordDispatchRegistered = true;
+        state.finalizeProgress.blockInserted = true;
+        state.finalizeProgress.wizardCleanupCleared = true;
+      }
+      state.finalized = true;
       await closeWizardWindow();
     }catch(error){
       logUiError("finalize share failed", error);
-      setMessage(error?.message || i18n('sharing_status_error'), 'error');
-      log('Share insert failed', error?.message);
+      if (error?.canRetry === true){
+        state.finalizeRetryAllowed = true;
+        setMessage(i18n('sharing_error_insert_failed'), 'error');
+      }else{
+        state.finalizeRetryAllowed = false;
+        state.finalizeCloseOnly = true;
+        setMessage(
+          i18n('sharing_error_insert_failed_close')
+            || i18n('sharing_error_insert_failed'),
+          'error'
+        );
+      }
+      log('Share insert failed', {
+        canRetry: error?.canRetry === true
+      });
+    }finally{
+      state.finalizeInProgress = false;
+      updateButtons();
+    }
+  }
+
+  function lockFinalizeInputs(){
+    setFinalizeInputsDisabled(true);
+  }
+
+  function setFinalizeInputsDisabled(disabled){
+    const controls = [
+      dom.shareName,
+      dom.permCreate,
+      dom.permWrite,
+      dom.permDelete,
+      dom.passwordToggle,
+      dom.passwordSeparateToggle,
+      dom.passwordDeliveryMode,
+      dom.passwordInput,
+      dom.passwordGenerate,
+      dom.expireToggle,
+      dom.expireDate,
+      dom.noteToggle,
+      dom.noteInput,
+      dom.addFilesBtn,
+      dom.addFolderBtn,
+      dom.removeFileBtn,
+      dom.fileInput,
+      dom.folderInput
+    ];
+    for (const control of controls){
+      if (control){
+        control.disabled = !!disabled;
+      }
     }
   }
 
@@ -1641,134 +1748,51 @@
     return mode;
   }
 
-  /**
-   * Clear the armed wizard remote cleanup entry on successful finalize.
-   * @returns {Promise<void>}
-   */
-  async function clearWizardRemoteCleanup(){
+  async function finalizeRenderedShare(payload = {}){
     if (!Number.isInteger(state.wizardWindowId) || state.wizardWindowId <= 0){
       state.wizardWindowId = await resolveWizardWindowId();
     }
-    if (!Number.isInteger(state.wizardWindowId) || state.wizardWindowId <= 0){
-      throw new Error(i18n('sharing_error_insert_failed'));
-    }
-    const response = await browser.runtime.sendMessage({
-      type: "sharing:clearWizardRemoteCleanup",
-      payload: {
-        windowId: state.wizardWindowId
-      }
-    });
-    if (!response?.ok){
-      log('Wizard remote cleanup clear failed', {
-        error: String(response?.error || ""),
-        windowId: state.wizardWindowId
-      });
-      throw new Error(i18n('sharing_error_insert_failed'));
-    }
-    log('Wizard remote cleanup cleared', {
-      windowId: state.wizardWindowId
-    });
-  }
-
-  /**
-   * Register compose-share cleanup in the background.
-   * The share folder is removed if the compose tab is closed without successful send.
-   * @param {{tabId:number,shareId:string,shareLabel:string,shareUrl:string,folderInfo:object}} payload
-   * @returns {Promise<void>}
-   */
-  async function armComposeShareCleanup(payload = {}){
     const tabId = Number(payload.tabId);
-    if (!Number.isInteger(tabId) || tabId <= 0){
-      throw new Error(i18n('sharing_error_insert_failed'));
-    }
-    const folderInfo = payload?.folderInfo && typeof payload.folderInfo === "object"
-      ? payload.folderInfo
-      : null;
-    if (!folderInfo || typeof folderInfo.relativeFolder !== "string" || !folderInfo.relativeFolder.trim()){
+    const folderInfo = payload?.cleanup?.folderInfo;
+    if (!Number.isInteger(tabId)
+      || tabId <= 0
+      || !Number.isInteger(state.wizardWindowId)
+      || state.wizardWindowId <= 0
+      || !folderInfo?.relativeFolder
+      || !String(payload.html || "").trim()
+      || !String(payload.plainText || "").trim()){
       throw new Error(i18n('sharing_error_insert_failed'));
     }
     const response = await browser.runtime.sendMessage({
-      type: "sharing:armComposeShareCleanup",
+      type: "sharing:finalizeRenderedShare",
       payload: {
         tabId,
-        wizardWindowId: Number(state.wizardWindowId) || 0,
-        shareId: String(payload.shareId || ""),
-        shareLabel: String(payload.shareLabel || ""),
-        shareUrl: String(payload.shareUrl || ""),
-        folderInfo: {
-          relativeFolder: String(folderInfo.relativeFolder || ""),
-          relativeBase: String(folderInfo.relativeBase || ""),
-          folderName: String(folderInfo.folderName || "")
-        }
-      }
-    });
-    if (!response?.ok){
-      log('Compose share cleanup arm failed', {
-        error: String(response?.error || "")
-      });
-      throw new Error(i18n('sharing_error_insert_failed'));
-    }
-    log('Compose share cleanup armed', {
-      tabId,
-      shareLabel: String(payload.shareLabel || ""),
-      relativeFolder: String(folderInfo.relativeFolder || "")
-    });
-  }
-
-  /**
-   * Register a password-only follow-up mail dispatch in the background.
-   * The background captures final recipients when the main message is sent.
-   * @param {{tabId:number,shareLabel:string,shareUrl:string,shareId?:string,folderInfo?:object,password:string,deliveryMode?:string,secretsExpireDays?:number,renderShareInfo?:object,policyShare?:object,policyEditableShare?:object,html:string,plainText?:string}} payload
-   * @returns {Promise<void>}
-   */
-  async function registerSeparatePasswordDispatch(payload = {}){
-    const tabId = Number(payload.tabId);
-    if (!Number.isInteger(tabId) || tabId <= 0){
-      throw new Error("invalid_tab_id");
-    }
-    const password = String(payload.password || "");
-    const html = String(payload.html || "");
-    const plainText = String(payload.plainText || "");
-    if (!password || !html || !plainText){
-      throw new Error("password_dispatch_payload_invalid");
-    }
-    const response = await browser.runtime.sendMessage({
-      type: "sharing:registerSeparatePasswordDispatch",
-      payload: {
-        tabId,
-        shareLabel: String(payload.shareLabel || ""),
-        shareUrl: String(payload.shareUrl || ""),
-        shareId: String(payload.shareId || ""),
-        folderInfo: payload?.folderInfo && typeof payload.folderInfo === "object"
-          ? {
-            relativeFolder: String(payload.folderInfo.relativeFolder || ""),
-            relativeBase: String(payload.folderInfo.relativeBase || ""),
-            folderName: String(payload.folderInfo.folderName || "")
+        wizardWindowId: state.wizardWindowId,
+        html: String(payload.html || ""),
+        plainText: String(payload.plainText || ""),
+        cleanup: {
+          shareId: String(payload.cleanup.shareId || ""),
+          shareLabel: String(payload.cleanup.shareLabel || ""),
+          shareUrl: String(payload.cleanup.shareUrl || ""),
+          folderInfo: {
+            relativeFolder: String(folderInfo.relativeFolder || ""),
+            relativeBase: String(folderInfo.relativeBase || ""),
+            folderName: String(folderInfo.folderName || "")
           }
-          : null,
-        password,
-        deliveryMode: NCSharePasswordDelivery.coerceMode(payload.deliveryMode, NCSharePasswordDelivery.MODE_PLAIN),
-        secretsExpireDays: NCSharePasswordDelivery.clampSecretsExpireDays(payload.secretsExpireDays),
-        renderShareInfo: payload?.renderShareInfo && typeof payload.renderShareInfo === "object"
-          ? payload.renderShareInfo
-          : null,
-        policyShare: payload?.policyShare && typeof payload.policyShare === "object"
-          ? payload.policyShare
-          : null,
-        policyEditableShare: payload?.policyEditableShare && typeof payload.policyEditableShare === "object"
-          ? payload.policyEditableShare
-          : null,
-        html,
-        plainText
+        },
+        passwordDispatch: payload.passwordDispatch || null
       }
     });
     if (!response?.ok){
-      throw new Error(response?.error || "password_dispatch_register_failed");
+      const finalizeError = new Error(i18n('sharing_error_insert_failed'));
+      finalizeError.canRetry = response?.canRetry === true;
+      throw finalizeError;
     }
-    log('Password dispatch registered', {
+    log('Share finalize committed', {
       tabId,
-      shareLabel: String(payload.shareLabel || ""),
-      deliveryMode: NCSharePasswordDelivery.coerceMode(payload.deliveryMode, NCSharePasswordDelivery.MODE_PLAIN)
+      windowId: state.wizardWindowId,
+      draftGroupId: String(response.draftGroupId || ""),
+      passwordDispatchDuplicate: response.passwordDispatchDuplicate === true
     });
   }
 
@@ -1794,20 +1818,47 @@
    * @returns {Promise<boolean>}
    */
   async function ensureUniqueQueueEntries(){
-    const seen = new Set();
-    for (const entry of state.files){
-      let key = getTargetRelativePath(entry);
-      while (seen.has(key)){
-        if (!promptForRename(entry, 'sharing_prompt_rename_duplicate')){
-          return false;
+    while (true){
+      const seen = new Set();
+      for (const entry of state.files){
+        let key = getTargetRelativePath(entry);
+        while (seen.has(key)){
+          if (!promptForRename(entry, 'sharing_prompt_rename_duplicate')){
+            return false;
+          }
+          key = getTargetRelativePath(entry);
+          log('Local duplicate rename', entry.displayPath);
         }
-        key = getTargetRelativePath(entry);
-        log('Local duplicate rename', entry.displayPath);
+        seen.add(key);
       }
-      seen.add(key);
+      const prefixConflict = findQueuePathPrefixConflict();
+      if (!prefixConflict){
+        break;
+      }
+      if (!promptForRename(
+        prefixConflict.fileEntry,
+        'sharing_prompt_rename_file_directory_conflict'
+      )){
+        return false;
+      }
+      log('Local file-directory conflict rename', {
+        filePath: prefixConflict.filePath,
+        nestedPath: prefixConflict.nestedPath
+      });
     }
     renderFileTable();
     return true;
+  }
+
+  function findQueuePathPrefixConflict(){
+    const entries = state.files.map((entry) => ({
+      entry,
+      path: getTargetRelativePath(entry)
+    }));
+    if (!globalThis.NCFileQueuePathConflicts?.find){
+      throw new Error("file_queue_path_conflict_runtime_unavailable");
+    }
+    return NCFileQueuePathConflicts.find(entries);
   }
 
   /**
@@ -1874,33 +1925,6 @@
   }
 
   /**
-   * Insert the generated share block into the compose window.
-   * @param {string} html
-   * @param {string} plainText
-   * @returns {Promise<void>}
-   */
-  async function insertIntoCompose(html, plainText){
-    const tabId = state.tabId;
-    if (!tabId){
-      throw new Error('tabId missing');
-    }
-    if (!html || !plainText){
-      throw new Error('share_render_payload_invalid');
-    }
-    const response = await browser.runtime.sendMessage({
-      type: 'sharing:insertRenderedBlock',
-      payload: {
-        tabId,
-        html,
-        plainText
-      }
-    });
-    if (!response?.ok){
-      throw new Error(response?.error || i18n('sharing_error_insert_failed'));
-    }
-  }
-
-  /**
    * Handle cancel by closing the wizard.
    * Background owns remote cleanup via the armed wizard window entry.
    * @param {Event} event
@@ -1908,6 +1932,10 @@
    */
   async function handleCancel(event){
     event?.preventDefault?.();
+    if (state.finalizeStarted){
+      log('Wizard cancel ignored during finalize');
+      return;
+    }
     log('Wizard cancel requested');
     await closeWizardWindow();
   }
