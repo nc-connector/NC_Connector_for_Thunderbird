@@ -105,6 +105,18 @@ function assertPresentationTable(name, table){
   assert(style.margin === "0", `${name} must not add margins`);
 }
 
+function assertIconPresentationTable(name, table){
+  assert(table.attributes.role === "presentation", `${name} must use role=presentation`);
+  assert(table.attributes.border === "0", `${name} must use border=0`);
+  assert(table.attributes.cellspacing === "0", `${name} must use cellspacing=0`);
+  assert(table.attributes.cellpadding === "0", `${name} must use cellpadding=0`);
+  assert(table.attributes.width === "14" && table.attributes.height === "14", `${name} must use fixed 14x14 attributes`);
+  const style = parseStyle(table.attributes.style);
+  assert(style["border-collapse"] === "collapse", `${name} must collapse borders`);
+  assert(style.width === "14px" && style.height === "14px", `${name} must use fixed 14px dimensions`);
+  assert(style.margin === "0", `${name} must not add margins`);
+}
+
 function assertPermissionsHtmlContract(caseName, html, labels, enabledStates){
   const normalizedHtml = String(html || "");
   const lowerHtml = normalizedHtml.toLowerCase();
@@ -115,10 +127,10 @@ function assertPermissionsHtmlContract(caseName, html, labels, enabledStates){
 
   const root = parseHtmlFragment(normalizedHtml);
   assert(root.children.length === 1 && root.children[0].tagName === "table", `${caseName} must contain one outer Rights table`);
-  assert(collectElements(root, "table").length === 5, `${caseName} must contain one outer and four nested tables`);
-  assert(collectElements(root, "tbody").length === 5, `${caseName} must contain one tbody per table`);
-  assert(collectElements(root, "tr").length === 5, `${caseName} must contain one outer and four nested rows`);
-  assert(collectElements(root, "td").length === 12, `${caseName} must contain four parent cells plus eight icon/label cells`);
+  assert(collectElements(root, "table").length === 9, `${caseName} must contain one outer, four permission-group, and four icon tables`);
+  assert(collectElements(root, "tbody").length === 9, `${caseName} must contain one tbody per table`);
+  assert(collectElements(root, "tr").length === 9, `${caseName} must contain one outer, four permission-group, and four icon rows`);
+  assert(collectElements(root, "td").length === 16, `${caseName} must contain four permission wrappers, four icon wrappers, four icon cells, and four labels`);
 
   const outerTable = root.children[0];
   assertPresentationTable(`${caseName} outer table`, outerTable);
@@ -138,17 +150,38 @@ function assertPermissionsHtmlContract(caseName, html, labels, enabledStates){
     assert(parentStyle["white-space"] === "nowrap", `${caseName} item ${index + 1} must prevent wrapping`);
     assert(parentStyle["vertical-align"] === "middle", `${caseName} item ${index + 1} must align vertically`);
 
+    assert(!Object.prototype.hasOwnProperty.call(parentStyle, "border"), `${caseName} item ${index + 1} permission wrapper must not carry the icon border`);
+
     const nestedTables = elementChildren(permissionCell, "table");
-    assert(nestedTables.length === 1, `${caseName} item ${index + 1} must contain one nested icon-label table`);
-    assertPresentationTable(`${caseName} nested table ${index + 1}`, nestedTables[0]);
+    assert(nestedTables.length === 1, `${caseName} item ${index + 1} must contain one nested permission-group table`);
+    assertPresentationTable(`${caseName} permission-group table ${index + 1}`, nestedTables[0]);
     const nestedBodies = elementChildren(nestedTables[0], "tbody");
     assert(nestedBodies.length === 1, `${caseName} item ${index + 1} must contain one nested tbody`);
     const nestedRows = elementChildren(nestedBodies[0], "tr");
     assert(nestedRows.length === 1, `${caseName} item ${index + 1} must contain one nested row`);
     const iconAndLabelCells = elementChildren(nestedRows[0], "td");
-    assert(iconAndLabelCells.length === 2, `${caseName} item ${index + 1} must contain one icon and one label cell`);
+    assert(iconAndLabelCells.length === 2, `${caseName} item ${index + 1} must contain one icon wrapper and one label cell`);
 
-    const iconCell = iconAndLabelCells[0];
+    const iconWrapperCell = iconAndLabelCells[0];
+    assert(iconWrapperCell.attributes.width === "14" && iconWrapperCell.attributes.height === "14", `${caseName} icon wrapper ${index + 1} must be 14x14`);
+    assert(iconWrapperCell.attributes.valign === "middle", `${caseName} icon wrapper ${index + 1} must use valign=middle`);
+    const iconWrapperStyle = parseStyle(iconWrapperCell.attributes.style);
+    assert(iconWrapperStyle.width === "14px" && iconWrapperStyle.height === "14px", `${caseName} icon wrapper ${index + 1} must use fixed 14px dimensions`);
+    assert(iconWrapperStyle.padding === "0", `${caseName} icon wrapper ${index + 1} must have no padding`);
+    assert(iconWrapperStyle["vertical-align"] === "middle", `${caseName} icon wrapper ${index + 1} must align vertically`);
+    assert(!Object.prototype.hasOwnProperty.call(iconWrapperStyle, "border"), `${caseName} icon wrapper ${index + 1} must remain unbordered`);
+
+    const iconTables = elementChildren(iconWrapperCell, "table");
+    assert(iconTables.length === 1, `${caseName} icon wrapper ${index + 1} must contain one icon-only table`);
+    assertIconPresentationTable(`${caseName} icon table ${index + 1}`, iconTables[0]);
+    const iconBodies = elementChildren(iconTables[0], "tbody");
+    assert(iconBodies.length === 1, `${caseName} icon table ${index + 1} must contain one tbody`);
+    const iconRows = elementChildren(iconBodies[0], "tr");
+    assert(iconRows.length === 1, `${caseName} icon table ${index + 1} must contain one row`);
+    const iconCells = elementChildren(iconRows[0], "td");
+    assert(iconCells.length === 1, `${caseName} icon table ${index + 1} must contain one bordered icon cell`);
+
+    const iconCell = iconCells[0];
     const expectedColor = enabledStates[index] ? "#0082c9" : "#c62828";
     const expectedSymbol = enabledStates[index] ? "&#10003;" : "&#10007;";
     assert(iconCell.attributes.width === "14" && iconCell.attributes.height === "14", `${caseName} icon ${index + 1} must be 14x14`);
@@ -160,6 +193,7 @@ function assertPermissionsHtmlContract(caseName, html, labels, enabledStates){
     assert(iconStyle["font-size"] === "11px", `${caseName} icon ${index + 1} must use an 11px symbol`);
     assert(iconStyle["font-weight"] === "700", `${caseName} icon ${index + 1} must use bold symbol weight`);
     assert(iconStyle["line-height"] === "14px", `${caseName} icon ${index + 1} must use a 14px line height`);
+    assert(iconStyle.padding === "0", `${caseName} icon ${index + 1} must have no padding`);
     assert(!Object.prototype.hasOwnProperty.call(iconStyle, "mso-line-height-rule"), `${caseName} icon ${index + 1} must not use an MSO line-height rule`);
     assert(iconStyle["text-align"] === "center" && iconStyle["vertical-align"] === "middle", `${caseName} icon ${index + 1} must center the symbol`);
     assert(nodeText(iconCell).trim() === expectedSymbol, `${caseName} icon ${index + 1} must contain the correct state symbol`);

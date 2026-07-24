@@ -1314,7 +1314,15 @@
         <table role="presentation" border="0" cellspacing="0" cellpadding="0" style="border-collapse: collapse; width: auto; margin: 0;">
           <tbody>
             <tr>
-              <td width="14" height="14" align="center" valign="middle" style="width: 14px; height: 14px; border: 1px solid ${color}; color: ${color}; font-size: 11px; font-weight: 700; line-height: 14px; text-align: center; vertical-align: middle;">${entry.enabled ? "&#10003;" : "&#10007;"}</td>
+              <td width="14" height="14" valign="middle" style="width: 14px; height: 14px; padding: 0; vertical-align: middle;">
+                <table role="presentation" border="0" cellspacing="0" cellpadding="0" width="14" height="14" style="border-collapse: collapse; width: 14px; height: 14px; margin: 0;">
+                  <tbody>
+                    <tr>
+                      <td width="14" height="14" align="center" valign="middle" style="width: 14px; height: 14px; border: 1px solid ${color}; color: ${color}; font-size: 11px; font-weight: 700; line-height: 14px; padding: 0; text-align: center; vertical-align: middle;">${entry.enabled ? "&#10003;" : "&#10007;"}</td>
+                    </tr>
+                  </tbody>
+                </table>
+              </td>
               <td nowrap="nowrap" valign="middle" style="padding-left: 5px; white-space: nowrap; font-weight: 600; vertical-align: middle;">${escapeHtml(entry.label)}</td>
             </tr>
           </tbody>
