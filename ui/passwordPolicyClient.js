@@ -12,13 +12,6 @@
   const LOCAL_STRONG_PASSWORD_MIN_LENGTH = 12;
   const LOCAL_STRONG_PASSWORD_SYMBOL_RE = /[!@#$%^&*()\-_=+\[\]{};:,.?]/;
 
-  const EMPTY_POLICY = Object.freeze({
-    hasPolicy: false,
-    minLength: null,
-    apiGenerateUrl: null,
-    apiValidateUrl: null
-  });
-
   function createEmptyPolicy(){
     return {
       hasPolicy: false,
@@ -150,7 +143,6 @@
   }
 
   global.NCPasswordPolicyClient = {
-    EMPTY_POLICY,
     createEmptyPolicy,
     normalizePolicy,
     getPolicyMinLength,

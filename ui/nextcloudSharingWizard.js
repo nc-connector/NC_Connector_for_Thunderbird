@@ -742,7 +742,7 @@
   }
 
   function applyPasswordToggleState(enabled){
-    const lockPassword = NCWizardPolicyUi.applyEditableLock({
+    NCWizardPolicyUi.applyEditableLock({
       active: state.policy.active,
       editable: state.policy.editable,
       key: "share_set_password",

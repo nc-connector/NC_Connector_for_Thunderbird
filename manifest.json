@@ -71,8 +71,7 @@
       "modules/bgCalendarState.js",
       "modules/bgCalendarDeparture.js",
       "modules/bgCalendar.js",
-      "modules/bgRouter.js",
-      "modules/background.js"
+      "modules/bgRouter.js"
     ]
   },
   "compose_action": {

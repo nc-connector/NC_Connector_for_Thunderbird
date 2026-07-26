@@ -135,7 +135,6 @@ Key files you’ll touch most:
 - `modules/bgRouter.js` — `runtime.onMessage` dispatcher for Talk/Sharing/Options/UI bridge contracts
 - `modules/policyState.js` — shared helpers for normalized backend policy status objects
 - `modules/policyRuntime.js` — centralized backend seat/policy status fetch + normalization (`/apps/ncc_backend_4mc/api/v1/status`)
-- `modules/background.js` — thin bootstrap entrypoint
 - `modules/hostPermissions.js` — single host-permission gate used by core/talk/sharing runtime modules
 - `modules/managedSetup.js` — reads managed Nextcloud URL values from Thunderbird Enterprise Policy (`storage.managed`)
 - `modules/shareTemplateContract.js` — shared share-template marker rules used by render + insert modules

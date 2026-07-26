@@ -9,6 +9,7 @@
  * Storage helpers for sharing defaults and legacy key migration.
  */
 const NCSharingStorage = (() => {
+  const DEFAULT_BASE_PATH = "NC Connector";
   const DEFAULT_ATTACHMENT_THRESHOLD_MB = 5;
   const ATTACHMENT_LINK_TARGETS = Object.freeze({
     ZIP_DOWNLOAD: "zip_download",
@@ -134,6 +135,7 @@ const NCSharingStorage = (() => {
   }
 
   return {
+    DEFAULT_BASE_PATH,
     DEFAULT_ATTACHMENT_THRESHOLD_MB,
     ATTACHMENT_LINK_TARGETS,
     DEFAULT_ATTACHMENT_LINK_TARGET,
