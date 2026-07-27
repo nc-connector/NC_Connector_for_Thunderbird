@@ -713,11 +713,11 @@
   "sharing_status_ready": {
     "message": "上传完成。"
   },
-  "sharing_status_uploading_bulk": {
-    "message": "正在上传文件..."
-  },
   "sharing_status_scanning": {
     "message": "正在扫描文件和文件夹..."
+  },
+  "sharing_status_calculating_checksums": {
+    "message": "正在计算校验和（$1 / $2）..."
   },
   "sharing_status_preparing_folders": {
     "message": "正在准备文件夹（$1 / $2）..."

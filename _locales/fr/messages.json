@@ -713,11 +713,11 @@
   "sharing_status_ready": {
     "message": "Téléversement terminé."
   },
-  "sharing_status_uploading_bulk": {
-    "message": "Téléversement des fichiers..."
-  },
   "sharing_status_scanning": {
     "message": "Analyse des fichiers et dossiers..."
+  },
+  "sharing_status_calculating_checksums": {
+    "message": "Calcul des sommes de contrôle ($1 / $2)…"
   },
   "sharing_status_preparing_folders": {
     "message": "Préparation des dossiers ($1 / $2)..."

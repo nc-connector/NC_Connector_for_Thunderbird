@@ -713,11 +713,11 @@
   "sharing_status_ready": {
     "message": "Envio concluído."
   },
-  "sharing_status_uploading_bulk": {
-    "message": "Enviando arquivos..."
-  },
   "sharing_status_scanning": {
     "message": "Analisando arquivos e pastas..."
+  },
+  "sharing_status_calculating_checksums": {
+    "message": "Calculando somas de verificação ($1 / $2)..."
   },
   "sharing_status_preparing_folders": {
     "message": "Preparando pastas ($1 / $2)..."

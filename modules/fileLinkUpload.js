@@ -689,7 +689,15 @@
       fixedRequestCount
     });
     const checksums = plan.useBulkUpload
-      ? await NCFileLinkBulkUpload.prepareChecksums(plan.bulkFiles, signal)
+      ? await NCFileLinkBulkUpload.prepareChecksums(
+          plan.bulkFiles,
+          signal,
+          (current, total) => onStatus?.({
+            phase: "checksums",
+            current,
+            total
+          })
+        )
       : new Map();
     if (typeof log === "function"){
       log("Upload plan ready", {

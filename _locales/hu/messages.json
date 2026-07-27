@@ -713,11 +713,11 @@
   "sharing_status_ready": {
     "message": "Feltöltés kész."
   },
-  "sharing_status_uploading_bulk": {
-    "message": "Fájlok feltöltése..."
-  },
   "sharing_status_scanning": {
     "message": "Fájlok és mappák vizsgálata..."
+  },
+  "sharing_status_calculating_checksums": {
+    "message": "Ellenőrzőösszegek számítása ($1 / $2)..."
   },
   "sharing_status_preparing_folders": {
     "message": "Mappák előkészítése ($1 / $2)..."

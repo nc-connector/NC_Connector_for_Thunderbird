@@ -1508,6 +1508,19 @@
       setOverallProgress({ visible: true, indeterminate: true });
       return;
     }
+    if (event.phase === 'checksums'){
+      const current = Math.max(0, Number(event.current) || 0);
+      const total = Math.max(0, Number(event.total) || 0);
+      setUploadStatus(i18n('sharing_status_calculating_checksums', [
+        String(current),
+        String(total)
+      ]));
+      setOverallProgress({
+        visible: true,
+        percent: total > 0 ? Math.round((current / total) * 100) : 100
+      });
+      return;
+    }
     if (event.phase === 'folders'){
       const current = Math.max(0, Number(event.current) || 0);
       const total = Math.max(0, Number(event.total) || 0);

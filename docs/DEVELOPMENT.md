@@ -923,6 +923,8 @@ Bulk upload posts `multipart/related` to `/remote.php/dav/bulk`. Every part cont
 
 MD5 values are calculated incrementally from 2 MiB slices with the vendored `SparkMD5` component. The multipart boundary and byte ranges stay fixed across retries; each retry creates a fresh `Blob` from the same descriptor. The JSON response is checked for every destination path, including a per-file `507`.
 
+Sequential checksum preparation reports completed and total Bulk files as its own wizard phase before the first server change. Intermediate updates are limited to at most ten per second, with the initial and final counts always shown.
+
 There is no mode switch after a failed Direct, Chunked, or Bulk operation.
 
 #### Retry and error rules
@@ -1207,8 +1209,8 @@ Common symptoms:
   - Check the localized minimum-version error and the capabilities request.
   - Nextcloud 32 or newer plus an explicit successful OCS meta result is required.
 
-- **FileLink remains in scanning or folder preparation**
-  - Bulk candidates are hashed before upload; large sets of small files can spend measurable time in this phase.
+- **FileLink remains in scanning, checksum calculation, or folder preparation**
+  - Bulk candidates are hashed before upload; large sets of small files can spend measurable time in the checksum phase.
   - Check the phase summary and matching Nextcloud DAV requests instead of relying only on byte percentage.
 
 - **FileLink fails with 507**

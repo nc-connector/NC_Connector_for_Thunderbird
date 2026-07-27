@@ -7,6 +7,7 @@
   'use strict';
 
   const HASH_READ_SIZE_BYTES = 2 * 1024 * 1024;
+  const CHECKSUM_PROGRESS_INTERVAL_MS = 100;
 
   async function calculateMd5(file, signal){
     if (typeof global.SparkMD5?.ArrayBuffer !== "function"){
@@ -31,11 +32,27 @@
     }
   }
 
-  async function prepareChecksums(files, signal){
+  async function prepareChecksums(files, signal, onProgress){
     const checksums = new Map();
-    for (const file of files || []){
+    const sourceFiles = Array.isArray(files) ? files : [];
+    const total = sourceFiles.length;
+    if (!total){
+      return checksums;
+    }
+
+    onProgress?.(0, total);
+    let lastProgressAt = Date.now();
+    for (let index = 0; index < total; index++){
       NCFileLinkDav.throwIfAborted(signal);
+      const file = sourceFiles[index];
       checksums.set(file.internalId, await calculateMd5(file, signal));
+      const completed = index + 1;
+      const now = Date.now();
+      if (completed === total
+        || now - lastProgressAt >= CHECKSUM_PROGRESS_INTERVAL_MS){
+        lastProgressAt = now;
+        onProgress?.(completed, total);
+      }
     }
     return checksums;
   }

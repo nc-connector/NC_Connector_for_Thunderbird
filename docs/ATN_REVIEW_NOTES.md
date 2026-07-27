@@ -233,7 +233,7 @@ not persist credentials, passwords, recipients, or rendered message bodies.
 - Replay-safe requests use at most three attempts for transport failures or HTTP `408`, `423`, `429`, `502`, `503`, and `504`; `Retry-After` is capped at 30 seconds.
 - HTTP `507`, including a failed item reported by DAV Bulk, maps to the localized insufficient-storage message.
 - Public-share create does not send `publicUpload`. Unclear create responses use an exact-path lookup and permit one more create only after the lookup reports a known empty result. The later share-metadata update path remains unchanged.
-- The Sharing wizard receives aggregate progress and batched item changes at most every 100 ms. Debug upload summaries are limited to one every five seconds.
+- The Sharing wizard receives a separate Bulk-checksum file count before upload. Intermediate checksum updates and the existing aggregate/item batches are limited to at most every 100 ms. Debug upload summaries are limited to one every five seconds.
 - Port disconnect, wizard removal, cancellation, and undeliverable success results lead to abort and cleanup. Cleanup generation IDs prevent an older delayed retry from deleting a newer window entry.
 - New visible FileLink status, speed, minimum-version, and storage messages are present in every supported locale.
 - `vendor/spark-md5.min.js` is SparkMD5 3.0.2 and calculates DAV Bulk MD5 values incrementally. Its exact source, license, local file, and SHA-256 are recorded in `VENDOR.md`.
