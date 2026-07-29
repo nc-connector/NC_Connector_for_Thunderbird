@@ -579,10 +579,10 @@
     "message": "Nom du partage"
   },
   "sharing_permission_read": {
-    "message": "Lecture"
+    "message": "Lire"
   },
   "sharing_permission_create": {
-    "message": "Téléverser"
+    "message": "Créer"
   },
   "sharing_permission_write": {
     "message": "Modifier"
@@ -666,7 +666,7 @@
     "message": "Date d'expiration"
   },
   "sharing_expire_hint": {
-    "message": "Après cette date, le lien n’est plus disponible."
+    "message": "Passé cette date, le lien ne sera plus accessible."
   },
   "sharing_step_files_title": {
     "message": "Sélectionner des fichiers ou des dossiers"
@@ -972,7 +972,7 @@
     "message": "Cette URL Nextcloud est gérée par votre administrateur."
   },
   "options_lang_custom": {
-    "message": "Personnalise (modele backend)"
+    "message": "Personnalisé (modele backend)"
   },
   "sharing_password_separate_backend_required_tooltip": {
     "message": "Cette fonctionnalité nécessite le backend Nextcloud."
