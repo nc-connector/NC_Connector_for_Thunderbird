@@ -960,7 +960,7 @@
     "message": "La politique backend est actuellement indisponible."
   },
   "policy_warning_license_invalid": {
-    "message": "La licence ou l'attribution de siège NC Connector n'est actuellement pas valide. Les paramètres locaux sont utilisés. Veuillez contacter votre administrateur Nextcloud."
+    "message": "La licence ou l'attribution de seat NC Connector n'est actuellement pas valide. Les paramètres locaux sont utilisés. Veuillez contacter votre administrateur Nextcloud."
   },
   "policy_warning_admin_link_label": {
     "message": "Ouvrir le guide de configuration administrateur"
