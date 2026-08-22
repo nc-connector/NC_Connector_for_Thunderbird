@@ -713,11 +713,11 @@
   "sharing_status_ready": {
     "message": "Upload completato."
   },
-  "sharing_status_uploading_bulk": {
-    "message": "Caricamento file..."
-  },
   "sharing_status_scanning": {
     "message": "Analisi di file e cartelle..."
+  },
+  "sharing_status_calculating_checksums": {
+    "message": "Calcolo dei checksum ($1 / $2)..."
   },
   "sharing_status_preparing_folders": {
     "message": "Preparazione delle cartelle ($1 / $2)..."

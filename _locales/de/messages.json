@@ -713,11 +713,11 @@
   "sharing_status_ready": {
     "message": "Upload abgeschlossen."
   },
-  "sharing_status_uploading_bulk": {
-    "message": "Dateien werden hochgeladen..."
-  },
   "sharing_status_scanning": {
     "message": "Dateien und Ordner werden erfasst..."
+  },
+  "sharing_status_calculating_checksums": {
+    "message": "Prüfsummen werden berechnet ($1 / $2)..."
   },
   "sharing_status_preparing_folders": {
     "message": "Ordner werden vorbereitet ($1 / $2)..."

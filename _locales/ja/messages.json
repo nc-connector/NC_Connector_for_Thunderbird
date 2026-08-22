@@ -713,11 +713,11 @@
   "sharing_status_ready": {
     "message": "アップロードが完了しました。"
   },
-  "sharing_status_uploading_bulk": {
-    "message": "ファイルをアップロード中..."
-  },
   "sharing_status_scanning": {
     "message": "ファイルとフォルダーをスキャン中..."
+  },
+  "sharing_status_calculating_checksums": {
+    "message": "チェックサムを計算しています（$1 / $2）..."
   },
   "sharing_status_preparing_folders": {
     "message": "フォルダーを準備中 ($1 / $2)..."

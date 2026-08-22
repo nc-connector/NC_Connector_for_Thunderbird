@@ -105,7 +105,7 @@ const emailSignatureOnReplyRow = document.getElementById("emailSignatureOnReplyR
 const emailSignatureOnReplyInput = document.getElementById("emailSignatureOnReply");
 const emailSignatureOnForwardRow = document.getElementById("emailSignatureOnForwardRow");
 const emailSignatureOnForwardInput = document.getElementById("emailSignatureOnForward");
-const DEFAULT_SHARING_BASE = (typeof NCSharing !== "undefined" ? NCSharing.DEFAULT_BASE_PATH : "NC Connector");
+const DEFAULT_SHARING_BASE = NCSharingStorage.DEFAULT_BASE_PATH;
 const OPTION_SHARE_POLICY_BINDINGS = [
   {
     name: "sharingBasePath",

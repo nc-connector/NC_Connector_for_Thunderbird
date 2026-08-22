@@ -742,7 +742,7 @@
   }
 
   function applyPasswordToggleState(enabled){
-    const lockPassword = NCWizardPolicyUi.applyEditableLock({
+    NCWizardPolicyUi.applyEditableLock({
       active: state.policy.active,
       editable: state.policy.editable,
       key: "share_set_password",
@@ -1506,6 +1506,19 @@
     if (event.phase === 'scanning'){
       setUploadStatus(i18n('sharing_status_scanning'));
       setOverallProgress({ visible: true, indeterminate: true });
+      return;
+    }
+    if (event.phase === 'checksums'){
+      const current = Math.max(0, Number(event.current) || 0);
+      const total = Math.max(0, Number(event.total) || 0);
+      setUploadStatus(i18n('sharing_status_calculating_checksums', [
+        String(current),
+        String(total)
+      ]));
+      setOverallProgress({
+        visible: true,
+        percent: total > 0 ? Math.round((current / total) * 100) : 100
+      });
       return;
     }
     if (event.phase === 'folders'){

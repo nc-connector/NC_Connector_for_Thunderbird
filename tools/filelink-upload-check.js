@@ -154,6 +154,43 @@ async function run(){
   };
   const checksum = await bulk.calculateMd5(contentFile);
   assert(checksum === "900150983cd24fb0d6963f7d28e17f72", "File MD5 must match the known vector");
+  const checksumProgress = [];
+  const preparedChecksums = await bulk.prepareChecksums(
+    [
+      contentFile,
+      {
+        ...contentFile,
+        internalId: "bulk-2",
+        itemId: "bulk-item-2",
+        fileName: "b.txt",
+        displayPath: "docs/b.txt"
+      }
+    ],
+    null,
+    (current, total) => checksumProgress.push(`${current}/${total}`)
+  );
+  assert(
+    checksumProgress[0] === "0/2",
+    "Bulk checksums must report their initial file count"
+  );
+  assert(
+    checksumProgress.at(-1) === "2/2",
+    "Bulk checksums must report their final file count"
+  );
+  assert(
+    preparedChecksums.size === 2,
+    "Bulk checksum preparation must calculate every MD5 value"
+  );
+  let emptyChecksumUpdates = 0;
+  await bulk.prepareChecksums(
+    [],
+    null,
+    () => emptyChecksumUpdates++
+  );
+  assert(
+    emptyChecksumUpdates === 0,
+    "Non-Bulk plans must not enter checksum progress"
+  );
   const descriptor = bulk.buildMultipartDescriptor({
     batch: { files: [contentFile] },
     shareRoot: "NC Connector/20260723_Test",
@@ -236,6 +273,11 @@ async function run(){
   );
   assert(!sharingSource.includes("publicUpload\", \"true"), "Share creation must not add a second permissions mode");
   assert(uploadSource.includes("NCFileLinkUploadPolicy.MAX_PARALLEL_REQUESTS"), "Transfer pool must use the shared worker limit");
+  assert(
+    uploadSource.includes('phase: "checksums"')
+      && wizardSource.includes("sharing_status_calculating_checksums"),
+    "Bulk checksum progress must reach the Sharing wizard"
+  );
 
   console.log("[OK] filelink-upload-check passed");
 }

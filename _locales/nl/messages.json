@@ -713,11 +713,11 @@
   "sharing_status_ready": {
     "message": "Upload voltooid."
   },
-  "sharing_status_uploading_bulk": {
-    "message": "Bestanden uploaden..."
-  },
   "sharing_status_scanning": {
     "message": "Bestanden en mappen scannen..."
+  },
+  "sharing_status_calculating_checksums": {
+    "message": "Controlesommen berekenen ($1 / $2)..."
   },
   "sharing_status_preparing_folders": {
     "message": "Mappen voorbereiden ($1 / $2)..."

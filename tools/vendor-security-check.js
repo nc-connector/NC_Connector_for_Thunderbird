@@ -32,7 +32,6 @@ function run(){
     "Background must load local DOMPurify before the sanitizer wrapper"
   );
   for (const relativeHtmlPath of [
-    "options.html",
     "ui/talkDialog.html",
     "ui/nextcloudSharingWizard.html"
   ]){

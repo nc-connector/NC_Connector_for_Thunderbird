@@ -12,7 +12,8 @@
   - iCalendar parsing/writing rules in `modules/icalContract.js`
   - Runtime consumers:
     - `modules/bgCalendar.js`
-    - `modules/talkcore.js`
+    - `modules/bgCalendarLifecycle.js`
+    - `modules/talkAddressbook.js`
 
 ## DOMPurify
 
@@ -35,8 +36,8 @@
     - `ui/talkDialog.js`
 - Module-format review:
   - The unchanged UMD browser distribution is loaded as a local ordered script
-    before `modules/htmlSanitizer.js` in the background, options page, Talk
-    dialog, and Sharing wizard.
+    before `modules/htmlSanitizer.js` in the background, Talk dialog, and
+    Sharing wizard.
   - It exposes only the local `DOMPurify` runtime; no remote module or script is
     loaded.
 
