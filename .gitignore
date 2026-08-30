@@ -1,6 +1,8 @@
 node_modules/
 .tmp/
 .cdn-lookup-cache/
+.lib-cdn-lookup-cache/
+.lib-mozilla-hash-db-cache/
 .experiments-cache/
 .library-hashes-cache/
 .schema-cache/

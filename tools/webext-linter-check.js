@@ -44,7 +44,9 @@ function shouldCopySource(source){
       first === ".git" ||
       first === ".github" ||
       first === ".cdn-lookup-cache" ||
-    first === ".experiments-cache" ||
+      first === ".lib-cdn-lookup-cache" ||
+      first === ".lib-mozilla-hash-db-cache" ||
+      first === ".experiments-cache" ||
     first === ".library-hashes-cache" ||
     first === ".schema-cache"
   ){
