@@ -136,7 +136,7 @@ not persist credentials, passwords, recipients, or rendered message bodies.
   - Talk HTML policy template (`talk_invitation_template`)
   - Share HTML policy templates (`share_html_block_template_v2` with `share_html_block_template` fallback, and `share_password_template`)
   - Email signature HTML policy template (`email_signature_template`)
-  - bundled sanitizer: `DOMPurify 3.4.12` documented in `VENDOR.md`
+  - bundled sanitizer: `DOMPurify 3.4.13` documented in `VENDOR.md`
 - Follow-up for the previous `ui/signatureCompose.js` `innerHTML` review finding:
   - email signature HTML is still sanitized in background before it reaches the compose script
   - the compose bridge no longer assigns dynamic HTML with `innerHTML`
@@ -163,6 +163,7 @@ not persist credentials, passwords, recipients, or rendered message bodies.
   - backend custom share templates are sanitized before rich or plain-text rendering
   - empty optional placeholders in backend custom share templates are pruned before replacement so hidden rights/password/expiry/note sections do not rely on fixed table rows
   - local built-in share templates stay on the trusted local render path and are not passed through the backend HTML sanitizer
+  - the local share header embeds a packaged transparent 164 x 48 PNG over one blue table-cell background; labels, dates, and Rights markup use the same Outlook-safe no-break/presentation-table contract as the Outlook add-in
 - Password follow-up compose is mode-aware as well:
   - HTML follow-up keeps the pre-rendered HTML block
   - plain-text follow-up uses the dedicated pre-rendered plain-text block
