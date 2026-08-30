@@ -1,5 +1,6 @@
 'use strict';
 
+const crypto = require("node:crypto");
 const fs = require("node:fs");
 const path = require("node:path");
 const vm = require("node:vm");
@@ -182,7 +183,7 @@ function assertPermissionsHtmlContract(caseName, html, labels, enabledStates){
     assert(iconCells.length === 1, `${caseName} icon table ${index + 1} must contain one bordered icon cell`);
 
     const iconCell = iconCells[0];
-    const expectedColor = enabledStates[index] ? "#0082c9" : "#c62828";
+    const expectedColor = enabledStates[index] ? "#0082C9" : "#c62828";
     const expectedSymbol = enabledStates[index] ? "&#10003;" : "&#10007;";
     assert(iconCell.attributes.width === "14" && iconCell.attributes.height === "14", `${caseName} icon ${index + 1} must be 14x14`);
     assert(iconCell.attributes.align === "center" && iconCell.attributes.valign === "middle", `${caseName} icon ${index + 1} must use legacy center alignment attributes`);
@@ -558,6 +559,84 @@ async function testPermissionsHtmlContract(){
   }
 }
 
+async function testPermissionsCrossSanitizerBoundary(){
+  const { context, storageState } = createHarness();
+  storageState.shareBlockLang = "custom";
+  let sanitizerInput = "";
+  context.NCHtmlSanitizer.sanitizeShareTemplateHtml = (html) => {
+    sanitizerInput = String(html || "");
+    return sanitizeShareTemplateHtml(sanitizerInput);
+  };
+
+  const html = await context.NCSharing.buildHtmlBlock({
+    shareUrl: "https://cloud.example/s/abc123",
+    password: "",
+    expireDate: "",
+    permissions: { read: true, create: false, write: true, delete: false }
+  }, {
+    permissions: { read: true, create: false, write: true, delete: false },
+    policyShare: {
+      share_html_block_template_v2: "<div>{RIGHTS}</div>"
+    }
+  });
+
+  assert(sanitizerInput.includes('<table role="presentation"'), "Custom-template Rights HTML must reach the sanitizer after placeholder replacement");
+  assert(sanitizerInput.includes('nowrap="nowrap"'), "Custom-template Rights HTML must carry its no-wrap compatibility attributes into the sanitizer");
+  assert(html.includes('nowrap="nowrap"'), "The configured sanitizer boundary must preserve Rights no-wrap attributes");
+}
+
+async function testBuiltInNoBreakValues(){
+  const { context } = createHarness();
+  const html = await context.NCSharing.buildHtmlBlock({
+    shareUrl: "https://cloud.example/s/abc123",
+    password: "",
+    expireDate: "2026-05-01",
+    permissions: { read: true, create: false, write: false, delete: false }
+  }, {
+    permissions: { read: true, create: false, write: false, delete: false }
+  });
+
+  assert(
+    html.includes('<nobr style="white-space: nowrap;">Nextcloud&nbsp;link</nobr>'),
+    "Built-in link label must remain one visual token"
+  );
+  assert(
+    html.includes('<nobr style="white-space: nowrap;">2026&#8209;05&#8209;01</nobr>'),
+    "Built-in expiration date must remain one visual token"
+  );
+}
+
+async function testCustomTemplateValuesStayAttributeSafe(){
+  const { context, storageState } = createHarness();
+  storageState.shareBlockLang = "custom";
+  const html = await context.NCSharing.buildHtmlBlock({
+    shareUrl: "https://cloud.example/s/abc123",
+    password: "",
+    expireDate: "2026-05-01",
+    permissions: { read: true, create: false, write: false, delete: false }
+  }, {
+    permissions: { read: true, create: false, write: false, delete: false },
+    policyShare: {
+      share_html_block_template_v2: '<time datetime="{EXPIRATIONDATE}">{EXPIRATIONDATE}</time><span title="{LINK_LABEL}">{LINK_LABEL}</span>'
+    }
+  });
+
+  assert(html.includes('datetime="2026-05-01"'), "Custom-template expiration date must remain valid in attributes");
+  assert(html.includes('title="Nextcloud link"'), "Custom-template link label must remain valid in attributes");
+  assert(!html.includes("<nobr"), "Generic custom-template replacements must stay context-neutral");
+}
+
+function testTransparentHeaderAssetContract(){
+  const asset = fs.readFileSync(path.join(ROOT, "ui", "assets", "header-transparent-164x48.png"));
+  const sha256 = crypto.createHash("sha256").update(asset).digest("hex").toUpperCase();
+  assert(sha256 === "311203D7DDE3501D630D5EB756D40F04789183EB09D2645EBC6617EBD2C85947", "Mail header must use the reviewed transparent branding asset");
+  assert(asset.subarray(1, 4).toString("ascii") === "PNG", "Mail header asset must be a PNG");
+  assert(asset.readUInt32BE(16) === 164 && asset.readUInt32BE(20) === 48, "Mail header asset must remain 164x48 pixels");
+  assert(asset[25] === 6, "Mail header PNG must carry an alpha channel");
+  const sharingSource = read("modules/ncSharing.js");
+  assert(sharingSource.includes('loadAssetBase64("ui/assets/header-transparent-164x48.png")'), "Share rendering must embed the transparent mail header asset");
+}
+
 async function testLocalPlainTextBuildSkipsSanitizer(){
   const { context } = createHarness();
   let sanitizeCalls = 0;
@@ -838,7 +917,11 @@ async function testInsertRejectsMissingPlainTextVariant(){
 }
 
 async function run(){
+  testTransparentHeaderAssetContract();
   await testPermissionsHtmlContract();
+  await testPermissionsCrossSanitizerBoundary();
+  await testBuiltInNoBreakValues();
+  await testCustomTemplateValuesStayAttributeSafe();
   await testLocalPlainTextBuildSkipsSanitizer();
   await testCustomTemplatePrunesEmptyPasswordAndSanitizes();
   await testCustomTemplateUsesSeparatePasswordHint();

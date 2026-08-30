@@ -6,6 +6,7 @@
 (function(__context){
   'use strict';
   const DEFAULT_BASE_PATH = "NC Connector";
+  const BRAND_BLUE = "#0082C9";
   const PERMISSION_FLAGS = {
     read: 1,
     write: 2,
@@ -306,7 +307,7 @@
     if (cachedHeaderBase64){
       return cachedHeaderBase64;
     }
-    cachedHeaderBase64 = await loadAssetBase64("ui/assets/header-solid-blue-164x48.png");
+    cachedHeaderBase64 = await loadAssetBase64("ui/assets/header-transparent-164x48.png");
     return cachedHeaderBase64;
   }
 
@@ -623,7 +624,7 @@
     if (introLine){
       paragraphs.push(`<p style="margin:0 0 14px 0;line-height:1.4;">${escapeHtml(introLine)}<br /></p>`);
     }
-    const downloadLink = `<a href="${escapeHtml(downloadUrl)}" style="color:#0082C9;text-decoration:none;">${escapeHtml(downloadUrl)}</a>`;
+    const downloadLink = `<a href="${escapeHtml(downloadUrl)}" style="color:${BRAND_BLUE};text-decoration:none;">${escapeHtml(downloadUrl)}</a>`;
     const rows = [];
     if (passwordOnly){
       const valueHtml = secretLink
@@ -640,13 +641,13 @@
         rows.push(buildTableRow(await tShare(effectiveLang, "sharing_html_password_label"), escapeHtml(await tShare(effectiveLang, "sharing_html_password_separate_hint"))));
       }
       if (result.expireDate){
-        rows.push(buildTableRow(await tShare(effectiveLang, "sharing_html_expire_label"), escapeHtml(result.expireDate)));
+        rows.push(buildTableRow(await tShare(effectiveLang, "sharing_html_expire_label"), encodeNoBreakToken(result.expireDate)));
       }
       if (!request?.hidePermissions){
         rows.push(buildTableRow(await tShare(effectiveLang, "sharing_html_permissions_label"), buildPermissionsBadges(result.permissions, permissionLabels)));
       }
     }
-    const nextcloudAnchor = `<a href="https://nextcloud.com/" style="color:#0082C9;text-decoration:none;">Nextcloud</a>`;
+    const nextcloudAnchor = `<a href="https://nextcloud.com/" style="color:${BRAND_BLUE};text-decoration:none;">Nextcloud</a>`;
     const footer = passwordOnly
       ? ""
       : ((await tShare(effectiveLang, "sharing_html_footer", [nextcloudAnchor])) || "");
@@ -662,7 +663,7 @@
       <td style="padding:0;">
         <table role="presentation" width="640" style="border-collapse:collapse;width:640px;margin:0;background-color:transparent;">
           <tr>
-            <td style="padding:0;background-color:#0082C9;text-align:center;height:32px;">
+            <td style="padding:0;background-color:${BRAND_BLUE};text-align:center;height:32px;">
               <a href="https://nc-connector.de" style="display:inline-block;text-decoration:none;" target="_blank" rel="noopener">
                 <img style="display:block;width:auto;height:32px;max-width:164px;object-fit:contain;border:0;margin:0 auto;" src="data:image/png;base64,${headerImage}" />
               </a>
@@ -816,9 +817,16 @@
       return "";
     }
     return `<tr>
-      <th style="text-align:left;width:12ch;vertical-align:top;padding:6px 10px 6px 0;">${escapeHtml(label)}</th>
+      <th style="text-align:left;width:12ch;vertical-align:top;padding:6px 10px 6px 0;">${encodeNoBreakToken(label)}</th>
       <td style="padding:6px 0;max-width:50ch;word-break:break-word;">${valueHtml}</td>
     </tr>`;
+  }
+
+  function encodeNoBreakToken(value){
+    const encoded = escapeHtml(String(value || ""))
+      .replace(/ /g, "&nbsp;")
+      .replace(/-/g, "&#8209;");
+    return `<nobr style="white-space: nowrap;">${encoded}</nobr>`;
   }
 
   function buildPasswordBadge(password){
@@ -827,7 +835,7 @@
 
   function buildSecretLinkHtml(secretUrl, linkText){
     const label = String(linkText || "").trim() || "Secret link";
-    return `<a href="${escapeHtml(secretUrl || "")}" style="color:#0082C9;font-weight:bold;text-decoration:underline;word-break:normal;" target="_blank" rel="noopener">${escapeHtml(label)}</a>`;
+    return `<a href="${escapeHtml(secretUrl || "")}" style="color:${BRAND_BLUE};font-weight:bold;text-decoration:underline;word-break:normal;" target="_blank" rel="noopener">${escapeHtml(label)}</a>`;
   }
 
   function buildPermissionsBadges(perms, labels = {}){
@@ -839,7 +847,7 @@
       { label: labels.delete || i18n("sharing_permission_delete"), enabled: !!safePerms.delete }
     ];
     const cells = entries.map((entry, index) => {
-      const color = entry.enabled ? "#0082c9" : "#c62828";
+      const color = entry.enabled ? BRAND_BLUE : "#c62828";
       const padding = index === entries.length - 1 ? "0" : "0 12px 0 0";
       return `<td nowrap="nowrap" valign="middle" style="padding: ${padding}; white-space: nowrap; vertical-align: middle;">
         <table role="presentation" border="0" cellspacing="0" cellpadding="0" style="border-collapse: collapse; width: auto; margin: 0;">

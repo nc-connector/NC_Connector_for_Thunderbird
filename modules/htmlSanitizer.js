@@ -43,14 +43,16 @@
     "cellpadding",
     "cellspacing",
     "align",
-    "valign"
+    "valign",
+    "nowrap"
   ];
 
   const ADD_TAGS = [
     "section",
     "article",
     "header",
-    "footer"
+    "footer",
+    "nobr"
   ];
 
   function resolveInternalLogPrefix(){

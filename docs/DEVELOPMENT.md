@@ -786,6 +786,7 @@ Background:
 - requires both render variants as part of the runtime message rules.
 - backend custom templates are sanitized in both rendering paths before use; local built-in templates stay on the trusted local render path and are not passed through the backend HTML sanitizer.
 - backend custom templates prune empty optional placeholders (`{RIGHTS}`, `{PASSWORD}`, `{EXPIRATIONDATE}`, `{NOTE}`) before replacement to reduce orphaned labels/wrappers in arbitrary layouts.
+- the trusted local HTML embeds `header-transparent-164x48.png` over the single blue header-cell background. Field labels and expiration dates use visible no-break tokens; permissions use the same nested presentation-table and fixed 14 px status-cell contract as Outlook.
 - resolves compose mode from `isPlainText` + `deliveryFormat`:
   - HTML compose mode: inserts source HTML near `<body>`.
   - Plain-text compose mode: prefers the pre-rendered `plainText` block, normalizes permission markers (`[x]` / `[ ]`), compacts permission rows inside explicit add-on-generated rights segments, and frames the block with a fixed 60-character `#` border.
@@ -808,6 +809,7 @@ Runtime rules:
 - For custom Share templates, Thunderbird prefers `policy.share.share_html_block_template_v2` and falls back to `policy.share.share_html_block_template`. The fallback keeps current clients compatible with older backend versions, while the V2 key lets newer backends keep the original key safe for clients that do not understand the mode-aware variables.
 - With current backends, `policy.share.share_html_block_effective_language` supplies the actual language of a custom template. Thunderbird uses it for all client-generated template text, including link wording, field labels, permission names, and the separate-password hint. Older backends without this output-only field retain the previous fallback behavior.
 - Templates that do not contain the new placeholders keep their previous rendering; the client does not rewrite backend-provided template HTML.
+- Generic custom-template replacement values stay context-neutral because placeholders can occur in visible text or attributes. No-break markup is therefore supplied only by known visible template positions.
 - Backend-provided rich HTML templates are sanitized client-side with bundled `DOMPurify` before use.
 - Backend custom templates use the sanitizer in both rich-HTML rendering and plain-text rendering; local built-in share blocks remain trusted local render output.
 - Privileged calendar-editor code does not parse backend HTML via `innerHTML`; sanitized markup is imported via `DOMParser` + DOM fragment replacement.
