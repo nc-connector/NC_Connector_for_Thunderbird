@@ -13,6 +13,8 @@ const LINTER_PACKAGE = path.join(
   "webext-linter",
   "package.json"
 );
+// 3.1.1 reports readable project sources as obfuscated; keep CI deterministic until upstream corrects it.
+const OBFUSCATION_DETECTOR_VERSION = "3.0.1";
 
 function readJson(filePath){
   return JSON.parse(fs.readFileSync(filePath, "utf8"));
@@ -48,6 +50,7 @@ function run(){
   const requireFromLinter = createRequire(LINTER_PACKAGE);
   const admZip = resolveDependencyVersion(requireFromLinter, "adm-zip");
   const fastUri = resolveDependencyVersion(requireFromLinter, "fast-uri");
+  const obfuscationDetector = resolveDependencyVersion(requireFromLinter, "obfuscation-detector");
 
   assert(
     compareVersions(admZip.version, "0.6.0") >= 0,
@@ -57,10 +60,15 @@ function run(){
     compareVersions(fastUri.version, "3.1.4") >= 0,
     `webext-linter resolves vulnerable fast-uri ${fastUri.version}`
   );
+  assert(
+    obfuscationDetector.version === OBFUSCATION_DETECTOR_VERSION,
+    `webext-linter resolves unsupported obfuscation-detector ${obfuscationDetector.version}`
+  );
 
   console.log(
     `[OK] webext-linter dependency check passed `
-      + `(adm-zip ${admZip.version}, fast-uri ${fastUri.version})`
+      + `(adm-zip ${admZip.version}, fast-uri ${fastUri.version}, `
+      + `obfuscation-detector ${obfuscationDetector.version})`
   );
 }
 

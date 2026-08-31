@@ -2,7 +2,8 @@
   "private": true,
   "overrides": {
     "adm-zip": "0.6.0",
-    "fast-uri": "3.1.4"
+    "fast-uri": "3.1.4",
+    "obfuscation-detector": "3.0.1"
   },
   "scripts": {
     "test": "npm run test:review && npm run test:webext-linter",
