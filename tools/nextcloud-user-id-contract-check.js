@@ -452,6 +452,35 @@ async function run(){
     "FileLink Basic Auth must still use the configured login"
   );
 
+  let metadataRequest = null;
+  sharing.context.NCOcs.ocsRequest = async (request) => {
+    metadataRequest = request;
+    return {
+      ok: true,
+      status: 200,
+      raw: "",
+      data: {
+        ocs: {
+          meta: { status: "ok", statuscode: 100 },
+          data: null
+        }
+      }
+    };
+  };
+  await sharing.context.NCSharing.updateShareDetails({
+    shareInfo: {
+      shareId: "42",
+      label: "Customer",
+      folderInfo: { folderName: "Customer" },
+      permissions: { read: true, write: true, create: false, delete: false }
+    },
+    noteEnabled: false,
+    note: ""
+  });
+  assert(metadataRequest.method === "PUT", "Share metadata must use the OCS update endpoint");
+  assert(metadataRequest.body.get("permissions") === "3", "Read and edit must retain the Nextcloud READ|UPDATE mask");
+  assert(!metadataRequest.body.has("publicUpload"), "Share metadata must not override the exact mask with legacy publicUpload");
+
   sharing.context.NCOcs.ocsRequest = async () => ({
     ok: true,
     status: 200,

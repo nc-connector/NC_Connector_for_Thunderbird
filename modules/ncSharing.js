@@ -243,14 +243,14 @@
    * @param {object} options
    * @returns {Promise<void>}
    */
-  async function updateShareMetadata({ baseUrl, shareId, authHeader, note, permissions, expireDate, password, publicUpload }){
+  async function updateShareMetadata({ baseUrl, shareId, authHeader, note, permissions, expireDate, password }){
     if (!shareId){
       return;
     }
     const url = baseUrl.replace(/\/+$/, "") + `/ocs/v2.php/apps/files_sharing/api/v1/shares/${shareId}`;
     const payload = new URLSearchParams();
+    // Nextcloud treats legacy publicUpload as an override, so preserve the exact permission mask.
     payload.append("permissions", String(buildPermissionMask(permissions || {})));
-    payload.append("publicUpload", publicUpload ? "true" : "false");
     payload.append("note", typeof note === "string" ? note : "");
     payload.append("attributes", "[]");
     if (expireDate){
@@ -1170,8 +1170,7 @@
       note: noteEnabled ? (note || "") : "",
       permissions: shareInfo.permissions,
       expireDate: shareInfo.expireDate || "",
-      password: shareInfo.password || "",
-      publicUpload: !!shareInfo.permissions?.create
+      password: shareInfo.password || ""
     });
     logDebug(opts, "share:updateMeta:done", { shareId: shareInfo.shareId });
   }

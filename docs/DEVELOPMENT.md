@@ -945,7 +945,7 @@ State-changing final MOVE and share-create decisions have separate recovery rule
 
 #### Public-share creation
 
-`modules/fileLinkShare.js` sends the initial public-share create payload without `publicUpload`. It includes the final path, share type, permissions, and the selected password, expiry, label, and note values. The existing finalize path may update mutable share metadata later.
+`modules/fileLinkShare.js` sends the initial public-share create payload without `publicUpload`. It includes the final path, share type, permissions, and the selected password, expiry, label, and note values. The existing finalize path may update mutable share metadata later. For permission handling, both paths send only the exact `permissions` mask because Nextcloud treats the legacy `publicUpload` field as an override. Read plus Edit is sent as `READ | UPDATE` (`3`); Create and Delete stay independent.
 
 Both create and metadata update require an explicit successful OCS meta result. HTTP success with an OCS failure status is rejected.
 
