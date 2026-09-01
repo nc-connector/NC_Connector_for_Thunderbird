@@ -154,6 +154,8 @@ function createStorageHarness(){
     userId: "canonical-user",
     requests: [],
     xhrRequests: [],
+    uploadCalls: [],
+    uploadLogs: [],
     copies: [],
     parseQueue: [],
     quota: { usage: 10, quota: 100 },
@@ -161,6 +163,8 @@ function createStorageHarness(){
     xhrHandler: null,
     copyHandler: null,
     hostChecks: 0,
+    capabilityChecks: 0,
+    uploadHandler: null,
     fetchRequests: []
   };
 
@@ -174,6 +178,11 @@ function createStorageHarness(){
     async getCurrentUserId(options){
       assert(options.user === state.opts.user, "Canonical UID lookup must use the configured login");
       return state.userId;
+    },
+    async getRequiredCapabilities(options){
+      state.capabilityChecks++;
+      assert(options.user === state.opts.user, "Upload capability checks must use the configured login");
+      return { versionMajor: 32, bulkUploadSupported: true };
     }
   };
   const ocs = {
@@ -233,7 +242,28 @@ function createStorageHarness(){
     state.fetchRequests.push({ url, options });
     return createResponse(200, "file-content");
   };
-  const storage = context.NCNextcloudVfsStorage.create({ core, ocs, dav, hostPermissions });
+  const fileUpload = {
+    async uploadSingleFile(options){
+      state.uploadCalls.push(options);
+      options.onStatus?.({
+        phase: "summary",
+        loadedBytes: options.file.size,
+        totalBytes: options.file.size
+      });
+      if (state.uploadHandler){
+        return state.uploadHandler(options);
+      }
+      return { result: { status: options.overwrite ? 204 : 201 } };
+    }
+  };
+  const storage = context.NCNextcloudVfsStorage.create({
+    core,
+    ocs,
+    dav,
+    hostPermissions,
+    fileUpload,
+    uploadLog: (...args) => state.uploadLogs.push(args)
+  });
   return { context, state, storage };
 }
 
@@ -291,23 +321,33 @@ async function checkReadWriteAndMutations(){
   );
 
   const upload = new Blob(["content"], { type: "text/plain" });
-  await storage.writeFile("/Folder/new.txt", upload, false);
-  assert(state.xhrRequests[0].headers["If-None-Match"] === "*", "Non-overwrite write must be atomic");
-  await storage.writeFile("/Folder/existing.txt", upload, true);
-  assert(!("If-None-Match" in state.xhrRequests[1].headers), "Overwrite write must not send create-only condition");
-
-  state.xhrHandler = async () => ({
-    status: 412,
-    statusText: "Precondition Failed",
-    responseText: "",
-    getHeader: () => ""
+  const progress = [];
+  await storage.writeFile("/Folder/new.txt", upload, false, {
+    onProgress: (event) => progress.push(event)
   });
+  assert(state.uploadCalls.length === 1, "VFS writes must use the shared upload engine exactly once");
+  assert(state.uploadCalls[0].shareRoot === "Folder", "VFS writes must retain the exact destination parent");
+  assert(state.uploadCalls[0].file.fileName === "new.txt", "VFS writes must retain the exact destination filename");
+  assert(state.uploadCalls[0].overwrite === false, "Non-overwrite VFS writes must preserve create-only semantics");
+  assert(state.uploadCalls[0].autoMkcol === false, "VFS writes must not create missing parent folders implicitly");
+  assert(
+    state.uploadCalls[0].uploadRoot.endsWith("/remote.php/dav/uploads/canonical-user"),
+    "VFS writes must provide the account upload root for chunked v2"
+  );
+  assert(progress.at(-1).loaded === upload.size, "Shared upload progress must be forwarded to the VFS request");
+  await storage.writeFile("/Folder/existing.txt", upload, true);
+  assert(state.uploadCalls[1].overwrite === true, "Overwrite VFS writes must preserve replace semantics");
+  assert(state.capabilityChecks === 2, "Every VFS write must enforce the supported Nextcloud version contract");
+
+  state.uploadHandler = async () => {
+    throw Object.assign(new Error("Precondition Failed"), { status: 412 });
+  };
   await expectFailure(
     () => storage.writeFile("/Folder/existing.txt", upload, false),
     (error) => error.code === "E:EXIST" && error.status === 412,
     "Conditional write conflicts must map to E:EXIST"
   );
-  state.xhrHandler = null;
+  state.uploadHandler = null;
 
   state.requestHandler = async (options) => {
     if (options.method === "MKCOL"){

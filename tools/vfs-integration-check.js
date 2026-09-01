@@ -907,6 +907,7 @@ function checkManifestAndReviewSurface(){
   assert(!sourceRuntime.includes("showSaveFilePicker"), "External File content must not be staged on disk");
   const clientRuntime = readText("modules/vfsClientRuntime.js");
   const providerRuntime = readText("modules/vfsProviderRuntime.js");
+  const storageRuntime = readText("modules/nextcloudVfsStorage.js");
   assert(
     !clientRuntime.includes("vfs_self_provider_unavailable"),
     "A fresh profile without credentials must not permanently reject the VFS client runtime"
@@ -938,6 +939,17 @@ function checkManifestAndReviewSurface(){
   assert(
     providerRuntime.includes("core: NCCore"),
     "VFS provider startup must inject the classic-script NCCore binding explicitly"
+  );
+  assert(
+    storageRuntime.includes("fileUpload.uploadSingleFile({")
+      && storageRuntime.includes("getRequiredCapabilities({ ...opts, signal })")
+      && !/async function writeFile[\s\S]*?dav\.xhrRequest\(\{/m.test(storageRuntime),
+    "Provider writes must enforce the Nextcloud contract and use the shared upload engine"
+  );
+  assert(
+    providerRuntime.includes("uploadLog: (message, metadata = {}) => L(message, {")
+      && providerRuntime.includes("origin: 'vfs_provider'"),
+    "Provider uploads must retain the existing upload messages with origin metadata"
   );
   assert(
     providerRuntime.includes("expectedAccountKey"),

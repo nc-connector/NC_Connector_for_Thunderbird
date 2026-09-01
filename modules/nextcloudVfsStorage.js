@@ -131,6 +131,8 @@
     const dav = options.dav || global.NCNextcloudDav;
     const hostPermissions = options.hostPermissions || global.NCHostPermissions;
     const log = typeof options.log === "function" ? options.log : null;
+    const uploadLog = typeof options.uploadLog === "function" ? options.uploadLog : log;
+    const fileUpload = options.fileUpload || global.NCFileLinkUpload;
 
     if (!core?.getOpts || !core?.getCurrentUserId || !ocs?.buildAuthHeader || !dav?.requestPath){
       throw createVfsError("E:PROVIDER", "Nextcloud storage dependencies are unavailable", {
@@ -144,7 +146,7 @@
       log?.(operation, metadata);
     }
 
-    async function resolveContext(signal, expectedAccountKey = ""){
+    async function resolveContext(signal, expectedAccountKey = "", requireCapabilities = false){
       dav.throwIfAborted(signal);
       const opts = await core.getOpts();
       dav.throwIfAborted(signal);
@@ -156,6 +158,17 @@
           logMissing: false,
           errorFactory: () => createVfsError("E:AUTH", "Nextcloud host permission is missing")
         });
+      }
+      dav.throwIfAborted(signal);
+      if (requireCapabilities){
+        if (typeof core.getRequiredCapabilities !== "function"){
+          throw createVfsError("E:PROVIDER", "Nextcloud upload dependencies are unavailable", {
+            id: "dependencies",
+            title: "Nextcloud storage unavailable",
+            description: "NC Connector could not initialize its Nextcloud upload engine."
+          });
+        }
+        await core.getRequiredCapabilities({ ...opts, signal });
       }
       dav.throwIfAborted(signal);
       let userId;
@@ -181,12 +194,16 @@
       const davRoot = dav.normalizeDavRoot(
         `${normalizedBase.replace(/\/+$/, "")}/remote.php/dav/files/${encodeURIComponent(userId)}`
       );
+      const uploadRoot = dav.normalizeDavRoot(
+        `${normalizedBase.replace(/\/+$/, "")}/remote.php/dav/uploads/${encodeURIComponent(userId)}`
+      );
       const accountIdentity = JSON.stringify([normalizedBase, userId]);
       if (expectedAccountKey && expectedAccountKey !== accountIdentity){
         throw createVfsError("E:AUTH", "The authorized Nextcloud storage connection has changed");
       }
       return Object.freeze({
         davRoot,
+        uploadRoot,
         authHeader: ocs.buildAuthHeader(opts.user, opts.appPass),
         normalizedBase,
         userId,
@@ -390,30 +407,61 @@
             description: "The file content could not be written to Nextcloud."
           });
         }
+        if (typeof fileUpload?.uploadSingleFile !== "function"){
+          throw createVfsError("E:PROVIDER", "Nextcloud upload dependencies are unavailable", {
+            id: "dependencies",
+            title: "Nextcloud storage unavailable",
+            description: "NC Connector could not initialize its Nextcloud upload engine."
+          });
+        }
         const context = await resolveContext(
           operationOptions.signal,
-          operationOptions.expectedAccountKey
+          operationOptions.expectedAccountKey,
+          true
         );
-        const result = await dav.xhrRequest({
-          method: "PUT",
-          url: dav.buildVfsFileUrl(context.davRoot, normalizedPath, { allowRoot: false }),
-          headers: {
-            "Authorization": context.authHeader,
-            ...(!overwrite ? { "If-None-Match": "*" } : {})
-          },
-          body: file,
-          signal: operationOptions.signal,
-          onProgress: operationOptions.onProgress,
-          timeoutMs: operationOptions.timeoutMs
+        const pathSegments = normalizedPath.slice(1).split("/");
+        const fileName = pathSegments.pop();
+        const relativeFolder = pathSegments.join("/");
+        const uploadFile = Object.freeze({
+          internalId: normalizedPath,
+          itemId: normalizedPath,
+          fileName,
+          displayPath: normalizedPath,
+          relativeDir: "",
+          size: Number(file.size),
+          contentType: file.type || "application/octet-stream",
+          lastModified: Number(file.lastModified) || Date.now(),
+          sourceFile: file
         });
-        if (result.status < 200 || result.status >= 300){
-          throw statusError(result.status, "write");
-        }
+        const transfer = await fileUpload.uploadSingleFile({
+          file: uploadFile,
+          davRoot: context.davRoot,
+          uploadRoot: context.uploadRoot,
+          shareRoot: relativeFolder,
+          authHeader: context.authHeader,
+          signal: operationOptions.signal,
+          log: uploadLog,
+          overwrite: overwrite === true,
+          // The VFS contract expects the selected parent to exist already.
+          autoMkcol: false,
+          onStatus: (event) => {
+            if (event?.phase === "summary"){
+              operationOptions.onProgress?.({
+                loaded: event.loadedBytes,
+                total: event.totalBytes
+              });
+            }
+          }
+        });
+        const resultStatus = Number(transfer?.result?.status) || 0;
+        const created = resultStatus
+          ? resultStatus === 201
+          : overwrite !== true;
         return Object.freeze({
-          created: result.status === 201,
+          created,
           changes: [{
             kind: "file",
-            action: result.status === 201 ? "created" : "modified",
+            action: created ? "created" : "modified",
             target: { path: normalizedPath }
           }]
         });

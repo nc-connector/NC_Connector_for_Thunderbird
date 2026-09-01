@@ -18,7 +18,12 @@
     // NCCore is a classic background-script binding, not a window property.
     // Pass it explicitly so provider startup uses the same core as the add-on.
     core: NCCore,
-    log: (...args) => L('VFS provider', ...args)
+    log: (...args) => L('VFS provider', ...args),
+    // Keep the established upload messages searchable across every caller.
+    uploadLog: (message, metadata = {}) => L(message, {
+      ...metadata,
+      origin: 'vfs_provider'
+    })
   });
   let provider = null;
   let providerModule = null;
