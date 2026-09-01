@@ -403,6 +403,129 @@ footer{
   color:var(--brand-blue);
   text-decoration:underline;
 }
+.vfs-runtime-notice{
+  margin:0 0 14px 0;
+  padding:10px 12px;
+  border:1px solid #b00020;
+  border-radius:var(--tb-radius);
+  background:rgba(176,0,32,0.08);
+  color:#b00020;
+}
+.vfs-status-card{
+  display:flex;
+  align-items:center;
+  gap:8px;
+  min-height:var(--control-height);
+}
+.vfs-status-dot{
+  width:9px;
+  height:9px;
+  border-radius:50%;
+  background:var(--tb-muted);
+  flex:0 0 auto;
+}
+.vfs-status-dot[data-tone="success"]{background:#16844f;}
+.vfs-status-dot[data-tone="warning"]{background:#c77700;}
+.vfs-status-dot[data-tone="error"]{background:#b00020;}
+.vfs-subsection{
+  margin-top:16px;
+  padding-top:14px;
+  border-top:1px solid var(--tb-border);
+}
+.vfs-subsection-heading{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:12px;
+}
+.vfs-subsection h3{
+  margin:0;
+  font-size:1em;
+}
+.vfs-list{
+  display:flex;
+  flex-direction:column;
+  gap:8px;
+  margin-top:10px;
+}
+.vfs-list-row{
+  display:grid;
+  grid-template-columns:minmax(0,1fr) auto auto;
+  gap:10px;
+  align-items:center;
+  padding:9px 10px;
+  border:1px solid var(--tb-border);
+  border-radius:var(--tb-control-radius);
+  background:var(--tb-surface-2);
+}
+.vfs-list-primary{
+  min-width:0;
+}
+.vfs-list-primary strong,
+.vfs-list-primary small{
+  display:block;
+  overflow:hidden;
+  text-overflow:ellipsis;
+  white-space:nowrap;
+}
+.vfs-list-primary small{
+  color:var(--tb-muted);
+  margin-top:2px;
+}
+.vfs-badge{
+  display:inline-flex;
+  align-items:center;
+  min-height:24px;
+  padding:0 9px;
+  border:1px solid var(--tb-border);
+  border-radius:999px;
+  color:var(--tb-muted);
+  background:var(--tb-surface);
+  font-size:12px;
+  white-space:nowrap;
+}
+.vfs-badge[data-tone="success"]{
+  border-color:#16844f;
+  color:#16844f;
+  background:rgba(22,132,79,0.08);
+}
+.vfs-badge[data-tone="warning"]{
+  border-color:#c77700;
+  color:#9b5d00;
+  background:rgba(199,119,0,0.08);
+}
+.vfs-badge[data-tone="error"]{
+  border-color:#b00020;
+  color:#b00020;
+  background:rgba(176,0,32,0.08);
+}
+.vfs-action-button{
+  min-height:var(--control-height);
+  padding:0 12px;
+  border:1px solid var(--tb-border);
+  border-radius:var(--control-radius);
+  background:var(--tb-surface);
+  color:var(--tb-text);
+}
+.vfs-action-button:disabled{
+  opacity:.55;
+  cursor:not-allowed;
+}
+.vfs-empty{
+  margin:10px 0 0 0;
+  color:var(--tb-muted);
+  font-size:12px;
+}
+.vfs-permission-control{
+  display:flex;
+  flex-wrap:wrap;
+  align-items:center;
+  gap:8px;
+}
+@media (max-width:680px){
+  .vfs-list-row{grid-template-columns:minmax(0,1fr) auto;}
+  .vfs-list-row .vfs-action-button{grid-column:1 / -1; justify-self:start;}
+}
 </style>
 <div class="hero">
   <img src="ui/assets/header-solid-blue-328x96.png" alt="NC Connector">
@@ -411,6 +534,7 @@ footer{
   <div class="tab-list" role="tablist">
     <button type="button" class="tab-btn active" data-tab="general" data-i18n="options_tab_general">General</button>
     <button type="button" class="tab-btn" data-tab="sharing" data-i18n="options_tab_sharing">Sharing</button>
+    <button type="button" class="tab-btn" data-tab="vfs" data-i18n="options_tab_vfs">VFS</button>
     <button type="button" class="tab-btn" data-tab="talklink" data-i18n="options_tab_talklink">Talk Link</button>
     <button type="button" class="tab-btn" data-tab="signature" data-i18n="options_tab_signature">Signature</button>
     <button type="button" class="tab-btn" data-tab="advanced" data-i18n="options_tab_advanced">Advanced</button>
@@ -579,6 +703,70 @@ footer{
         <p class="attachments-lock-link">
           <a id="sharingAttachmentsAdminLink" class="policy-warning-link" data-i18n="options_sharing_attachments_lock_admin_link_label" target="_blank" rel="noopener noreferrer" href="https://github.com/nc-connector/NC_Connector_for_Thunderbird/blob/main/docs/ADMIN.md#63-attachment-policy-example">System-wide rollout guide for administrators</a>
         </p>
+      </div>
+    </fieldset>
+  </section>
+  <section id="tab-vfs" class="tab-panel">
+    <p id="vfsRuntimeNotice" class="vfs-runtime-notice" role="alert" data-i18n="options_vfs_runtime_unavailable" hidden>Die VFS-Komponenten sind nicht verfügbar.</p>
+    <fieldset class="auth-block">
+      <legend data-i18n="options_vfs_provider_heading">Eigene Nextcloud</legend>
+      <p class="hint" data-i18n="options_vfs_provider_intro">Stellt die bereits eingerichtete Nextcloud-Verbindung für freigegebene Thunderbird-Add-ons bereit.</p>
+      <div class="row">
+        <label for="vfsProviderEnabled" class="option-tooltip-wrap" tabindex="0">
+          <span data-i18n="options_vfs_provider_enabled_label">NC Connector als VFS-Anbieter aktivieren</span>
+          <div class="option-tooltip" role="tooltip">
+            <div class="option-tooltip-title" data-i18n="options_vfs_provider_tooltip_title">VFS-Zugriff auf Ihre Nextcloud</div>
+            <p class="option-tooltip-text" data-i18n="options_vfs_provider_tooltip_text">Nur ausdrücklich freigegebene Add-ons erhalten Lese- und Schreibzugriff. Zugangsdaten werden nicht weitergegeben.</p>
+          </div>
+        </label>
+        <div class="boolean-control">
+          <input id="vfsProviderEnabled" type="checkbox" disabled>
+        </div>
+      </div>
+      <div class="row">
+        <span data-i18n="options_vfs_provider_status_label">Status</span>
+        <div class="vfs-status-card" aria-live="polite">
+          <span id="vfsProviderStatusDot" class="vfs-status-dot" aria-hidden="true"></span>
+          <strong id="vfsProviderStatus" data-i18n="options_vfs_loading">Wird geladen …</strong>
+        </div>
+      </div>
+      <div class="vfs-subsection">
+        <h3 data-i18n="options_vfs_grants_heading">Freigegebene Add-ons</h3>
+        <p class="hint" data-i18n="options_vfs_grants_hint">Jede Freigabe gilt für genau ein Add-on und kann hier jederzeit entzogen werden.</p>
+        <div id="vfsGrantList" class="vfs-list" role="list"></div>
+        <p id="vfsNoGrants" class="vfs-empty" data-i18n="options_vfs_no_grants">Noch kein Add-on hat Zugriff.</p>
+      </div>
+    </fieldset>
+    <fieldset class="auth-block">
+      <legend data-i18n="options_vfs_external_heading">Externe VFS-Anbieter</legend>
+      <p class="hint" data-i18n="options_vfs_external_intro">Dateien anderer Anbieter werden gelesen und anschließend in die Freigabe auf Ihrer Nextcloud hochgeladen.</p>
+      <div class="row">
+        <label for="vfsExternalProvidersEnabled" class="option-tooltip-wrap" tabindex="0">
+          <span data-i18n="options_vfs_external_enabled_label">Externe VFS-Anbieter aktivieren</span>
+          <div class="option-tooltip" role="tooltip">
+            <div class="option-tooltip-title" data-i18n="options_vfs_external_tooltip_title">Andere Speicher anbinden</div>
+            <p class="option-tooltip-text" data-i18n="options_vfs_external_tooltip_text">NC Connector erkennt kompatible VFS-Anbieter erst nach Ihrer ausdrücklichen Freigabe. Dateien werden nicht direkt zwischen den Anbietern kopiert.</p>
+          </div>
+        </label>
+        <div class="boolean-control">
+          <input id="vfsExternalProvidersEnabled" type="checkbox" disabled>
+        </div>
+      </div>
+      <div class="row">
+        <span data-i18n="options_vfs_external_permission_label">Thunderbird-Berechtigung</span>
+        <div class="vfs-permission-control">
+          <span id="vfsExternalPermissionStatus" class="vfs-badge" data-i18n="options_vfs_external_permission_required">Nicht erteilt</span>
+          <button id="vfsRequestExternalPermission" type="button" class="vfs-action-button" data-i18n="options_vfs_external_permission_button" disabled>Berechtigung erteilen</button>
+        </div>
+      </div>
+      <div class="vfs-subsection">
+        <div class="vfs-subsection-heading">
+          <h3 data-i18n="options_vfs_connections_heading">Erkannte Verbindungen</h3>
+          <button id="vfsRefreshConnections" type="button" class="vfs-action-button" data-i18n="options_vfs_refresh_button" disabled>Aktualisieren</button>
+        </div>
+        <p class="hint" data-i18n="options_vfs_connections_hint">Hier erscheinen kompatible VFS-Anbieter, die in Thunderbird eingerichtet und erreichbar sind.</p>
+        <div id="vfsConnectionList" class="vfs-list" role="list"></div>
+        <p id="vfsNoConnections" class="vfs-empty" data-i18n="options_vfs_no_connections">Keine VFS-Verbindung erkannt.</p>
       </div>
     </fieldset>
   </section>
@@ -810,4 +998,5 @@ footer{
 <script src="ui/domI18n.js"></script>
 <script src="ui/addressbookUi.js"></script>
 <script src="ui/wizardPolicyUi.js"></script>
+<script src="ui/optionsVfs.js"></script>
 <script src="options.js"></script>

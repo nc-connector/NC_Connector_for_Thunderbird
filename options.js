@@ -1437,6 +1437,7 @@ async function save(){
     [EMAIL_SIGNATURE_KEYS.onReply]: emailSignatureOnReply,
     [EMAIL_SIGNATURE_KEYS.onForward]: emailSignatureOnForward
   });
+  await globalThis.NCVfsOptions?.save?.();
   emailSignatureStoredState = {
     hasOnCompose: true,
     hasOnReply: true,

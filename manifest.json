@@ -23,6 +23,7 @@
     "notifications"
   ],
   "optional_permissions": [
+    "management",
     "https://*/*"
   ],
   "background": {
@@ -57,6 +58,9 @@
       "modules/passwordPolicyRuntime.js",
       "modules/talkAddressbook.js",
       "modules/talkcore.js",
+      "modules/nextcloudVfsStorage.js",
+      "modules/vfsProviderRuntime.js",
+      "modules/vfsClientRuntime.js",
       "modules/ncSharing.js",
       "modules/bgComposeAttachments.js",
       "modules/bgShareCleanupStore.js",
