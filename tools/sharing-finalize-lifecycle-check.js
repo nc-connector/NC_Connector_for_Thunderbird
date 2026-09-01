@@ -63,6 +63,7 @@ function createFinalizeHarness(options = {}){
     cleanupArm: [],
     cleanupRollback: [],
     cleanupCommit: [],
+    shareNoteUpdate: [],
     passwordRegister: [],
     passwordUnregister: [],
     passwordHandoff: [],
@@ -174,7 +175,29 @@ function createFinalizeHarness(options = {}){
         stagedState,
         previousState,
         wizardWindowId: payload.wizardWindowId,
-        wizardEntry: { cleanupId: "wizard-cleanup" },
+        wizardEntry: {
+          cleanupId: "wizard-cleanup",
+          shareId: payload.shareId,
+          cleanupTarget: {
+            baseUrl: "https://upload-account.example.test",
+            authHeader: "Basic upload-account"
+          },
+          shareDetails: Object.freeze({
+            permissions: Object.freeze({
+              read: true,
+              create: false,
+              write: true,
+              delete: false
+            }),
+            expireDate: "2026-09-30",
+            password: "upload-password",
+            noteEnabled: options.shareDetails?.noteEnabled !== false,
+            note: options.shareDetails?.noteEnabled === false
+              ? ""
+              : String(options.shareDetails?.note || "Initial note"),
+            attachmentMode: options.shareDetails?.attachmentMode === true
+          })
+        },
         wizardOwnershipTransferred: false,
         persistenceTransition: { id: "persistence-transition" }
       };
@@ -204,6 +227,14 @@ function createFinalizeHarness(options = {}){
     },
     async restorePersistentWizardCleanupOwnership(mutation){
       calls.persistentRestore.push(mutation);
+    },
+    NCSharing: {
+      async updateShareNote(request){
+        calls.shareNoteUpdate.push(structuredClone(request));
+        if (options.shareNoteFailure){
+          throw new Error("share_note_update_failed");
+        }
+      }
     },
     async registerSeparatePasswordMailDispatch(tabId){
       const registrationId = "password-registration-exact";
@@ -624,7 +655,7 @@ async function verifyCrashRetentionStates(){
   );
 }
 
-function finalizePayload(){
+function finalizePayload(overrides = {}){
   return {
     tabId: 25,
     wizardWindowId: 50,
@@ -639,11 +670,83 @@ function finalizePayload(){
         folderName: "Project"
       }
     },
+    shareNote: {
+      noteEnabled: true,
+      note: "Initial note"
+    },
     passwordDispatch: {
       shareId: "share-1",
       password: "secret"
-    }
+    },
+    ...overrides
   };
+}
+
+async function verifyShareNoteFinalization(){
+  const unchanged = createFinalizeHarness();
+  const unchangedResult = await unchanged.context.handleSharingFinalizeTransaction(
+    finalizePayload({ passwordDispatch: null })
+  );
+  assert(unchangedResult.ok === true, "An unchanged share note must finalize");
+  assert(
+    unchanged.calls.shareNoteUpdate.length === 0,
+    "An unchanged share note must not issue another OCS update"
+  );
+
+  const changed = createFinalizeHarness();
+  const changedResult = await changed.context.handleSharingFinalizeTransaction(
+    finalizePayload({
+      shareNote: { noteEnabled: true, note: "Changed note" },
+      passwordDispatch: null
+    })
+  );
+  assert(changedResult.ok === true, "A changed share note must finalize");
+  assert(changed.calls.shareNoteUpdate.length === 1, "A changed share note must update once");
+  const update = changed.calls.shareNoteUpdate[0];
+  assert(
+    update.baseUrl === "https://upload-account.example.test"
+      && update.authHeader === "Basic upload-account",
+    "Share note finalization must use the account captured by the upload"
+  );
+  assert(
+    update.shareId === "share-1"
+      && update.noteEnabled === true
+      && update.note === "Changed note",
+    "Share note finalization must update the owned share with the requested note"
+  );
+
+  const attachment = createFinalizeHarness({
+    shareDetails: {
+      noteEnabled: false,
+      note: "",
+      attachmentMode: true
+    }
+  });
+  const attachmentResult = await attachment.context.handleSharingFinalizeTransaction(
+    finalizePayload({
+      shareNote: { noteEnabled: true, note: "Must not be stored" },
+      passwordDispatch: null
+    })
+  );
+  assert(attachmentResult.ok === true, "Attachment-mode finalization must succeed");
+  assert(
+    attachment.calls.shareNoteUpdate.length === 0,
+    "Attachment mode must keep the share note disabled"
+  );
+}
+
+function verifyWizardDelegatesShareNoteFinalization(){
+  const wizardSource = readText("ui/nextcloudSharingWizard.js");
+  assert(
+    !wizardSource.includes("NCSharing.updateShareNote")
+      && !wizardSource.includes("NCSharing.updateShareDetails"),
+    "The wizard must not update share metadata with UI-owned account state"
+  );
+  assert(
+    wizardSource.includes("shareNote: {")
+      && wizardSource.includes("noteEnabled: payload.shareNote?.noteEnabled === true"),
+    "The wizard must pass only the requested note into background finalization"
+  );
 }
 
 async function verifyInsertFailureRollback(){
@@ -787,6 +890,8 @@ async function verifySuccessfulCommit(){
 }
 
 async function run(){
+  verifyWizardDelegatesShareNoteFinalization();
+  await verifyShareNoteFinalization();
   await verifyInsertFailureRollback();
   await verifyDelayedStageTimeoutRollback();
   await verifySuccessfulCommit();

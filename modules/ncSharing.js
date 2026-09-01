@@ -1157,35 +1157,43 @@
   }
 
   /**
-   * Update note and label metadata for one existing share
-   * @param {{shareInfo:Object,noteEnabled:boolean,note:string}} options
+   * Update one existing share note with the account captured by its upload.
+   * @param {object} options
    */
-  async function updateShareDetails({ shareInfo, noteEnabled, note } = {}){
-    if (!shareInfo?.shareId){
+  async function updateShareNote({
+    baseUrl,
+    authHeader,
+    shareId,
+    permissions,
+    expireDate,
+    password,
+    noteEnabled,
+    note
+  } = {}){
+    const normalizedBaseUrl = String(baseUrl || "").trim().replace(/\/+$/, "");
+    const normalizedAuthHeader = String(authHeader || "").trim();
+    const normalizedShareId = String(shareId || "").trim();
+    if (!normalizedShareId){
       throw new Error(i18n("sharing_error_upload_required"));
     }
-    const opts = await NCCore.getOpts();
-    if (!opts.baseUrl || !opts.user || !opts.appPass){
+    if (!normalizedBaseUrl || !normalizedAuthHeader){
       throw new Error(i18n("error_credentials_missing"));
     }
-    await ensureHostPermission(opts.baseUrl);
-    const authHeader = NCOcs.buildAuthHeader(opts.user, opts.appPass);
-    const normalizedLabel = shareInfo.label || sanitizeShareName(shareInfo.folderInfo?.folderName || shareInfo.shareUrl);
-    logDebug(opts, "share:updateMeta", {
-      shareId: shareInfo.shareId,
-      label: normalizedLabel,
+    await ensureHostPermission(normalizedBaseUrl);
+    logDebug(null, "share:updateNote", {
+      shareId: normalizedShareId,
       noteEnabled: !!noteEnabled
     });
     await updateShareMetadata({
-      baseUrl: opts.baseUrl,
-      shareId: shareInfo.shareId,
-      authHeader,
+      baseUrl: normalizedBaseUrl,
+      shareId: normalizedShareId,
+      authHeader: normalizedAuthHeader,
       note: noteEnabled ? (note || "") : "",
-      permissions: shareInfo.permissions,
-      expireDate: shareInfo.expireDate || "",
-      password: shareInfo.password || ""
+      permissions,
+      expireDate: expireDate || "",
+      password: password || ""
     });
-    logDebug(opts, "share:updateMeta:done", { shareId: shareInfo.shareId });
+    logDebug(null, "share:updateNote:done", { shareId: normalizedShareId });
   }
 
   async function deleteShareFolder({ folderInfo } = {}){
@@ -1220,7 +1228,7 @@
     sanitizeShareName,
     sanitizeFileName,
     sanitizeRelativeDir,
-    updateShareDetails,
+    updateShareNote,
     deleteShareFolder
   };
 

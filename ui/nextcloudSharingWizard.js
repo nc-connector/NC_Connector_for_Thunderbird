@@ -100,7 +100,6 @@
     finalizeCloseOnly: false,
     finalized: false,
     finalizeProgress: {
-      detailsUpdated: false,
       composeCleanupArmed: false,
       blockInserted: false,
       passwordDispatchRegistered: false,
@@ -2101,18 +2100,6 @@
       separatePasswordMail
     });
     try{
-      if (!state.finalizeProgress.detailsUpdated
-        && !attachmentMode
-        && typeof NCSharing.updateShareDetails === 'function'){
-        await NCSharing.updateShareDetails({
-          shareInfo: state.uploadResult.shareInfo,
-          noteEnabled,
-          note
-        });
-        state.uploadResult.shareInfo.note = note;
-        state.uploadResult.shareInfo.noteEnabled = noteEnabled;
-      }
-      state.finalizeProgress.detailsUpdated = true;
       setMessage(i18n('sharing_status_inserting'), 'info');
       const renderOptions = {
         policyShare: state.policy.active ? state.policy.share : null,
@@ -2157,6 +2144,10 @@
             shareLabel: state.uploadResult.shareInfo?.label || getSanitizedShareName(),
             shareUrl: state.uploadResult.shareInfo?.shareUrl || "",
             folderInfo: state.uploadResult.shareInfo?.folderInfo || null
+          },
+          shareNote: {
+            noteEnabled,
+            note
           },
           passwordDispatch: separatePasswordMail
             ? {
@@ -2311,6 +2302,10 @@
             relativeBase: String(folderInfo.relativeBase || ""),
             folderName: String(folderInfo.folderName || "")
           }
+        },
+        shareNote: {
+          noteEnabled: payload.shareNote?.noteEnabled === true,
+          note: String(payload.shareNote?.note || "")
         },
         passwordDispatch: payload.passwordDispatch || null
       }

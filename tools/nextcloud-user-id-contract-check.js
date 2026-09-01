@@ -472,17 +472,23 @@ async function run(){
       }
     };
   };
-  await sharing.context.NCSharing.updateShareDetails({
-    shareInfo: {
-      shareId: "42",
-      label: "Customer",
-      folderInfo: { folderName: "Customer" },
-      permissions: { read: true, write: true, create: false, delete: false }
-    },
+  await sharing.context.NCSharing.updateShareNote({
+    baseUrl: "https://upload-account.example.test",
+    authHeader: "Basic upload-account",
+    shareId: "42",
+    permissions: { read: true, write: true, create: false, delete: false },
     noteEnabled: false,
     note: ""
   });
   assert(metadataRequest.method === "PUT", "Share metadata must use the OCS update endpoint");
+  assert(
+    metadataRequest.url.startsWith("https://upload-account.example.test/"),
+    "Share note updates must keep the account captured by the upload"
+  );
+  assert(
+    metadataRequest.headers.Authorization === "Basic upload-account",
+    "Share note updates must keep the authorization captured by the upload"
+  );
   assert(metadataRequest.body.get("permissions") === "3", "Read and edit must retain the Nextcloud READ|UPDATE mask");
   assert(!metadataRequest.body.has("publicUpload"), "Share metadata must not override the exact mask with legacy publicUpload");
 
@@ -502,13 +508,11 @@ async function run(){
     }
   });
   const metadataFailure = await expectRejected(
-    () => sharing.context.NCSharing.updateShareDetails({
-      shareInfo: {
-        shareId: "42",
-        label: "Customer",
-        folderInfo: { folderName: "Customer" },
-        permissions: { read: true }
-      },
+    () => sharing.context.NCSharing.updateShareNote({
+      baseUrl: "https://upload-account.example.test",
+      authHeader: "Basic upload-account",
+      shareId: "42",
+      permissions: { read: true },
       noteEnabled: true,
       note: "Test"
     }),

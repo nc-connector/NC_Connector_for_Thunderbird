@@ -691,7 +691,7 @@ Responsibilities:
 - Before manual mode leaves step 1, it asks background to `PROPFIND` the exact share root and remains on step 1 when that root already exists.
 - `modules/bgFileLinkUpload.js` owns the upload, abort controller, share-folder cleanup handoff, and result delivery for the lifetime of that Port.
 - Shared FileLink modules perform DAV/OCS work in the background context.
-- Public-link share creation follows the documented OCS rules: `label` is sent during create, and mutable metadata such as `note` is updated later via form-encoded OCS update arguments.
+- Public-link share creation sends `label` and the initial `note`. A changed note is updated during background finalization with the base URL and authorization captured by that upload; an unchanged note causes no second OCS request.
 - The background is used for **compose insertion**, because the compose APIs are executed from the background.
 - In attachment mode, background removes selected attachments from compose and
   passes them as a one-time launch context to the wizard.
@@ -719,7 +719,7 @@ Key files:
 
 Attachment mode specifics:
 - Wizard starts in step 3 (files queue), without note step.
-- Share label is fixed at create time; note metadata is pushed at finalize time via the documented OCS update endpoint.
+- Share label is fixed at create time. A note changed after upload is pushed by background finalization; attachment mode always keeps it disabled.
 - Share name base is fixed to `email_attachment` with fixed `_1`, `_2`, ... suffix handling.
 - The effective attachment-link target comes from `sharingAttachmentsLinkTarget` and backend policy key `policy.share.attachment_link_target` (`zip_download` or `share_page`). An invalid local value counts as unset, allowing a usable editable backend default to seed it. A locked valid backend value always wins; a locked missing or invalid backend value forces `zip_download` instead of falling back to stored local state.
 - The target changes only the inserted URL plus `{LINK_INTRO}` / `{LINK_LABEL}` wording. Attachment-mode read-only permissions, hidden permission row, and cleanup behavior stay unchanged.
@@ -740,7 +740,7 @@ Attachment mode specifics:
   - attachment mode tries its fixed numbered folder-name candidates
 - Share cleanup rules:
   - every created share first has background-owned wizard cleanup; finalize transfers that exact ownership to the compose draft
-  - one `sharing:finalizeRenderedShare` call runs a background transaction: resolve draft group, stage cleanup ownership, stage the optional password dispatch, apply the body/header mutation, then commit
+  - one `sharing:finalizeRenderedShare` call runs a background transaction: resolve draft group, stage cleanup ownership, update a changed note with the upload account, stage the optional password dispatch, apply the body/header mutation, then commit
   - send is blocked while this transaction is active
   - a stage failure or popup/tab close rolls back the exact insertion and password registration and restores the previous cleanup owner; incomplete rollback taints the lifecycle and remains fail-closed
   - cleanup for the complete set is cleared after successful `compose.onAfterSend`; a missing `headerMessageId` is diagnostic only and does not turn a successful `sendNow` or `sendLater` event into failure
@@ -797,7 +797,7 @@ Attachment mode specifics:
 ### 10.2 Inserting share blocks into compose (mode-aware)
 
 The sharing wizard sends one transaction request:
-- `browser.runtime.sendMessage({ type: "sharing:finalizeRenderedShare", payload: { tabId, wizardWindowId, cleanup, passwordDispatch, html, plainText } })`
+- `browser.runtime.sendMessage({ type: "sharing:finalizeRenderedShare", payload: { tabId, wizardWindowId, cleanup, shareNote, passwordDispatch, html, plainText } })`
 
 Background:
 - stages/commits cleanup and optional password dispatch through `modules/bgComposeFinalize.js`
@@ -968,7 +968,7 @@ State-changing final MOVE and share-create decisions have separate recovery rule
 
 #### Public-share creation
 
-`modules/fileLinkShare.js` sends the initial public-share create payload without `publicUpload`. It includes the final path, share type, permissions, and the selected password, expiry, label, and note values. The existing finalize path may update mutable share metadata later. For permission handling, both paths send only the exact `permissions` mask because Nextcloud treats the legacy `publicUpload` field as an override. Read plus Edit is sent as `READ | UPDATE` (`3`); Create and Delete stay independent.
+`modules/fileLinkShare.js` sends the initial public-share create payload without `publicUpload`. It includes the final path, share type, permissions, and the selected password, expiry, label, and note values. Background finalization updates the note only when it changed after upload. For permission handling, both paths send only the exact `permissions` mask because Nextcloud treats the legacy `publicUpload` field as an override. Read plus Edit is sent as `READ | UPDATE` (`3`); Create and Delete stay independent.
 
 Both create and metadata update require an explicit successful OCS meta result. HTTP success with an OCS failure status is rejected.
 

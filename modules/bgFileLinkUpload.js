@@ -159,7 +159,15 @@ async function runFileLinkUploadSession(session, request){
       shareId: result?.shareInfo?.shareId || "",
       shareLabel: result?.shareInfo?.label || "",
       shareUrl: result?.shareInfo?.shareUrl || "",
-      cleanupTarget: session.root?.cleanupTarget || null
+      cleanupTarget: session.root?.cleanupTarget || null,
+      shareDetails: {
+        permissions: result?.shareInfo?.permissions,
+        expireDate: result?.shareInfo?.expireDate || "",
+        password: result?.shareInfo?.password || "",
+        noteEnabled: result?.shareInfo?.noteEnabled === true,
+        note: result?.shareInfo?.note || "",
+        attachmentMode: preparedRequest.request.attachmentMode === true
+      }
     });
     const cleanupId = SHARING_WIZARD_CLEANUP_BY_WINDOW.get(
       session.windowId

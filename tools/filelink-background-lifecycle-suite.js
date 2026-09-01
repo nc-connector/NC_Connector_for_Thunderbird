@@ -514,7 +514,7 @@ function createPort(){
 async function createBackgroundHarness({
   deleteRemotePath = async () => true,
   createFileLink,
-  prepareFileLinkRequest = (request) => request
+  prepareFileLinkRequest = (request) => ({ request, sourcePlan: {} })
 } = {}){
   let connectListener = null;
   let windowRemovedListener = null;
@@ -542,7 +542,7 @@ async function createBackgroundHarness({
     NCSharing: {
       deleteShareFolder: async () => {},
       prepareFileLinkRequest,
-      createFileLink
+      createFileLink: (prepared) => createFileLink(prepared.request)
     },
     browser: {
       runtime: {

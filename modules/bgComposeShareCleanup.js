@@ -96,6 +96,27 @@ function normalizeShareCleanupTarget(cleanupTarget){
   });
 }
 
+function normalizeSharingWizardShareDetails(shareDetails){
+  if (!shareDetails || typeof shareDetails !== "object"){
+    return null;
+  }
+  const attachmentMode = shareDetails.attachmentMode === true;
+  const noteEnabled = !attachmentMode && shareDetails.noteEnabled === true;
+  return Object.freeze({
+    permissions: Object.freeze({
+      read: true,
+      create: shareDetails.permissions?.create === true,
+      write: shareDetails.permissions?.write === true,
+      delete: shareDetails.permissions?.delete === true
+    }),
+    expireDate: String(shareDetails.expireDate || "").trim(),
+    password: String(shareDetails.password || ""),
+    noteEnabled,
+    note: noteEnabled ? String(shareDetails.note || "").trim() : "",
+    attachmentMode
+  });
+}
+
 async function deleteShareCleanupEntry(entry, groupId = ""){
   const descriptor = entry?.cleanupDescriptor
     || createPersistedShareCleanupDescriptor(entry);
@@ -139,7 +160,7 @@ function clearSharingWizardRemoteCleanup(windowId, reason = "", expectedEntry = 
  * Arm a sharing-wizard remote cleanup entry for the wizard popup window.
  * If the popup closes without explicit clear, server-side folder cleanup runs.
  * @param {number} windowId
- * @param {{folderInfo?:object,shareId?:string,shareLabel?:string,shareUrl?:string,tabId?:number}} payload
+ * @param {{folderInfo?:object,shareId?:string,shareLabel?:string,shareUrl?:string,tabId?:number,shareDetails?:object}} payload
  */
 async function armSharingWizardRemoteCleanup(windowId, payload = {}){
   if (!Number.isInteger(windowId) || windowId <= 0){
@@ -169,6 +190,7 @@ async function armSharingWizardRemoteCleanup(windowId, payload = {}){
     shareLabel: String(payload.shareLabel || "").trim(),
     shareUrl: String(payload.shareUrl || "").trim(),
     cleanupTarget: normalizeShareCleanupTarget(payload.cleanupTarget),
+    shareDetails: normalizeSharingWizardShareDetails(payload.shareDetails),
     created: Date.now(),
     retryTimerId: null
   };
