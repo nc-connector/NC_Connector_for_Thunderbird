@@ -14,8 +14,15 @@ import * as vfs from './vfs-client.mjs';
 
 // Locales that have a corresponding file in locales/. Only these will be
 // fetched.
-const _AVAILABLE = new Set(['cs', 'de', 'en', 'es', 'fr', 'hu', 'it', 'ja', 'pt', 'ru', 'sv']);
-const _lang = browser.i18n.getUILanguage().split('-')[0];
+const _AVAILABLE = new Set([
+  'cs', 'de', 'en', 'es', 'fr', 'hu', 'it', 'ja', 'nl', 'pl', 'pt', 'ru',
+  'sv', 'zh_CN', 'zh_TW',
+]);
+const _uiLocale = new Intl.Locale(browser.i18n.getUILanguage().replaceAll('_', '-'));
+const _localeCandidates = [
+  _uiLocale.region ? `${_uiLocale.language}_${_uiLocale.region}` : null,
+  _uiLocale.language,
+].filter(Boolean);
 
 async function _loadLocale(lang) {
   if (!_AVAILABLE.has(lang)) return null;
@@ -29,9 +36,17 @@ async function _loadLocale(lang) {
   }
 }
 
+async function _loadPreferredLocale() {
+  for (const candidate of _localeCandidates) {
+    const strings = await _loadLocale(candidate);
+    if (strings) return strings;
+  }
+  return null;
+}
+
 // Load the requested locale, falling back to 'en' if the file is missing.
 const _strings =
-  (_lang !== 'en' ? await _loadLocale(_lang) : null) ??
+  await _loadPreferredLocale() ??
   await _loadLocale('en') ??
   {};
 
