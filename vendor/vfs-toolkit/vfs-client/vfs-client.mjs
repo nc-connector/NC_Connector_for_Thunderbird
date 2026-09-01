@@ -15,6 +15,7 @@ const pendingPickers = new Map();
 
 // Module-level port cache: providerId → { port, pending: Map<id, {resolve,reject}> }
 const _providerPorts = new Map();
+const _localProviders = new Map();
 
 let _isBackground = false;
 let _configStorageKey = null;
@@ -208,7 +209,8 @@ async function _probeExtension(id, options = {}) {
  *   external storage backend providers. Requires the `management` and `storage`
  *   permissions. When true, `configStorageKey` is required.
  * @param {string} [options.configStorageKey] - Storage key used to persist provider
- *   connection data. Required when `enableExternalProviders` is true.
+ *   connection data. Required when `enableExternalProviders` is true and when a
+ *   provider is registered from this add-on.
  */
 export function init(options = {}) {
   const bg = browser.extension.getBackgroundPage();
@@ -225,9 +227,30 @@ export function init(options = {}) {
     }
   });
 
+  _configStorageKey = options?.configStorageKey ?? null;
+  if (_configStorageKey) {
+    browser.runtime.onMessage.addListener((msg, _sender, sendResponse) => {
+      if (msg?.type === 'vfs-toolkit-get-connections') {
+        _readProviderList().then(list =>
+          sendResponse(list.map(p => ({
+            providerId: p.providerId,
+            name: p.name,
+            icon: p.icon ?? null,
+            hasConfig: p.hasConfig ?? false,
+            connections: (p.connections ?? []).map(c => ({
+              storageRef: { providerId: p.providerId, storageId: c.storageId },
+              name: c.name,
+              capabilities: c.capabilities,
+            })),
+          })))
+        );
+        return true;
+      }
+    });
+  }
+
   if (!options.enableExternalProviders) return;
 
-  _configStorageKey = options?.configStorageKey ?? null;
   if (!_configStorageKey) {
     throw new Error('[vfs-toolkit] configStorageKey is required when enableExternalProviders is true.');
   }
@@ -245,25 +268,6 @@ export function init(options = {}) {
   browser.management.onEnabled.addListener(ext => _probeExtension(ext.id, { delay: 1000 }));
   browser.management.onDisabled.addListener(ext => _removeProvider(ext.id));
   browser.management.onUninstalled.addListener(ext => _removeProvider(ext.id));
-
-  browser.runtime.onMessage.addListener((msg, _sender, sendResponse) => {
-    if (msg?.type === 'vfs-toolkit-get-connections') {
-      _readProviderList().then(list =>
-        sendResponse(list.map(p => ({
-          providerId: p.providerId,
-          name: p.name,
-          icon: p.icon ?? null,
-          hasConfig: p.hasConfig ?? false,
-          connections: (p.connections ?? []).map(c => ({
-            storageRef: { providerId: p.providerId, storageId: c.storageId },
-            name: c.name,
-            capabilities: c.capabilities,
-          })),
-        })))
-      );
-      return true;
-    }
-  });
 
   // Listen for providers reporting new or removed connections.
   browser.runtime.onMessageExternal.addListener((msg, sender) => {
@@ -291,6 +295,35 @@ export function init(options = {}) {
       }
     });
   });
+}
+
+/**
+ * Registers a provider implemented by the same add-on as this client.
+ *
+ * @param {object} descriptor
+ * @param {string} descriptor.providerId
+ * @param {string} descriptor.name
+ * @param {Array<{storageId:string,name:string,capabilities:object}>} descriptor.connections
+ * @param {Blob|null} [descriptor.icon]
+ * @param {boolean} [descriptor.hasConfig]
+ * @param {function(): browser.runtime.Port} connect
+ */
+export async function registerLocalProvider(descriptor, connect) {
+  if (!_isBackground || !_configStorageKey) {
+    throw new Error('[vfs-toolkit] init() requires configStorageKey before local provider registration.');
+  }
+  const providerId = String(descriptor?.providerId ?? '');
+  if (providerId !== browser.runtime.id || typeof connect !== 'function') {
+    throw new Error('[vfs-toolkit] Invalid local provider registration.');
+  }
+  _localProviders.set(providerId, { connect });
+  await _updateProvider(
+    providerId,
+    String(descriptor?.name ?? providerId),
+    Array.isArray(descriptor?.connections) ? descriptor.connections : [],
+    descriptor?.icon ?? null,
+    descriptor?.hasConfig === true
+  );
 }
 
 /**
@@ -442,7 +475,10 @@ export const onConnectionsChanged = {
 
 function _getProviderPort(providerId) {
   if (_providerPorts.has(providerId)) return _providerPorts.get(providerId);
-  const port = browser.runtime.connect(providerId, { name: 'vfs-toolkit' });
+  const localProvider = _localProviders.get(providerId);
+  const port = localProvider
+    ? localProvider.connect()
+    : browser.runtime.connect(providerId, { name: 'vfs-toolkit' });
   const pending = new Map();
   port.onMessage.addListener(msg => {
     if (msg.type === 'vfs-progress') {

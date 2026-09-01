@@ -5,6 +5,54 @@
 const API_VERSION = "1.3";
 const CONNECTIONS_KEY = 'vfs-toolkit-connections';
 
+function _createLocalEvent() {
+  const listeners = new Set();
+  return {
+    addListener(listener) { listeners.add(listener); },
+    removeListener(listener) { listeners.delete(listener); },
+    hasListener(listener) { return listeners.has(listener); },
+    emit(...args) { for (const listener of [...listeners]) listener(...args); },
+  };
+}
+
+function _createLocalPortPair() {
+  const clientMessages = _createLocalEvent();
+  const providerMessages = _createLocalEvent();
+  const clientDisconnect = _createLocalEvent();
+  const providerDisconnect = _createLocalEvent();
+  let disconnected = false;
+  const disconnect = () => {
+    if (disconnected) return;
+    disconnected = true;
+    queueMicrotask(() => {
+      clientDisconnect.emit();
+      providerDisconnect.emit();
+    });
+  };
+  const deliver = (event, message) => {
+    if (disconnected) throw new Error('Attempt to postMessage on disconnected port');
+    queueMicrotask(() => {
+      if (!disconnected) event.emit(message);
+    });
+  };
+  const clientPort = {
+    name: 'vfs-toolkit',
+    onMessage: clientMessages,
+    onDisconnect: clientDisconnect,
+    postMessage(message) { deliver(providerMessages, message); },
+    disconnect,
+  };
+  const providerPort = {
+    name: 'vfs-toolkit',
+    sender: { id: browser.runtime.id },
+    onMessage: providerMessages,
+    onDisconnect: providerDisconnect,
+    postMessage(message) { deliver(clientMessages, message); },
+    disconnect,
+  };
+  return { clientPort, providerPort };
+}
+
 function _pickIconUrl(icons) {
   if (!icons) return null;
   const entries = Array.isArray(icons)
@@ -74,6 +122,7 @@ export class VfsProviderImplementation {
   #requestPorts = new Map();
   #activePorts = new Set();
   #pendingSetups = new Map();
+  #connectionPortHandler = null;
 
   /**
    * @param {object} options
@@ -277,6 +326,18 @@ export class VfsProviderImplementation {
   }
 
   /**
+   * Connects a client hosted in the same background document.
+   */
+  connectLocal() {
+    if (!this.#connectionPortHandler) {
+      throw new Error('Provider is not initialized');
+    }
+    const { clientPort, providerPort } = _createLocalPortPair();
+    this.#connectionPortHandler(providerPort);
+    return clientPort;
+  }
+
+  /**
    * Registers the provider with the browser extension runtime.
    * Call this once from your extension's background script.
    * Sets up the discovery listener (`vfs-toolkit-discover` message) and
@@ -328,7 +389,7 @@ export class VfsProviderImplementation {
 
     // ── Port listener ──────────────────────────────────────────────────────────────
 
-    browser.runtime.onConnectExternal.addListener(port => {
+    const connectionPortHandler = port => {
       if (port.name !== 'vfs-toolkit') return;
 
       this.#activePorts.add(port);
@@ -346,7 +407,10 @@ export class VfsProviderImplementation {
         }
         this.#requestPorts.delete(requestId);
       });
-    });
+    };
+    this.#connectionPortHandler = connectionPortHandler;
+    browser.runtime.onConnectExternal.addListener(connectionPortHandler);
+    browser.runtime.onConnect.addListener(connectionPortHandler);
 
     // ── Command handling────────────────────────────────────────────────────────────
 
