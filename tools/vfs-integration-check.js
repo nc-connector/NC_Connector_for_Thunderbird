@@ -708,6 +708,7 @@ async function checkMixedSourcePlan(){
   context.globalThis = context;
   context.window = context;
   vm.createContext(context);
+  loadScript("modules/fileQueuePathConflicts.js", context);
   loadScript("modules/fileLinkSources.js", context);
 
   const localFile = createFile("local.txt", 5, "text/plain");

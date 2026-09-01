@@ -39,6 +39,27 @@
     return Object.freeze({ providerId, storageId });
   }
 
+  function throwForQueueConflict(items){
+    if (!global.NCFileQueuePathConflicts?.find){
+      throw new Error('file_queue_path_conflict_runtime_unavailable');
+    }
+    const conflict = global.NCFileQueuePathConflicts.find(items.map((item) => ({
+      entry: item,
+      path: targetPath(item),
+      kind: item.kind
+    })));
+    if (!conflict){
+      return;
+    }
+    const path = conflict.type === 'exact' ? conflict.path : conflict.filePath;
+    const messageKey = conflict.type === 'exact'
+      ? 'sharing_prompt_rename_duplicate'
+      : 'sharing_prompt_rename_file_directory_conflict';
+    const error = new Error('file_link_queue_path_conflict');
+    error.ncUserMessage = bgI18n(messageKey, [path]);
+    throw error;
+  }
+
   function normalizeItems(sourceItems, { sanitizeFileName, sanitizeRelativeDir } = {}){
     if (typeof sanitizeFileName !== 'function' || typeof sanitizeRelativeDir !== 'function'){
       throw new Error('file_link_source_normalizers_missing');
@@ -88,6 +109,7 @@
       }
       return Object.freeze(item);
     });
+    throwForQueueConflict(items);
 
     const localFiles = items
       .filter((item) => item.sourceKind === 'local')

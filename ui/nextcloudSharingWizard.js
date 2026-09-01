@@ -1881,9 +1881,6 @@
         shareName: shareContext.sanitizedName,
         basePath: state.basePath,
         shareDate: shareContext.shareDate.toISOString(),
-        attachmentMode: state.mode === 'attachments',
-        policyShare: state.policy.active ? state.policy.share : null,
-        policyEditableShare: state.policy.active ? state.policy.editable : null,
         permissions,
         passwordEnabled: !!dom.passwordToggle.checked,
         password: dom.passwordInput.value,
@@ -2354,46 +2351,36 @@
    */
   async function ensureUniqueQueueEntries(){
     while (true){
-      const seen = new Set();
-      let renamedDuplicate = false;
-      for (const entry of state.files){
-        const key = getTargetRelativePath(entry);
-        if (seen.has(key)){
-          if (!promptForRename(
-            getCollisionRenameTarget(entry),
-            'sharing_prompt_rename_duplicate'
-          )){
-            return false;
-          }
-          log('Local duplicate rename', entry.displayPath);
-          renamedDuplicate = true;
-          break;
-        }
-        seen.add(key);
-      }
-      if (renamedDuplicate){
-        continue;
-      }
-      const prefixConflict = findQueuePathPrefixConflict();
-      if (!prefixConflict){
+      const conflict = findQueuePathConflict();
+      if (!conflict){
         break;
       }
+      if (conflict.type === 'exact'){
+        if (!promptForRename(
+          getCollisionRenameTarget(conflict.duplicateEntry),
+          'sharing_prompt_rename_duplicate'
+        )){
+          return false;
+        }
+        log('Local duplicate rename', conflict.path);
+        continue;
+      }
       if (!promptForRename(
-        getCollisionRenameTarget(prefixConflict.fileEntry),
+        getCollisionRenameTarget(conflict.fileEntry),
         'sharing_prompt_rename_file_directory_conflict'
       )){
         return false;
       }
       log('Local file-directory conflict rename', {
-        filePath: prefixConflict.filePath,
-        nestedPath: prefixConflict.nestedPath
+        filePath: conflict.filePath,
+        nestedPath: conflict.nestedPath
       });
     }
     renderFileTable();
     return true;
   }
 
-  function findQueuePathPrefixConflict(){
+  function findQueuePathConflict(){
     const entries = state.files.map((entry) => ({
       entry,
       path: getTargetRelativePath(entry),

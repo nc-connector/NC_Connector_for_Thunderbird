@@ -5,7 +5,7 @@
  */
 (function(__context){
   'use strict';
-  const DEFAULT_BASE_PATH = "NC Connector";
+  const DEFAULT_BASE_PATH = NCSharingStorage.DEFAULT_BASE_PATH;
   const BRAND_BLUE = "#0082C9";
   const PERMISSION_FLAGS = {
     read: 1,
@@ -976,12 +976,37 @@
     return probe.exists;
   }
 
+  function prepareFileLinkRequest(request){
+    if (!request || typeof request !== "object"){
+      throw new Error("file_link_request_missing");
+    }
+    const shareName = sanitizeShareName(request.shareName);
+    if (!shareName){
+      const error = new Error("file_link_share_name_missing");
+      error.ncUserMessage = i18n("sharing_message_invalid_share_name");
+      throw error;
+    }
+    const sourcePlan = NCFileLinkSources.normalizeItems(request.files, {
+      sanitizeFileName,
+      sanitizeRelativeDir
+    });
+    return Object.freeze({
+      request: Object.freeze({ ...request, shareName }),
+      sourcePlan
+    });
+  }
+
   /**
-   * Create a Nextcloud share, upload files, and return HTML output.
-   * @param {object} request
+   * Create a Nextcloud share from one validated upload request.
+   * @param {{request:object,sourcePlan:object}} prepared
    * @returns {Promise<{shareUrl:string, shareInfo:object}>}
    */
-  async function createFileLink(request){
+  async function createFileLink(prepared){
+    if (!prepared?.request || !prepared?.sourcePlan){
+      throw new Error("file_link_request_not_prepared");
+    }
+    const request = prepared.request;
+    const sourcePlan = prepared.sourcePlan;
     const opts = await NCCore.getOpts();
     logDebug(opts, "createFileLink:start", {
       shareName: request?.shareName || "",
@@ -1004,12 +1029,7 @@
     const noteEnabled = !!request?.noteEnabled;
     const noteValue = noteEnabled ? String(request?.note || "").trim() : "";
     const statusCallback = typeof request?.onUploadStatus === "function" ? request.onUploadStatus : null;
-    const sourceItems = Array.isArray(request?.files) ? request.files : [];
-    const sourcePlan = NCFileLinkSources.normalizeItems(sourceItems, {
-      sanitizeFileName,
-      sanitizeRelativeDir
-    });
-    const baseShareName = sanitizeShareName(request?.shareName) || sanitizeShareName(i18n("sharing_share_default"));
+    const baseShareName = request.shareName;
     const candidateLimit = request?.attachmentMode ? 1000 : 1;
     const rootCandidates = Array.from({ length: candidateLimit }, (_, suffix) => {
       const shareName = suffix === 0 ? baseShareName : `${baseShareName}_${suffix}`;
@@ -1190,6 +1210,7 @@
 
   const api = {
     DEFAULT_BASE_PATH,
+    prepareFileLinkRequest,
     createFileLink,
     checkFileLinkFolderExists,
     buildHtmlBlock,

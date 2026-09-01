@@ -513,13 +513,35 @@ function createPort(){
 
 async function createBackgroundHarness({
   deleteRemotePath = async () => true,
-  createFileLink
+  createFileLink,
+  prepareFileLinkRequest = (request) => request
 } = {}){
   let connectListener = null;
   let windowRemovedListener = null;
+  const requestContexts = new Map();
   const cleanup = await createCleanupHarness(deleteRemotePath, {
+    SHARING_WIZARD_REQUEST_BY_WINDOW: requestContexts,
+    getSharingWizardRequestContext: (windowId, tabId) => requestContexts.get(windowId) || {
+      windowId,
+      tabId,
+      attachmentMode: false
+    },
+    clearSharingWizardRequestContext: (windowId) => requestContexts.delete(windowId),
+    NCPolicyRuntime: {
+      getPolicyStatus: async () => null
+    },
+    NCPolicyState: {
+      isDomainActive: () => false
+    },
+    NCShareRequestRules: {
+      resolveUploadRequest: (request, context) => ({
+        ...request,
+        attachmentMode: context?.attachmentMode === true
+      })
+    },
     NCSharing: {
       deleteShareFolder: async () => {},
+      prepareFileLinkRequest,
       createFileLink
     },
     browser: {
@@ -544,11 +566,49 @@ async function createBackgroundHarness({
     context: cleanup.context,
     wizardEntries: cleanup.wizardEntries,
     connect: (port) => connectListener(port),
-    removeWindow: (windowId) => windowRemovedListener(windowId)
+    removeWindow: (windowId) => windowRemovedListener(windowId),
+    requestContexts
   };
 }
 
 async function checkBackgroundAbort(){
+  let invalidCleanupCalls = 0;
+  let invalidCreateCalls = 0;
+  const invalid = await createBackgroundHarness({
+    deleteRemotePath: async () => {
+      invalidCleanupCalls++;
+      return true;
+    },
+    prepareFileLinkRequest: () => {
+      throw new Error("file_link_queue_path_conflict");
+    },
+    createFileLink: async () => {
+      invalidCreateCalls++;
+      return {};
+    }
+  });
+  invalid.wizardEntries.set(20, {
+    cleanupId: "invalid-cleanup",
+    folderInfo: { relativeFolder: "NC Connector/Old" },
+    cleanupTarget: {
+      url: "https://cloud.example.test/remote.php/dav/files/user/NC%20Connector/Old",
+      authHeader: "Basic old"
+    }
+  });
+  const invalidPort = createPort();
+  invalid.connect(invalidPort);
+  invalidPort.emitMessage({
+    type: "start",
+    windowId: 20,
+    tabId: 30,
+    request: { files: [] }
+  });
+  await flushMicrotasks();
+  assert(
+    invalidCleanupCalls === 0 && invalidCreateCalls === 0,
+    "An invalid queue must fail before any remote cleanup or upload mutation"
+  );
+
   let uploadSignal = null;
   let createCalls = 0;
   const background = await createBackgroundHarness({

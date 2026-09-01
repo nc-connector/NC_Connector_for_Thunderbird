@@ -79,6 +79,7 @@ function createHarness(){
   context.window = context;
   context.globalThis = context;
   vm.createContext(context);
+  loadScript("modules/sharingStorage.js", context);
   loadScript("modules/shareTemplateContract.js", context);
   loadScript("modules/textUtils.js", context);
   loadScript("modules/ncSharing.js", context);

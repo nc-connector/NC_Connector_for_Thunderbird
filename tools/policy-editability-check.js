@@ -342,6 +342,7 @@ function verifyConsumerGuards(){
   const talk = readText("ui/talkDialog.js");
   const sharingWizard = readText("ui/nextcloudSharingWizard.js");
   const sharing = readText("modules/ncSharing.js");
+  const shareRequestRules = readText("modules/shareRequestRules.js");
   const composeFinalize = readText("modules/bgComposeFinalize.js");
   const passwordDispatch = readText("modules/bgComposePasswordDispatch.js");
   const composeAttachments = readText("modules/bgComposeAttachments.js");
@@ -445,8 +446,19 @@ function verifyConsumerGuards(){
   assertCode(resolveShareLanguage, "? localSetting.value : (policyLang || localSetting.value)", "Share rendering must keep locked/backend language precedence");
 
   assert(
-    count(sharingWizard, "policyEditableShare: state.policy.active ? state.policy.editable : null") >= 4,
-    "Sharing wizard must pass editability metadata to upload, rendering, and password dispatch"
+    count(sharingWizard, "policyEditableShare: state.policy.active ? state.policy.editable : null") >= 3,
+    "Sharing wizard must pass editability metadata to rendering and password dispatch"
+  );
+  const startUpload = functionBody(sharingWizard, "startUpload");
+  assert(
+    !startUpload.includes("policyShare:") && !startUpload.includes("policyEditableShare:"),
+    "FileLink upload must not trust a wizard policy snapshot"
+  );
+  const resolveUploadRequest = functionBody(shareRequestRules, "resolveUploadRequest");
+  assertCode(
+    resolveUploadRequest,
+    "resolveLocked( policyStatus, POLICY_KEYS.permWrite",
+    "Background upload must reapply locked share permissions"
   );
   assertCode(
     finalizeShare,

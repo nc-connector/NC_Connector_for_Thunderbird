@@ -215,8 +215,10 @@ function createSharingHarness(){
   loadScript("modules/ocs.js", context);
   context.NCOcs.ocsRequest = testOcsRequest;
   context.NCOcs.buildAuthHeader = testBuildAuthHeader;
+  loadScript("modules/sharingStorage.js", context);
   loadScript("modules/shareTemplateContract.js", context);
   loadScript("modules/textUtils.js", context);
+  loadScript("modules/fileQueuePathConflicts.js", context);
   loadScript("modules/fileLinkSources.js", context);
   loadScript("modules/ncSharing.js", context);
   return { context, requests, transferCalls, davProbes, credentials };
@@ -437,13 +439,15 @@ async function run(){
     await sharing.context.NCSharing.checkFileLinkFolderExists(preflightRequest),
     "An existing manual share folder must fail wizard preflight"
   );
-  await sharing.context.NCSharing.createFileLink({
-    shareName: "Customer",
-    basePath: "Team Shares",
-    shareDate: new Date("2026-07-16T12:00:00Z").toISOString(),
-    permissions: { read: true },
-    files: []
-  });
+  await sharing.context.NCSharing.createFileLink(
+    sharing.context.NCSharing.prepareFileLinkRequest({
+      shareName: "Customer",
+      basePath: "Team Shares",
+      shareDate: new Date("2026-07-16T12:00:00Z").toISOString(),
+      permissions: { read: true },
+      files: []
+    })
+  );
   assert(sharing.transferCalls.length === 1, "FileLink upload should create one transfer plan");
   assert(sharing.transferCalls[0].davRoot.includes("/remote.php/dav/files/canonical-user"), "FileLink DAV path must use the canonical UID");
   assert(sharing.transferCalls[0].uploadRoot.includes("/remote.php/dav/uploads/canonical-user"), "Chunk path must use the canonical UID");
@@ -535,13 +539,15 @@ async function run(){
     throw new Error("share create failed");
   };
   await expectRejected(
-    () => sharing.context.NCSharing.createFileLink({
-      shareName: "Customer",
-      basePath: "Team Shares",
-      shareDate: new Date("2026-07-16T12:00:00Z").toISOString(),
-      permissions: { read: true },
-      files: []
-    }),
+    () => sharing.context.NCSharing.createFileLink(
+      sharing.context.NCSharing.prepareFileLinkRequest({
+        shareName: "Customer",
+        basePath: "Team Shares",
+        shareDate: new Date("2026-07-16T12:00:00Z").toISOString(),
+        permissions: { read: true },
+        files: []
+      })
+    ),
     "A failed share create must clean its reserved root"
   );
   assert(

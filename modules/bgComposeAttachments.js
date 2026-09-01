@@ -48,6 +48,38 @@ function takeSharingLaunchContext(contextId){
   return entry;
 }
 
+function bindSharingWizardRequestContext(windowId, tabId, launchContext = null){
+  const normalizedWindowId = Number(windowId);
+  const normalizedTabId = Number(tabId);
+  if (!Number.isInteger(normalizedWindowId)
+    || normalizedWindowId <= 0
+    || !Number.isInteger(normalizedTabId)
+    || normalizedTabId <= 0){
+    throw new Error("sharing_wizard_request_context_invalid");
+  }
+  const context = Object.freeze({
+    windowId: normalizedWindowId,
+    tabId: normalizedTabId,
+    attachmentMode: launchContext?.mode === "attachments"
+  });
+  SHARING_WIZARD_REQUEST_BY_WINDOW.set(normalizedWindowId, context);
+  return context;
+}
+
+function getSharingWizardRequestContext(windowId, tabId){
+  const normalizedWindowId = Number(windowId);
+  const normalizedTabId = Number(tabId);
+  const context = SHARING_WIZARD_REQUEST_BY_WINDOW.get(normalizedWindowId) || null;
+  if (!context || context.tabId !== normalizedTabId){
+    throw new Error("sharing_wizard_request_context_missing");
+  }
+  return context;
+}
+
+function clearSharingWizardRequestContext(windowId){
+  return SHARING_WIZARD_REQUEST_BY_WINDOW.delete(Number(windowId));
+}
+
 function clearComposeAttachmentEvalTimer(tabId){
   const timerId = ATTACHMENT_EVAL_TIMER_BY_TAB.get(tabId);
   if (!timerId){
@@ -361,6 +393,11 @@ async function openSharingWizardWindow(tabId, launchContext = null){
     width: SHARING_POPUP_WIDTH,
     height: SHARING_POPUP_HEIGHT
   });
+  const requestContext = bindSharingWizardRequestContext(
+    windowInfo?.id,
+    tabId,
+    launchContext
+  );
   const focusApplied = await focusPopupWindowBestEffort(windowInfo, {
     label: "sharing wizard popup"
   });
@@ -368,7 +405,7 @@ async function openSharingWizardWindow(tabId, launchContext = null){
     tabId,
     windowId: Number(windowInfo?.id) || 0,
     contextId: bgShortId(contextId, 24),
-    mode: launchContext?.mode || "default",
+    mode: requestContext.attachmentMode ? "attachments" : "default",
     focusApplied
   });
   return windowInfo;

@@ -471,6 +471,7 @@ function createHarness(){
   context.global = context;
   context.globalThis = context;
   vm.createContext(context);
+  loadScriptIntoContext("modules/sharingStorage.js", context);
   loadScriptIntoContext("modules/shareTemplateContract.js", context);
   loadScriptIntoContext("modules/ncSharing.js", context);
   loadScriptIntoContext("modules/bgComposeShareInsert.js", context);

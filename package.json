@@ -29,6 +29,7 @@
     "test:filelink-policy": "node tools/filelink-policy-check.js",
     "test:filelink-protocol": "node tools/filelink-protocol-check.js",
     "test:filelink-lifecycle": "node tools/filelink-lifecycle-check.js",
+    "test:share-request-rules": "node tools/share-request-rules-check.js",
     "test:vfs-integration": "node tools/vfs-integration-check.js",
     "test:signature-compose-settle": "node tools/signature-compose-settle-check.js",
     "test:nextcloud-user-id-contract": "node tools/nextcloud-user-id-contract-check.js",

@@ -102,8 +102,49 @@ async function cleanUntrackedFileLinkRoot(session){
   }
 }
 
+async function prepareBackgroundFileLinkRequest(session, request){
+  const wizardContext = getSharingWizardRequestContext(
+    session.windowId,
+    session.tabId
+  );
+  const policyStatus = await NCPolicyRuntime.getPolicyStatus();
+  const effectiveRequest = NCShareRequestRules.resolveUploadRequest(request, {
+    policyStatus,
+    attachmentMode: wizardContext.attachmentMode
+  });
+  L("FileLink request resolved", {
+    windowId: session.windowId,
+    attachmentMode: wizardContext.attachmentMode,
+    policyActive: NCPolicyState.isDomainActive(policyStatus, "share"),
+    files: Array.isArray(effectiveRequest.files) ? effectiveRequest.files.length : 0
+  });
+  return NCSharing.prepareFileLinkRequest({
+    ...effectiveRequest,
+    signal: session.controller.signal,
+    onUploadStatus: (event) => {
+      postFileLinkUploadMessage(session, {
+        type: "progress",
+        event
+      });
+    },
+    onRootCreated: async (root) => {
+      session.root = root;
+      session.rootHandled = false;
+    },
+    onRootCleanup: async (event) => {
+      if (event?.cleaned){
+        session.rootHandled = true;
+        return;
+      }
+      await trackFailedFileLinkCleanup(session, event);
+      session.rootHandled = true;
+    }
+  });
+}
+
 async function runFileLinkUploadSession(session, request){
   try{
+    const preparedRequest = await prepareBackgroundFileLinkRequest(session, request);
     const previousCleanupDone = await deleteSharingWizardRemoteCleanupNow(
       session.windowId,
       "before_upload"
@@ -111,28 +152,7 @@ async function runFileLinkUploadSession(session, request){
     if (!previousCleanupDone){
       throw new Error(bgI18n("sharing_status_error"));
     }
-    const result = await NCSharing.createFileLink({
-      ...request,
-      signal: session.controller.signal,
-      onUploadStatus: (event) => {
-        postFileLinkUploadMessage(session, {
-          type: "progress",
-          event
-        });
-      },
-      onRootCreated: async (root) => {
-        session.root = root;
-        session.rootHandled = false;
-      },
-      onRootCleanup: async (event) => {
-        if (event?.cleaned){
-          session.rootHandled = true;
-          return;
-        }
-        await trackFailedFileLinkCleanup(session, event);
-        session.rootHandled = true;
-      }
-    });
+    const result = await NCSharing.createFileLink(preparedRequest);
     await armSharingWizardRemoteCleanup(session.windowId, {
       tabId: session.tabId,
       folderInfo: result?.shareInfo?.folderInfo,
@@ -259,6 +279,7 @@ browser.runtime.onConnect.addListener((port) => {
 });
 
 browser.windows.onRemoved.addListener((windowId) => {
+  clearSharingWizardRequestContext(windowId);
   for (const session of FILELINK_UPLOAD_SESSIONS.values()){
     if (session.windowId === windowId){
       session.disconnected = true;

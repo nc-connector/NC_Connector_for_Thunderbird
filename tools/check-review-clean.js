@@ -35,6 +35,7 @@ const CHECKS = [
   "tools/filelink-policy-check.js",
   "tools/filelink-protocol-check.js",
   "tools/filelink-lifecycle-check.js",
+  "tools/share-request-rules-check.js",
   "tools/signature-compose-settle-check.js",
   "tools/nextcloud-user-id-contract-check.js",
   "tools/admin-link-check.js",
