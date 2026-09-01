@@ -4,6 +4,8 @@
 
 const API_VERSION = "1.3";
 const CONNECTIONS_KEY = 'vfs-toolkit-connections';
+const _pendingSetupOwners = new Map();
+let _setupCompletionListenerRegistered = false;
 
 function _createLocalEvent() {
   const listeners = new Set();
@@ -51,6 +53,37 @@ function _createLocalPortPair() {
     disconnect,
   };
   return { clientPort, providerPort };
+}
+
+function _sendConnectionMessage(addonId, message) {
+  return addonId === browser.runtime.id
+    ? browser.runtime.sendMessage(message)
+    : browser.runtime.sendMessage(addonId, message);
+}
+
+async function _persistConnection(
+  addonId,
+  addonName,
+  storageId,
+  name,
+  capabilities,
+  { notify = true } = {},
+) {
+  const rv = await browser.storage.local.get({ [CONNECTIONS_KEY]: [] });
+  const list = rv[CONNECTIONS_KEY];
+  const idx = list.findIndex(c => c.addonId === addonId && c.storageId === storageId);
+  const previous = idx >= 0 ? list[idx] : null;
+  const entry = { addonId, addonName, storageId, name, capabilities };
+  if (idx >= 0) list[idx] = entry;
+  else list.push(entry);
+  await browser.storage.local.set({ [CONNECTIONS_KEY]: list });
+  if (notify) {
+    const delivery = _sendConnectionMessage(addonId, {
+      type: 'vfs-toolkit-add-connection', storageId, name, capabilities
+    });
+    await delivery.catch(() => { });
+  }
+  return previous;
 }
 
 function _pickIconUrl(icons) {
@@ -120,7 +153,7 @@ export class VfsProviderImplementation {
   #configWidth;
   #configHeight;
   #requestPorts = new Map();
-  #activePorts = new Set();
+  #activePorts = new Map();
   #pendingSetups = new Map();
   #connectionPortHandler = null;
 
@@ -318,10 +351,22 @@ export class VfsProviderImplementation {
    *
    * @param {string} storageId - The storage ID of the affected connection.
    * @param {StorageChangeEntry[]} entries - Entries describing what changed.
+   * @returns {Promise<void>}
    */
-  reportStorageChange(storageId, entries) {
-    for (const port of this.#activePorts) {
-      port.postMessage({ type: 'vfs-storage-changed', storageId, entries });
+  async reportStorageChange(storageId, entries) {
+    const rv = await browser.storage.local.get({ [CONNECTIONS_KEY]: [] });
+    const consumers = new Set(
+      rv[CONNECTIONS_KEY]
+        .filter(connection => connection.storageId === storageId)
+        .map(connection => connection.addonId)
+    );
+    for (const [port, consumerId] of this.#activePorts) {
+      if (!consumers.has(consumerId)) continue;
+      try {
+        port.postMessage({ type: 'vfs-storage-changed', storageId, entries });
+      } catch {
+        // The disconnect listener removes stale ports.
+      }
     }
   }
 
@@ -338,6 +383,67 @@ export class VfsProviderImplementation {
   }
 
   /**
+   * Completes setup for the consumer that opened the setup request.
+   */
+  async completeSetup(setupToken, storageId, name, capabilities) {
+    const token = String(setupToken ?? '');
+    const entry = this.#pendingSetups.get(token);
+    if (!entry || _pendingSetupOwners.get(token) !== this) {
+      throw new Error('Invalid or expired setup request');
+    }
+    if (entry.completing) {
+      throw new Error('Setup request is already being completed');
+    }
+    if (typeof storageId !== 'string' || !storageId) {
+      throw new Error('Invalid storage ID');
+    }
+    entry.completing = true;
+    let previousConnection;
+    try {
+      previousConnection = await _persistConnection(
+        entry.consumerId,
+        entry.addonName,
+        storageId,
+        name,
+        capabilities,
+        { notify: entry.consumerId !== browser.runtime.id },
+      );
+    } catch (error) {
+      if (this.#pendingSetups.get(token) === entry) {
+        entry.completing = false;
+      }
+      throw error;
+    }
+    if (this.#pendingSetups.get(token) !== entry) {
+      const rv = await browser.storage.local.get({ [CONNECTIONS_KEY]: [] });
+      const connections = rv[CONNECTIONS_KEY].filter(c =>
+        !(c.addonId === entry.consumerId && c.storageId === storageId)
+      );
+      if (previousConnection) connections.push(previousConnection);
+      await browser.storage.local.set({
+        [CONNECTIONS_KEY]: connections,
+      });
+      await _sendConnectionMessage(entry.consumerId, previousConnection
+        ? {
+            type: 'vfs-toolkit-add-connection',
+            storageId: previousConnection.storageId,
+            name: previousConnection.name,
+            capabilities: previousConnection.capabilities,
+          }
+        : {
+            type: 'vfs-toolkit-remove-connection',
+            storageId,
+          }
+      ).catch(() => { });
+      throw new Error('Setup request expired');
+    }
+    this.#pendingSetups.delete(token);
+    _pendingSetupOwners.delete(token);
+    entry.resolve(storageId);
+    return { addonId: entry.consumerId, addonName: entry.addonName, storageId };
+  }
+
+  /**
    * Registers the provider with the browser extension runtime.
    * Call this once from your extension's background script.
    * Sets up the discovery listener (`vfs-toolkit-discover` message) and
@@ -346,15 +452,25 @@ export class VfsProviderImplementation {
   init() {
     // ── Setup completion listeners ─────────────────────────────────────────────────
 
-    // The setup page reports success by calling reportNewConnection(..., setupToken),
-    // which dispatches this in-extension runtime message. Resolve the matching entry.
-    browser.runtime.onMessage.addListener(msg => {
-      if (msg?.type !== 'vfs-provider-setup-completed') return;
-      const entry = this.#pendingSetups.get(msg.setupToken);
-      if (!entry) return;
-      this.#pendingSetups.delete(msg.setupToken);
-      entry.resolve(msg.storageId);
-    });
+    // Setup pages run in their own extension context. Route their one-time token
+    // back to the provider instance in the background that opened the window.
+    if (!_setupCompletionListenerRegistered) {
+      _setupCompletionListenerRegistered = true;
+      browser.runtime.onMessage.addListener((msg, sender) => {
+        if (msg?.type !== 'vfs-provider-setup-completed') return;
+        if (sender.id !== browser.runtime.id) {
+          throw new Error('Invalid setup completion sender');
+        }
+        const owner = _pendingSetupOwners.get(String(msg.setupToken ?? ''));
+        if (!owner) throw new Error('Invalid or expired setup request');
+        return owner.completeSetup(
+          msg.setupToken,
+          msg.storageId,
+          msg.name,
+          msg.capabilities,
+        );
+      });
+    }
 
     // If the setup window closes without a completion message, reject after a short
     // grace so the success path (reportNewConnection then window.close) can land first.
@@ -365,6 +481,7 @@ export class VfsProviderImplementation {
           const still = this.#pendingSetups.get(token);
           if (!still) return;
           this.#pendingSetups.delete(token);
+          _pendingSetupOwners.delete(token);
           still.reject(new Error('Setup cancelled'));
         }, 500);
       }
@@ -391,16 +508,34 @@ export class VfsProviderImplementation {
 
     const connectionPortHandler = port => {
       if (port.name !== 'vfs-toolkit') return;
+      const consumerId = String(port.sender?.id ?? '');
+      if (!consumerId) {
+        port.disconnect();
+        return;
+      }
 
-      this.#activePorts.add(port);
-      port.onDisconnect.addListener(() => this.#activePorts.delete(port));
+      this.#activePorts.set(port, consumerId);
+      port.onDisconnect.addListener(() => {
+        this.#activePorts.delete(port);
+        for (const [token, entry] of this.#pendingSetups) {
+          if (entry.port !== port) continue;
+          this.#pendingSetups.delete(token);
+          _pendingSetupOwners.delete(token);
+          entry.reject(new Error('Setup cancelled'));
+          if (entry.windowId != null) {
+            browser.windows.remove(entry.windowId).catch(() => { });
+          } else {
+            entry.closeWhenCreated = true;
+          }
+        }
+      });
 
       port.onMessage.addListener(async msg => {
         const { requestId, cmd, ...args } = msg;
 
         this.#requestPorts.set(requestId, port);
         try {
-          const result = await handleCommand(cmd, args, requestId);
+          const result = await handleCommand(cmd, args, requestId, consumerId, port);
           port.postMessage({ requestId, ok: true, result });
         } catch (err) {
           port.postMessage({ requestId, ok: false, error: err.message, errorCode: err.code, errorDetails: err.details });
@@ -414,7 +549,37 @@ export class VfsProviderImplementation {
 
     // ── Command handling────────────────────────────────────────────────────────────
 
-    const handleCommand = async (cmd, args, requestId) => {
+    const requireConnection = async (consumerId, storageId) => {
+      const rv = await browser.storage.local.get({ [CONNECTIONS_KEY]: [] });
+      if (!rv[CONNECTIONS_KEY].some(c =>
+        c.addonId === consumerId && c.storageId === storageId
+      )) {
+        const error = new Error('Storage access denied');
+        error.code = 'E:AUTH';
+        throw error;
+      }
+    };
+
+    const storageCommands = new Set([
+      'storageUsage',
+      'list',
+      'readFile',
+      'writeFile',
+      'addFolder',
+      'moveFile',
+      'moveFolder',
+      'copyFile',
+      'copyFolder',
+      'deleteFile',
+      'deleteFolder',
+      'deleteConnection',
+      'openConfig',
+    ]);
+
+    const handleCommand = async (cmd, args, requestId, consumerId, originPort) => {
+      if (storageCommands.has(cmd)) {
+        await requireConnection(consumerId, args.storageId);
+      }
       switch (cmd) {
 
         case 'cancel': {
@@ -478,10 +643,12 @@ export class VfsProviderImplementation {
           const rv = await browser.storage.local.get({ [CONNECTIONS_KEY]: [] });
           await browser.storage.local.set({
             [CONNECTIONS_KEY]: rv[CONNECTIONS_KEY].filter(
-              c => !(c.addonId === args.addonId && c.storageId === args.storageId)
+              c => !(c.addonId === consumerId && c.storageId === args.storageId)
             )
           });
-          browser.runtime.sendMessage(args.addonId, { type: 'vfs-toolkit-remove-connection', storageId: args.storageId }).catch(() => { });
+          await _sendConnectionMessage(consumerId, {
+            type: 'vfs-toolkit-remove-connection', storageId: args.storageId
+          }).catch(() => { });
           return;
         }
 
@@ -489,19 +656,45 @@ export class VfsProviderImplementation {
           if (!this.#setupPath) throw new Error('Provider has no setup page');
           const setupToken = crypto.randomUUID();
           const url = new URL(browser.runtime.getURL(this.#setupPath));
-          if (args.addonId) url.searchParams.set('addonId', args.addonId);
+          url.searchParams.set('addonId', consumerId);
           if (args.addonName) url.searchParams.set('addonName', args.addonName);
           url.searchParams.set('setupToken', setupToken);
-          const win = await browser.windows.create({ url: url.toString(), type: 'popup', width: this.#setupWidth, height: this.#setupHeight });
           return new Promise((resolve, reject) => {
-            this.#pendingSetups.set(setupToken, { resolve, reject, windowId: win.id });
+            const entry = {
+              resolve,
+              reject,
+              windowId: null,
+              port: originPort,
+              consumerId,
+              addonName: String(args.addonName || consumerId),
+              completing: false,
+              closeWhenCreated: false,
+            };
+            this.#pendingSetups.set(setupToken, entry);
+            _pendingSetupOwners.set(setupToken, this);
+            browser.windows.create({
+              url: url.toString(),
+              type: 'popup',
+              width: this.#setupWidth,
+              height: this.#setupHeight,
+            }).then(win => {
+              entry.windowId = win.id;
+              if (entry.closeWhenCreated) {
+                browser.windows.remove(win.id).catch(() => { });
+              }
+            }).catch(error => {
+              if (this.#pendingSetups.get(setupToken) !== entry) return;
+              this.#pendingSetups.delete(setupToken);
+              _pendingSetupOwners.delete(setupToken);
+              reject(error);
+            });
           });
         }
 
         case 'openConfig': {
           if (!this.#configPath) throw new Error('Provider has no config page');
           const url = new URL(browser.runtime.getURL(this.#configPath));
-          if (args.addonId) url.searchParams.set('addonId', args.addonId);
+          url.searchParams.set('addonId', consumerId);
           if (args.storageId) url.searchParams.set('storageId', args.storageId);
           browser.windows.create({ url: url.toString(), type: 'popup', width: this.#configWidth, height: this.#configHeight });
           return null;
@@ -529,15 +722,23 @@ export class VfsProviderImplementation {
  *   to the new connection.
  */
 export async function reportNewConnection(addonId, addonName, storageId, name, capabilities, setupToken) {
-  const rv = await browser.storage.local.get({ [CONNECTIONS_KEY]: [] });
-  const list = rv[CONNECTIONS_KEY];
-  const idx = list.findIndex(c => c.addonId === addonId && c.storageId === storageId);
-  const entry = { addonId, addonName, storageId, name, capabilities };
-  if (idx >= 0) list[idx] = entry;
-  else list.push(entry);
-  await browser.storage.local.set({ [CONNECTIONS_KEY]: list });
-  await browser.runtime.sendMessage(addonId, { type: 'vfs-toolkit-add-connection', storageId, name, capabilities }).catch(() => { });
   if (setupToken) {
-    browser.runtime.sendMessage({ type: 'vfs-provider-setup-completed', setupToken, storageId }).catch(() => { });
+    const connection = await browser.runtime.sendMessage({
+      type: 'vfs-provider-setup-completed',
+      setupToken,
+      storageId,
+      name,
+      capabilities,
+    });
+    if (connection?.addonId === browser.runtime.id) {
+      await browser.runtime.sendMessage({
+        type: 'vfs-toolkit-add-connection',
+        storageId,
+        name,
+        capabilities,
+      });
+    }
+    return connection;
   }
+  await _persistConnection(addonId, addonName, storageId, name, capabilities);
 }
