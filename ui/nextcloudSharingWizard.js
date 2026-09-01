@@ -1282,54 +1282,26 @@
   }
 
   function runVfsSourceSelection(request){
-    return new Promise((resolve, reject) => {
-      const port = browser.runtime.connect({ name: 'nc-vfs-source-selection' });
-      state.sourceSelectionPort = port;
-      let settled = false;
-      const dispose = () => {
-        port.onMessage.removeListener(onMessage);
-        port.onDisconnect.removeListener(onDisconnect);
+    return NCSharingPortRequest.run({
+      portName: 'nc-vfs-source-selection',
+      startMessage: { type: 'start', request },
+      fallbackErrorMessage: i18n('sharing_status_error'),
+      onProgress: (message) => {
+        const current = Math.max(0, Number(message.current) || 0);
+        setMessage(i18n('sharing_vfs_scanning_source', [String(current)]), 'info');
+      },
+      mapResult: (message) => message,
+      mapError: (message) => new Error(message.error || i18n('sharing_status_error')),
+      onPortOpened: (port) => {
+        state.sourceSelectionPort = port;
+      },
+      onPortClosed: (port) => {
         if (state.sourceSelectionPort === port){
           state.sourceSelectionPort = null;
         }
-      };
-      const finish = (callback, value) => {
-        if (settled){
-          return;
-        }
-        settled = true;
-        dispose();
-        try{
-          port.disconnect();
-        }catch(error){
-          logUiError('VFS selection port disconnect failed', error);
-        }
-        callback(value);
-      };
-      const onMessage = (message) => {
-        if (message?.type === 'progress'){
-          const current = Math.max(0, Number(message.current) || 0);
-          setMessage(i18n('sharing_vfs_scanning_source', [String(current)]), 'info');
-          return;
-        }
-        if (message?.type === 'result'){
-          finish(resolve, message);
-          return;
-        }
-        if (message?.type === 'error'){
-          finish(reject, new Error(message.error || i18n('sharing_status_error')));
-        }
-      };
-      const onDisconnect = () => {
-        const runtimeError = browser.runtime.lastError;
-        finish(reject, new Error(runtimeError?.message || i18n('sharing_status_error')));
-      };
-      port.onMessage.addListener(onMessage);
-      port.onDisconnect.addListener(onDisconnect);
-      try{
-        port.postMessage({ type: 'start', request });
-      }catch(error){
-        finish(reject, error);
+      },
+      onDisconnectError: (error) => {
+        logUiError('VFS selection port disconnect failed', error);
       }
     });
   }
@@ -1789,65 +1761,34 @@
    * @returns {Promise<object>}
    */
   async function runBackgroundFileLinkUpload(request){
-    return new Promise((resolve, reject) => {
-      const port = browser.runtime.connect({ name: 'nc-filelink-upload' });
-      state.uploadPort = port;
-      let settled = false;
-      const dispose = () => {
-        port.onMessage.removeListener(onMessage);
-        port.onDisconnect.removeListener(onDisconnect);
+    return NCSharingPortRequest.run({
+      portName: 'nc-filelink-upload',
+      startMessage: {
+        type: 'start',
+        windowId: state.wizardWindowId,
+        tabId: Number(state.tabId) || 0,
+        request
+      },
+      fallbackErrorMessage: i18n('sharing_status_error'),
+      onProgress: (message) => handleUploadStatus(message.event),
+      mapResult: (message) => message.result,
+      mapError: (message) => {
+        const error = new Error(message.error?.message || i18n('sharing_status_error'));
+        error.name = message.error?.name || 'Error';
+        error.status = Number(message.error?.status) || 0;
+        error.code = message.error?.code || '';
+        return error;
+      },
+      onPortOpened: (port) => {
+        state.uploadPort = port;
+      },
+      onPortClosed: (port) => {
         if (state.uploadPort === port){
           state.uploadPort = null;
         }
-      };
-      const complete = (callback, value) => {
-        if (settled){
-          return;
-        }
-        settled = true;
-        dispose();
-        try{
-          port.disconnect();
-        }catch(error){
-          logUiError("upload port disconnect failed", error);
-        }
-        callback(value);
-      };
-      const onMessage = (message) => {
-        if (message?.type === 'progress'){
-          handleUploadStatus(message.event);
-          return;
-        }
-        if (message?.type === 'result'){
-          complete(resolve, message.result);
-          return;
-        }
-        if (message?.type === 'error'){
-          const error = new Error(message.error?.message || i18n('sharing_status_error'));
-          error.name = message.error?.name || 'Error';
-          error.status = Number(message.error?.status) || 0;
-          error.code = message.error?.code || '';
-          complete(reject, error);
-        }
-      };
-      const onDisconnect = () => {
-        const runtimeError = browser.runtime.lastError;
-        complete(
-          reject,
-          new Error(runtimeError?.message || i18n('sharing_status_error'))
-        );
-      };
-      port.onMessage.addListener(onMessage);
-      port.onDisconnect.addListener(onDisconnect);
-      try{
-        port.postMessage({
-          type: 'start',
-          windowId: state.wizardWindowId,
-          tabId: Number(state.tabId) || 0,
-          request
-        });
-      }catch(error){
-        complete(reject, error);
+      },
+      onDisconnectError: (error) => {
+        logUiError("upload port disconnect failed", error);
       }
     });
   }
@@ -2788,27 +2729,17 @@
     NCDebugForwarder.markRuntimeContextUnloading?.();
     isPageUnloading = true;
     if (state.uploadPort){
-      try{
-        state.uploadPort.postMessage({
-          type: 'cancel',
-          reason: 'wizard_unload'
-        });
-        state.uploadPort.disconnect();
-      }catch(error){
-        logUiError("upload port cancellation failed", error);
-      }
+      NCSharingPortRequest.cancel(state.uploadPort, {
+        reason: 'wizard_unload',
+        onError: (error) => logUiError("upload port cancellation failed", error)
+      });
       state.uploadPort = null;
     }
     if (state.sourceSelectionPort){
-      try{
-        state.sourceSelectionPort.postMessage({
-          type: 'cancel',
-          reason: 'wizard_unload'
-        });
-        state.sourceSelectionPort.disconnect();
-      }catch(error){
-        logUiError('VFS selection cancellation failed', error);
-      }
+      NCSharingPortRequest.cancel(state.sourceSelectionPort, {
+        reason: 'wizard_unload',
+        onError: (error) => logUiError('VFS selection cancellation failed', error)
+      });
       state.sourceSelectionPort = null;
     }
     if (uploadRenderTimer){

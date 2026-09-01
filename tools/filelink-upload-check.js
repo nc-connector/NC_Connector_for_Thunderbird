@@ -47,6 +47,196 @@ function createContext(){
   return context;
 }
 
+function createTestEvent(){
+  const listeners = new Set();
+  return {
+    addListener(listener){
+      listeners.add(listener);
+    },
+    removeListener(listener){
+      listeners.delete(listener);
+    },
+    emit(value){
+      for (const listener of Array.from(listeners)){
+        listener(value);
+      }
+    },
+    get size(){
+      return listeners.size;
+    }
+  };
+}
+
+function createTestPort({ postError = null, disconnectError = null } = {}){
+  const onMessage = createTestEvent();
+  const onDisconnect = createTestEvent();
+  return {
+    posted: [],
+    disconnectCount: 0,
+    onMessage,
+    onDisconnect,
+    postMessage(message){
+      if (postError){
+        throw postError;
+      }
+      this.posted.push(message);
+    },
+    disconnect(){
+      if (disconnectError){
+        throw disconnectError;
+      }
+      this.disconnectCount++;
+      onDisconnect.emit();
+    }
+  };
+}
+
+function createPortRequestContext(){
+  const state = {
+    port: null,
+    connectError: null,
+    connectedNames: [],
+    lastError: null
+  };
+  const context = {
+    console,
+    Error,
+    TypeError,
+    Promise,
+    Object,
+    String,
+    browser: {
+      runtime: {
+        connect({ name }){
+          state.connectedNames.push(name);
+          if (state.connectError){
+            throw state.connectError;
+          }
+          return state.port;
+        },
+        get lastError(){
+          return state.lastError;
+        }
+      }
+    },
+    globalThis: null,
+    window: null
+  };
+  context.globalThis = context;
+  context.window = context;
+  vm.createContext(context);
+  loadScript("ui/sharingPortRequest.js", context);
+  return { context, state };
+}
+
+async function checkSharingPortRequest(){
+  const { context, state } = createPortRequestContext();
+  const runtime = context.NCSharingPortRequest;
+  const opened = [];
+  const closed = [];
+  const progress = [];
+  state.port = createTestPort();
+
+  const resultPromise = runtime.run({
+    portName: "nc-filelink-upload",
+    startMessage: { type: "start", request: { id: 1 } },
+    fallbackErrorMessage: "Upload failed",
+    onProgress: (message) => progress.push(message.current),
+    mapResult: (message) => message.result,
+    onPortOpened: (port) => opened.push(port),
+    onPortClosed: (port) => closed.push(port)
+  });
+  assert(state.connectedNames[0] === "nc-filelink-upload", "Port helper must connect with the requested name");
+  assert(state.port.posted[0]?.type === "start", "Port helper must post the start message after listener setup");
+  state.port.onMessage.emit({ type: "progress", current: 4 });
+  state.port.onMessage.emit({ type: "result", result: { shareId: "42" } });
+  const result = await resultPromise;
+  assert(result.shareId === "42", "Port helper must map the result message");
+  assert(progress[0] === 4, "Port helper must forward progress messages");
+  assert(opened[0] === state.port && closed[0] === state.port, "Port ownership callbacks must receive the same Port");
+  assert(
+    state.port.onMessage.size === 0
+      && state.port.onDisconnect.size === 0
+      && state.port.disconnectCount === 1,
+    "Completed Port requests must remove listeners and disconnect once"
+  );
+
+  state.port = createTestPort();
+  const errorPromise = runtime.run({
+    portName: "nc-filelink-upload",
+    startMessage: { type: "start" },
+    fallbackErrorMessage: "Upload failed",
+    mapError: (message) => {
+      const error = new Error(message.error.message);
+      error.code = message.error.code;
+      return error;
+    }
+  });
+  state.port.onMessage.emit({
+    type: "error",
+    error: { message: "Quota exceeded", code: "quota" }
+  });
+  let mappedFailure = null;
+  try{
+    await errorPromise;
+  }catch(error){
+    mappedFailure = error;
+  }
+  assert(
+    mappedFailure?.message === "Quota exceeded" && mappedFailure.code === "quota",
+    "Port helper must preserve the caller's serialized error mapping"
+  );
+
+  state.port = createTestPort();
+  state.lastError = { message: "Background closed" };
+  const disconnectPromise = runtime.run({
+    portName: "nc-vfs-source-selection",
+    startMessage: { type: "start" },
+    fallbackErrorMessage: "Selection failed"
+  });
+  state.port.onDisconnect.emit();
+  let disconnectFailure = null;
+  try{
+    await disconnectPromise;
+  }catch(error){
+    disconnectFailure = error;
+  }
+  assert(disconnectFailure?.message === "Background closed", "Port disconnects must expose runtime.lastError");
+  state.lastError = null;
+
+  const postFailure = new Error("Start failed");
+  state.port = createTestPort({ postError: postFailure });
+  let startFailure = null;
+  try{
+    await runtime.run({
+      portName: "nc-filelink-upload",
+      startMessage: { type: "start" },
+      fallbackErrorMessage: "Upload failed"
+    });
+  }catch(error){
+    startFailure = error;
+  }
+  assert(startFailure === postFailure, "A failed start post must reject with the original error");
+  assert(
+    state.port.onMessage.size === 0
+      && state.port.onDisconnect.size === 0
+      && state.port.disconnectCount === 1,
+    "A failed start post must release the Port"
+  );
+
+  const cancelPort = createTestPort();
+  assert(
+    runtime.cancel(cancelPort, { reason: "wizard_unload" }),
+    "An active request must accept wizard cancellation"
+  );
+  assert(
+    cancelPort.posted[0]?.type === "cancel"
+      && cancelPort.posted[0]?.reason === "wizard_unload"
+      && cancelPort.disconnectCount === 1,
+    "Wizard cancellation must post the reason before disconnecting"
+  );
+}
+
 function plannedFile(index, size, relativeDir = ""){
   return Object.freeze({
     itemId: `item-${index}`,
@@ -61,6 +251,7 @@ function plannedFile(index, size, relativeDir = ""){
 }
 
 async function run(){
+  await checkSharingPortRequest();
   const context = createContext();
   const policy = context.NCFileLinkUploadPolicy;
   const dav = context.NCNextcloudDav;
@@ -266,10 +457,18 @@ async function run(){
   }
 
   const wizardSource = readText("ui/nextcloudSharingWizard.js");
+  const wizardHtml = readText("ui/nextcloudSharingWizard.html");
+  const portRequestSource = readText("ui/sharingPortRequest.js");
   const sharingSource = readText("modules/ncSharing.js");
   const routerSource = readText("modules/bgRouter.js");
   const uploadSource = readText("modules/fileLinkUpload.js");
-  assert(wizardSource.includes("browser.runtime.connect({ name: 'nc-filelink-upload' })"), "Wizard must hand FileLink work to the background");
+  assert(
+    wizardHtml.includes('<script src="sharingPortRequest.js"></script>')
+      && portRequestSource.includes("browser.runtime.connect({ name: portName })")
+      && (wizardSource.match(/NCSharingPortRequest\.run\(\{/g) || []).length === 2
+      && !wizardSource.includes("browser.runtime.connect("),
+    "Sharing wizard Ports must use the shared request lifecycle"
+  );
   assert(!wizardSource.includes("NCSharing.createFileLink({"), "Wizard must not own network transfers");
   assert(
     wizardSource.includes('type: "sharing:checkFolderExists"'),

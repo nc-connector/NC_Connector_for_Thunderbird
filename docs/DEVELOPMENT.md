@@ -699,6 +699,7 @@ Responsibilities:
 Key files:
 - `ui/nextcloudSharingWizard.html`
 - `ui/nextcloudSharingWizard.js`
+- `ui/sharingPortRequest.js`
 - `ui/composeAttachmentPrompt.html`
 - `ui/composeAttachmentPrompt.js`
 - `modules/ncSharing.js`
@@ -989,7 +990,7 @@ The wizard opens:
 browser.runtime.connect({ name: "nc-filelink-upload" })
 ```
 
-The Port transfers the start request, batched progress events, final result, cancel request, and serialized error. File values cross the WebExtension boundary through the platform's structured-clone support. `modules/bgFileLinkUpload.js` owns one abort controller per session.
+The Port transfers the start request, batched progress events, final result, cancel request, and serialized error. File values cross the WebExtension boundary through the platform's structured-clone support. `ui/sharingPortRequest.js` owns listener disposal, one-time settlement, client disconnect, and unload cancellation for both Sharing wizard Ports. `modules/bgFileLinkUpload.js` owns one abort controller per session.
 
 Cancellation starts when:
 

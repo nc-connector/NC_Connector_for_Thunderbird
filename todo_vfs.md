@@ -23,6 +23,7 @@ approval.
   selections in one queue.
 - [x] Keep provider grants bound to the verified add-on ID, storage ID, and
   configured Nextcloud account.
+- [x] Consolidate repeated wizard port request/listener bookkeeping.
 
 ## Later cleanup
 
@@ -36,7 +37,6 @@ approval.
 - [ ] Share the live and persistent cleanup retry schedule.
 - [ ] Remove the descriptorless cleanup fallback after confirming that no
   supported persisted record can reach it.
-- [ ] Consolidate repeated wizard port request/listener bookkeeping.
 
 ## Deliberate boundaries
 
