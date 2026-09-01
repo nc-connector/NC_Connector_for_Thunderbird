@@ -89,7 +89,7 @@ body {
 /* ── Toolbar ─────────────────────────────────────── */
 
 #vfs-toolbar {
-  display: flex;
+  display: none;
   align-items: center;
   gap: 6px;
   padding: 5px 8px;

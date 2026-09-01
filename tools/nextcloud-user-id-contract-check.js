@@ -217,6 +217,7 @@ function createSharingHarness(){
   context.NCOcs.buildAuthHeader = testBuildAuthHeader;
   loadScript("modules/shareTemplateContract.js", context);
   loadScript("modules/textUtils.js", context);
+  loadScript("modules/fileLinkSources.js", context);
   loadScript("modules/ncSharing.js", context);
   return { context, requests, transferCalls, davProbes, credentials };
 }

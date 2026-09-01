@@ -601,12 +601,13 @@
     checksums,
     signal,
     log,
-    onStatus
+    onStatus,
+    progress: sharedProgress
   } = {}){
     if (!plan.files.length){
       return;
     }
-    const progress = NCFileLinkUploadProgress.create({
+    const progress = sharedProgress || NCFileLinkUploadProgress.create({
       files: plan.files,
       onStatus,
       log
@@ -662,7 +663,9 @@
         });
       }
     }finally{
-      progress.stop();
+      if (!sharedProgress){
+        progress.stop();
+      }
     }
   }
 
@@ -680,7 +683,10 @@
     log,
     onStatus,
     onRootCreated,
-    collisionMessage
+    collisionMessage,
+    additionalDirectories = [],
+    additionalProgressFiles = [],
+    transferAdditionalSources
   } = {}){
     onStatus?.({ phase: "scanning" });
     const plan = NCFileLinkUploadPolicy.buildPlan({
@@ -711,8 +717,24 @@
       });
     }
 
+    const directories = Array.from(new Set([
+      ...plan.directories,
+      ...(Array.isArray(additionalDirectories) ? additionalDirectories : [])
+    ])).sort((left, right) => {
+      const depth = left.split("/").length - right.split("/").length;
+      return depth || left.localeCompare(right);
+    });
+    const progressFiles = [
+      ...plan.files,
+      ...(Array.isArray(additionalProgressFiles) ? additionalProgressFiles : [])
+    ];
+    const progress = NCFileLinkUploadProgress.create({
+      files: progressFiles,
+      onStatus,
+      log
+    });
     const baseSegments = NCNextcloudDav.normalizeRelativePath(basePath).split("/").filter(Boolean);
-    const folderTotal = baseSegments.length + 1 + plan.directories.length;
+    const folderTotal = baseSegments.length + 1 + directories.length;
     let folderCurrent = 0;
     const folderStatus = createFolderStatusReporter(onStatus, folderTotal);
     let root = null;
@@ -750,7 +772,7 @@
       await NCNextcloudDav.createPlannedDirectories({
         davRoot,
         shareRoot: root.folderInfo.relativeFolder,
-        directories: plan.directories,
+        directories,
         authHeader,
         signal,
         log,
@@ -770,11 +792,26 @@
         checksums,
         signal,
         log,
-        onStatus
+        onStatus,
+        progress
       });
+      if (typeof transferAdditionalSources === "function"){
+        await transferAdditionalSources({
+          davRoot,
+          uploadRoot,
+          bulkUrl,
+          shareRoot: root.folderInfo.relativeFolder,
+          authHeader,
+          signal,
+          log,
+          onStatus,
+          progress
+        });
+      }
       return Object.freeze({ plan, root });
     }finally{
       folderStatus.stop();
+      progress.stop();
     }
   }
 

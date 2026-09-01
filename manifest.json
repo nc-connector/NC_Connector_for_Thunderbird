@@ -61,6 +61,7 @@
       "modules/nextcloudVfsStorage.js",
       "modules/vfsProviderRuntime.js",
       "modules/vfsClientRuntime.js",
+      "modules/fileLinkSources.js",
       "modules/ncSharing.js",
       "modules/bgComposeAttachments.js",
       "modules/bgShareCleanupStore.js",

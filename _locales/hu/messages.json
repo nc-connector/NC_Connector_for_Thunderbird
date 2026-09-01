@@ -683,12 +683,6 @@
   "sharing_files_table_status": {
     "message": "Állapot"
   },
-  "sharing_button_add_files": {
-    "message": "Fájlok hozzáadása..."
-  },
-  "sharing_button_add_folder": {
-    "message": "Mappa hozzáadása..."
-  },
   "sharing_button_remove": {
     "message": "Eltávolítás"
   },

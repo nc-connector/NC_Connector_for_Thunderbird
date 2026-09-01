@@ -683,12 +683,6 @@
   "sharing_files_table_status": {
     "message": "状态"
   },
-  "sharing_button_add_files": {
-    "message": "添加文件..."
-  },
-  "sharing_button_add_folder": {
-    "message": "添加文件夹..."
-  },
   "sharing_button_remove": {
     "message": "移除"
   },

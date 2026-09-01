@@ -683,12 +683,6 @@
   "sharing_files_table_status": {
     "message": "状態"
   },
-  "sharing_button_add_files": {
-    "message": "ファイルを追加..."
-  },
-  "sharing_button_add_folder": {
-    "message": "フォルダーを追加..."
-  },
   "sharing_button_remove": {
     "message": "削除"
   },

@@ -26,6 +26,7 @@ const CHECKS = [
   "tools/policy-network-timeout-check.js",
   "tools/managed-setup-contract-check.js",
   "tools/nextcloud-vfs-storage-check.js",
+  "tools/vfs-integration-check.js",
   "tools/vendor-security-check.js",
   "tools/background-state-security-check.js",
   "tools/url-subfolder-contract-check.js",

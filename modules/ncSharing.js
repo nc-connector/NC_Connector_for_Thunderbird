@@ -1005,22 +1005,9 @@
     const noteValue = noteEnabled ? String(request?.note || "").trim() : "";
     const statusCallback = typeof request?.onUploadStatus === "function" ? request.onUploadStatus : null;
     const sourceItems = Array.isArray(request?.files) ? request.files : [];
-    const files = sourceItems.map((item, index) => {
-      const sourceFile = item?.file;
-      if (!sourceFile || typeof sourceFile.slice !== "function"){
-        throw new Error(i18n("sharing_status_error"));
-      }
-      const fileName = sanitizeFileName(item.renamedName || sourceFile.name || "File");
-      return {
-        itemId: item.id || `file-${index + 1}`,
-        sourceFile,
-        fileName,
-        displayPath: item.displayPath || sourceFile.name || fileName,
-        relativeDir: sanitizeRelativeDir(item.relativeDir || ""),
-        size: Number(sourceFile.size) || 0,
-        lastModified: Number(sourceFile.lastModified) || Date.now(),
-        contentType: sourceFile.type || "application/octet-stream"
-      };
+    const sourcePlan = NCFileLinkSources.normalizeItems(sourceItems, {
+      sanitizeFileName,
+      sanitizeRelativeDir
     });
     const baseShareName = sanitizeShareName(request?.shareName) || sanitizeShareName(i18n("sharing_share_default"));
     const candidateLimit = request?.attachmentMode ? 1000 : 1;
@@ -1048,7 +1035,7 @@
     };
     try{
       const transfer = await NCFileLinkUpload.prepareAndUpload({
-        files,
+        files: sourcePlan.localFiles,
         bulkSupported: capabilities.bulkUploadSupported,
         fixedRequestCount: normalizeRelativePath(basePathSetting).split("/").filter(Boolean).length + 2,
         davRoot,
@@ -1060,6 +1047,12 @@
         signal: request?.signal || null,
         log: (...args) => logDebug(opts, ...args),
         onStatus: statusCallback,
+        additionalDirectories: sourcePlan.additionalDirectories,
+        additionalProgressFiles: sourcePlan.additionalProgressFiles,
+        transferAdditionalSources: (context) => NCFileLinkSources.transferAdditionalSources({
+          ...context,
+          plan: sourcePlan
+        }),
         collisionMessage: i18n("sharing_error_folder_exists"),
         onRootCreated: async (root) => {
           preparedRoot = buildTrackedRoot(root);
@@ -1098,7 +1091,7 @@
       };
       logDebug(opts, "createFileLink:done", {
         shareId: share.id || "",
-        files: files.length
+        files: sourcePlan.items.length
       });
       return {
         shareUrl: share.url,

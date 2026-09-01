@@ -683,12 +683,6 @@
   "sharing_files_table_status": {
     "message": "Stav"
   },
-  "sharing_button_add_files": {
-    "message": "Přidat soubory..."
-  },
-  "sharing_button_add_folder": {
-    "message": "Přidat složku..."
-  },
   "sharing_button_remove": {
     "message": "Odebrat"
   },

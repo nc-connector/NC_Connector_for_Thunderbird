@@ -683,12 +683,6 @@
   "sharing_files_table_status": {
     "message": "Statut"
   },
-  "sharing_button_add_files": {
-    "message": "Ajouter des fichiers..."
-  },
-  "sharing_button_add_folder": {
-    "message": "Ajouter un dossier..."
-  },
   "sharing_button_remove": {
     "message": "Supprimer"
   },

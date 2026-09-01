@@ -84,6 +84,12 @@
     },
     passwordPolicy: null,
     shareFolderCheckInProgress: false,
+    sourceSelectionInProgress: false,
+    sourceSelectionPort: null,
+    vfsAvailability: {
+      nextcloud: false,
+      external: false
+    },
     uploadInProgress: false,
     uploadCompleted: false,
     uploadResult: null,
@@ -186,6 +192,7 @@
     }
     setWizardReady(false);
     NCTalkDomI18n.translatePage(i18n, { titleKey: "sharing_dialog_title" });
+    dom.vfsConnectionList?.setAttribute('aria-label', i18n('sharing_vfs_connection_label'));
     try{
       state.tabId = parseTabId();
       state.launchContextId = parseLaunchContextId();
@@ -210,6 +217,7 @@
         logUiError('init', error);
       }
       await loadLaunchContext();
+      await refreshVfsSourceAvailability();
       if (state.mode === "attachments"){
         await applyAttachmentModeDefaults();
       }else{
@@ -267,9 +275,22 @@
     dom.basePathLabel = document.getElementById('basePathLabel');
     dom.addFilesBtn = document.getElementById('addFilesBtn');
     dom.addFolderBtn = document.getElementById('addFolderBtn');
+    dom.localSourceAction = document.getElementById('localSourceAction');
+    dom.nextcloudSourceAction = document.getElementById('nextcloudSourceAction');
+    dom.externalSourceAction = document.getElementById('externalSourceAction');
+    dom.localSourceSummary = dom.localSourceAction?.querySelector('summary') || null;
+    dom.nextcloudSourceSummary = dom.nextcloudSourceAction?.querySelector('summary') || null;
+    dom.externalSourceSummary = dom.externalSourceAction?.querySelector('summary') || null;
+    dom.addNextcloudFilesBtn = document.getElementById('addNextcloudFilesBtn');
+    dom.addNextcloudFolderBtn = document.getElementById('addNextcloudFolderBtn');
+    dom.addExternalFilesBtn = document.getElementById('addExternalFilesBtn');
+    dom.addExternalFolderBtn = document.getElementById('addExternalFolderBtn');
     dom.removeFileBtn = document.getElementById('removeFileBtn');
     dom.fileInput = document.getElementById('fileInput');
     dom.folderInput = document.getElementById('folderInput');
+    dom.vfsConnectionDialog = document.getElementById('vfsConnectionDialog');
+    dom.vfsConnectionList = document.getElementById('vfsConnectionList');
+    dom.vfsProviderFallbackIcon = document.getElementById('vfsProviderFallbackIcon');
     dom.fileTableBody = document.getElementById('fileTableBody');
     dom.fileTableWrapper = document.querySelector('.file-table-wrapper');
     dom.fileEmptyPlaceholder = document.getElementById('fileEmptyPlaceholder');
@@ -368,12 +389,41 @@
       log('note toggle', dom.noteToggle.checked);
     });
     dom.addFilesBtn.addEventListener('click', () => {
+      closeSourceMenus();
       log('File dialog opened');
       dom.fileInput.click();
     });
     dom.addFolderBtn.addEventListener('click', () => {
+      closeSourceMenus();
       log('Folder dialog opened');
       dom.folderInput?.click();
+    });
+    dom.addNextcloudFilesBtn?.addEventListener('click', () => {
+      closeSourceMenus();
+      void startVfsSelection({ sourceKind: 'nextcloud', entryKind: 'file' });
+    });
+    dom.addNextcloudFolderBtn?.addEventListener('click', () => {
+      closeSourceMenus();
+      void startVfsSelection({ sourceKind: 'nextcloud', entryKind: 'folder' });
+    });
+    dom.addExternalFilesBtn?.addEventListener('click', () => {
+      closeSourceMenus();
+      void startVfsSelection({ sourceKind: 'external-vfs', entryKind: 'file' });
+    });
+    dom.addExternalFolderBtn?.addEventListener('click', () => {
+      closeSourceMenus();
+      void startVfsSelection({ sourceKind: 'external-vfs', entryKind: 'folder' });
+    });
+    [
+      dom.localSourceSummary,
+      dom.nextcloudSourceSummary,
+      dom.externalSourceSummary
+    ].forEach((summary) => {
+      summary?.addEventListener('click', (event) => {
+        if (summary.getAttribute('aria-disabled') === 'true'){
+          event.preventDefault();
+        }
+      });
     });
     dom.fileInput.addEventListener('change', (event) => handleFileSelection(event, 'file'));
     dom.folderInput?.addEventListener('change', (event) => handleFileSelection(event, 'folder'));
@@ -399,7 +449,14 @@
       }
     });
     dom.cancelBtn.addEventListener('click', handleCancel);
+    window.addEventListener('focus', handleWindowFocus);
     log('Event handlers registered');
+  }
+
+  function handleWindowFocus(){
+    if (!state.sourceSelectionInProgress && !state.uploadInProgress && !state.finalizeStarted){
+      void refreshVfsSourceAvailability();
+    }
   }
 
   async function loadDefaultSettings(){
@@ -908,8 +965,48 @@
 
   function updateButtons(){
     const busy = state.shareFolderCheckInProgress
+      || state.sourceSelectionInProgress
       || state.uploadInProgress
       || state.finalizeInProgress;
+    const sourceControlsDisabled = state.finalizeStarted || busy;
+    [
+      dom.addFilesBtn,
+      dom.addFolderBtn
+    ].forEach((control) => {
+      if (control){
+        control.disabled = sourceControlsDisabled;
+      }
+    });
+    [dom.addNextcloudFilesBtn, dom.addNextcloudFolderBtn].forEach((control) => {
+      if (control){
+        control.disabled = sourceControlsDisabled || !state.vfsAvailability.nextcloud;
+      }
+    });
+    [dom.addExternalFilesBtn, dom.addExternalFolderBtn].forEach((control) => {
+      if (control){
+        control.disabled = sourceControlsDisabled || !state.vfsAvailability.external;
+      }
+    });
+    setSourceActionState({
+      action: dom.localSourceAction,
+      summary: dom.localSourceSummary,
+      disabled: sourceControlsDisabled
+    });
+    setSourceActionState({
+      action: dom.nextcloudSourceAction,
+      summary: dom.nextcloudSourceSummary,
+      disabled: sourceControlsDisabled || !state.vfsAvailability.nextcloud,
+      unavailableTitle: i18n('sharing_vfs_nextcloud_unavailable_tooltip')
+    });
+    setSourceActionState({
+      action: dom.externalSourceAction,
+      summary: dom.externalSourceSummary,
+      disabled: sourceControlsDisabled || !state.vfsAvailability.external,
+      unavailableTitle: i18n('sharing_vfs_external_unavailable_tooltip')
+    });
+    if (sourceControlsDisabled){
+      closeSourceMenus();
+    }
     dom.cancelBtn.disabled = state.finalizeInProgress;
     if (state.mode === "attachments"){
       dom.backBtn.style.visibility = 'hidden';
@@ -937,6 +1034,44 @@
       || (state.finalizeStarted && !state.finalizeRetryAllowed)
       || state.finalized;
     dom.removeFileBtn.disabled = state.finalizeStarted || !state.selectedFileId || busy;
+  }
+
+  function setSourceActionState({ action, summary, disabled, unavailableTitle = '' } = {}){
+    const isDisabled = disabled === true;
+    action?.classList.toggle('is-disabled', isDisabled);
+    action?.setAttribute('aria-disabled', isDisabled ? 'true' : 'false');
+    summary?.setAttribute('aria-disabled', isDisabled ? 'true' : 'false');
+    if (summary){
+      const availabilityBlocked = unavailableTitle
+        && ((action === dom.nextcloudSourceAction && !state.vfsAvailability.nextcloud)
+          || (action === dom.externalSourceAction && !state.vfsAvailability.external));
+      summary.title = availabilityBlocked ? unavailableTitle : '';
+    }
+    if (isDisabled && action){
+      action.open = false;
+    }
+  }
+
+  async function refreshVfsSourceAvailability(){
+    const [nextcloudResponse, externalResponse] = await Promise.all([
+      browser.runtime.sendMessage({ type: 'vfs:getStatus' }).catch((error) => {
+        logUiError('Nextcloud VFS availability failed', error);
+        return null;
+      }),
+      browser.runtime.sendMessage({ type: 'vfs:listExternalConnections' }).catch((error) => {
+        logUiError('External VFS availability failed', error);
+        return null;
+      })
+    ]);
+    const nextcloudStatus = nextcloudResponse?.ok ? nextcloudResponse.status : null;
+    const externalConnections = externalResponse?.ok && Array.isArray(externalResponse.connections)
+      ? externalResponse.connections
+      : [];
+    state.vfsAvailability.nextcloud = nextcloudStatus?.accountConfigured === true
+      && !!nextcloudStatus?.selfStorageRef?.providerId
+      && !!nextcloudStatus?.selfStorageRef?.storageId;
+    state.vfsAvailability.external = externalConnections.length > 0;
+    updateButtons();
   }
 
   async function handleNext(){
@@ -1024,6 +1159,253 @@
     }
   }
 
+  function closeSourceMenus(){
+    if (dom.localSourceAction){
+      dom.localSourceAction.open = false;
+    }
+    if (dom.nextcloudSourceAction){
+      dom.nextcloudSourceAction.open = false;
+    }
+    if (dom.externalSourceAction){
+      dom.externalSourceAction.open = false;
+    }
+  }
+
+  async function selectExternalStorage(){
+    const response = await browser.runtime.sendMessage({
+      type: 'vfs:listExternalConnections'
+    });
+    if (!response?.ok){
+      throw new Error(response?.error || i18n('sharing_vfs_external_unavailable'));
+    }
+    const connections = Array.isArray(response.connections) ? response.connections : [];
+    if (!connections.length){
+      throw new Error(i18n('sharing_vfs_external_unavailable'));
+    }
+    if (connections.length === 1){
+      return connections[0];
+    }
+    if (!dom.vfsConnectionDialog || !dom.vfsConnectionList){
+      throw new Error(i18n('sharing_status_error'));
+    }
+    dom.vfsConnectionList.replaceChildren();
+    const iconUrls = [];
+    let selectedConnection = null;
+    connections.forEach((connection) => {
+      const button = document.createElement('button');
+      button.type = 'button';
+      button.className = 'vfs-connection-choice';
+      button.setAttribute('role', 'option');
+      button.appendChild(createExternalConnectionIcon(connection, iconUrls));
+
+      const text = document.createElement('span');
+      text.className = 'vfs-connection-choice-text';
+      const title = document.createElement('strong');
+      title.textContent = String(
+        connection?.storageName
+        || connection?.label
+        || connection?.providerName
+        || ''
+      );
+      text.appendChild(title);
+      const providerName = String(connection?.providerName || '').trim();
+      if (providerName && providerName !== title.textContent){
+        const provider = document.createElement('small');
+        provider.textContent = providerName;
+        text.appendChild(provider);
+      }
+      button.appendChild(text);
+      button.addEventListener('click', () => {
+        selectedConnection = connection;
+        dom.vfsConnectionDialog.close('accept');
+      });
+      dom.vfsConnectionList.appendChild(button);
+    });
+    return new Promise((resolve) => {
+      const onClose = () => {
+        dom.vfsConnectionDialog.removeEventListener('close', onClose);
+        for (const iconUrl of iconUrls){
+          URL.revokeObjectURL(iconUrl);
+        }
+        resolve(dom.vfsConnectionDialog.returnValue === 'accept' ? selectedConnection : null);
+      };
+      dom.vfsConnectionDialog.addEventListener('close', onClose);
+      dom.vfsConnectionDialog.showModal();
+    });
+  }
+
+  function createExternalConnectionIcon(connection, iconUrls){
+    const holder = document.createElement('span');
+    holder.className = 'vfs-provider-icon';
+    if (typeof Blob !== 'undefined' && connection?.icon instanceof Blob){
+      try{
+        const iconUrl = URL.createObjectURL(connection.icon);
+        iconUrls.push(iconUrl);
+        const image = document.createElement('img');
+        image.src = iconUrl;
+        image.alt = '';
+        holder.appendChild(image);
+        return holder;
+      }catch(error){
+        logUiError('VFS provider icon unavailable', error);
+      }
+    }
+    const fallback = dom.vfsProviderFallbackIcon?.content?.firstElementChild?.cloneNode(true);
+    if (fallback){
+      holder.appendChild(fallback);
+    }
+    return holder;
+  }
+
+  function runVfsSourceSelection(request){
+    return new Promise((resolve, reject) => {
+      const port = browser.runtime.connect({ name: 'nc-vfs-source-selection' });
+      state.sourceSelectionPort = port;
+      let settled = false;
+      const dispose = () => {
+        port.onMessage.removeListener(onMessage);
+        port.onDisconnect.removeListener(onDisconnect);
+        if (state.sourceSelectionPort === port){
+          state.sourceSelectionPort = null;
+        }
+      };
+      const finish = (callback, value) => {
+        if (settled){
+          return;
+        }
+        settled = true;
+        dispose();
+        try{
+          port.disconnect();
+        }catch(error){
+          logUiError('VFS selection port disconnect failed', error);
+        }
+        callback(value);
+      };
+      const onMessage = (message) => {
+        if (message?.type === 'progress'){
+          const current = Math.max(0, Number(message.current) || 0);
+          setMessage(i18n('sharing_vfs_scanning_source', [String(current)]), 'info');
+          return;
+        }
+        if (message?.type === 'result'){
+          finish(resolve, message);
+          return;
+        }
+        if (message?.type === 'error'){
+          finish(reject, new Error(message.error || i18n('sharing_status_error')));
+        }
+      };
+      const onDisconnect = () => {
+        const runtimeError = browser.runtime.lastError;
+        finish(reject, new Error(runtimeError?.message || i18n('sharing_status_error')));
+      };
+      port.onMessage.addListener(onMessage);
+      port.onDisconnect.addListener(onDisconnect);
+      try{
+        port.postMessage({ type: 'start', request });
+      }catch(error){
+        finish(reject, error);
+      }
+    });
+  }
+
+  function createRemoteQueueEntry(source, index){
+    const sourceKind = source?.sourceKind === 'nextcloud' ? 'nextcloud' : 'external-vfs';
+    const kind = source?.kind === 'folder' ? 'folder' : 'file';
+    const name = String(source?.name || '').trim();
+    if (!name){
+      throw new Error(i18n('sharing_status_error'));
+    }
+    const relativeDir = String(source?.relativeDir || '').replace(/\\/g, '/').replace(/^\/+|\/+$/g, '');
+    const displayPath = normalizeDisplayPath(source?.displayPath)
+      || buildDisplayPath(relativeDir, name);
+    return {
+      id: `entry_${Date.now()}_${index}_${Math.random().toString(36).slice(2)}`,
+      sourceKind,
+      sourceLabel: String(source?.sourceLabel || '').trim(),
+      kind,
+      name,
+      file: null,
+      storageRef: source?.storageRef && typeof source.storageRef === 'object'
+        ? {
+            providerId: String(source.storageRef.providerId || ''),
+            storageId: String(source.storageRef.storageId || '')
+          }
+        : null,
+      sourcePath: String(source?.sourcePath || ''),
+      size: kind === 'file' && source?.size != null && Number.isFinite(Number(source.size))
+        ? Math.max(0, Number(source.size))
+        : null,
+      lastModified: Math.max(0, Number(source?.lastModified) || 0),
+      contentType: String(source?.contentType || 'application/octet-stream'),
+      transferGroupId: String(source?.transferGroupId || ''),
+      transferRole: String(source?.transferRole || 'item'),
+      transferRoot: source?.transferRoot === true,
+      displayPath,
+      displayDir: extractDisplayDir(displayPath),
+      relativeDir,
+      renamedName: '',
+      status: 'pending',
+      progress: 0,
+      error: '',
+      speedKbps: 0,
+      progressStartedAt: 0
+    };
+  }
+
+  async function startVfsSelection({ sourceKind, entryKind } = {}){
+    if (state.sourceSelectionInProgress || state.uploadInProgress || state.finalizeStarted){
+      return;
+    }
+    state.sourceSelectionInProgress = true;
+    updateButtons();
+    setMessage(i18n('sharing_vfs_opening_picker'), 'info');
+    try{
+      let storageRef = null;
+      if (sourceKind === 'external-vfs'){
+        const connection = await selectExternalStorage();
+        if (!connection){
+          setMessage('');
+          return;
+        }
+        storageRef = connection.storageRef || null;
+      }
+      const result = await runVfsSourceSelection({
+        sourceKind,
+        entryKind,
+        storageRef
+      });
+      if (result?.cancelled){
+        setMessage('');
+        return;
+      }
+      const sources = Array.isArray(result?.entries) ? result.entries : [];
+      if (!sources.length){
+        setMessage('');
+        return;
+      }
+      const entries = sources.map((source, index) => createRemoteQueueEntry(source, index));
+      state.files.push(...entries);
+      rebuildFileEntryIndex();
+      pendingUploadScroll = '__bottom__';
+      state.selectedFileId = null;
+      invalidateUpload();
+      setMessage('');
+      log('VFS source selection completed', {
+        sourceKind,
+        entryKind,
+        entries: entries.length
+      });
+    }catch(error){
+      logUiError('VFS source selection failed', error);
+      setMessage(error?.message || i18n('sharing_status_error'), 'error');
+    }finally{
+      state.sourceSelectionInProgress = false;
+      updateButtons();
+    }
+  }
+
   /**
    * Handle file or folder input selections.
    * @param {Event} event
@@ -1062,6 +1444,10 @@
       const displayDir = extractDisplayDir(displayPath);
       return {
         id: `entry_${Date.now()}_${Math.random().toString(36).slice(2)}`,
+        sourceKind: 'local',
+        sourceLabel: '',
+        kind: 'file',
+        name: file.name || 'File',
         file,
         displayPath,
         displayDir,
@@ -1087,7 +1473,9 @@
       return;
     }
     const removed = state.files.find((entry) => entry.id === state.selectedFileId);
-    state.files = state.files.filter((entry) => entry.id !== state.selectedFileId);
+    state.files = removed?.transferGroupId
+      ? state.files.filter((entry) => entry.transferGroupId !== removed.transferGroupId)
+      : state.files.filter((entry) => entry.id !== state.selectedFileId);
     rebuildFileEntryIndex();
     state.selectedFileId = null;
     invalidateUpload();
@@ -1118,24 +1506,30 @@
       if (state.selectedFileId === entry.id){
         row.classList.add('selected');
       }
-      if (entry.status === 'uploading'){
+      if (['uploading', 'fetching', 'copying', 'preparing'].includes(entry.status)){
         row.classList.add('uploading');
       }
       const pathCell = document.createElement('td');
       pathCell.className = 'path-cell';
       const pathScroll = document.createElement('div');
       pathScroll.className = 'path-scroll';
-      pathScroll.textContent = entry.displayPath || entry.file?.name || '';
+      pathScroll.textContent = entry.displayPath || entry.name || entry.file?.name || '';
       attachPathWheelScroll(pathScroll);
       pathScroll.scrollLeft = state.pathColumnScrollLeft;
       pathCell.appendChild(pathScroll);
       const typeCell = document.createElement('td');
       typeCell.className = 'type-cell';
-      typeCell.textContent = i18n('sharing_file_type_file');
+      typeCell.textContent = entry.kind === 'folder'
+        ? i18n('sharing_file_type_folder')
+        : i18n('sharing_file_type_file');
+      const sourceCell = document.createElement('td');
+      sourceCell.className = 'source-cell';
+      sourceCell.textContent = getEntrySourceLabel(entry);
+      sourceCell.title = sourceCell.textContent;
       const statusCell = document.createElement('td');
       statusCell.className = 'status-cell';
       statusCell.appendChild(buildStatusNode(entry));
-      row.append(pathCell, typeCell, statusCell);
+      row.append(pathCell, typeCell, sourceCell, statusCell);
       row.addEventListener('click', () => {
         const previousId = state.selectedFileId;
         state.selectedFileId = entry.id;
@@ -1149,6 +1543,16 @@
     dom.fileTableBody.appendChild(rows);
     applySharedPathColumnScroll(state.pathColumnScrollLeft);
     ensureUploadListVisible();
+  }
+
+  function getEntrySourceLabel(entry){
+    if (entry?.sourceKind === 'nextcloud'){
+      return i18n('sharing_source_nextcloud');
+    }
+    if (entry?.sourceKind === 'external-vfs'){
+      return String(entry.sourceLabel || i18n('sharing_source_external'));
+    }
+    return i18n('sharing_source_local');
   }
 
   /**
@@ -1236,7 +1640,10 @@
     if (!row){
       return false;
     }
-    row.classList.toggle('uploading', entry.status === 'uploading');
+    row.classList.toggle(
+      'uploading',
+      ['uploading', 'fetching', 'copying', 'preparing'].includes(entry.status)
+    );
     const statusCell = row.querySelector('.status-cell');
     if (!statusCell){
       return false;
@@ -1281,6 +1688,22 @@
    * @returns {Node}
    */
   function buildStatusNode(entry){
+    if (entry.status === 'fetching'){
+      const text = document.createElement('span');
+      const percent = Math.min(100, Math.max(0, Number(entry.progress) || 0));
+      text.textContent = `${i18n('sharing_status_fetching_source')} ${percent}%`;
+      return text;
+    }
+    if (entry.status === 'copying'){
+      const text = document.createElement('span');
+      text.textContent = i18n('sharing_status_copying_source');
+      return text;
+    }
+    if (entry.status === 'preparing'){
+      const text = document.createElement('span');
+      text.textContent = i18n('sharing_status_preparing_source');
+      return text;
+    }
     if (entry.status === 'uploading'){
       const percent = entry.progress || 0;
       const wrapper = document.createElement('div');
@@ -1470,7 +1893,21 @@
         note: noteValue,
         files: state.files.map((entry) => ({
           id: entry.id,
+          sourceKind: entry.sourceKind || 'local',
+          sourceLabel: entry.sourceLabel || '',
+          kind: entry.kind || 'file',
+          name: entry.name || entry.file?.name || 'File',
           file: entry.file,
+          storageRef: entry.storageRef || null,
+          sourcePath: entry.sourcePath || '',
+          size: entry.sourceKind === 'local'
+            ? (Number(entry.file?.size) || 0)
+            : entry.size,
+          lastModified: Number(entry.lastModified ?? entry.file?.lastModified) || 0,
+          contentType: entry.contentType || entry.file?.type || 'application/octet-stream',
+          transferGroupId: entry.transferGroupId || '',
+          transferRole: entry.transferRole || 'item',
+          transferRoot: entry.transferRoot === true,
           displayPath: entry.displayPath,
           renamedName: entry.renamedName,
           relativeDir: entry.relativeDir
@@ -1531,6 +1968,17 @@
       });
       return;
     }
+    if (event.phase === 'source_transfer'){
+      const current = Math.max(0, Number(event.current) || 0);
+      const total = Math.max(0, Number(event.total) || 0);
+      const displayCurrent = total > 0 && current < total ? current + 1 : current;
+      const key = event.mode === 'copy'
+        ? 'sharing_status_copying_sources'
+        : 'sharing_status_fetching_sources';
+      setUploadStatus(i18n(key, [String(displayCurrent), String(total)]));
+      setOverallProgress({ visible: true, indeterminate: true });
+      return;
+    }
     if (event.phase === 'summary'){
       const completedFiles = Math.max(0, Number(event.completedFiles) || 0);
       const totalFiles = Math.max(0, Number(event.totalFiles) || 0);
@@ -1573,7 +2021,19 @@
     if (!entry){
       return false;
     }
-    if (event.phase === 'start'){
+    if (event.phase === 'source_fetch'){
+      if (entry.status !== 'fetching'){
+        resetFileEntry(entry);
+      }
+      entry.status = 'fetching';
+      entry.progress = Math.min(100, Math.max(0, Number(event.percent) || 0));
+    }else if (event.phase === 'source_copy'){
+      resetFileEntry(entry);
+      entry.status = 'copying';
+    }else if (event.phase === 'source_prepare'){
+      resetFileEntry(entry);
+      entry.status = 'preparing';
+    }else if (event.phase === 'start'){
       resetFileEntry(entry);
       entry.status = 'uploading';
       entry.progressStartedAt = Date.now();
@@ -1596,7 +2056,7 @@
       entry.status = 'error';
       entry.error = event.error || '';
       entry.speedKbps = 0;
-      log('Upload file error', { name: entry.displayPath || entry.file?.name || entry.id, error: entry.error });
+      log('Upload file error', { name: entry.displayPath || entry.name || entry.file?.name || entry.id, error: entry.error });
     }else{
       return false;
     }
@@ -1769,6 +2229,10 @@
       dom.noteInput,
       dom.addFilesBtn,
       dom.addFolderBtn,
+      dom.addNextcloudFilesBtn,
+      dom.addNextcloudFolderBtn,
+      dom.addExternalFilesBtn,
+      dom.addExternalFolderBtn,
       dom.removeFileBtn,
       dom.fileInput,
       dom.folderInput
@@ -1891,23 +2355,31 @@
   async function ensureUniqueQueueEntries(){
     while (true){
       const seen = new Set();
+      let renamedDuplicate = false;
       for (const entry of state.files){
-        let key = getTargetRelativePath(entry);
-        while (seen.has(key)){
-          if (!promptForRename(entry, 'sharing_prompt_rename_duplicate')){
+        const key = getTargetRelativePath(entry);
+        if (seen.has(key)){
+          if (!promptForRename(
+            getCollisionRenameTarget(entry),
+            'sharing_prompt_rename_duplicate'
+          )){
             return false;
           }
-          key = getTargetRelativePath(entry);
           log('Local duplicate rename', entry.displayPath);
+          renamedDuplicate = true;
+          break;
         }
         seen.add(key);
+      }
+      if (renamedDuplicate){
+        continue;
       }
       const prefixConflict = findQueuePathPrefixConflict();
       if (!prefixConflict){
         break;
       }
       if (!promptForRename(
-        prefixConflict.fileEntry,
+        getCollisionRenameTarget(prefixConflict.fileEntry),
         'sharing_prompt_rename_file_directory_conflict'
       )){
         return false;
@@ -1924,7 +2396,8 @@
   function findQueuePathPrefixConflict(){
     const entries = state.files.map((entry) => ({
       entry,
-      path: getTargetRelativePath(entry)
+      path: getTargetRelativePath(entry),
+      kind: entry.kind || 'file'
     }));
     if (!globalThis.NCFileQueuePathConflicts?.find){
       throw new Error("file_queue_path_conflict_runtime_unavailable");
@@ -1938,9 +2411,22 @@
    * @returns {string}
    */
   function getTargetRelativePath(entry){
-    const sanitizedName = NCSharing.sanitizeFileName(entry.renamedName || entry.file?.name || 'File');
+    const sanitizedName = NCSharing.sanitizeFileName(
+      entry.renamedName || entry.name || entry.file?.name || 'File'
+    );
     const sanitizedDir = NCSharing.sanitizeRelativeDir(entry.relativeDir || '');
     return sanitizedDir ? `${sanitizedDir}/${sanitizedName}` : sanitizedName;
+  }
+
+  function getCollisionRenameTarget(entry){
+    if (entry?.sourceKind !== 'nextcloud'
+      || !entry.transferGroupId
+      || entry.transferRoot){
+      return entry;
+    }
+    return state.files.find((candidate) =>
+      candidate.transferGroupId === entry.transferGroupId && candidate.transferRoot
+    ) || entry;
   }
 
   /**
@@ -2079,6 +2565,30 @@
   function applyEntryRename(entry, newName){
     const clean = (newName || '').trim();
     if (!clean){
+      return;
+    }
+    if (entry.kind === 'folder' && entry.transferGroupId){
+      const oldRoot = normalizeDisplayPath(entry.displayPath);
+      const newRoot = buildDisplayPath(entry.displayDir || entry.relativeDir || '', clean);
+      for (const member of state.files){
+        if (member.transferGroupId !== entry.transferGroupId){
+          continue;
+        }
+        const currentPath = normalizeDisplayPath(member.displayPath);
+        if (member === entry){
+          member.renamedName = clean;
+          member.displayPath = newRoot;
+          member.displayDir = extractDisplayDir(newRoot);
+          continue;
+        }
+        if (!oldRoot || !currentPath.startsWith(`${oldRoot}/`)){
+          continue;
+        }
+        const updatedPath = `${newRoot}${currentPath.slice(oldRoot.length)}`;
+        member.displayPath = updatedPath;
+        member.displayDir = extractDisplayDir(updatedPath);
+        member.relativeDir = member.displayDir;
+      }
       return;
     }
     entry.renamedName = clean;
@@ -2236,7 +2746,7 @@
    * @returns {boolean}
    */
   function promptForRename(entry, messageKey){
-    const suggestion = entry.renamedName || entry.file?.name || '';
+    const suggestion = entry.renamedName || entry.name || entry.file?.name || '';
     const renamed = prompt(i18n(messageKey, [entry.displayPath]), suggestion);
     if (!renamed){
       setMessage(i18n('sharing_message_rename_cancelled'), 'error');
@@ -2277,6 +2787,18 @@
       }
       state.uploadPort = null;
     }
+    if (state.sourceSelectionPort){
+      try{
+        state.sourceSelectionPort.postMessage({
+          type: 'cancel',
+          reason: 'wizard_unload'
+        });
+        state.sourceSelectionPort.disconnect();
+      }catch(error){
+        logUiError('VFS selection cancellation failed', error);
+      }
+      state.sourceSelectionPort = null;
+    }
     if (uploadRenderTimer){
       clearTimeout(uploadRenderTimer);
       uploadRenderTimer = null;
@@ -2294,6 +2816,7 @@
     window.removeEventListener('pagehide', cleanupPageResources, true);
     window.removeEventListener('beforeunload', cleanupPageResources, true);
     window.removeEventListener('unload', cleanupPageResources, true);
+    window.removeEventListener('focus', handleWindowFocus);
   }
 
   /**
