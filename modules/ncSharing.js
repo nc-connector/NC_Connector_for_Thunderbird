@@ -920,9 +920,9 @@
     if (!opts.baseUrl || !opts.user || !opts.appPass){
       throw new Error(i18n("error_credentials_missing"));
     }
-    NCFileLinkDav.throwIfAborted(request?.signal);
+    NCNextcloudDav.throwIfAborted(request?.signal);
     await ensureHostPermission(opts.baseUrl);
-    NCFileLinkDav.throwIfAborted(request?.signal);
+    NCNextcloudDav.throwIfAborted(request?.signal);
     const requestOptions = {
       ...opts,
       signal: request?.signal || null
@@ -967,8 +967,8 @@
     logDebug(opts, "folders:preflight", {
       relativeFolder: folderInfo.relativeFolder
     });
-    const probe = await NCFileLinkDav.probePath({
-      url: NCFileLinkDav.buildFileUrl(context.davRoot, folderInfo.relativeFolder),
+    const probe = await NCNextcloudDav.probePath({
+      url: NCNextcloudDav.buildFileUrl(context.davRoot, folderInfo.relativeFolder),
       authHeader: context.authHeader,
       signal: request?.signal || null,
       log: (...args) => logDebug(opts, ...args)
@@ -1037,7 +1037,7 @@
       return Object.freeze({
         ...root,
         cleanupTarget: Object.freeze({
-          url: NCFileLinkDav.buildFileUrl(davRoot, root.folderInfo.relativeFolder),
+          url: NCNextcloudDav.buildFileUrl(davRoot, root.folderInfo.relativeFolder),
           authHeader,
           baseUrl: opts.baseUrl,
           relativeFolder: root.folderInfo.relativeFolder,
@@ -1108,9 +1108,9 @@
       if (preparedRoot?.folderInfo?.relativeFolder){
         let cleaned = false;
         try{
-          await NCFileLinkDav.deleteTrackedRoot({
+          await NCNextcloudDav.deleteTrackedRoot({
             url: preparedRoot.cleanupTarget?.url
-              || NCFileLinkDav.buildFileUrl(davRoot, preparedRoot.folderInfo.relativeFolder),
+              || NCNextcloudDav.buildFileUrl(davRoot, preparedRoot.folderInfo.relativeFolder),
             reservationUrl: preparedRoot.cleanupTarget?.reservationUrl || "",
             targetUrl: preparedRoot.cleanupTarget?.targetUrl || "",
             authHeader,
@@ -1188,8 +1188,8 @@
     const authHeader = NCOcs.buildAuthHeader(opts.user, opts.appPass);
     const davRoot = `${opts.baseUrl.replace(/\/+$/, "")}/remote.php/dav/files/${encodeURIComponent(userId)}`;
     logDebug(opts, "folders:delete", { relativeFolder: folderInfo.relativeFolder });
-    return NCFileLinkDav.deleteRemotePath({
-      url: NCFileLinkDav.buildFileUrl(davRoot, folderInfo.relativeFolder),
+    return NCNextcloudDav.deleteRemotePath({
+      url: NCNextcloudDav.buildFileUrl(davRoot, folderInfo.relativeFolder),
       authHeader,
       log: (...args) => logDebug(opts, ...args)
     });

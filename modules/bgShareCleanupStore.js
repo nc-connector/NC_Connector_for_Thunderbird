@@ -25,7 +25,7 @@ let PERSISTED_SHARE_CLEANUP_WRITE_QUEUE = Promise.resolve();
 let PERSISTED_SHARE_CLEANUP_LOAD_ERROR = null;
 
 function normalizePersistedCleanupRelativePath(value){
-  const normalized = NCFileLinkDav.normalizeRelativePath(String(value || ""));
+  const normalized = NCNextcloudDav.normalizeRelativePath(String(value || ""));
   if (!normalized){
     return "";
   }
@@ -674,13 +674,13 @@ async function deletePersistedShareCleanupDescriptor(descriptor){
   }
   const authHeader = NCOcs.buildAuthHeader(opts.user, opts.appPass);
   const davRoot = `${currentBaseUrl}/remote.php/dav/files/${encodeURIComponent(currentUserId)}`;
-  await NCFileLinkDav.deleteTrackedRoot({
-    url: NCFileLinkDav.buildFileUrl(davRoot, normalized.relativeFolder),
+  await NCNextcloudDav.deleteTrackedRoot({
+    url: NCNextcloudDav.buildFileUrl(davRoot, normalized.relativeFolder),
     reservationUrl: normalized.reservationRelativeFolder
-      ? NCFileLinkDav.buildFileUrl(davRoot, normalized.reservationRelativeFolder)
+      ? NCNextcloudDav.buildFileUrl(davRoot, normalized.reservationRelativeFolder)
       : "",
     targetUrl: normalized.targetRelativeFolder
-      ? NCFileLinkDav.buildFileUrl(davRoot, normalized.targetRelativeFolder)
+      ? NCNextcloudDav.buildFileUrl(davRoot, normalized.targetRelativeFolder)
       : "",
     authHeader,
     log: (...args) => L(...args)

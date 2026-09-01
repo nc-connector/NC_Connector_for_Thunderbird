@@ -313,7 +313,7 @@ function createStoreHarness(){
         onStartup: startup
       }
     },
-    NCFileLinkDav: {
+    NCNextcloudDav: {
       normalizeRelativePath(value){
         return String(value || "")
           .replace(/\\/g, "/")

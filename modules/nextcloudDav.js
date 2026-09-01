@@ -788,5 +788,5 @@
     deleteBestEffort
   });
 
-  global.NCFileLinkDav = api;
+  global.NCNextcloudDav = api;
 })(typeof window !== "undefined" ? window : (typeof globalThis !== "undefined" ? globalThis : this));

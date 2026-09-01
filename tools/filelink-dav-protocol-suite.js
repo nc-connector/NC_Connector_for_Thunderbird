@@ -24,9 +24,9 @@ async function checkRetryRules(){
   const context = createUploadContext(immediateTimers());
   loadUploadModules(context, [
     "modules/fileLinkUploadPolicy.js",
-    "modules/fileLinkDav.js"
+    "modules/nextcloudDav.js"
   ]);
-  const dav = context.NCFileLinkDav;
+  const dav = context.NCNextcloudDav;
 
   assert(
     JSON.stringify(context.NCFileLinkUploadPolicy.RETRY_STATUS_CODES)
@@ -156,9 +156,9 @@ async function checkRequestTimeoutsAndAbort(){
   });
   loadUploadModules(context, [
     "modules/fileLinkUploadPolicy.js",
-    "modules/fileLinkDav.js"
+    "modules/nextcloudDav.js"
   ]);
-  const dav = context.NCFileLinkDav;
+  const dav = context.NCNextcloudDav;
 
   const headerRequest = dav.fetchWithTimeout({
     timeoutMs: 100,
@@ -230,10 +230,10 @@ async function checkRequestTimeoutsAndAbort(){
   });
   loadUploadModules(xhrContext, [
     "modules/fileLinkUploadPolicy.js",
-    "modules/fileLinkDav.js"
+    "modules/nextcloudDav.js"
   ]);
   const controller = new AbortController();
-  const xhrRequest = xhrContext.NCFileLinkDav.xhrWithRetry({
+  const xhrRequest = xhrContext.NCNextcloudDav.xhrWithRetry({
     method: "PUT",
     url: "https://cloud.example.test/files/share/file.bin",
     headers: { "Authorization": "Basic test" },
@@ -255,18 +255,18 @@ async function checkMoveRecovery(){
   const context = createUploadContext();
   loadUploadModules(context, [
     "modules/fileLinkUploadPolicy.js",
-    "modules/fileLinkDav.js",
+    "modules/nextcloudDav.js",
     "modules/fileLinkUpload.js"
   ]);
   const upload = context.NCFileLinkUpload;
-  const baseDav = context.NCFileLinkDav;
+  const baseDav = context.NCNextcloudDav;
   const moveRequests = [];
 
   context.fetch = async (url, options) => {
     moveRequests.push({ url, options });
     throw new Error("connection closed");
   };
-  context.NCFileLinkDav = {
+  context.NCNextcloudDav = {
     ...baseDav,
     probePath: async () => ({
       exists: true,
@@ -292,7 +292,7 @@ async function checkMoveRecovery(){
     authHeader: "Basic test"
   });
 
-  context.NCFileLinkDav = {
+  context.NCNextcloudDav = {
     ...baseDav,
     probePath: async () => ({
       exists: true,
@@ -313,7 +313,7 @@ async function checkMoveRecovery(){
     assert(options.headers.Overwrite === "F", "Root reservation MOVE must reject overwrites");
     return makeDavResponse(412);
   };
-  context.NCFileLinkDav = {
+  context.NCNextcloudDav = {
     ...baseDav,
     probePath: async () => {
       rootProbeCalls++;
@@ -335,7 +335,7 @@ async function checkMoveRecovery(){
   context.fetch = async () => {
     throw new Error("connection closed");
   };
-  context.NCFileLinkDav = {
+  context.NCNextcloudDav = {
     ...baseDav,
     probePath: async () => probeQueue.shift()
   };
@@ -351,7 +351,7 @@ async function checkMoveRecovery(){
     { exists: true, collection: true, contentLength: null }
   ];
   context.fetch = async () => makeDavResponse(503);
-  context.NCFileLinkDav = {
+  context.NCNextcloudDav = {
     ...baseDav,
     probePath: async () => collisionProbeQueue.shift()
   };
@@ -375,7 +375,7 @@ async function checkConcurrentRootReservations(){
   });
   loadUploadModules(context, [
     "modules/fileLinkUploadPolicy.js",
-    "modules/fileLinkDav.js",
+    "modules/nextcloudDav.js",
     "modules/fileLinkUpload.js"
   ]);
   const collections = new Set();
@@ -478,11 +478,11 @@ async function checkDirectAndChunkRequests(){
   const context = createUploadContext();
   loadUploadModules(context, [
     "modules/fileLinkUploadPolicy.js",
-    "modules/fileLinkDav.js",
+    "modules/nextcloudDav.js",
     "modules/fileLinkUpload.js"
   ]);
   const upload = context.NCFileLinkUpload;
-  const dav = context.NCFileLinkDav;
+  const dav = context.NCNextcloudDav;
   const xhrCalls = [];
   const collectionCalls = [];
   let cleanupCalls = 0;
@@ -491,7 +491,7 @@ async function checkDirectAndChunkRequests(){
     moveCalls.push({ url, options });
     return makeDavResponse(201);
   };
-  context.NCFileLinkDav = {
+  context.NCNextcloudDav = {
     ...dav,
     xhrWithRetry: async (options) => {
       const body = await options.createBody(1);
@@ -607,9 +607,9 @@ async function checkRootReservationCleanup(){
   const context = createUploadContext();
   loadUploadModules(context, [
     "modules/fileLinkUploadPolicy.js",
-    "modules/fileLinkDav.js"
+    "modules/nextcloudDav.js"
   ]);
-  const dav = context.NCFileLinkDav;
+  const dav = context.NCNextcloudDav;
   const reservationUrl = "https://cloud.example.test/files/_stage";
   const targetUrl = "https://cloud.example.test/files/share";
   const collectionBody = "<d:multistatus xmlns:d=\"DAV:\"><d:response><d:propstat><d:prop><d:resourcetype><d:collection/></d:resourcetype></d:prop></d:propstat></d:response></d:multistatus>";
@@ -686,7 +686,7 @@ async function checkBulkQuota(){
   loadUploadModules(context, [
     "vendor/spark-md5.min.js",
     "modules/fileLinkUploadPolicy.js",
-    "modules/fileLinkDav.js",
+    "modules/nextcloudDav.js",
     "modules/fileLinkBulkUpload.js"
   ]);
   const file = {
@@ -725,11 +725,11 @@ async function checkReservationCleanupHandoff(){
   const context = createUploadContext();
   loadUploadModules(context, [
     "modules/fileLinkUploadPolicy.js",
-    "modules/fileLinkDav.js",
+    "modules/nextcloudDav.js",
     "modules/fileLinkUpload.js"
   ]);
   const upload = context.NCFileLinkUpload;
-  const baseDav = context.NCFileLinkDav;
+  const baseDav = context.NCNextcloudDav;
   const candidate = {
     shareName: "Share",
     folderInfo: {
@@ -750,7 +750,7 @@ async function checkReservationCleanupHandoff(){
     { exists: false, collection: false, contentLength: null },
     { exists: true, collection: true, contentLength: null }
   ];
-  context.NCFileLinkDav = {
+  context.NCNextcloudDav = {
     ...baseDav,
     createCollection: async () => true,
     probePath: async () => probeQueue.shift(),
@@ -774,13 +774,13 @@ async function checkReservationCleanupHandoff(){
   const stagingContext = createUploadContext();
   loadUploadModules(stagingContext, [
     "modules/fileLinkUploadPolicy.js",
-    "modules/fileLinkDav.js",
+    "modules/nextcloudDav.js",
     "modules/fileLinkUpload.js"
   ]);
   const stagingUpload = stagingContext.NCFileLinkUpload;
-  const stagingDav = stagingContext.NCFileLinkDav;
+  const stagingDav = stagingContext.NCNextcloudDav;
   stagingContext.fetch = async () => makeDavResponse(412);
-  stagingContext.NCFileLinkDav = {
+  stagingContext.NCNextcloudDav = {
     ...stagingDav,
     createCollection: async () => true,
     probePath: async (options) => ({
@@ -808,15 +808,15 @@ async function checkReservationCleanupHandoff(){
   const ambiguousContext = createUploadContext();
   loadUploadModules(ambiguousContext, [
     "modules/fileLinkUploadPolicy.js",
-    "modules/fileLinkDav.js",
+    "modules/nextcloudDav.js",
     "modules/fileLinkUpload.js"
   ]);
   const ambiguousUpload = ambiguousContext.NCFileLinkUpload;
-  const ambiguousDav = ambiguousContext.NCFileLinkDav;
+  const ambiguousDav = ambiguousContext.NCNextcloudDav;
   ambiguousContext.fetch = async () => {
     throw new Error("connection closed");
   };
-  ambiguousContext.NCFileLinkDav = {
+  ambiguousContext.NCNextcloudDav = {
     ...ambiguousDav,
     createCollection: async () => true,
     probePath: async () => {

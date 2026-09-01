@@ -45,7 +45,7 @@
       "modules/nccore.js",
       "vendor/spark-md5.min.js",
       "modules/fileLinkUploadPolicy.js",
-      "modules/fileLinkDav.js",
+      "modules/nextcloudDav.js",
       "modules/fileLinkUploadProgress.js",
       "modules/fileLinkBulkUpload.js",
       "modules/fileLinkUpload.js",

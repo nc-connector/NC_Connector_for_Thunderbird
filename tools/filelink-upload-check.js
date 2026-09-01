@@ -39,7 +39,7 @@ function createContext(){
   vm.createContext(context);
   loadScript("vendor/spark-md5.min.js", context);
   loadScript("modules/fileLinkUploadPolicy.js", context);
-  loadScript("modules/fileLinkDav.js", context);
+  loadScript("modules/nextcloudDav.js", context);
   loadScript("modules/fileLinkUploadProgress.js", context);
   loadScript("modules/fileLinkBulkUpload.js", context);
   loadScript("modules/fileLinkUpload.js", context);
@@ -63,7 +63,7 @@ function plannedFile(index, size, relativeDir = ""){
 async function run(){
   const context = createContext();
   const policy = context.NCFileLinkUploadPolicy;
-  const dav = context.NCFileLinkDav;
+  const dav = context.NCNextcloudDav;
   const bulk = context.NCFileLinkBulkUpload;
 
   assert(policy.DIRECT_UPLOAD_LIMIT_BYTES === 20 * MIB, "Direct limit must be 20 MiB");
@@ -225,7 +225,7 @@ async function run(){
   const requiredOrder = [
     "vendor/spark-md5.min.js",
     "modules/fileLinkUploadPolicy.js",
-    "modules/fileLinkDav.js",
+    "modules/nextcloudDav.js",
     "modules/fileLinkUploadProgress.js",
     "modules/fileLinkBulkUpload.js",
     "modules/fileLinkUpload.js",
@@ -259,7 +259,7 @@ async function run(){
     "Existing manual targets must keep the localized collision error in step one"
   );
   assert(
-    !wizardSource.includes("NCFileLinkDav.probePath"),
+    !wizardSource.includes("NCNextcloudDav.probePath"),
     "Wizard must not perform DAV network access directly"
   );
   assert(
@@ -268,7 +268,7 @@ async function run(){
   );
   assert(
     sharingSource.includes("async function checkFileLinkFolderExists(request)")
-      && sharingSource.includes("NCFileLinkDav.probePath({"),
+      && sharingSource.includes("NCNextcloudDav.probePath({"),
     "Manual folder collision preflight must reuse the central DAV probe"
   );
   assert(!sharingSource.includes("publicUpload\", \"true"), "Share creation must not add a second permissions mode");

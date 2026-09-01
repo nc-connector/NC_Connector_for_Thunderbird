@@ -181,7 +181,7 @@ function createSharingHarness(){
       },
       clearIndeterminate: async () => true
     },
-    NCFileLinkDav: {
+    NCNextcloudDav: {
       throwIfAborted: (signal) => {
         if (signal?.aborted){
           const error = new Error("aborted");
@@ -427,7 +427,7 @@ async function run(){
       === "Basic " + Buffer.from("login@example.test:app-password").toString("base64"),
     "Manual share preflight must authenticate with the configured login"
   );
-  sharing.context.NCFileLinkDav.probePath = async () => ({
+  sharing.context.NCNextcloudDav.probePath = async () => ({
     exists: true,
     collection: true,
     contentLength: null
@@ -515,7 +515,7 @@ async function run(){
   );
 
   let trackedRootCleanup = null;
-  sharing.context.NCFileLinkDav.deleteTrackedRoot = async (options) => {
+  sharing.context.NCNextcloudDav.deleteTrackedRoot = async (options) => {
     trackedRootCleanup = options;
     return "reservation";
   };

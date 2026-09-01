@@ -103,7 +103,7 @@
       response,
       `HTTP ${response?.status || 0}`
     );
-    return NCFileLinkDav.createTechnicalError(
+    return NCNextcloudDav.createTechnicalError(
       String(detail || "Share creation failed"),
       Number(response?.status) || 0
     );
@@ -165,9 +165,9 @@
         });
       }catch(error){
         if (signal?.aborted || error?.name === "AbortError"){
-          throw NCFileLinkDav.createAbortError();
+          throw NCNextcloudDav.createAbortError();
         }
-        const lookupError = NCFileLinkDav.createTechnicalError(
+        const lookupError = NCNextcloudDav.createTechnicalError(
           error?.message || String(error)
         );
         lookupError.cause = error;
@@ -175,7 +175,7 @@
       }
       if (previous.share){
         if (previousFingerprint !== fingerprint){
-          throw NCFileLinkDav.createTechnicalError(
+          throw NCNextcloudDav.createTechnicalError(
             "Existing share settings could not be verified"
           );
         }
@@ -183,7 +183,7 @@
         return previous.share;
       }
       if (!previous.known){
-        throw NCFileLinkDav.createTechnicalError(
+        throw NCNextcloudDav.createTechnicalError(
           "Share creation result is unknown"
         );
       }
@@ -208,7 +208,7 @@
             return share;
           }
           unclear = true;
-          lastError = NCFileLinkDav.createTechnicalError(
+          lastError = NCNextcloudDav.createTechnicalError(
             "Share creation returned incomplete data"
           );
         }else{
@@ -222,21 +222,21 @@
       }catch(error){
         if (signal?.aborted || error?.name === "AbortError"){
           INDETERMINATE_PATHS.set(createKey, fingerprint);
-          throw NCFileLinkDav.createAbortError();
+          throw NCNextcloudDav.createAbortError();
         }
         if (error === lastError && !unclear){
           throw error;
         }
         lastError = error?.ncUserMessage
           ? error
-          : NCFileLinkDav.createTechnicalError(
+          : NCNextcloudDav.createTechnicalError(
             error?.message || String(error)
           );
         unclear = true;
       }
 
       if (!unclear){
-        throw lastError || NCFileLinkDav.createTechnicalError(
+        throw lastError || NCNextcloudDav.createTechnicalError(
           "Share creation failed"
         );
       }
@@ -252,7 +252,7 @@
         });
       }catch(error){
         if (signal?.aborted || error?.name === "AbortError"){
-          throw NCFileLinkDav.createAbortError();
+          throw NCNextcloudDav.createAbortError();
         }
         throw lastError || error;
       }
@@ -261,18 +261,18 @@
         return lookup.share;
       }
       if (!lookup.known){
-        throw lastError || NCFileLinkDav.createTechnicalError(
+        throw lastError || NCNextcloudDav.createTechnicalError(
           "Share creation result is unknown"
         );
       }
       INDETERMINATE_PATHS.delete(createKey);
       if (attempt >= 2){
-        throw lastError || NCFileLinkDav.createTechnicalError(
+        throw lastError || NCNextcloudDav.createTechnicalError(
           "Share creation failed"
         );
       }
     }
-    throw lastError || NCFileLinkDav.createTechnicalError(
+    throw lastError || NCNextcloudDav.createTechnicalError(
       "Share creation failed"
     );
   }
@@ -295,7 +295,7 @@
       };
       const onAbort = () => finish(
         reject,
-        NCFileLinkDav.createAbortError(),
+        NCNextcloudDav.createAbortError(),
         true
       );
       signal?.addEventListener?.("abort", onAbort, { once: true });
@@ -327,7 +327,7 @@
     const inflight = CREATE_INFLIGHT.get(createKey);
     if (inflight){
       if (inflight.fingerprint !== fingerprint){
-        throw NCFileLinkDav.createTechnicalError(
+        throw NCNextcloudDav.createTechnicalError(
           "Share creation already uses different settings"
         );
       }

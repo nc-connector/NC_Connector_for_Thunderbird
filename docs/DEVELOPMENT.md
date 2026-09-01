@@ -118,7 +118,7 @@ Key files you’ll touch most:
 - `modules/bgComposePasswordDispatch.js` — separate-password-mail dispatch and follow-up compose handling
 - `modules/bgFileLinkUpload.js` — background-owned FileLink upload sessions, cancellation, and cleanup handoff
 - `modules/fileLinkUploadPolicy.js` — upload-mode thresholds, batching, concurrency, and retry limits
-- `modules/fileLinkDav.js` — shared DAV request, retry, path-probe, and folder helpers
+- `modules/nextcloudDav.js` — shared DAV request, retry, path-probe, and folder helpers
 - `modules/fileLinkUploadProgress.js` — aggregate and per-item progress throttling
 - `modules/fileLinkBulkUpload.js` — Nextcloud DAV bulk multipart construction, MD5 calculation, and response handling
 - `modules/fileLinkUpload.js` — root reservation plus Direct, Chunked, and Bulk orchestration
@@ -687,7 +687,7 @@ Key files:
 - `modules/ncSharing.js`
 - `modules/bgFileLinkUpload.js`
 - `modules/fileLinkUploadPolicy.js`
-- `modules/fileLinkDav.js`
+- `modules/nextcloudDav.js`
 - `modules/fileLinkUploadProgress.js`
 - `modules/fileLinkBulkUpload.js`
 - `modules/fileLinkUpload.js`

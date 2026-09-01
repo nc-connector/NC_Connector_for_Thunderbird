@@ -241,7 +241,7 @@ not persist credentials, passwords, recipients, or rendered message bodies.
 - New background/runtime files:
   - `modules/bgFileLinkUpload.js`
   - `modules/fileLinkUploadPolicy.js`
-  - `modules/fileLinkDav.js`
+  - `modules/nextcloudDav.js`
   - `modules/fileLinkUploadProgress.js`
   - `modules/fileLinkBulkUpload.js`
   - `modules/fileLinkUpload.js`

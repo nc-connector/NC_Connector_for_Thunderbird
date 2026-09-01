@@ -192,7 +192,7 @@ async function createCleanupHarness(deleteRemotePath, overrides = {}){
     NCOcs: {
       buildAuthHeader: (user, appPass) => `Basic ${user}:${appPass}`
     },
-    NCFileLinkDav: {
+    NCNextcloudDav: {
       normalizeRelativePath: normalizeTestRelativePath,
       buildFileUrl: buildTestFileUrl,
       deleteRemotePath,
@@ -385,7 +385,7 @@ async function checkCleanupGenerations(){
   );
 
   let reservationCleanup = null;
-  cleanup.context.NCFileLinkDav.deleteRootReservation = async (options) => {
+  cleanup.context.NCNextcloudDav.deleteRootReservation = async (options) => {
     reservationCleanup = options;
     return "target";
   };
@@ -410,7 +410,7 @@ async function checkCleanupGenerations(){
   );
 
   let finishDelete;
-  cleanup.context.NCFileLinkDav.deleteRemotePath = () => new Promise((resolve) => {
+  cleanup.context.NCNextcloudDav.deleteRemotePath = () => new Promise((resolve) => {
     finishDelete = resolve;
   });
   await cleanup.context.armSharingWizardRemoteCleanup(
@@ -436,7 +436,7 @@ async function checkCleanupGenerations(){
   assert(cleanup.wizardEntries.get(8) === replacement, "The newer wizard generation must remain armed");
 
   let composeDeleteCount = 0;
-  cleanup.context.NCFileLinkDav.deleteRemotePath = async () => {
+  cleanup.context.NCNextcloudDav.deleteRemotePath = async () => {
     composeDeleteCount++;
     return true;
   };
