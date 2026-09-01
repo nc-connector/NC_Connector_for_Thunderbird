@@ -58,3 +58,21 @@
 - Module-format review:
   - The add-on background still uses Manifest V2 ordered scripts.
   - The UMD build exposes `SparkMD5` in that existing script context.
+
+## Thunderbird VFS Toolkit
+
+- Component: `vfs-toolkit`
+- API version: `1.3`
+- Upstream repository: https://github.com/thunderbird/webext-support
+- Exact upstream commit: [`3476faa0870bb6dbe63c7c72fc3dab2b67731f4e`](https://github.com/thunderbird/webext-support/commit/3476faa0870bb6dbe63c7c72fc3dab2b67731f4e)
+- Source subtree: `modules/vfs-toolkit`
+- License: MPL-2.0; the upstream repository license is stored in `vendor/vfs-toolkit/LICENSE`.
+- Included runtime files:
+  - client API and built-in OPFS provider: `vendor/vfs-toolkit/vfs-client/*.mjs`
+  - picker: `vendor/vfs-toolkit/vfs-client/picker.html`, `picker.mjs`, `picker.css`, and `icon-configure.svg`
+  - picker translations: `vendor/vfs-toolkit/vfs-client/locales/*.json`
+  - provider API: `vendor/vfs-toolkit/vfs-provider/vfs-provider.mjs`
+- Module format:
+  - The client and provider APIs are native ES modules (`.mjs`).
+  - Picker assets and translations are local package resources; no remote script or module is loaded.
+- Vendor state: all files in this commit are unchanged from the pinned upstream revision.
