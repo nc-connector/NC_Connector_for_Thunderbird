@@ -1009,5 +1009,260 @@
   },
   "sharing_status_speed_kbps": {
     "message": "$1 KB/s"
+  },
+  "options_tab_vfs": {
+    "message": "VFS"
+  },
+  "options_vfs_provider_heading": {
+    "message": "マイ Nextcloud"
+  },
+  "options_vfs_provider_intro": {
+    "message": "既存の Nextcloud 接続を、許可した Thunderbird アドオンから利用できるようにします。"
+  },
+  "options_vfs_provider_enabled_label": {
+    "message": "NC Connector を VFS プロバイダーとして有効にする"
+  },
+  "options_vfs_provider_tooltip_title": {
+    "message": "Nextcloud への VFS アクセス"
+  },
+  "options_vfs_provider_tooltip_text": {
+    "message": "明示的に許可したアドオンだけが読み取りと書き込みのアクセス権を取得します。認証情報は共有されません。"
+  },
+  "options_vfs_provider_status_label": {
+    "message": "状態"
+  },
+  "options_vfs_provider_status_active": {
+    "message": "プロバイダーは有効です"
+  },
+  "options_vfs_provider_status_inactive": {
+    "message": "プロバイダーは無効です"
+  },
+  "options_vfs_provider_status_connection_required": {
+    "message": "先に Nextcloud 接続を設定してください"
+  },
+  "options_vfs_provider_status_error": {
+    "message": "プロバイダーエラー"
+  },
+  "options_vfs_runtime_unavailable": {
+    "message": "VFS コンポーネントを利用できません。"
+  },
+  "options_vfs_grants_heading": {
+    "message": "許可済みアドオン"
+  },
+  "options_vfs_grants_hint": {
+    "message": "各許可は 1 つのアドオンにのみ適用され、ここでいつでも取り消せます。"
+  },
+  "options_vfs_access_read_write": {
+    "message": "読み取りと書き込み"
+  },
+  "options_vfs_revoke_button": {
+    "message": "アクセスを取り消す"
+  },
+  "options_vfs_no_grants": {
+    "message": "アクセスを許可したアドオンはまだありません。"
+  },
+  "options_vfs_revoke_confirm": {
+    "message": "$1 のアクセスを取り消しますか？"
+  },
+  "options_vfs_external_heading": {
+    "message": "外部 VFS プロバイダー"
+  },
+  "options_vfs_external_intro": {
+    "message": "他のプロバイダーのファイルを読み取り、Nextcloud 上の共有へアップロードします。"
+  },
+  "options_vfs_external_enabled_label": {
+    "message": "外部 VFS プロバイダーを有効にする"
+  },
+  "options_vfs_external_tooltip_title": {
+    "message": "他のストレージを接続"
+  },
+  "options_vfs_external_tooltip_text": {
+    "message": "NC Connector は、明示的な許可後にのみ互換性のある VFS プロバイダーを検出します。ファイルはプロバイダー間で直接コピーされません。"
+  },
+  "options_vfs_external_permission_label": {
+    "message": "Thunderbird の権限"
+  },
+  "options_vfs_external_permission_granted": {
+    "message": "許可済み"
+  },
+  "options_vfs_external_permission_required": {
+    "message": "未許可"
+  },
+  "options_vfs_external_permission_button": {
+    "message": "権限を許可"
+  },
+  "options_vfs_connections_heading": {
+    "message": "検出された接続"
+  },
+  "options_vfs_connections_hint": {
+    "message": "Thunderbird に設定され、接続可能な互換 VFS プロバイダーがここに表示されます。"
+  },
+  "options_vfs_refresh_button": {
+    "message": "更新"
+  },
+  "options_vfs_connect_button": {
+    "message": "接続"
+  },
+  "options_vfs_disconnect_button": {
+    "message": "切断"
+  },
+  "options_vfs_disconnect_confirm": {
+    "message": "$1 を切断しますか？"
+  },
+  "options_vfs_no_connections": {
+    "message": "VFS 接続が見つかりません。"
+  },
+  "options_vfs_connection_status_connected": {
+    "message": "接続済み"
+  },
+  "options_vfs_connection_status_available": {
+    "message": "利用可能"
+  },
+  "options_vfs_connection_status_unavailable": {
+    "message": "利用不可"
+  },
+  "options_vfs_connection_status_error": {
+    "message": "エラー"
+  },
+  "options_vfs_loading": {
+    "message": "読み込み中…"
+  },
+  "options_vfs_action_failed": {
+    "message": "VFS 操作を完了できませんでした。"
+  },
+  "vfs_error_management_permission_missing": {
+    "message": "外部 VFS プロバイダーの検出に必要な権限がありません。"
+  },
+  "vfs_error_storage_changed": {
+    "message": "ストレージ接続が変更されました。ファイルを選択し直してください。"
+  },
+  "vfs_error_file_metadata_missing": {
+    "message": "ファイル情報が不完全です。ファイルを選択し直してください。"
+  },
+  "vfs_error_file_read_failed": {
+    "message": "ストレージプロバイダーからファイルを読み取れませんでした。"
+  },
+  "vfs_error_file_changed": {
+    "message": "選択後にファイルが変更されました。選択し直してください。"
+  },
+  "vfs_error_invalid_path": {
+    "message": "選択したストレージパスは無効です。"
+  },
+  "vfs_error_root_not_selectable": {
+    "message": "ストレージのルートをフォルダーとして選択することはできません。"
+  },
+  "vfs_error_external_connection_missing": {
+    "message": "選択したストレージ接続は利用できなくなりました。"
+  },
+  "vfs_error_duplicate_path": {
+    "message": "選択内容に同じパスが複数含まれています。"
+  },
+  "sharing_button_add_nextcloud": {
+    "message": "Nextcloud から…"
+  },
+  "sharing_button_add_nextcloud_files": {
+    "message": "ファイルを選択"
+  },
+  "sharing_button_add_nextcloud_folder": {
+    "message": "フォルダーを選択"
+  },
+  "sharing_button_add_external": {
+    "message": "別のストレージから…"
+  },
+  "sharing_button_add_external_files": {
+    "message": "ファイルを選択"
+  },
+  "sharing_button_add_external_folder": {
+    "message": "フォルダーを選択"
+  },
+  "sharing_files_table_source": {
+    "message": "取得元"
+  },
+  "sharing_vfs_connection_heading": {
+    "message": "ストレージを選択"
+  },
+  "sharing_vfs_connection_label": {
+    "message": "ストレージ"
+  },
+  "sharing_vfs_external_unavailable": {
+    "message": "利用できる外部ストレージ接続がありません。"
+  },
+  "sharing_vfs_nextcloud_unavailable_tooltip": {
+    "message": "利用できません。まずアドオン設定で Nextcloud 接続を設定してください。"
+  },
+  "sharing_vfs_external_unavailable_tooltip": {
+    "message": "利用できません。設定 > VFS で外部プロバイダーを有効にし、少なくとも 1 つのストレージを接続してください。"
+  },
+  "sharing_vfs_scanning_source": {
+    "message": "選択内容を確認中 ($1)…"
+  },
+  "sharing_vfs_opening_picker": {
+    "message": "ファイル選択画面を開いています…"
+  },
+  "sharing_file_type_folder": {
+    "message": "フォルダー"
+  },
+  "sharing_source_nextcloud": {
+    "message": "Nextcloud ストレージ"
+  },
+  "sharing_source_external": {
+    "message": "外部ストレージ"
+  },
+  "sharing_source_local": {
+    "message": "ローカル"
+  },
+  "sharing_status_fetching_source": {
+    "message": "ファイルを読み取り中…"
+  },
+  "sharing_status_copying_source": {
+    "message": "コピー中…"
+  },
+  "sharing_status_preparing_source": {
+    "message": "準備中…"
+  },
+  "sharing_status_copying_sources": {
+    "message": "Nextcloud の項目をコピー中 ($1 / $2)…"
+  },
+  "sharing_status_fetching_sources": {
+    "message": "ストレージからファイルを読み取り中 ($1 / $2)…"
+  },
+  "vfs_setup_title": {
+    "message": "Nextcloud へのアクセス"
+  },
+  "vfs_setup_heading": {
+    "message": "Nextcloud へのアクセスを許可しますか？"
+  },
+  "vfs_setup_access_heading": {
+    "message": "読み取りおよび書き込みアクセス"
+  },
+  "vfs_setup_access_read": {
+    "message": "ファイルとフォルダーの閲覧および読み取り"
+  },
+  "vfs_setup_access_write": {
+    "message": "ファイルとフォルダーの作成および変更"
+  },
+  "vfs_setup_access_delete": {
+    "message": "ファイルとフォルダーの削除"
+  },
+  "vfs_setup_allow": {
+    "message": "アクセスを許可"
+  },
+  "vfs_setup_request": {
+    "message": "$1 がこの Nextcloud ストレージへのアクセスを要求しています。"
+  },
+  "vfs_setup_account": {
+    "message": "Nextcloud アカウント: $1"
+  },
+  "vfs_setup_invalid_request": {
+    "message": "アクセス要求は無効です。"
+  },
+  "vfs_setup_provider_unavailable": {
+    "message": "Nextcloud ストレージプロバイダーは利用できません。"
+  },
+  "vfs_setup_granting": {
+    "message": "アクセスを許可しています…"
+  },
+  "vfs_setup_failed": {
+    "message": "アクセスを許可できませんでした。"
   }
 }

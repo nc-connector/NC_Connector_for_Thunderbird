@@ -1009,5 +1009,260 @@
   },
   "sharing_status_speed_kbps": {
     "message": "$1 KB/s"
+  },
+  "options_tab_vfs": {
+    "message": "VFS"
+  },
+  "options_vfs_provider_heading": {
+    "message": "Il mio Nextcloud"
+  },
+  "options_vfs_provider_intro": {
+    "message": "Rende disponibile la connessione Nextcloud esistente ai componenti aggiuntivi Thunderbird autorizzati."
+  },
+  "options_vfs_provider_enabled_label": {
+    "message": "Attiva NC Connector come provider VFS"
+  },
+  "options_vfs_provider_tooltip_title": {
+    "message": "Accesso VFS al tuo Nextcloud"
+  },
+  "options_vfs_provider_tooltip_text": {
+    "message": "Solo i componenti aggiuntivi autorizzati esplicitamente ottengono accesso in lettura e scrittura. Le credenziali non vengono condivise."
+  },
+  "options_vfs_provider_status_label": {
+    "message": "Stato"
+  },
+  "options_vfs_provider_status_active": {
+    "message": "Provider attivo"
+  },
+  "options_vfs_provider_status_inactive": {
+    "message": "Provider inattivo"
+  },
+  "options_vfs_provider_status_connection_required": {
+    "message": "Configura prima la connessione Nextcloud"
+  },
+  "options_vfs_provider_status_error": {
+    "message": "Errore del provider"
+  },
+  "options_vfs_runtime_unavailable": {
+    "message": "I componenti VFS non sono disponibili."
+  },
+  "options_vfs_grants_heading": {
+    "message": "Componenti aggiuntivi autorizzati"
+  },
+  "options_vfs_grants_hint": {
+    "message": "Ogni autorizzazione vale per un solo componente aggiuntivo e può essere revocata qui in qualsiasi momento."
+  },
+  "options_vfs_access_read_write": {
+    "message": "Lettura e scrittura"
+  },
+  "options_vfs_revoke_button": {
+    "message": "Revoca accesso"
+  },
+  "options_vfs_no_grants": {
+    "message": "Nessun componente aggiuntivo ha ancora accesso."
+  },
+  "options_vfs_revoke_confirm": {
+    "message": "Revocare l’accesso a $1?"
+  },
+  "options_vfs_external_heading": {
+    "message": "Provider VFS esterni"
+  },
+  "options_vfs_external_intro": {
+    "message": "I file di altri provider vengono letti e poi caricati nella condivisione sul tuo Nextcloud."
+  },
+  "options_vfs_external_enabled_label": {
+    "message": "Attiva provider VFS esterni"
+  },
+  "options_vfs_external_tooltip_title": {
+    "message": "Collega altri spazi di archiviazione"
+  },
+  "options_vfs_external_tooltip_text": {
+    "message": "NC Connector rileva i provider VFS compatibili solo dopo la tua autorizzazione esplicita. I file non vengono copiati direttamente tra i provider."
+  },
+  "options_vfs_external_permission_label": {
+    "message": "Autorizzazione Thunderbird"
+  },
+  "options_vfs_external_permission_granted": {
+    "message": "Concessa"
+  },
+  "options_vfs_external_permission_required": {
+    "message": "Non concessa"
+  },
+  "options_vfs_external_permission_button": {
+    "message": "Concedi autorizzazione"
+  },
+  "options_vfs_connections_heading": {
+    "message": "Connessioni rilevate"
+  },
+  "options_vfs_connections_hint": {
+    "message": "Qui compaiono i provider VFS compatibili configurati e raggiungibili in Thunderbird."
+  },
+  "options_vfs_refresh_button": {
+    "message": "Aggiorna"
+  },
+  "options_vfs_connect_button": {
+    "message": "Connetti"
+  },
+  "options_vfs_disconnect_button": {
+    "message": "Disconnetti"
+  },
+  "options_vfs_disconnect_confirm": {
+    "message": "Disconnettere $1?"
+  },
+  "options_vfs_no_connections": {
+    "message": "Nessuna connessione VFS rilevata."
+  },
+  "options_vfs_connection_status_connected": {
+    "message": "Connesso"
+  },
+  "options_vfs_connection_status_available": {
+    "message": "Disponibile"
+  },
+  "options_vfs_connection_status_unavailable": {
+    "message": "Non disponibile"
+  },
+  "options_vfs_connection_status_error": {
+    "message": "Errore"
+  },
+  "options_vfs_loading": {
+    "message": "Caricamento…"
+  },
+  "options_vfs_action_failed": {
+    "message": "Impossibile completare l’azione VFS."
+  },
+  "vfs_error_management_permission_missing": {
+    "message": "Manca l’autorizzazione per rilevare i provider VFS esterni."
+  },
+  "vfs_error_storage_changed": {
+    "message": "La connessione allo spazio di archiviazione è cambiata. Seleziona nuovamente i file."
+  },
+  "vfs_error_file_metadata_missing": {
+    "message": "Le informazioni del file sono incomplete. Seleziona nuovamente il file."
+  },
+  "vfs_error_file_read_failed": {
+    "message": "Impossibile leggere il file dal provider di archiviazione."
+  },
+  "vfs_error_file_changed": {
+    "message": "Il file è cambiato dopo la selezione. Selezionalo nuovamente."
+  },
+  "vfs_error_invalid_path": {
+    "message": "Il percorso di archiviazione selezionato non è valido."
+  },
+  "vfs_error_root_not_selectable": {
+    "message": "La radice dello spazio di archiviazione non può essere selezionata come cartella."
+  },
+  "vfs_error_external_connection_missing": {
+    "message": "La connessione allo spazio di archiviazione selezionata non è più disponibile."
+  },
+  "vfs_error_duplicate_path": {
+    "message": "La selezione contiene lo stesso percorso più di una volta."
+  },
+  "sharing_button_add_nextcloud": {
+    "message": "Da Nextcloud…"
+  },
+  "sharing_button_add_nextcloud_files": {
+    "message": "Seleziona file"
+  },
+  "sharing_button_add_nextcloud_folder": {
+    "message": "Seleziona cartella"
+  },
+  "sharing_button_add_external": {
+    "message": "Da un altro spazio di archiviazione…"
+  },
+  "sharing_button_add_external_files": {
+    "message": "Seleziona file"
+  },
+  "sharing_button_add_external_folder": {
+    "message": "Seleziona cartella"
+  },
+  "sharing_files_table_source": {
+    "message": "Origine"
+  },
+  "sharing_vfs_connection_heading": {
+    "message": "Seleziona spazio di archiviazione"
+  },
+  "sharing_vfs_connection_label": {
+    "message": "Spazio di archiviazione"
+  },
+  "sharing_vfs_external_unavailable": {
+    "message": "Nessuna connessione a uno spazio di archiviazione esterno disponibile."
+  },
+  "sharing_vfs_nextcloud_unavailable_tooltip": {
+    "message": "Non disponibile. Configurare prima una connessione Nextcloud nelle impostazioni del componente aggiuntivo."
+  },
+  "sharing_vfs_external_unavailable_tooltip": {
+    "message": "Non disponibile. Abilitare i provider esterni in Impostazioni > VFS e connettere almeno uno spazio di archiviazione."
+  },
+  "sharing_vfs_scanning_source": {
+    "message": "Analisi della selezione ($1)…"
+  },
+  "sharing_vfs_opening_picker": {
+    "message": "Apertura del selettore di file…"
+  },
+  "sharing_file_type_folder": {
+    "message": "Cartella"
+  },
+  "sharing_source_nextcloud": {
+    "message": "Spazio Nextcloud"
+  },
+  "sharing_source_external": {
+    "message": "Spazio esterno"
+  },
+  "sharing_source_local": {
+    "message": "Locale"
+  },
+  "sharing_status_fetching_source": {
+    "message": "Lettura del file…"
+  },
+  "sharing_status_copying_source": {
+    "message": "Copia…"
+  },
+  "sharing_status_preparing_source": {
+    "message": "Preparazione…"
+  },
+  "sharing_status_copying_sources": {
+    "message": "Copia degli elementi Nextcloud ($1 / $2)…"
+  },
+  "sharing_status_fetching_sources": {
+    "message": "Lettura dei file dallo spazio di archiviazione ($1 / $2)…"
+  },
+  "vfs_setup_title": {
+    "message": "Accesso a Nextcloud"
+  },
+  "vfs_setup_heading": {
+    "message": "Consentire l’accesso a Nextcloud?"
+  },
+  "vfs_setup_access_heading": {
+    "message": "Accesso in lettura e scrittura"
+  },
+  "vfs_setup_access_read": {
+    "message": "Sfogliare e leggere file e cartelle"
+  },
+  "vfs_setup_access_write": {
+    "message": "Creare e modificare file e cartelle"
+  },
+  "vfs_setup_access_delete": {
+    "message": "Eliminare file e cartelle"
+  },
+  "vfs_setup_allow": {
+    "message": "Consenti accesso"
+  },
+  "vfs_setup_request": {
+    "message": "$1 richiede l’accesso a questo spazio di archiviazione Nextcloud."
+  },
+  "vfs_setup_account": {
+    "message": "Account Nextcloud: $1"
+  },
+  "vfs_setup_invalid_request": {
+    "message": "La richiesta di accesso non è valida."
+  },
+  "vfs_setup_provider_unavailable": {
+    "message": "Il provider di archiviazione Nextcloud non è disponibile."
+  },
+  "vfs_setup_granting": {
+    "message": "Concessione dell’accesso…"
+  },
+  "vfs_setup_failed": {
+    "message": "Impossibile concedere l’accesso."
   }
 }

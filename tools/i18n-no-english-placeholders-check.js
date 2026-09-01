@@ -24,6 +24,7 @@ const ALLOWED_IDENTICAL_KEYS_GLOBAL = new Set([
   "ui_description_help_url",
   "talk_dialog_title",
   "sharing_password_mail_notify_title",
+  "options_tab_vfs",
   "options_base_url_placeholder",
   "options_about_license_value",
   "options_sharing_attachments_offer_suffix",

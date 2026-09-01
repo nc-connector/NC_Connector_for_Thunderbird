@@ -1009,5 +1009,260 @@
   },
   "sharing_status_speed_kbps": {
     "message": "$1 KB/s"
+  },
+  "options_tab_vfs": {
+    "message": "VFS"
+  },
+  "options_vfs_provider_heading": {
+    "message": "我的 Nextcloud"
+  },
+  "options_vfs_provider_intro": {
+    "message": "將現有 Nextcloud 連線提供給已授權的 Thunderbird 擴充套件。"
+  },
+  "options_vfs_provider_enabled_label": {
+    "message": "啟用 NC Connector 作為 VFS 提供者"
+  },
+  "options_vfs_provider_tooltip_title": {
+    "message": "存取您的 Nextcloud 的 VFS"
+  },
+  "options_vfs_provider_tooltip_text": {
+    "message": "只有明確授權的擴充套件才能取得讀寫存取權。登入憑證不會被分享。"
+  },
+  "options_vfs_provider_status_label": {
+    "message": "狀態"
+  },
+  "options_vfs_provider_status_active": {
+    "message": "提供者已啟用"
+  },
+  "options_vfs_provider_status_inactive": {
+    "message": "提供者已停用"
+  },
+  "options_vfs_provider_status_connection_required": {
+    "message": "請先設定 Nextcloud 連線"
+  },
+  "options_vfs_provider_status_error": {
+    "message": "提供者錯誤"
+  },
+  "options_vfs_runtime_unavailable": {
+    "message": "VFS 元件無法使用。"
+  },
+  "options_vfs_grants_heading": {
+    "message": "已授權的擴充套件"
+  },
+  "options_vfs_grants_hint": {
+    "message": "每項授權僅適用於一個擴充套件，可隨時在此撤銷。"
+  },
+  "options_vfs_access_read_write": {
+    "message": "讀取與寫入"
+  },
+  "options_vfs_revoke_button": {
+    "message": "撤銷存取權"
+  },
+  "options_vfs_no_grants": {
+    "message": "尚無擴充套件取得存取權。"
+  },
+  "options_vfs_revoke_confirm": {
+    "message": "撤銷 $1 的存取權？"
+  },
+  "options_vfs_external_heading": {
+    "message": "外部 VFS 提供者"
+  },
+  "options_vfs_external_intro": {
+    "message": "系統會讀取其他提供者中的檔案，然後將其上傳到您的 Nextcloud 分享。"
+  },
+  "options_vfs_external_enabled_label": {
+    "message": "啟用外部 VFS 提供者"
+  },
+  "options_vfs_external_tooltip_title": {
+    "message": "連接其他儲存空間"
+  },
+  "options_vfs_external_tooltip_text": {
+    "message": "只有在您明確授權後，NC Connector 才會偵測相容的 VFS 提供者。檔案不會在提供者之間直接複製。"
+  },
+  "options_vfs_external_permission_label": {
+    "message": "Thunderbird 權限"
+  },
+  "options_vfs_external_permission_granted": {
+    "message": "已授予"
+  },
+  "options_vfs_external_permission_required": {
+    "message": "未授予"
+  },
+  "options_vfs_external_permission_button": {
+    "message": "授予權限"
+  },
+  "options_vfs_connections_heading": {
+    "message": "偵測到的連線"
+  },
+  "options_vfs_connections_hint": {
+    "message": "此處會顯示已在 Thunderbird 中設定且可連線的相容 VFS 提供者。"
+  },
+  "options_vfs_refresh_button": {
+    "message": "重新整理"
+  },
+  "options_vfs_connect_button": {
+    "message": "連線"
+  },
+  "options_vfs_disconnect_button": {
+    "message": "中斷連線"
+  },
+  "options_vfs_disconnect_confirm": {
+    "message": "中斷與 $1 的連線？"
+  },
+  "options_vfs_no_connections": {
+    "message": "未偵測到 VFS 連線。"
+  },
+  "options_vfs_connection_status_connected": {
+    "message": "已連線"
+  },
+  "options_vfs_connection_status_available": {
+    "message": "可用"
+  },
+  "options_vfs_connection_status_unavailable": {
+    "message": "無法使用"
+  },
+  "options_vfs_connection_status_error": {
+    "message": "錯誤"
+  },
+  "options_vfs_loading": {
+    "message": "正在載入…"
+  },
+  "options_vfs_action_failed": {
+    "message": "無法完成 VFS 操作。"
+  },
+  "vfs_error_management_permission_missing": {
+    "message": "缺少偵測外部 VFS 提供者所需的權限。"
+  },
+  "vfs_error_storage_changed": {
+    "message": "儲存空間連線已變更。請重新選擇檔案。"
+  },
+  "vfs_error_file_metadata_missing": {
+    "message": "檔案資訊不完整。請重新選擇該檔案。"
+  },
+  "vfs_error_file_read_failed": {
+    "message": "無法從儲存空間提供者讀取檔案。"
+  },
+  "vfs_error_file_changed": {
+    "message": "檔案在選擇後已變更。請重新選擇。"
+  },
+  "vfs_error_invalid_path": {
+    "message": "所選儲存空間路徑無效。"
+  },
+  "vfs_error_root_not_selectable": {
+    "message": "無法將儲存空間根目錄選為資料夾。"
+  },
+  "vfs_error_external_connection_missing": {
+    "message": "所選儲存空間連線已無法使用。"
+  },
+  "vfs_error_duplicate_path": {
+    "message": "選取內容多次包含相同路徑。"
+  },
+  "sharing_button_add_nextcloud": {
+    "message": "從 Nextcloud 加入…"
+  },
+  "sharing_button_add_nextcloud_files": {
+    "message": "選擇檔案"
+  },
+  "sharing_button_add_nextcloud_folder": {
+    "message": "選擇資料夾"
+  },
+  "sharing_button_add_external": {
+    "message": "從其他儲存空間加入…"
+  },
+  "sharing_button_add_external_files": {
+    "message": "選擇檔案"
+  },
+  "sharing_button_add_external_folder": {
+    "message": "選擇資料夾"
+  },
+  "sharing_files_table_source": {
+    "message": "來源"
+  },
+  "sharing_vfs_connection_heading": {
+    "message": "選擇儲存空間"
+  },
+  "sharing_vfs_connection_label": {
+    "message": "儲存空間"
+  },
+  "sharing_vfs_external_unavailable": {
+    "message": "沒有可用的外部儲存空間連線。"
+  },
+  "sharing_vfs_nextcloud_unavailable_tooltip": {
+    "message": "無法使用。請先在附加元件設定中設定 Nextcloud 連線。"
+  },
+  "sharing_vfs_external_unavailable_tooltip": {
+    "message": "無法使用。請在「設定 > VFS」中啟用外部提供者，並至少連線一個儲存空間。"
+  },
+  "sharing_vfs_scanning_source": {
+    "message": "正在掃描選取內容（$1）…"
+  },
+  "sharing_vfs_opening_picker": {
+    "message": "正在開啟檔案選擇器…"
+  },
+  "sharing_file_type_folder": {
+    "message": "資料夾"
+  },
+  "sharing_source_nextcloud": {
+    "message": "Nextcloud 儲存空間"
+  },
+  "sharing_source_external": {
+    "message": "外部儲存空間"
+  },
+  "sharing_source_local": {
+    "message": "本機儲存空間"
+  },
+  "sharing_status_fetching_source": {
+    "message": "正在讀取檔案…"
+  },
+  "sharing_status_copying_source": {
+    "message": "正在複製…"
+  },
+  "sharing_status_preparing_source": {
+    "message": "正在準備…"
+  },
+  "sharing_status_copying_sources": {
+    "message": "正在複製 Nextcloud 項目（$1 / $2）…"
+  },
+  "sharing_status_fetching_sources": {
+    "message": "正在從儲存空間讀取檔案（$1 / $2）…"
+  },
+  "vfs_setup_title": {
+    "message": "Nextcloud 存取權限"
+  },
+  "vfs_setup_heading": {
+    "message": "允許存取 Nextcloud？"
+  },
+  "vfs_setup_access_heading": {
+    "message": "讀寫權限"
+  },
+  "vfs_setup_access_read": {
+    "message": "瀏覽和讀取檔案及資料夾"
+  },
+  "vfs_setup_access_write": {
+    "message": "建立和修改檔案及資料夾"
+  },
+  "vfs_setup_access_delete": {
+    "message": "刪除檔案和資料夾"
+  },
+  "vfs_setup_allow": {
+    "message": "允許存取"
+  },
+  "vfs_setup_request": {
+    "message": "$1 正在要求存取此 Nextcloud 儲存空間。"
+  },
+  "vfs_setup_account": {
+    "message": "Nextcloud 帳戶：$1"
+  },
+  "vfs_setup_invalid_request": {
+    "message": "存取要求無效。"
+  },
+  "vfs_setup_provider_unavailable": {
+    "message": "Nextcloud 儲存空間提供者無法使用。"
+  },
+  "vfs_setup_granting": {
+    "message": "正在授予存取權限…"
+  },
+  "vfs_setup_failed": {
+    "message": "無法授予存取權限。"
   }
 }

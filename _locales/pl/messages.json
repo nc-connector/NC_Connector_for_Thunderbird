@@ -1009,5 +1009,260 @@
   },
   "sharing_status_speed_kbps": {
     "message": "$1 KB/s"
+  },
+  "options_tab_vfs": {
+    "message": "VFS"
+  },
+  "options_vfs_provider_heading": {
+    "message": "Mój Nextcloud"
+  },
+  "options_vfs_provider_intro": {
+    "message": "Udostępnia istniejące połączenie Nextcloud autoryzowanym dodatkom Thunderbirda."
+  },
+  "options_vfs_provider_enabled_label": {
+    "message": "Włącz NC Connector jako dostawcę VFS"
+  },
+  "options_vfs_provider_tooltip_title": {
+    "message": "Dostęp VFS do Nextcloud"
+  },
+  "options_vfs_provider_tooltip_text": {
+    "message": "Tylko wyraźnie autoryzowane dodatki otrzymują dostęp do odczytu i zapisu. Dane logowania nie są udostępniane."
+  },
+  "options_vfs_provider_status_label": {
+    "message": "Stan"
+  },
+  "options_vfs_provider_status_active": {
+    "message": "Dostawca aktywny"
+  },
+  "options_vfs_provider_status_inactive": {
+    "message": "Dostawca nieaktywny"
+  },
+  "options_vfs_provider_status_connection_required": {
+    "message": "Najpierw skonfiguruj połączenie z Nextcloud"
+  },
+  "options_vfs_provider_status_error": {
+    "message": "Błąd dostawcy"
+  },
+  "options_vfs_runtime_unavailable": {
+    "message": "Składniki VFS są niedostępne."
+  },
+  "options_vfs_grants_heading": {
+    "message": "Autoryzowane dodatki"
+  },
+  "options_vfs_grants_hint": {
+    "message": "Każde uprawnienie dotyczy jednego dodatku i można je tutaj w każdej chwili cofnąć."
+  },
+  "options_vfs_access_read_write": {
+    "message": "Odczyt i zapis"
+  },
+  "options_vfs_revoke_button": {
+    "message": "Cofnij dostęp"
+  },
+  "options_vfs_no_grants": {
+    "message": "Żaden dodatek nie ma jeszcze dostępu."
+  },
+  "options_vfs_revoke_confirm": {
+    "message": "Cofnąć dostęp dla $1?"
+  },
+  "options_vfs_external_heading": {
+    "message": "Zewnętrzni dostawcy VFS"
+  },
+  "options_vfs_external_intro": {
+    "message": "Pliki od innych dostawców są odczytywane, a następnie przesyłane do udziału w Nextcloud."
+  },
+  "options_vfs_external_enabled_label": {
+    "message": "Włącz zewnętrznych dostawców VFS"
+  },
+  "options_vfs_external_tooltip_title": {
+    "message": "Podłącz inne magazyny"
+  },
+  "options_vfs_external_tooltip_text": {
+    "message": "NC Connector wykrywa zgodnych dostawców VFS dopiero po wyraźnym udzieleniu zgody. Pliki nie są kopiowane bezpośrednio między dostawcami."
+  },
+  "options_vfs_external_permission_label": {
+    "message": "Uprawnienie Thunderbirda"
+  },
+  "options_vfs_external_permission_granted": {
+    "message": "Udzielono"
+  },
+  "options_vfs_external_permission_required": {
+    "message": "Nie udzielono"
+  },
+  "options_vfs_external_permission_button": {
+    "message": "Udziel uprawnienia"
+  },
+  "options_vfs_connections_heading": {
+    "message": "Wykryte połączenia"
+  },
+  "options_vfs_connections_hint": {
+    "message": "Tutaj pojawiają się zgodni dostawcy VFS skonfigurowani i dostępni w Thunderbirdzie."
+  },
+  "options_vfs_refresh_button": {
+    "message": "Odśwież"
+  },
+  "options_vfs_connect_button": {
+    "message": "Połącz"
+  },
+  "options_vfs_disconnect_button": {
+    "message": "Rozłącz"
+  },
+  "options_vfs_disconnect_confirm": {
+    "message": "Rozłączyć $1?"
+  },
+  "options_vfs_no_connections": {
+    "message": "Nie wykryto połączenia VFS."
+  },
+  "options_vfs_connection_status_connected": {
+    "message": "Połączono"
+  },
+  "options_vfs_connection_status_available": {
+    "message": "Dostępny"
+  },
+  "options_vfs_connection_status_unavailable": {
+    "message": "Niedostępny"
+  },
+  "options_vfs_connection_status_error": {
+    "message": "Błąd"
+  },
+  "options_vfs_loading": {
+    "message": "Ładowanie…"
+  },
+  "options_vfs_action_failed": {
+    "message": "Nie udało się ukończyć operacji VFS."
+  },
+  "vfs_error_management_permission_missing": {
+    "message": "Brakuje uprawnienia do wykrywania zewnętrznych dostawców VFS."
+  },
+  "vfs_error_storage_changed": {
+    "message": "Połączenie z magazynem uległo zmianie. Wybierz pliki ponownie."
+  },
+  "vfs_error_file_metadata_missing": {
+    "message": "Informacje o pliku są niepełne. Wybierz plik ponownie."
+  },
+  "vfs_error_file_read_failed": {
+    "message": "Nie udało się odczytać pliku od dostawcy magazynu."
+  },
+  "vfs_error_file_changed": {
+    "message": "Plik zmienił się po wybraniu. Wybierz go ponownie."
+  },
+  "vfs_error_invalid_path": {
+    "message": "Wybrana ścieżka w magazynie jest nieprawidłowa."
+  },
+  "vfs_error_root_not_selectable": {
+    "message": "Katalogu głównego magazynu nie można wybrać jako folderu."
+  },
+  "vfs_error_external_connection_missing": {
+    "message": "Wybrane połączenie z magazynem nie jest już dostępne."
+  },
+  "vfs_error_duplicate_path": {
+    "message": "Wybór zawiera tę samą ścieżkę więcej niż raz."
+  },
+  "sharing_button_add_nextcloud": {
+    "message": "Z Nextcloud…"
+  },
+  "sharing_button_add_nextcloud_files": {
+    "message": "Wybierz pliki"
+  },
+  "sharing_button_add_nextcloud_folder": {
+    "message": "Wybierz folder"
+  },
+  "sharing_button_add_external": {
+    "message": "Z innego magazynu…"
+  },
+  "sharing_button_add_external_files": {
+    "message": "Wybierz pliki"
+  },
+  "sharing_button_add_external_folder": {
+    "message": "Wybierz folder"
+  },
+  "sharing_files_table_source": {
+    "message": "Źródło"
+  },
+  "sharing_vfs_connection_heading": {
+    "message": "Wybierz magazyn"
+  },
+  "sharing_vfs_connection_label": {
+    "message": "Magazyn"
+  },
+  "sharing_vfs_external_unavailable": {
+    "message": "Brak dostępnego połączenia z zewnętrznym magazynem."
+  },
+  "sharing_vfs_nextcloud_unavailable_tooltip": {
+    "message": "Niedostępne. Najpierw skonfiguruj połączenie z Nextcloud w ustawieniach dodatku."
+  },
+  "sharing_vfs_external_unavailable_tooltip": {
+    "message": "Niedostępne. Włącz zewnętrznych dostawców w Ustawienia > VFS i połącz co najmniej jeden magazyn."
+  },
+  "sharing_vfs_scanning_source": {
+    "message": "Skanowanie wyboru ($1)…"
+  },
+  "sharing_vfs_opening_picker": {
+    "message": "Otwieranie wyboru plików…"
+  },
+  "sharing_file_type_folder": {
+    "message": "Katalog"
+  },
+  "sharing_source_nextcloud": {
+    "message": "Magazyn Nextcloud"
+  },
+  "sharing_source_external": {
+    "message": "Magazyn zewnętrzny"
+  },
+  "sharing_source_local": {
+    "message": "Lokalne"
+  },
+  "sharing_status_fetching_source": {
+    "message": "Odczytywanie pliku…"
+  },
+  "sharing_status_copying_source": {
+    "message": "Kopiowanie…"
+  },
+  "sharing_status_preparing_source": {
+    "message": "Przygotowywanie…"
+  },
+  "sharing_status_copying_sources": {
+    "message": "Kopiowanie elementów Nextcloud ($1 / $2)…"
+  },
+  "sharing_status_fetching_sources": {
+    "message": "Odczytywanie plików z magazynu ($1 / $2)…"
+  },
+  "vfs_setup_title": {
+    "message": "Dostęp do Nextcloud"
+  },
+  "vfs_setup_heading": {
+    "message": "Zezwolić na dostęp do Nextcloud?"
+  },
+  "vfs_setup_access_heading": {
+    "message": "Dostęp do odczytu i zapisu"
+  },
+  "vfs_setup_access_read": {
+    "message": "Przeglądanie i odczytywanie plików oraz folderów"
+  },
+  "vfs_setup_access_write": {
+    "message": "Tworzenie i modyfikowanie plików oraz folderów"
+  },
+  "vfs_setup_access_delete": {
+    "message": "Usuwanie plików i folderów"
+  },
+  "vfs_setup_allow": {
+    "message": "Zezwól na dostęp"
+  },
+  "vfs_setup_request": {
+    "message": "$1 prosi o dostęp do tego magazynu Nextcloud."
+  },
+  "vfs_setup_account": {
+    "message": "Konto Nextcloud: $1"
+  },
+  "vfs_setup_invalid_request": {
+    "message": "Żądanie dostępu jest nieprawidłowe."
+  },
+  "vfs_setup_provider_unavailable": {
+    "message": "Dostawca magazynu Nextcloud jest niedostępny."
+  },
+  "vfs_setup_granting": {
+    "message": "Udzielanie dostępu…"
+  },
+  "vfs_setup_failed": {
+    "message": "Nie udało się udzielić dostępu."
   }
 }

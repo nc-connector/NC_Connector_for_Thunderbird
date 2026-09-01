@@ -1009,5 +1009,260 @@
   },
   "sharing_status_speed_kbps": {
     "message": "$1 KB/s"
+  },
+  "options_tab_vfs": {
+    "message": "VFS"
+  },
+  "options_vfs_provider_heading": {
+    "message": "Můj Nextcloud"
+  },
+  "options_vfs_provider_intro": {
+    "message": "Zpřístupní stávající připojení Nextcloud autorizovaným doplňkům Thunderbirdu."
+  },
+  "options_vfs_provider_enabled_label": {
+    "message": "Zapnout NC Connector jako poskytovatele VFS"
+  },
+  "options_vfs_provider_tooltip_title": {
+    "message": "Přístup VFS k vašemu Nextcloudu"
+  },
+  "options_vfs_provider_tooltip_text": {
+    "message": "Pouze výslovně autorizované doplňky získají přístup pro čtení a zápis. Přihlašovací údaje se nesdílejí."
+  },
+  "options_vfs_provider_status_label": {
+    "message": "Stav"
+  },
+  "options_vfs_provider_status_active": {
+    "message": "Poskytovatel je aktivní"
+  },
+  "options_vfs_provider_status_inactive": {
+    "message": "Poskytovatel je neaktivní"
+  },
+  "options_vfs_provider_status_connection_required": {
+    "message": "Nejprve nastavte připojení k Nextcloudu"
+  },
+  "options_vfs_provider_status_error": {
+    "message": "Chyba poskytovatele"
+  },
+  "options_vfs_runtime_unavailable": {
+    "message": "Komponenty VFS nejsou dostupné."
+  },
+  "options_vfs_grants_heading": {
+    "message": "Autorizované doplňky"
+  },
+  "options_vfs_grants_hint": {
+    "message": "Každé oprávnění platí pro jeden doplněk a lze je zde kdykoli odvolat."
+  },
+  "options_vfs_access_read_write": {
+    "message": "Čtení a zápis"
+  },
+  "options_vfs_revoke_button": {
+    "message": "Odvolat přístup"
+  },
+  "options_vfs_no_grants": {
+    "message": "Zatím nemá přístup žádný doplněk."
+  },
+  "options_vfs_revoke_confirm": {
+    "message": "Odvolat přístup pro $1?"
+  },
+  "options_vfs_external_heading": {
+    "message": "Externí poskytovatelé VFS"
+  },
+  "options_vfs_external_intro": {
+    "message": "Soubory od jiných poskytovatelů se načtou a poté nahrají do sdílení ve vašem Nextcloudu."
+  },
+  "options_vfs_external_enabled_label": {
+    "message": "Zapnout externí poskytovatele VFS"
+  },
+  "options_vfs_external_tooltip_title": {
+    "message": "Připojit jiná úložiště"
+  },
+  "options_vfs_external_tooltip_text": {
+    "message": "NC Connector rozpozná kompatibilní poskytovatele VFS až po vašem výslovném povolení. Soubory se nekopírují přímo mezi poskytovateli."
+  },
+  "options_vfs_external_permission_label": {
+    "message": "Oprávnění Thunderbirdu"
+  },
+  "options_vfs_external_permission_granted": {
+    "message": "Uděleno"
+  },
+  "options_vfs_external_permission_required": {
+    "message": "Neuděleno"
+  },
+  "options_vfs_external_permission_button": {
+    "message": "Udělit oprávnění"
+  },
+  "options_vfs_connections_heading": {
+    "message": "Zjištěná připojení"
+  },
+  "options_vfs_connections_hint": {
+    "message": "Zde se zobrazí kompatibilní poskytovatelé VFS, kteří jsou v Thunderbirdu nastaveni a dostupní."
+  },
+  "options_vfs_refresh_button": {
+    "message": "Aktualizovat"
+  },
+  "options_vfs_connect_button": {
+    "message": "Připojit"
+  },
+  "options_vfs_disconnect_button": {
+    "message": "Odpojit"
+  },
+  "options_vfs_disconnect_confirm": {
+    "message": "Odpojit $1?"
+  },
+  "options_vfs_no_connections": {
+    "message": "Nebylo zjištěno žádné připojení VFS."
+  },
+  "options_vfs_connection_status_connected": {
+    "message": "Připojeno"
+  },
+  "options_vfs_connection_status_available": {
+    "message": "Dostupné"
+  },
+  "options_vfs_connection_status_unavailable": {
+    "message": "Nedostupné"
+  },
+  "options_vfs_connection_status_error": {
+    "message": "Chyba"
+  },
+  "options_vfs_loading": {
+    "message": "Načítání…"
+  },
+  "options_vfs_action_failed": {
+    "message": "Akci VFS se nepodařilo dokončit."
+  },
+  "vfs_error_management_permission_missing": {
+    "message": "Chybí oprávnění k rozpoznání externích poskytovatelů VFS."
+  },
+  "vfs_error_storage_changed": {
+    "message": "Připojení k úložišti se změnilo. Vyberte soubory znovu."
+  },
+  "vfs_error_file_metadata_missing": {
+    "message": "Údaje o souboru nejsou úplné. Vyberte soubor znovu."
+  },
+  "vfs_error_file_read_failed": {
+    "message": "Soubor se nepodařilo přečíst z úložiště."
+  },
+  "vfs_error_file_changed": {
+    "message": "Soubor se po výběru změnil. Vyberte jej znovu."
+  },
+  "vfs_error_invalid_path": {
+    "message": "Vybraná cesta v úložišti je neplatná."
+  },
+  "vfs_error_root_not_selectable": {
+    "message": "Kořen úložiště nelze vybrat jako složku."
+  },
+  "vfs_error_external_connection_missing": {
+    "message": "Vybrané připojení k úložišti již není dostupné."
+  },
+  "vfs_error_duplicate_path": {
+    "message": "Výběr obsahuje stejnou cestu vícekrát."
+  },
+  "sharing_button_add_nextcloud": {
+    "message": "Z Nextcloudu…"
+  },
+  "sharing_button_add_nextcloud_files": {
+    "message": "Vybrat soubory"
+  },
+  "sharing_button_add_nextcloud_folder": {
+    "message": "Vybrat složku"
+  },
+  "sharing_button_add_external": {
+    "message": "Z jiného úložiště…"
+  },
+  "sharing_button_add_external_files": {
+    "message": "Vybrat soubory"
+  },
+  "sharing_button_add_external_folder": {
+    "message": "Vybrat složku"
+  },
+  "sharing_files_table_source": {
+    "message": "Zdroj"
+  },
+  "sharing_vfs_connection_heading": {
+    "message": "Vybrat úložiště"
+  },
+  "sharing_vfs_connection_label": {
+    "message": "Úložiště"
+  },
+  "sharing_vfs_external_unavailable": {
+    "message": "Není dostupné žádné externí připojení k úložišti."
+  },
+  "sharing_vfs_nextcloud_unavailable_tooltip": {
+    "message": "Není k dispozici. Nejprve nastavte připojení k Nextcloudu v nastavení doplňku."
+  },
+  "sharing_vfs_external_unavailable_tooltip": {
+    "message": "Není k dispozici. V Nastavení > VFS povolte externí poskytovatele a připojte alespoň jedno úložiště."
+  },
+  "sharing_vfs_scanning_source": {
+    "message": "Procházení výběru ($1)…"
+  },
+  "sharing_vfs_opening_picker": {
+    "message": "Otevírání výběru souborů…"
+  },
+  "sharing_file_type_folder": {
+    "message": "Složka"
+  },
+  "sharing_source_nextcloud": {
+    "message": "Úložiště Nextcloud"
+  },
+  "sharing_source_external": {
+    "message": "Externí úložiště"
+  },
+  "sharing_source_local": {
+    "message": "Místní"
+  },
+  "sharing_status_fetching_source": {
+    "message": "Načítání souboru…"
+  },
+  "sharing_status_copying_source": {
+    "message": "Kopírování…"
+  },
+  "sharing_status_preparing_source": {
+    "message": "Příprava…"
+  },
+  "sharing_status_copying_sources": {
+    "message": "Kopírování položek Nextcloudu ($1 / $2)…"
+  },
+  "sharing_status_fetching_sources": {
+    "message": "Načítání souborů z úložiště ($1 / $2)…"
+  },
+  "vfs_setup_title": {
+    "message": "Přístup k Nextcloudu"
+  },
+  "vfs_setup_heading": {
+    "message": "Povolit přístup k Nextcloudu?"
+  },
+  "vfs_setup_access_heading": {
+    "message": "Přístup pro čtení a zápis"
+  },
+  "vfs_setup_access_read": {
+    "message": "Procházet a číst soubory a složky"
+  },
+  "vfs_setup_access_write": {
+    "message": "Vytvářet a upravovat soubory a složky"
+  },
+  "vfs_setup_access_delete": {
+    "message": "Odstraňovat soubory a složky"
+  },
+  "vfs_setup_allow": {
+    "message": "Povolit přístup"
+  },
+  "vfs_setup_request": {
+    "message": "$1 žádá o přístup k tomuto úložišti Nextcloud."
+  },
+  "vfs_setup_account": {
+    "message": "Účet Nextcloud: $1"
+  },
+  "vfs_setup_invalid_request": {
+    "message": "Žádost o přístup je neplatná."
+  },
+  "vfs_setup_provider_unavailable": {
+    "message": "Poskytovatel úložiště Nextcloud není dostupný."
+  },
+  "vfs_setup_granting": {
+    "message": "Udělování přístupu…"
+  },
+  "vfs_setup_failed": {
+    "message": "Přístup se nepodařilo udělit."
   }
 }

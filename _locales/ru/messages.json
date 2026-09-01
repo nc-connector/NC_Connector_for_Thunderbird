@@ -1009,5 +1009,260 @@
   },
   "sharing_status_speed_kbps": {
     "message": "$1 KB/s"
+  },
+  "options_tab_vfs": {
+    "message": "VFS"
+  },
+  "options_vfs_provider_heading": {
+    "message": "Мой Nextcloud"
+  },
+  "options_vfs_provider_intro": {
+    "message": "Предоставляет настроенное подключение Nextcloud авторизованным дополнениям Thunderbird."
+  },
+  "options_vfs_provider_enabled_label": {
+    "message": "Включить NC Connector как провайдер VFS"
+  },
+  "options_vfs_provider_tooltip_title": {
+    "message": "Доступ VFS к вашему Nextcloud"
+  },
+  "options_vfs_provider_tooltip_text": {
+    "message": "Доступ на чтение и запись получают только явно авторизованные дополнения. Учетные данные не передаются."
+  },
+  "options_vfs_provider_status_label": {
+    "message": "Состояние"
+  },
+  "options_vfs_provider_status_active": {
+    "message": "Провайдер включен"
+  },
+  "options_vfs_provider_status_inactive": {
+    "message": "Провайдер выключен"
+  },
+  "options_vfs_provider_status_connection_required": {
+    "message": "Сначала настройте подключение к Nextcloud"
+  },
+  "options_vfs_provider_status_error": {
+    "message": "Ошибка провайдера"
+  },
+  "options_vfs_runtime_unavailable": {
+    "message": "Компоненты VFS недоступны."
+  },
+  "options_vfs_grants_heading": {
+    "message": "Авторизованные дополнения"
+  },
+  "options_vfs_grants_hint": {
+    "message": "Каждое разрешение относится к одному дополнению и может быть отозвано здесь в любое время."
+  },
+  "options_vfs_access_read_write": {
+    "message": "Чтение и запись"
+  },
+  "options_vfs_revoke_button": {
+    "message": "Отозвать доступ"
+  },
+  "options_vfs_no_grants": {
+    "message": "Ни одно дополнение пока не имеет доступа."
+  },
+  "options_vfs_revoke_confirm": {
+    "message": "Отозвать доступ для $1?"
+  },
+  "options_vfs_external_heading": {
+    "message": "Внешние провайдеры VFS"
+  },
+  "options_vfs_external_intro": {
+    "message": "Файлы других провайдеров считываются, а затем загружаются в общую папку на вашем Nextcloud."
+  },
+  "options_vfs_external_enabled_label": {
+    "message": "Включить внешние провайдеры VFS"
+  },
+  "options_vfs_external_tooltip_title": {
+    "message": "Подключить другие хранилища"
+  },
+  "options_vfs_external_tooltip_text": {
+    "message": "NC Connector обнаруживает совместимые провайдеры VFS только после вашего явного разрешения. Файлы не копируются напрямую между провайдерами."
+  },
+  "options_vfs_external_permission_label": {
+    "message": "Разрешение Thunderbird"
+  },
+  "options_vfs_external_permission_granted": {
+    "message": "Предоставлено"
+  },
+  "options_vfs_external_permission_required": {
+    "message": "Не предоставлено"
+  },
+  "options_vfs_external_permission_button": {
+    "message": "Предоставить разрешение"
+  },
+  "options_vfs_connections_heading": {
+    "message": "Обнаруженные подключения"
+  },
+  "options_vfs_connections_hint": {
+    "message": "Здесь отображаются совместимые провайдеры VFS, настроенные и доступные в Thunderbird."
+  },
+  "options_vfs_refresh_button": {
+    "message": "Обновить"
+  },
+  "options_vfs_connect_button": {
+    "message": "Подключить"
+  },
+  "options_vfs_disconnect_button": {
+    "message": "Отключить"
+  },
+  "options_vfs_disconnect_confirm": {
+    "message": "Отключить $1?"
+  },
+  "options_vfs_no_connections": {
+    "message": "Подключения VFS не обнаружены."
+  },
+  "options_vfs_connection_status_connected": {
+    "message": "Подключено"
+  },
+  "options_vfs_connection_status_available": {
+    "message": "Доступно"
+  },
+  "options_vfs_connection_status_unavailable": {
+    "message": "Недоступно"
+  },
+  "options_vfs_connection_status_error": {
+    "message": "Ошибка"
+  },
+  "options_vfs_loading": {
+    "message": "Загрузка…"
+  },
+  "options_vfs_action_failed": {
+    "message": "Не удалось выполнить операцию VFS."
+  },
+  "vfs_error_management_permission_missing": {
+    "message": "Отсутствует разрешение на обнаружение внешних провайдеров VFS."
+  },
+  "vfs_error_storage_changed": {
+    "message": "Подключение к хранилищу изменилось. Выберите файлы заново."
+  },
+  "vfs_error_file_metadata_missing": {
+    "message": "Сведения о файле неполны. Выберите файл заново."
+  },
+  "vfs_error_file_read_failed": {
+    "message": "Не удалось прочитать файл из хранилища."
+  },
+  "vfs_error_file_changed": {
+    "message": "Файл изменился после выбора. Выберите его заново."
+  },
+  "vfs_error_invalid_path": {
+    "message": "Выбранный путь в хранилище недействителен."
+  },
+  "vfs_error_root_not_selectable": {
+    "message": "Корень хранилища нельзя выбрать как папку."
+  },
+  "vfs_error_external_connection_missing": {
+    "message": "Выбранное подключение к хранилищу больше недоступно."
+  },
+  "vfs_error_duplicate_path": {
+    "message": "В выбранных данных один и тот же путь указан несколько раз."
+  },
+  "sharing_button_add_nextcloud": {
+    "message": "Из Nextcloud…"
+  },
+  "sharing_button_add_nextcloud_files": {
+    "message": "Выбрать файлы"
+  },
+  "sharing_button_add_nextcloud_folder": {
+    "message": "Выбрать папку"
+  },
+  "sharing_button_add_external": {
+    "message": "Из другого хранилища…"
+  },
+  "sharing_button_add_external_files": {
+    "message": "Выбрать файлы"
+  },
+  "sharing_button_add_external_folder": {
+    "message": "Выбрать папку"
+  },
+  "sharing_files_table_source": {
+    "message": "Источник"
+  },
+  "sharing_vfs_connection_heading": {
+    "message": "Выбрать хранилище"
+  },
+  "sharing_vfs_connection_label": {
+    "message": "Хранилище"
+  },
+  "sharing_vfs_external_unavailable": {
+    "message": "Нет доступных подключений к внешнему хранилищу."
+  },
+  "sharing_vfs_nextcloud_unavailable_tooltip": {
+    "message": "Недоступно. Сначала настройте подключение к Nextcloud в настройках дополнения."
+  },
+  "sharing_vfs_external_unavailable_tooltip": {
+    "message": "Недоступно. Включите внешних провайдеров в разделе «Настройки > VFS» и подключите хотя бы одно хранилище."
+  },
+  "sharing_vfs_scanning_source": {
+    "message": "Проверка выбранных данных ($1)…"
+  },
+  "sharing_vfs_opening_picker": {
+    "message": "Открытие окна выбора файлов…"
+  },
+  "sharing_file_type_folder": {
+    "message": "Папка"
+  },
+  "sharing_source_nextcloud": {
+    "message": "Хранилище Nextcloud"
+  },
+  "sharing_source_external": {
+    "message": "Внешнее хранилище"
+  },
+  "sharing_source_local": {
+    "message": "Локальное хранилище"
+  },
+  "sharing_status_fetching_source": {
+    "message": "Чтение файла…"
+  },
+  "sharing_status_copying_source": {
+    "message": "Копирование…"
+  },
+  "sharing_status_preparing_source": {
+    "message": "Подготовка…"
+  },
+  "sharing_status_copying_sources": {
+    "message": "Копирование объектов Nextcloud ($1 / $2)…"
+  },
+  "sharing_status_fetching_sources": {
+    "message": "Чтение файлов из хранилища ($1 / $2)…"
+  },
+  "vfs_setup_title": {
+    "message": "Доступ к Nextcloud"
+  },
+  "vfs_setup_heading": {
+    "message": "Разрешить доступ к Nextcloud?"
+  },
+  "vfs_setup_access_heading": {
+    "message": "Доступ для чтения и записи"
+  },
+  "vfs_setup_access_read": {
+    "message": "Просмотр и чтение файлов и папок"
+  },
+  "vfs_setup_access_write": {
+    "message": "Создание и изменение файлов и папок"
+  },
+  "vfs_setup_access_delete": {
+    "message": "Удаление файлов и папок"
+  },
+  "vfs_setup_allow": {
+    "message": "Разрешить доступ"
+  },
+  "vfs_setup_request": {
+    "message": "$1 запрашивает доступ к этому хранилищу Nextcloud."
+  },
+  "vfs_setup_account": {
+    "message": "Учётная запись Nextcloud: $1"
+  },
+  "vfs_setup_invalid_request": {
+    "message": "Запрос доступа недействителен."
+  },
+  "vfs_setup_provider_unavailable": {
+    "message": "Провайдер хранилища Nextcloud недоступен."
+  },
+  "vfs_setup_granting": {
+    "message": "Предоставление доступа…"
+  },
+  "vfs_setup_failed": {
+    "message": "Не удалось предоставить доступ."
   }
 }
