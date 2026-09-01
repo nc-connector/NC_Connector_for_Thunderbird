@@ -1486,7 +1486,7 @@ async function save(){
     [EMAIL_SIGNATURE_KEYS.onReply]: emailSignatureOnReply,
     [EMAIL_SIGNATURE_KEYS.onForward]: emailSignatureOnForward
   });
-  await globalThis.NCVfsOptions?.save?.();
+  const vfsReloadRequired = (await globalThis.NCVfsOptions?.save?.()) === true;
   emailSignatureStoredState = {
     hasOnCompose: true,
     hasOnReply: true,
@@ -1496,17 +1496,23 @@ async function save(){
   await refreshBackendPolicyStatus();
   await refreshTalkSystemAddressbookState({ forceRefresh: true });
   showStatus(i18n("options_status_saved"));
+  return vfsReloadRequired;
 }
 
 if (saveButton){
   saveButton.addEventListener("click", async () => {
+    let vfsReloadRequired = false;
     try{
-      await save();
+      vfsReloadRequired = await save();
     }catch(error){
       globalThis.NCLogContext.safeConsoleError(OPTIONS_LOG_PREFIX, "save failed", error);
       showStatus(error?.message || i18n("options_status_save_failed"), true);
     }finally{
       updateAuthModeUI();
+    }
+    if (vfsReloadRequired){
+      // External-provider discovery starts with the background; reload after all save-time messages have settled.
+      browser.runtime.reload();
     }
   });
 }

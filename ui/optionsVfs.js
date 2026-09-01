@@ -113,11 +113,16 @@
     };
   }
 
-  async function requestState(type, payload){
+  async function request(type, payload){
     const response = await browser.runtime.sendMessage({ type, payload });
     if (!response?.ok){
       throw new Error(normalizeText(response?.error) || "vfs_options_request_failed");
     }
+    return response;
+  }
+
+  async function requestState(type, payload){
+    const response = await request(type, payload);
     return normalizeState(response.state);
   }
 
@@ -405,11 +410,13 @@
     actionPending = true;
     updateControls();
     try{
-      const state = await requestState(MESSAGE_TYPES.updateSettings, {
+      const response = await request(MESSAGE_TYPES.updateSettings, {
         providerEnabled: providerEnabledInput?.checked === true,
         externalProvidersEnabled: externalEnabledInput?.checked === true
       });
+      const state = normalizeState(response.state);
       renderState(state);
+      return response.reloadRequired === true;
     }catch(error){
       global.NCLogContext.safeConsoleError(LOG_PREFIX, "VFS options settings update failed", error);
       showNotice("options_vfs_action_failed");

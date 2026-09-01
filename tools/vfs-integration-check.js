@@ -909,6 +909,22 @@ function checkManifestAndReviewSurface(){
       && /if \(state\.skipNextVfsFocusRefresh\)\{\s*state\.skipNextVfsFocusRefresh = false;\s*return;\s*\}/s.test(wizardRuntime),
     "Returning from a VFS picker must not refresh while its runtime actor is closing"
   );
+  const backgroundRouter = readText("modules/bgRouter.js");
+  const updateSettingsStart = backgroundRouter.indexOf('msg.type === "vfs:options:updateSettings"');
+  const updateSettingsEnd = backgroundRouter.indexOf('msg.type === "vfs:options:requestExternalProviderPermission"');
+  const updateSettingsBlock = backgroundRouter.slice(updateSettingsStart, updateSettingsEnd);
+  const optionsVfsRuntime = readText("ui/optionsVfs.js");
+  const optionsRuntime = readText("options.js");
+  assert(
+    updateSettingsStart >= 0
+      && updateSettingsEnd > updateSettingsStart
+      && updateSettingsBlock.includes("reloadRequired: external.reloadRequired === true")
+      && !updateSettingsBlock.includes("browser.runtime.reload")
+      && optionsVfsRuntime.includes("return response.reloadRequired === true;")
+      && /await refreshTalkSystemAddressbookState\(\{ forceRefresh: true \}\);\s*showStatus\([^\n]+\);\s*return vfsReloadRequired;/s.test(optionsRuntime)
+      && /finally\{\s*updateAuthModeUI\(\);\s*\}\s*if \(vfsReloadRequired\)\{[\s\S]*?browser\.runtime\.reload\(\);/s.test(optionsRuntime),
+    "VFS setting changes must reload only after the complete options save has settled"
+  );
   const sourceRuntime = readText("modules/fileLinkSources.js");
   assert(!sourceRuntime.includes("storage.local"), "External File content must not be staged in extension storage");
   assert(!sourceRuntime.includes("indexedDB"), "External File content must not be staged in IndexedDB");

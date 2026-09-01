@@ -169,10 +169,11 @@ browser.runtime.onMessage.addListener((msg, sender) => {
         );
         await NCVfsProviderRuntime.setEnabled(msg.payload?.providerEnabled === true);
         const state = await getVfsOptionsState();
-        if (external.reloadRequired){
-          setTimeout(() => browser.runtime.reload(), 250);
-        }
-        return { ok:true, state };
+        return {
+          ok:true,
+          state,
+          reloadRequired: external.reloadRequired === true
+        };
       }catch(error){
         return messageError("vfs:options:updateSettings", error);
       }
