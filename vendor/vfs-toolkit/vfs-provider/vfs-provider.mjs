@@ -335,13 +335,18 @@ export class VfsProviderImplementation {
    */
   reportProgress(requestId, percent, currentFile, totalFiles) {
     const port = this.#requestPorts.get(requestId);
-    port.postMessage({
-      type: 'vfs-progress',
-      requestId,
-      percent,
-      currentFile,
-      totalFiles,
-    });
+    if (!port) return;
+    try {
+      port.postMessage({
+        type: 'vfs-progress',
+        requestId,
+        percent,
+        currentFile,
+        totalFiles,
+      });
+    } catch {
+      // The disconnect listener removes stale request ownership.
+    }
   }
 
   /**
@@ -517,6 +522,11 @@ export class VfsProviderImplementation {
       this.#activePorts.set(port, consumerId);
       port.onDisconnect.addListener(() => {
         this.#activePorts.delete(port);
+        for (const [requestId, requestPort] of this.#requestPorts) {
+          if (requestPort !== port) continue;
+          this.#requestPorts.delete(requestId);
+          Promise.resolve(this.onCancel(requestId)).catch(() => { });
+        }
         for (const [token, entry] of this.#pendingSetups) {
           if (entry.port !== port) continue;
           this.#pendingSetups.delete(token);
@@ -531,16 +541,58 @@ export class VfsProviderImplementation {
       });
 
       port.onMessage.addListener(async msg => {
+        if (!msg || typeof msg !== 'object') return;
         const { requestId, cmd, ...args } = msg;
 
+        // API 1.3 clients originally sent cancel without a request ID of its own.
+        // Keep accepting that wire format while authorizing its target by port.
+        if (cmd === 'cancel' && (typeof requestId !== 'string' || !requestId)) {
+          try {
+            await handleCommand(cmd, args, '', consumerId, port);
+          } catch { }
+          return;
+        }
+        if (typeof requestId !== 'string' || !requestId) {
+          try {
+            port.postMessage({
+              requestId: null,
+              ok: false,
+              error: 'Invalid request ID',
+              errorCode: 'E:AUTH',
+            });
+          } catch { }
+          return;
+        }
+        if (this.#requestPorts.has(requestId)) {
+          try {
+            port.postMessage({
+              requestId,
+              ok: false,
+              error: 'Duplicate request ID',
+              errorCode: 'E:AUTH',
+            });
+          } catch { }
+          return;
+        }
         this.#requestPorts.set(requestId, port);
+        let response;
         try {
           const result = await handleCommand(cmd, args, requestId, consumerId, port);
-          port.postMessage({ requestId, ok: true, result });
+          response = { requestId, ok: true, result };
         } catch (err) {
-          port.postMessage({ requestId, ok: false, error: err.message, errorCode: err.code, errorDetails: err.details });
+          response = {
+            requestId,
+            ok: false,
+            error: err.message,
+            errorCode: err.code,
+            errorDetails: err.details,
+          };
+        } finally {
+          this.#requestPorts.delete(requestId);
         }
-        this.#requestPorts.delete(requestId);
+        try {
+          port.postMessage(response);
+        } catch { }
       });
     };
     this.#connectionPortHandler = connectionPortHandler;
@@ -583,6 +635,13 @@ export class VfsProviderImplementation {
       switch (cmd) {
 
         case 'cancel': {
+          const targetPort = this.#requestPorts.get(args.canceledRequestId);
+          if (!targetPort) return;
+          if (targetPort !== originPort) {
+            const error = new Error('Storage access denied');
+            error.code = 'E:AUTH';
+            throw error;
+          }
           await this.onCancel(args.canceledRequestId);
           return;
         }

@@ -567,13 +567,53 @@ function _getProviderPort(providerId) {
   return entry;
 }
 
-async function _providerSend(providerId, cmd, args = {}, onProgress) {
+async function _providerSend(providerId, cmd, args = {}, onProgress, signal = null) {
+  if (signal?.aborted) throw new DOMException('Cancelled', 'AbortError');
   const { port, pending } = _getProviderPort(providerId);
   const requestId = crypto.randomUUID();
   if (onProgress) _progressCallbacks.set(requestId, onProgress);
   return new Promise((resolve, reject) => {
-    pending.set(requestId, { resolve, reject });
-    port.postMessage({ requestId, cmd, ...args });
+    const cleanup = () => {
+      signal?.removeEventListener('abort', abortHandler);
+      _progressCallbacks.delete(requestId);
+    };
+    const abortHandler = () => {
+      if (!pending.has(requestId)) return;
+      pending.delete(requestId);
+      cleanup();
+      try {
+        port.postMessage({
+          requestId: crypto.randomUUID(),
+          cmd: 'cancel',
+          canceledRequestId: requestId,
+        });
+      } catch {
+        // Reject locally even if the provider disconnected before the notice.
+      }
+      reject(new DOMException('Cancelled', 'AbortError'));
+    };
+    pending.set(requestId, {
+      resolve(value) {
+        cleanup();
+        resolve(value);
+      },
+      reject(error) {
+        cleanup();
+        reject(error);
+      },
+    });
+    signal?.addEventListener('abort', abortHandler, { once: true });
+    if (signal?.aborted) {
+      abortHandler();
+      return;
+    }
+    try {
+      port.postMessage({ requestId, cmd, ...args });
+    } catch (error) {
+      pending.delete(requestId);
+      cleanup();
+      reject(error);
+    }
   });
 }
 
@@ -592,7 +632,15 @@ export function abort(storageRef) {
   if (!entry) return;
   const { port, pending } = entry;
   for (const [requestId, { reject }] of pending) {
-    port.postMessage({ cmd: 'cancel', canceledRequestId: requestId });
+    try {
+      port.postMessage({
+        requestId: crypto.randomUUID(),
+        cmd: 'cancel',
+        canceledRequestId: requestId,
+      });
+    } catch {
+      // The local rejection below is authoritative for the caller.
+    }
     _progressCallbacks.delete(requestId);
     reject(new DOMException('Cancelled', 'AbortError'));
   }
@@ -618,14 +666,15 @@ export function abort(storageRef) {
  * @param {Entry} [entry={path:'/'}]
  * @param {object} [options={}]
  * @param {Function} [options.onProgress]
+ * @param {AbortSignal} [options.signal]
  * @returns {Promise<Entry[]>} - Each item includes `name`, `kind`, `storageRef`, and (for files) `size` and `lastModified`.
  */
 export async function list(entry = {}, options = {}) {
   const { path = '/', storageRef = null } = entry;
   const { providerId, storageId } = storageRef ?? {};
-  const { onProgress } = options;
+  const { onProgress, signal = null } = options;
   const items = storageRef
-    ? await _providerSend(providerId, 'list', { path, storageId }, onProgress)
+    ? await _providerSend(providerId, 'list', { path, storageId }, onProgress, signal)
     : await opfsProvider.list(path, onProgress);
   return items.map(item => ({ ...item, storageRef }));
 }
@@ -636,16 +685,17 @@ export async function list(entry = {}, options = {}) {
  * @param {Entry} entry
  * @param {object} [options={}]
  * @param {Function} [options.onProgress]
+ * @param {AbortSignal} [options.signal]
  * @returns {Promise<File>}
  */
 export async function readFile(entry, options = {}) {
   const { path, storageRef = null } = entry;
   const { providerId, storageId } = storageRef ?? {};
-  const { onProgress } = options;
+  const { onProgress, signal = null } = options;
   if (!storageRef) {
     return opfsProvider.readFile(path, onProgress);
   }
-  return _providerSend(providerId, 'readFile', { path, storageId }, onProgress);
+  return _providerSend(providerId, 'readFile', { path, storageId }, onProgress, signal);
 }
 
 /**
@@ -950,13 +1000,14 @@ export async function getStorageUsage(storageRef = null) {
  *   Has no effect on external providers, which use their own reported name.
  * @param {boolean} [options.multiple=false] - Allow selecting multiple files. When false
  *   (default), the returned array always contains exactly one entry.
+ * @param {AbortSignal} [options.signal] - Closes and rejects only this picker when aborted.
  * @returns {Promise<Entry[]|null>} Array of `Entry` objects (each with `path` and `storageRef`), or null if cancelled.
  */
 export function showSelectFilePicker(options = {}) {
   // mode=open is the default, no extra param needed
   return new Promise((resolve, reject) => {
     const sessionId = crypto.randomUUID();
-    const { types = null, excludeAcceptAllOption = false, width = 800, height = 600, storageRef = null, lockStorage = null, multiple = false, id = null, startIn = null, opfsStorageName = null, buttons = null } = options;
+    const { types = null, excludeAcceptAllOption = false, width = 800, height = 600, storageRef = null, lockStorage = null, multiple = false, id = null, startIn = null, opfsStorageName = null, buttons = null, signal = null } = options;
 
     pendingPickers.set(sessionId, { resolve, reject, defaultValue: [] });
 
@@ -973,7 +1024,7 @@ export function showSelectFilePicker(options = {}) {
     if (opfsStorageName) pickerParams.set('opfsStorageName', opfsStorageName);
     if (buttons?.length) pickerParams.set('buttons', JSON.stringify(buttons));
 
-    _openPopupWindow(sessionId, pickerParams, width, height).catch(reject);
+    _openPopupWindow(sessionId, pickerParams, width, height, signal).catch(reject);
   });
 }
 
@@ -1093,13 +1144,14 @@ export function showSaveFilePicker(options = {}) {
  * @param {string} [options.opfsStorageName]
  * @param {number} [options.width=800]
  * @param {number} [options.height=600]
+ * @param {AbortSignal} [options.signal] - Closes and rejects only this picker when aborted.
  * @returns {Promise<Entry|null>}
  */
 export function showDirectoryPicker(options = {}) {
   return new Promise((resolve, reject) => {
     const sessionId = crypto.randomUUID();
     const { width = 800, height = 600, storageRef = null, lockStorage = null, id = null,
-      startIn = null, opfsStorageName = null, buttons = null } = options;
+      startIn = null, opfsStorageName = null, buttons = null, signal = null } = options;
 
     pendingPickers.set(sessionId, { resolve, reject, defaultValue: null });
 
@@ -1114,7 +1166,7 @@ export function showDirectoryPicker(options = {}) {
     if (opfsStorageName) pickerParams.set('opfsStorageName', opfsStorageName);
     if (buttons?.length) pickerParams.set('buttons', JSON.stringify(buttons));
 
-    _openPopupWindow(sessionId, pickerParams, width, height).catch(reject);
+    _openPopupWindow(sessionId, pickerParams, width, height, signal).catch(reject);
   });
 }
 
@@ -1378,7 +1430,43 @@ function _pickerBaseUrl() {
   return new URL('picker.html', import.meta.url).href;
 }
 
-async function _openPopupWindow(sessionId, pickerParams, width, height) {
+async function _openPopupWindow(sessionId, pickerParams, width, height, signal = null) {
+  const pendingPicker = pendingPickers.get(sessionId);
+  if (!pendingPicker) return;
+  const { resolve, reject, defaultValue } = pendingPicker;
+  let windowId = null;
+  let closedHandler = null;
+  let aborted = false;
+
+  const cleanup = () => {
+    browser.runtime.onMessage.removeListener(messageHandler);
+    if (closedHandler) browser.windows.onRemoved.removeListener(closedHandler);
+    signal?.removeEventListener('abort', abortHandler);
+    pendingPickers.delete(sessionId);
+  };
+  const settle = (callback, value) => {
+    if (!pendingPickers.has(sessionId)) return;
+    cleanup();
+    callback(value);
+  };
+  const abortHandler = () => {
+    aborted = true;
+    if (windowId != null) browser.windows.remove(windowId).catch(() => { });
+    settle(reject, new DOMException('Cancelled', 'AbortError'));
+  };
+  function messageHandler(msg) {
+    if (msg && msg.type === 'vfs-picker-result' && msg.session === sessionId) {
+      settle(resolve, msg.result ?? defaultValue);
+    }
+  }
+
+  browser.runtime.onMessage.addListener(messageHandler);
+  signal?.addEventListener('abort', abortHandler, { once: true });
+  if (signal?.aborted) {
+    abortHandler();
+    return;
+  }
+
   // Auto-inject action button registered via parseManifest.
   // When called from a page context (not background), _actionButton is null because
   // parseManifest was called in a different module instance. Ask the background instead.
@@ -1391,48 +1479,33 @@ async function _openPopupWindow(sessionId, pickerParams, width, height) {
     pickerParams.set('buttons', JSON.stringify([...existing, actionBtn]));
   }
 
+  if (aborted || !pendingPickers.has(sessionId)) return;
+
   const popupUrl = _pickerBaseUrl() + '?' + pickerParams.toString();
-  const { resolve, reject, defaultValue } = pendingPickers.get(sessionId);
-  let windowId = null;
-
-  // Listen for result via runtime messaging.
-  function messageHandler(msg) {
-    if (msg && msg.type === 'vfs-picker-result' && msg.session === sessionId) {
-      browser.runtime.onMessage.removeListener(messageHandler);
-      pendingPickers.delete(sessionId);
-      // The picker window should be closed by the caller.
-      resolve(msg.result ?? defaultValue);
-    }
-  }
-
-  browser.runtime.onMessage.addListener(messageHandler);
-
-  browser.windows.create({
-    type: 'popup',
-    url: popupUrl,
-    width,
-    height,
-    allowScriptsToClose: true,
-  }).then(win => {
+  try {
+    const win = await browser.windows.create({
+      type: 'popup',
+      url: popupUrl,
+      width,
+      height,
+      allowScriptsToClose: true,
+    });
     windowId = win.id;
+    if (aborted || !pendingPickers.has(sessionId)) {
+      await browser.windows.remove(windowId).catch(() => { });
+      return;
+    }
 
     // If the popup window is closed without a result (user closed it manually),
     // clean up and resolve with the default value.
-    function closedHandler(closedWindowId) {
+    closedHandler = closedWindowId => {
       if (closedWindowId === windowId) {
-        browser.windows.onRemoved.removeListener(closedHandler);
-        if (pendingPickers.has(sessionId)) {
-          browser.runtime.onMessage.removeListener(messageHandler);
-          pendingPickers.delete(sessionId);
-          resolve(defaultValue);
-        }
+        settle(resolve, defaultValue);
       }
-    }
+    };
 
     browser.windows.onRemoved.addListener(closedHandler);
-  }).catch(err => {
-    browser.runtime.onMessage.removeListener(messageHandler);
-    pendingPickers.delete(sessionId);
-    reject(err);
-  });
+  } catch (error) {
+    settle(reject, error);
+  }
 }
