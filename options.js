@@ -5,7 +5,7 @@
  */
 'use strict';
 const i18n = NCI18n.translate;
-const DEFAULT_SHARING_EXPIRE_DAYS = 7;
+const DEFAULT_SHARING_EXPIRE_DAYS = NCSharingStorage.DEFAULT_EXPIRE_DAYS;
 const DEFAULT_SHARING_ATTACHMENT_THRESHOLD_MB = NCSharingStorage.DEFAULT_ATTACHMENT_THRESHOLD_MB;
 const DEFAULT_SHARING_ATTACHMENT_LINK_TARGET = NCSharingStorage.DEFAULT_ATTACHMENT_LINK_TARGET;
 const DEFAULT_SHARING_SHARE_NAME = i18n("sharing_share_default") || "Share name";
@@ -13,6 +13,7 @@ const DEFAULT_TALK_TITLE = i18n("ui_default_title") || "Meeting";
 const FALLBACK_POPUP_WIDTH = 520;
 const FALLBACK_POPUP_HEIGHT = 320;
 const SHARING_KEYS = NCSharingStorage.SHARING_KEYS;
+const SHARE_POLICY_KEYS = NCSharingStorage.SHARE_POLICY_KEYS;
 const normalizeAttachmentThresholdMb = NCSharingStorage.normalizeAttachmentThresholdMb;
 const normalizeAttachmentLinkTarget = NCSharingStorage.normalizeAttachmentLinkTarget;
 const OPTIONS_LOG_PREFIX = "[NCUI][Options]";
@@ -111,7 +112,7 @@ const OPTION_SHARE_POLICY_BINDINGS = [
     name: "sharingBasePath",
     storageKey: SHARING_KEYS.basePath,
     domain: "share",
-    key: "share_base_directory",
+    key: SHARE_POLICY_KEYS.basePath,
     element: sharingBaseInput,
     row: sharingBaseRow,
     property: "value",
@@ -122,7 +123,7 @@ const OPTION_SHARE_POLICY_BINDINGS = [
     name: "sharingDefaultShareName",
     storageKey: SHARING_KEYS.defaultShareName,
     domain: "share",
-    key: "share_name_template",
+    key: SHARE_POLICY_KEYS.shareName,
     element: sharingDefaultShareNameInput,
     row: sharingDefaultShareNameRow,
     property: "value",
@@ -133,7 +134,7 @@ const OPTION_SHARE_POLICY_BINDINGS = [
     name: "sharingDefaultPermCreate",
     storageKey: SHARING_KEYS.defaultPermCreate,
     domain: "share",
-    key: "share_permission_upload",
+    key: SHARE_POLICY_KEYS.permCreate,
     element: sharingDefaultPermCreateInput,
     property: "checked",
     type: "boolean"
@@ -142,7 +143,7 @@ const OPTION_SHARE_POLICY_BINDINGS = [
     name: "sharingDefaultPermWrite",
     storageKey: SHARING_KEYS.defaultPermWrite,
     domain: "share",
-    key: "share_permission_edit",
+    key: SHARE_POLICY_KEYS.permWrite,
     element: sharingDefaultPermWriteInput,
     property: "checked",
     type: "boolean"
@@ -151,7 +152,7 @@ const OPTION_SHARE_POLICY_BINDINGS = [
     name: "sharingDefaultPermDelete",
     storageKey: SHARING_KEYS.defaultPermDelete,
     domain: "share",
-    key: "share_permission_delete",
+    key: SHARE_POLICY_KEYS.permDelete,
     element: sharingDefaultPermDeleteInput,
     property: "checked",
     type: "boolean"
@@ -160,7 +161,7 @@ const OPTION_SHARE_POLICY_BINDINGS = [
     name: "sharingDefaultPassword",
     storageKey: SHARING_KEYS.defaultPassword,
     domain: "share",
-    key: "share_set_password",
+    key: SHARE_POLICY_KEYS.passwordEnabled,
     element: sharingDefaultPasswordInput,
     row: sharingDefaultPasswordRow,
     property: "checked",
@@ -170,7 +171,7 @@ const OPTION_SHARE_POLICY_BINDINGS = [
     name: "sharingDefaultPasswordSeparate",
     storageKey: SHARING_KEYS.defaultPasswordSeparate,
     domain: "share",
-    key: "share_send_password_separately",
+    key: SHARE_POLICY_KEYS.passwordSeparate,
     element: sharingDefaultPasswordSeparateInput,
     property: "checked",
     type: "boolean"
@@ -179,7 +180,7 @@ const OPTION_SHARE_POLICY_BINDINGS = [
     name: "sharingDefaultPasswordDeliveryMode",
     storageKey: SHARING_KEYS.defaultPasswordDeliveryMode,
     domain: "share",
-    key: "share_send_password_mode",
+    key: SHARE_POLICY_KEYS.passwordDeliveryMode,
     element: sharingDefaultPasswordDeliveryModeSelect,
     row: sharingDefaultPasswordDeliveryModeRow,
     property: "value",
@@ -191,7 +192,7 @@ const OPTION_SHARE_POLICY_BINDINGS = [
     name: "sharingDefaultExpireDays",
     storageKey: SHARING_KEYS.defaultExpireDays,
     domain: "share",
-    key: "share_expire_days",
+    key: SHARE_POLICY_KEYS.expireDays,
     element: sharingDefaultExpireDaysInput,
     row: sharingDefaultExpireDaysRow,
     property: "value",
@@ -202,7 +203,7 @@ const OPTION_SHARE_POLICY_BINDINGS = [
     name: "sharingAttachmentsLinkTarget",
     storageKey: SHARING_KEYS.attachmentsLinkTarget,
     domain: "share",
-    key: "attachment_link_target",
+    key: SHARE_POLICY_KEYS.attachmentLinkTarget,
     element: sharingAttachmentsLinkTargetSelect,
     row: sharingAttachmentsLinkTargetRow,
     property: "value",
@@ -216,7 +217,7 @@ const OPTION_SHARE_POLICY_BINDINGS = [
     name: "shareBlockLang",
     storageKey: "shareBlockLang",
     domain: "share",
-    key: "language_share_html_block",
+    key: SHARE_POLICY_KEYS.blockLanguage,
     element: shareBlockLangSelect,
     row: shareBlockLangRow,
     property: "value",
@@ -480,7 +481,7 @@ function showStatus(message, isError = false, sticky = false, isSuccess = false)
   }
 }
 function getPolicyLanguageKey(domain){
-  return domain === "talk" ? "language_talk_description" : "language_share_html_block";
+  return domain === "talk" ? "language_talk_description" : SHARE_POLICY_KEYS.blockLanguage;
 }
 
 function getPolicyTemplateKeys(domain){
@@ -662,7 +663,7 @@ function applyInitialSpecialPolicyDefaults(stored){
     sharingAttachmentsAlwaysNcInput.checked = NCPolicyState.resolveDefaultValue(
       runtimePolicyStatus,
       "share",
-      "attachments_always_via_ncconnector",
+      SHARE_POLICY_KEYS.attachmentsAlwaysConnector,
       !!sharingAttachmentsAlwaysNcInput.checked,
       hasLocalAlways,
       NCPolicyState.coerceBoolean
@@ -672,10 +673,22 @@ function applyInitialSpecialPolicyDefaults(stored){
   const hasLocalThreshold = typeof stored?.[SHARING_KEYS.attachmentsOfferAboveEnabled] === "boolean"
     || stored?.[SHARING_KEYS.attachmentsOfferAboveMb] !== undefined;
   const usePolicyThreshold = NCPolicyState.isDomainActive(runtimePolicyStatus, "share")
-    && (!hasLocalThreshold || NCPolicyState.isLocked(runtimePolicyStatus, "share", "attachments_min_size_mb"))
-    && NCPolicyState.hasPolicyKey(runtimePolicyStatus, "share", "attachments_min_size_mb");
+    && (!hasLocalThreshold || NCPolicyState.isLocked(
+      runtimePolicyStatus,
+      "share",
+      SHARE_POLICY_KEYS.attachmentsMinSizeMb
+    ))
+    && NCPolicyState.hasPolicyKey(
+      runtimePolicyStatus,
+      "share",
+      SHARE_POLICY_KEYS.attachmentsMinSizeMb
+    );
   if (usePolicyThreshold){
-    const rawThreshold = NCPolicyState.readPolicyValue(runtimePolicyStatus, "share", "attachments_min_size_mb");
+    const rawThreshold = NCPolicyState.readPolicyValue(
+      runtimePolicyStatus,
+      "share",
+      SHARE_POLICY_KEYS.attachmentsMinSizeMb
+    );
     if (sharingAttachmentsOfferAboveEnabledInput){
       sharingAttachmentsOfferAboveEnabledInput.checked = rawThreshold != null;
     }
@@ -839,8 +852,16 @@ function applyPolicySettingsOverlay(){
   const lockPermEdit = !!shareLocks.sharingDefaultPermWrite;
   const lockPermDelete = !!shareLocks.sharingDefaultPermDelete;
   const lockTalkRoomType = NCPolicyState.isLocked(runtimePolicyStatus, "talk", "talk_room_type");
-  policyLockSharingAttachmentsAlways = NCPolicyState.isLocked(runtimePolicyStatus, "share", "attachments_always_via_ncconnector");
-  policyLockSharingAttachmentsThreshold = NCPolicyState.isLocked(runtimePolicyStatus, "share", "attachments_min_size_mb");
+  policyLockSharingAttachmentsAlways = NCPolicyState.isLocked(
+    runtimePolicyStatus,
+    "share",
+    SHARE_POLICY_KEYS.attachmentsAlwaysConnector
+  );
+  policyLockSharingAttachmentsThreshold = NCPolicyState.isLocked(
+    runtimePolicyStatus,
+    "share",
+    SHARE_POLICY_KEYS.attachmentsMinSizeMb
+  );
   policyLockTalkAddUsers = !!talkLocks.talkAddUsersDefaultEnabled;
   policyLockTalkAddGuests = !!talkLocks.talkAddGuestsDefaultEnabled;
 
@@ -849,17 +870,29 @@ function applyPolicySettingsOverlay(){
   }
   if (policyLockSharingAttachmentsAlways && sharingAttachmentsAlwaysNcInput){
     sharingAttachmentsAlwaysNcInput.checked = NCPolicyState.coerceBoolean(
-      NCPolicyState.readPolicyValue(runtimePolicyStatus, "share", "attachments_always_via_ncconnector"),
+      NCPolicyState.readPolicyValue(
+        runtimePolicyStatus,
+        "share",
+        SHARE_POLICY_KEYS.attachmentsAlwaysConnector
+      ),
       sharingAttachmentsAlwaysNcInput.checked
     );
   }
   if (policyLockSharingAttachmentsThreshold && sharingAttachmentsOfferAboveMbInput){
-    const thresholdDisabled = NCPolicyState.isExplicitNull(runtimePolicyStatus, "share", "attachments_min_size_mb");
+    const thresholdDisabled = NCPolicyState.isExplicitNull(
+      runtimePolicyStatus,
+      "share",
+      SHARE_POLICY_KEYS.attachmentsMinSizeMb
+    );
     if (!thresholdDisabled){
       sharingAttachmentsOfferAboveMbInput.value = String(
         normalizeAttachmentThresholdMb(
           NCPolicyState.coerceInt(
-            NCPolicyState.readPolicyValue(runtimePolicyStatus, "share", "attachments_min_size_mb"),
+            NCPolicyState.readPolicyValue(
+              runtimePolicyStatus,
+              "share",
+              SHARE_POLICY_KEYS.attachmentsMinSizeMb
+            ),
             Number.parseInt(sharingAttachmentsOfferAboveMbInput.value || "", 10)
           )
         )
@@ -1358,12 +1391,28 @@ async function save(){
     talkDeleteRoomOnEventDelete,
     eventDescriptionLang
   } = policyValues);
-  sharingAttachmentsAlwaysConnector = NCPolicyState.resolveValue(runtimePolicyStatus, "share", "attachments_always_via_ncconnector", sharingAttachmentsAlwaysConnector, NCPolicyState.coerceBoolean);
-  sharingAttachmentsOfferAboveMb = normalizeAttachmentThresholdMb(
-    NCPolicyState.resolveValue(runtimePolicyStatus, "share", "attachments_min_size_mb", sharingAttachmentsOfferAboveMb, NCPolicyState.coerceInt)
+  sharingAttachmentsAlwaysConnector = NCPolicyState.resolveValue(
+    runtimePolicyStatus,
+    "share",
+    SHARE_POLICY_KEYS.attachmentsAlwaysConnector,
+    sharingAttachmentsAlwaysConnector,
+    NCPolicyState.coerceBoolean
   );
-  if (NCPolicyState.isLocked(runtimePolicyStatus, "share", "attachments_min_size_mb")){
-    sharingAttachmentsOfferAboveEnabled = !NCPolicyState.isExplicitNull(runtimePolicyStatus, "share", "attachments_min_size_mb");
+  sharingAttachmentsOfferAboveMb = normalizeAttachmentThresholdMb(
+    NCPolicyState.resolveValue(
+      runtimePolicyStatus,
+      "share",
+      SHARE_POLICY_KEYS.attachmentsMinSizeMb,
+      sharingAttachmentsOfferAboveMb,
+      NCPolicyState.coerceInt
+    )
+  );
+  if (NCPolicyState.isLocked(runtimePolicyStatus, "share", SHARE_POLICY_KEYS.attachmentsMinSizeMb)){
+    sharingAttachmentsOfferAboveEnabled = !NCPolicyState.isExplicitNull(
+      runtimePolicyStatus,
+      "share",
+      SHARE_POLICY_KEYS.attachmentsMinSizeMb
+    );
   }
   talkAddParticipantsDefaultEnabled = talkAddUsersDefaultEnabled || talkAddGuestsDefaultEnabled;
   talkDefaultRoomType = NCPolicyState.resolveValue(runtimePolicyStatus, "talk", "talk_room_type", talkDefaultRoomType, NCPolicyState.coerceString);
@@ -1834,9 +1883,21 @@ function updateSharingPasswordState(){
   if (!sharingDefaultPasswordInput || !sharingDefaultPasswordSeparateInput){
     return;
   }
-  const lockPassword = NCPolicyState.isLocked(runtimePolicyStatus, "share", "share_set_password");
-  const lockSeparate = NCPolicyState.isLocked(runtimePolicyStatus, "share", "share_send_password_separately");
-  const lockDeliveryMode = NCPolicyState.isLocked(runtimePolicyStatus, "share", "share_send_password_mode");
+  const lockPassword = NCPolicyState.isLocked(
+    runtimePolicyStatus,
+    "share",
+    SHARE_POLICY_KEYS.passwordEnabled
+  );
+  const lockSeparate = NCPolicyState.isLocked(
+    runtimePolicyStatus,
+    "share",
+    SHARE_POLICY_KEYS.passwordSeparate
+  );
+  const lockDeliveryMode = NCPolicyState.isLocked(
+    runtimePolicyStatus,
+    "share",
+    SHARE_POLICY_KEYS.passwordDeliveryMode
+  );
   const featureUnavailable = !isSeparatePasswordMailFeatureAvailable();
   const secretsUnavailable = NCSharePasswordDelivery.isSecretsUnavailable(runtimePolicyStatus);
   const passwordEnabled = !!sharingDefaultPasswordInput.checked;
@@ -1901,7 +1962,11 @@ function updateAttachmentThresholdState(){
     return;
   }
   if (policyLockSharingAttachmentsThreshold){
-    sharingAttachmentsOfferAboveEnabledInput.checked = !NCPolicyState.isExplicitNull(runtimePolicyStatus, "share", "attachments_min_size_mb");
+    sharingAttachmentsOfferAboveEnabledInput.checked = !NCPolicyState.isExplicitNull(
+      runtimePolicyStatus,
+      "share",
+      SHARE_POLICY_KEYS.attachmentsMinSizeMb
+    );
   }
   const alwaysViaConnector = !!sharingAttachmentsAlwaysNcInput?.checked;
   if (sharingAttachmentsOfferRow){

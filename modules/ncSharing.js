@@ -319,11 +319,12 @@
    */
   async function resolveShareBlockLanguage(request){
     const localSetting = await getShareBlockLanguageSetting();
-    const policyLang = String(request?.policyShare?.language_share_html_block || "").trim();
+    const languageKey = NCSharingStorage.SHARE_POLICY_KEYS.blockLanguage;
+    const policyLang = String(request?.policyShare?.[languageKey] || "").trim();
     const editableShare = request?.policyEditableShare;
     const hasEditableMetadata = !!editableShare && typeof editableShare === "object";
     const localMayOverride = hasEditableMetadata
-      && editableShare.language_share_html_block !== false
+      && editableShare[languageKey] !== false
       && localSetting.hasLocalValue;
     const selectedLang = localMayOverride
       ? localSetting.value

@@ -124,30 +124,31 @@
   const dom = {};
   const i18n = NCI18n.translate;
   const wizardTranslate = (key, fallback = "") => i18n(key) || fallback || "";
-  const DEFAULT_EXPIRE_DAYS = 7;
+  const SHARE_POLICY_KEYS = NCSharingStorage.SHARE_POLICY_KEYS;
+  const DEFAULT_EXPIRE_DAYS = NCSharingStorage.DEFAULT_EXPIRE_DAYS;
   const SHARE_DEFAULT_POLICY_BINDINGS = [
-    { name: "shareName", key: "share_name_template", type: "string" },
-    { name: "permCreate", key: "share_permission_upload", type: "boolean" },
-    { name: "permWrite", key: "share_permission_edit", type: "boolean" },
-    { name: "permDelete", key: "share_permission_delete", type: "boolean" },
-    { name: "passwordEnabled", key: "share_set_password", type: "boolean" },
-    { name: "passwordSeparate", key: "share_send_password_separately", type: "boolean" },
+    { name: "shareName", key: SHARE_POLICY_KEYS.shareName, type: "string" },
+    { name: "permCreate", key: SHARE_POLICY_KEYS.permCreate, type: "boolean" },
+    { name: "permWrite", key: SHARE_POLICY_KEYS.permWrite, type: "boolean" },
+    { name: "permDelete", key: SHARE_POLICY_KEYS.permDelete, type: "boolean" },
+    { name: "passwordEnabled", key: SHARE_POLICY_KEYS.passwordEnabled, type: "boolean" },
+    { name: "passwordSeparate", key: SHARE_POLICY_KEYS.passwordSeparate, type: "boolean" },
     {
       name: "passwordDeliveryMode",
-      key: "share_send_password_mode",
+      key: SHARE_POLICY_KEYS.passwordDeliveryMode,
       type: "string",
       fallback: NCSharePasswordDelivery.MODE_PLAIN,
       normalize: (value, fallback) => NCSharePasswordDelivery.coerceMode(value, fallback)
     },
     {
       name: "expireDays",
-      key: "share_expire_days",
+      key: SHARE_POLICY_KEYS.expireDays,
       type: "int",
       normalize: (value, fallback) => NCTalkTextUtils.normalizeExpireDays(value, fallback)
     },
     {
       name: "attachmentLinkTarget",
-      key: "attachment_link_target",
+      key: SHARE_POLICY_KEYS.attachmentLinkTarget,
       type: "string",
       fallback: NCSharingStorage.DEFAULT_ATTACHMENT_LINK_TARGET,
       lockedFallback: NCSharingStorage.DEFAULT_ATTACHMENT_LINK_TARGET,
@@ -551,8 +552,11 @@
       storedMode: stored[SHARING_KEYS.defaultPasswordDeliveryMode] ?? "",
       defaultMode: state.defaults.passwordDeliveryMode,
       localDefault: localDefaultNames.has("passwordDeliveryMode"),
-      policyMode: NCPolicyState.readDomainValue(state.policy.share, "share_send_password_mode"),
-      policyEditable: state.policy.editable?.share_send_password_mode,
+      policyMode: NCPolicyState.readDomainValue(
+        state.policy.share,
+        SHARE_POLICY_KEYS.passwordDeliveryMode
+      ),
+      policyEditable: state.policy.editable?.[SHARE_POLICY_KEYS.passwordDeliveryMode],
       secretsUnavailable: NCSharePasswordDelivery.isSecretsUnavailable(state.policy.status),
       separateDefault: !!state.defaults.passwordSeparate
     });
@@ -560,8 +564,11 @@
       storedTarget: stored[SHARING_KEYS.attachmentsLinkTarget] ?? "",
       effectiveTarget: state.defaults.attachmentLinkTarget,
       localDefault: localDefaultNames.has("attachmentLinkTarget"),
-      policyTarget: NCPolicyState.readDomainValue(state.policy.share, "attachment_link_target"),
-      policyEditable: state.policy.editable?.attachment_link_target
+      policyTarget: NCPolicyState.readDomainValue(
+        state.policy.share,
+        SHARE_POLICY_KEYS.attachmentLinkTarget
+      ),
+      policyEditable: state.policy.editable?.[SHARE_POLICY_KEYS.attachmentLinkTarget]
     });
   }
   /**
@@ -578,7 +585,7 @@
       const basePath = NCPolicyState.resolveDefaultValue(
         state.policy.status,
         "share",
-        "share_base_directory",
+        SHARE_POLICY_KEYS.basePath,
         localBasePath,
         !!rawLocalBasePath,
         NCPolicyState.coerceString
@@ -801,13 +808,21 @@
     NCWizardPolicyUi.applyEditableLock({
       active: state.policy.active,
       editable: state.policy.editable,
-      key: "share_set_password",
+      key: SHARE_POLICY_KEYS.passwordEnabled,
       element: dom.passwordToggle,
       row: dom.passwordToggleRow,
       translate: wizardTranslate
     });
-    const lockSeparate = NCPolicyState.isEditableLocked(state.policy.active, state.policy.editable, "share_send_password_separately");
-    const lockDeliveryMode = NCPolicyState.isEditableLocked(state.policy.active, state.policy.editable, "share_send_password_mode");
+    const lockSeparate = NCPolicyState.isEditableLocked(
+      state.policy.active,
+      state.policy.editable,
+      SHARE_POLICY_KEYS.passwordSeparate
+    );
+    const lockDeliveryMode = NCPolicyState.isEditableLocked(
+      state.policy.active,
+      state.policy.editable,
+      SHARE_POLICY_KEYS.passwordDeliveryMode
+    );
     const featureUnavailable = !NCWizardPolicyUi.isSeparatePasswordFeatureAvailable(state.policy.status);
     const secretsUnavailable = NCSharePasswordDelivery.isSecretsUnavailable(state.policy.status);
     const adminHint = NCWizardPolicyUi.getAdminControlledHint(wizardTranslate);
@@ -894,7 +909,7 @@
     NCWizardPolicyUi.applyEditableLock({
       active: state.policy.active,
       editable: state.policy.editable,
-      key: "share_name_template",
+      key: SHARE_POLICY_KEYS.shareName,
       element: dom.shareName,
       row: dom.shareNameRow,
       translate: wizardTranslate
@@ -902,7 +917,7 @@
     NCWizardPolicyUi.applyEditableLock({
       active: state.policy.active,
       editable: state.policy.editable,
-      key: "share_permission_upload",
+      key: SHARE_POLICY_KEYS.permCreate,
       element: dom.permCreate,
       row: dom.permCreateRow,
       translate: wizardTranslate
@@ -910,7 +925,7 @@
     NCWizardPolicyUi.applyEditableLock({
       active: state.policy.active,
       editable: state.policy.editable,
-      key: "share_permission_edit",
+      key: SHARE_POLICY_KEYS.permWrite,
       element: dom.permWrite,
       row: dom.permWriteRow,
       translate: wizardTranslate
@@ -918,7 +933,7 @@
     NCWizardPolicyUi.applyEditableLock({
       active: state.policy.active,
       editable: state.policy.editable,
-      key: "share_permission_delete",
+      key: SHARE_POLICY_KEYS.permDelete,
       element: dom.permDelete,
       row: dom.permDeleteRow,
       translate: wizardTranslate
@@ -926,7 +941,7 @@
     const lockExpireDays = NCWizardPolicyUi.applyEditableLock({
       active: state.policy.active,
       editable: state.policy.editable,
-      key: "share_expire_days",
+      key: SHARE_POLICY_KEYS.expireDays,
       element: dom.expireToggle,
       row: dom.expireToggleRow,
       translate: wizardTranslate,

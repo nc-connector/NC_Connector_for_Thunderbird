@@ -26,6 +26,7 @@ const NCSharingStorage = (() => {
     passwordEnabled: "share_set_password",
     passwordSeparate: "share_send_password_separately",
     passwordDeliveryMode: "share_send_password_mode",
+    secretsExpireDays: "share_secrets_expire_days",
     expireDays: "share_expire_days",
     attachmentLinkTarget: "attachment_link_target",
     attachmentsAlwaysConnector: "attachments_always_via_ncconnector",

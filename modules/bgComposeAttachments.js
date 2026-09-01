@@ -243,19 +243,27 @@ async function getComposeAttachmentAutomationSettings(){
       alwaysConnector = NCPolicyState.resolveDefaultValue(
         policyStatus,
         "share",
-        "attachments_always_via_ncconnector",
+        NCSharingStorage.SHARE_POLICY_KEYS.attachmentsAlwaysConnector,
         alwaysConnector,
         hasLocalAlways,
         NCPolicyState.coerceBoolean
       );
       if (
-        (!hasLocalThreshold || NCPolicyState.isLocked(policyStatus, "share", "attachments_min_size_mb"))
-        && NCPolicyState.hasPolicyKey(policyStatus, "share", "attachments_min_size_mb")
+        (!hasLocalThreshold || NCPolicyState.isLocked(
+          policyStatus,
+          "share",
+          NCSharingStorage.SHARE_POLICY_KEYS.attachmentsMinSizeMb
+        ))
+        && NCPolicyState.hasPolicyKey(
+          policyStatus,
+          "share",
+          NCSharingStorage.SHARE_POLICY_KEYS.attachmentsMinSizeMb
+        )
       ){
         const policyThreshold = NCPolicyState.readPolicyValue(
           policyStatus,
           "share",
-          "attachments_min_size_mb"
+          NCSharingStorage.SHARE_POLICY_KEYS.attachmentsMinSizeMb
         );
         if (policyThreshold == null){
           offerAboveEnabled = false;

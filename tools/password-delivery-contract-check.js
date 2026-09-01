@@ -14,6 +14,7 @@ function loadDeliveryApi(){
   context.globalThis = context;
   vm.createContext(context);
   loadScript("modules/policyState.js", context, "\nglobalThis.NCPolicyState = NCPolicyState;");
+  loadScript("modules/sharingStorage.js", context, "\nglobalThis.NCSharingStorage = NCSharingStorage;");
   loadScript("modules/sharePasswordDelivery.js", context);
   return context.NCSharePasswordDelivery;
 }
@@ -91,6 +92,7 @@ function createDispatchRegistrationHarness(policyStatus){
   context.globalThis = context;
   vm.createContext(context);
   loadScript("modules/policyState.js", context, "\nglobalThis.NCPolicyState = NCPolicyState;");
+  loadScript("modules/sharingStorage.js", context, "\nglobalThis.NCSharingStorage = NCSharingStorage;");
   loadScript("modules/sharePasswordDelivery.js", context);
   loadScript(
     "modules/bgComposePasswordDispatch.js",
@@ -195,6 +197,7 @@ function createDispatchHarness(composeDetailsByProbe = []){
   context.globalThis = context;
   vm.createContext(context);
   loadScript("modules/policyState.js", context, "\nglobalThis.NCPolicyState = NCPolicyState;");
+  loadScript("modules/sharingStorage.js", context, "\nglobalThis.NCSharingStorage = NCSharingStorage;");
   loadScript("modules/sharePasswordDelivery.js", context);
   loadScript(
     "modules/bgComposePasswordDispatch.js",
