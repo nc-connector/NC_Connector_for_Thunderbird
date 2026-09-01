@@ -50,6 +50,7 @@ It complements:
   - [10.2 Inserting share blocks into compose (mode-aware)](#102-inserting-share-blocks-into-compose-mode-aware)
   - [10.3 Share block language override](#103-share-block-language-override)
   - [10.4 FileLink upload engine (Nextcloud 32+)](#104-filelink-upload-engine-nextcloud-32)
+  - [10.5 VFS provider, client, and mixed-source materialization](#105-vfs-provider-client-and-mixed-source-materialization)
 - [11. Data model](#11-data-model)
   - [11.1 `X-NCTALK-*` iCalendar properties](#111-x-nctalk--icalendar-properties)
   - [11.2 Internal persistence (`storage.local`)](#112-internal-persistence-storagelocal)
@@ -68,6 +69,7 @@ It complements:
 Goals for this project:
 - Provide **Nextcloud Talk** room creation directly from the **calendar event editor** (dialog + tab).
 - Provide **Nextcloud sharing** directly from the **compose window** (sharing wizard).
+- Let the Sharing wizard combine local files, the configured Nextcloud, and compatible Thunderbird VFS providers without duplicating Nextcloud credentials or upload policy.
 - Maintain **no feature loss** across reviewer-driven changes.
 - Keep custom experiments **minimal and easy to review**.
 - Keep all user-facing text **localized** via WebExtension i18n (`_locales/**/messages.json`).
@@ -118,11 +120,15 @@ Key files you’ll touch most:
 - `modules/bgComposePasswordDispatch.js` — separate-password-mail dispatch and follow-up compose handling
 - `modules/bgFileLinkUpload.js` — background-owned FileLink upload sessions, cancellation, and cleanup handoff
 - `modules/fileLinkUploadPolicy.js` — upload-mode thresholds, batching, concurrency, and retry limits
-- `modules/nextcloudDav.js` — shared DAV request, retry, path-probe, and folder helpers
+- `modules/nextcloudDav.js` — shared DAV request, retry, path, XML, quota, and server-side copy helpers
 - `modules/fileLinkUploadProgress.js` — aggregate and per-item progress throttling
 - `modules/fileLinkBulkUpload.js` — Nextcloud DAV bulk multipart construction, MD5 calculation, and response handling
 - `modules/fileLinkUpload.js` — root reservation plus Direct, Chunked, and Bulk orchestration
 - `modules/fileLinkShare.js` — public-share creation and ambiguous-response recovery
+- `modules/fileLinkSources.js` — mixed-source normalization and materialization into the reserved share root
+- `modules/nextcloudVfsStorage.js` — full read/write VFS storage adapter over the configured Nextcloud account
+- `modules/vfsProviderRuntime.js` — provider grants, account binding, and Toolkit request bridge
+- `modules/vfsClientRuntime.js` — self/external provider discovery, picker sessions, and sequential reads
 - `modules/fileQueuePathConflicts.js` — linear-time exact/prefix conflict detection for upload queues
 - `modules/passwordPolicyRuntime.js` — background password-policy fetch/generate helper for wizard requests
 - `modules/bgCompose.js` — compose/window/tab listener wiring
@@ -146,6 +152,9 @@ Key files you’ll touch most:
 - `experiments/ncComposePrefs/parent.js` — read-only compose preference bridge (`mail.compose.big_attachments.*`)
 - `ui/talkDialog.html` + `ui/talkDialog.js` — Talk wizard UI
 - `ui/nextcloudSharingWizard.html` + `ui/nextcloudSharingWizard.js` — Sharing wizard UI
+- `ui/optionsVfs.js` — VFS provider/client settings, grants, and external connection setup
+- `ui/vfsProviderSetup.html` + `ui/vfsProviderSetup.js` — explicit full read/write grant confirmation
+- `vendor/vfs-toolkit/**` — pinned Thunderbird VFS Toolkit API 1.3 runtime and local assets
 - `ui/debugForwarder.js` — shared runtime debug forwarding/helper layer for Talk, Sharing, and attachment prompt UIs
 - `ui/addressbookUi.js` — shared system-addressbook tooltip lock helper used by Talk wizard + options
 - `ui/passwordPolicyClient.js` — shared password-policy fetch/generate helper for both wizards
@@ -324,6 +333,14 @@ Sharing defaults (managed by `modules/sharingStorage.js`):
 - `sharingAttachmentsAlwaysConnector`
 - `sharingAttachmentsOfferAboveEnabled`
 - `sharingAttachmentsOfferAboveMb`
+
+VFS:
+- `ncVfsProviderStateV1` (`storage.local`) — provider enable flag, canonical account binding, and opaque self-storage ID
+- `vfs-toolkit-connections` (`storage.local`) — Toolkit provider grants keyed by consumer add-on ID and opaque storage ID
+- `ncVfsExternalProvidersEnabled` (`storage.local`) — explicit external-provider discovery switch
+- `ncVfsClientProvidersV1` (`storage.session`) — providers and connections discovered for the current Thunderbird session
+
+These records contain no Nextcloud password, authorization header, file content, or rendered message data. The configured `baseUrl`, `user`, and `appPass` remain the only Nextcloud credential source.
 
 Advanced language overrides:
 - `shareBlockLang` (`"default"` or a supported locale folder name like `de`, `pt_BR`, `zh_TW`, …)
@@ -692,6 +709,10 @@ Key files:
 - `modules/fileLinkBulkUpload.js`
 - `modules/fileLinkUpload.js`
 - `modules/fileLinkShare.js`
+- `modules/fileLinkSources.js`
+- `modules/nextcloudVfsStorage.js`
+- `modules/vfsProviderRuntime.js`
+- `modules/vfsClientRuntime.js`
 - `modules/ocs.js`
 - `modules/nccore.js`
 - `modules/sharingStorage.js`
@@ -991,6 +1012,31 @@ Thunderbird platform references:
 - [Thunderbird windows API](https://webextension-api.thunderbird.net/en/mv2/windows.html)
 - [Structured clone algorithm](https://developer.mozilla.org/en-US/docs/Web/API/Web_Workers_API/Structured_clone_algorithm)
 
+### 10.5 VFS provider, client, and mixed-source materialization
+
+NC Connector uses the vendored Thunderbird VFS Toolkit in two roles:
+
+- As a provider, it exposes the already configured Nextcloud account with full read/write file and folder capabilities after an explicit grant.
+- As a client, it uses its own provider for **From Nextcloud** and can discover separately installed providers only after the user enables external providers and grants Thunderbird's optional `management` permission.
+
+There is no second Nextcloud login. `modules/nextcloudVfsStorage.js` resolves the canonical Nextcloud UID through the existing core runtime, while Basic Auth continues to use the configured login alias and app password. A provider storage ID is bound to the normalized server plus canonical UID. Changing either rotates that ID and removes every previous grant; an app-password or login-alias change for the same canonical account does not.
+
+The provider implements live list, quota, read, write, add, move, copy, and delete operations through the common DAV module. Toolkit ports are authorized by the runtime-supplied sender ID and the exact consumer/storage pair. Setup uses a one-time token tied to the requesting port. Each active request has its own abort controller, and every operation rechecks the captured account binding before DAV access.
+
+The Sharing wizard first builds one immutable queue of descriptors. Each row carries a source kind (`local`, `nextcloud`, or `external-vfs`), provider label, source path, target path, item kind, size, and transfer-group metadata. Folder enumeration includes empty directories. Exact and prefix conflicts are resolved before any remote share mutation; removing a selected folder removes its complete transfer group.
+
+The wizard exposes exactly three source menus: local storage, the configured Nextcloud, and another VFS storage. A remote menu stays disabled with a setup tooltip until its corresponding connection exists. If several external connections are available, NC Connector shows an intermediate connection list with the provider-reported add-on icon before opening a picker locked to that exact storage reference. External connections are removed through the Toolkit's `deleteProviderConnection()` contract, not by editing Toolkit session records directly.
+
+Materialization begins only after queue collection is complete and the share root is reserved:
+
+1. local `File` objects use the established Direct, Chunked, or Bulk planner;
+2. roots selected from the same configured Nextcloud use one server-side WebDAV `COPY` each, with `Overwrite: F`; sources are never moved or deleted;
+3. external provider files are read sequentially as complete Toolkit `File` objects and immediately passed to the established Direct or Chunked uploader; no extension storage, IndexedDB, or disk staging path is used.
+
+The complete-`File` contract means one large external file can temporarily require similar Thunderbird memory. Sequential read/upload bounds this to one external file at a time. There is deliberately no fallback that downloads a same-Nextcloud source or silently switches transfer protocols. Cancellation closes the exact picker/request, waits for active transfer work to settle, and then uses the existing background-owned share-root cleanup.
+
+The Toolkit is pinned to API 1.3 and loaded only from `vendor/vfs-toolkit/**` as local `.mjs` modules. `VENDOR.md` records its commit, license, hashes, and the narrow local patches required for co-located provider registration plus request/grant lifecycle safety. The provider descriptor is refreshed before opening an own-Nextcloud picker; its local loopback port enters the same authenticated Toolkit handler as an external port. Toolkit-owned runtime messages remain with the Toolkit listeners, so the NC Connector background router returns `undefined` for those types. The upstream picker has no selection-only option, so NC Connector's packaged picker hides `#vfs-toolbar` with CSS. This deliberately removes management actions and search from the source-selection popup without changing directory navigation or selection. No remote code is loaded.
+
 ---
 
 ## 11. Data model
@@ -1085,7 +1131,23 @@ Sharing wizard:
 - `sharing:checkAttachmentAutomationAllowed`
 - `sharing:finalizeRenderedShare`
 
+VFS options/provider:
+- `vfs:getStatus`
+- `vfs:grantConsumer`
+- `vfs:listExternalConnections`
+- `vfs:options:getState`
+- `vfs:options:updateSettings`
+- `vfs:options:requestExternalProviderPermission`
+- `vfs:options:refreshConnections`
+- `vfs:options:connectProvider`
+- `vfs:options:revokeGrant`
+
 FileLink upload uses the named runtime Port `nc-filelink-upload` instead of one long-lived `runtime.sendMessage()` call:
+
+- wizard → background: `start`, `cancel`
+- background → wizard: `progress`, `result`, `error`
+
+VFS source selection uses a separate named Port, `nc-vfs-source-selection`, so picker/folder traversal can be canceled independently before an upload session starts:
 
 - wizard → background: `start`, `cancel`
 - background → wizard: `progress`, `result`, `error`
@@ -1126,12 +1188,13 @@ This add-on uses Nextcloud APIs such as:
   - Direct/final files: `/remote.php/dav/files/<canonical-uid>/...`
   - Chunked upload v2: `/remote.php/dav/uploads/<canonical-uid>/<upload-id>/...`
   - DAV bulk upload: `/remote.php/dav/bulk`
+  - VFS browsing and mutations stay below `/remote.php/dav/files/<canonical-uid>/...` and use `PROPFIND`, `GET`, `PUT`, `MKCOL`, `COPY`, `MOVE`, and `DELETE` as required
 - Addressbook (system addressbook export):
   - `remote.php/dav/addressbooks/.../?export`
 
 Authentication aliases and DAV identities are intentionally kept separate. Basic Auth uses the configured login (which may be an email address), while `modules/nccore.js` resolves and caches `ocs.data.id` for the current background session. User-scoped FileLink, chunk-upload, and CardDAV paths use only that canonical UID; a missing UID fails explicitly instead of substituting the login.
 
-All endpoint interaction lives in the shared modules (`modules/ocs.js`, `modules/nccore.js`, `modules/policyRuntime.js`, `modules/talkcore.js`, `modules/talkAddressbook.js`, `modules/ncSharing.js`, `modules/ncSecrets.js`).
+All endpoint interaction lives in shared modules, including `modules/ocs.js`, `modules/nccore.js`, `modules/nextcloudDav.js`, `modules/nextcloudVfsStorage.js`, `modules/policyRuntime.js`, `modules/talkcore.js`, `modules/talkAddressbook.js`, `modules/ncSharing.js`, and `modules/ncSecrets.js`.
 
 Login Flow start/poll, backend-policy fetches, Talk/CardDAV control requests,
 and their response-body reads use bounded deadlines. Login Flow polling also has
@@ -1222,6 +1285,13 @@ Common symptoms:
 - **Upload result is lost when the wizard closes**
   - The Port disconnect aborts active work.
   - If the root or share already exists, background cleanup uses the captured cleanup target and generation ID.
+
+- **No external VFS provider appears**
+  - Enable external VFS providers and grant the optional add-on-management permission. NC Connector reloads the add-on automatically; reopen the settings if necessary and use **Connect** for the detected provider in the VFS tab.
+  - Only established, reachable Toolkit connections appear in the Sharing wizard.
+
+- **A VFS connection stops working after changing the Nextcloud account**
+  - This is intentional: changing server or canonical user invalidates old grants. Re-authorize the consuming add-on for the new account.
 
 ---
 

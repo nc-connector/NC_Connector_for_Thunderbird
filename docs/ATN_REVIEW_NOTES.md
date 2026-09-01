@@ -1,8 +1,9 @@
-# Reviewer Notes - 3.3.0
+# Reviewer Notes
 NC Connector for Thunderbird (`{4a35421f-0906-439c-bff2-8eef39e2baee}`)
 
-This document summarizes the currently implemented reviewer-relevant behavior
-for add-on version 3.3.0.
+This document summarizes the reviewer-relevant behavior of the current
+development branch. The branch currently retains manifest version 3.3.0;
+release-specific differences remain in `CHANGELOG.md`.
 
 ---
 
@@ -15,6 +16,9 @@ for add-on version 3.3.0.
   lock conflicting Thunderbird big-attachment behavior.
 - The Nextcloud 32 FileLink upload engine is ordinary WebExtension/background
   code. It adds no permission and no Experiment API.
+- VFS provider/client support is ordinary WebExtension/background code. External
+  provider discovery uses the optional `management` permission; no Experiment API
+  and no remote code are added.
 
 ---
 
@@ -57,7 +61,10 @@ for persisted monitoring (`browser.calendar.items.onCreated/onUpdated/onRemoved`
 11) Share finalization is one background-owned transaction. A partial cleanup,
 password-dispatch, header, or body mutation cannot be exposed as committed.
 12) Versioned cleanup records contain remote ownership descriptors only. They do
-not persist credentials, passwords, recipients, or rendered message bodies.
+  not persist credentials, passwords, recipients, or rendered message bodies.
+13) Mixed local, same-Nextcloud, and external VFS sources are fully collected
+  before upload. Same-Nextcloud content is copied server-side; external content
+  is read and uploaded one file at a time without disk staging.
 
 ---
 
@@ -246,6 +253,21 @@ not persist credentials, passwords, recipients, or rendered message bodies.
   - `modules/fileLinkBulkUpload.js`
   - `modules/fileLinkUpload.js`
   - `modules/fileLinkShare.js`
+
+### VFS provider and mixed-source queues
+
+- The vendored Thunderbird VFS Toolkit is pinned to API 1.3 and an exact upstream commit. Local picker/runtime assets are packaged with the add-on; no module is fetched remotely.
+- `VENDOR.md` records every vendored file hash. Only the documented self-provider discovery, request/grant lifecycle, and selection-toolbar CSS patches differ from upstream.
+- NC Connector is a full read/write provider for its existing configured Nextcloud account. Access is disabled by default, requires an explicit per-add-on grant, and can be revoked in the VFS options tab.
+- Grants use verified runtime sender IDs, one-time setup tokens, and exact consumer/storage pairs. A change of Nextcloud server or canonical user rotates the opaque storage ID and removes old grants.
+- External-provider discovery is disabled by default. The optional `management` permission is requested only through the user's VFS setting; the NC Connector self provider is excluded from external enumeration.
+- Toolkit-owned runtime messages are not answered by NC Connector's general message router. External connection removal uses the Toolkit's provider-side `deleteProviderConnection()` flow and verifies that the exact storage reference disappeared locally.
+- The co-located Nextcloud provider refreshes its descriptor in the Toolkit session cache before selection and uses a local loopback port that enters the normal authenticated provider command handler. External providers continue to use cross-extension messaging.
+- The packaged picker hides its management/search toolbar because this integration uses it only for source selection. Directory navigation and selection remain unchanged.
+- The wizard queue supports files, folders, empty directories, source labels, duplicate/prefix validation, and mixed local/Nextcloud/external selections before upload begins.
+- Same-Nextcloud selections use server-side WebDAV `COPY` with no download, move, or source deletion. External providers return complete `File` values; NC Connector reads and uploads them sequentially through its existing Direct/Chunked paths without persistent or disk staging.
+- Picker, list, and read cancellation is request-specific. Wizard disconnect uses the established background cleanup lifecycle and never deletes a selected source.
+- VFS storage, Toolkit integration, mixed-source transfer, localization, and vendor-integrity checks are registered in the normal review aggregate and therefore run in GitHub Actions.
 
 Known temporary deviation:
 - The editor context bridge still includes scoped tab/window correlation inside

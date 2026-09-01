@@ -21,6 +21,7 @@ This guide is for administrators and operations teams that deploy and run NC Con
 NC Connector integrates the following Nextcloud functions into Thunderbird:
 
 - Files Sharing and WebDAV uploads from new messages, replies, and forwards
+- optional VFS access to the configured Nextcloud and compatible Thunderbird storage providers
 - Nextcloud Talk rooms from calendar events
 - optional central policies, templates, and email signatures from NC Connector Backend
 - optional one-time Secret links for separate password delivery
@@ -48,12 +49,13 @@ Thunderbird clients need HTTPS access to the configured Nextcloud origin. Firewa
 - WebDAV below `/remote.php/dav/`
 - the optional backend below `/apps/ncc_backend_4mc/`
 
-FileLink uses `PROPFIND`, `MKCOL`, `PUT`, `POST`, `MOVE`, and `DELETE`. A proxy that permits only `GET` and `POST` breaks upload, collision handling, or cleanup.
+FileLink and VFS storage access use `GET`, `PROPFIND`, `MKCOL`, `PUT`, `POST`, `COPY`, `MOVE`, and `DELETE`. A proxy that permits only `GET` and `POST` breaks browsing, upload, server-side copy, collision handling, or cleanup.
 
 Keep these request properties intact:
 
 - `Authorization`
 - `Destination`
+- `Depth`
 - `Overwrite`
 - `OCS-APIRequest`
 - `X-NC-WebDAV-Auto-Mkcol` (including the hyphen before `Mkcol`)
@@ -136,6 +138,15 @@ Manual shares always insert the share page. Attachment automation can insert eit
 When NC Connector owns the attachment workflow, disable Thunderbird's competing large-attachment prompt through enterprise policy. See [Attachment policy example](#63-attachment-policy-example).
 
 Do not use **Save as Template** for a message that contains an NC Connector share. Thunderbird templates can create independent messages without a reliable share lifecycle; NC Connector therefore blocks sending such templates and messages created from them.
+
+#### VFS sources and provider access
+
+The **VFS** options tab controls two independent functions:
+
+- **NC Connector as provider** exposes the already configured Nextcloud account to another compatible Thunderbird add-on. It is disabled by default. Each connection requires an explicit user grant and provides full read/write file access for that Nextcloud user; grants can be revoked in the same tab.
+- **External VFS providers** let users add files and folders from compatible storage add-ons to the Sharing wizard. Provider discovery is disabled by default and requests Thunderbird's optional add-on-management permission only when the user enables it. NC Connector reloads the add-on automatically after activation; reopen the settings if necessary, then use **Connect** beside a detected provider to complete that provider's own setup. Established storage connections can be removed again with **Disconnect**.
+
+There is no second Nextcloud login for VFS. Changing the configured Nextcloud server or canonical user invalidates all existing provider grants so they cannot silently point to another account. Changing only the app password for the same account keeps the storage identity.
 
 ### 4.3 Talk and system address book
 
@@ -237,6 +248,12 @@ Short-lived lock, rate-limit, gateway, and service-unavailable responses are ret
 DAV and OCS control requests stop after 60 seconds per attempt, active upload requests after five minutes, and cleanup requests after 10 seconds per attempt. These limits prevent a stalled proxy or server connection from leaving one request open without a bound.
 
 NC Connector does not silently change to another upload mode after a protocol failure. This keeps server and proxy faults visible instead of masking them through a second transfer path.
+
+### 5.5 Mixed local, Nextcloud, and VFS sources
+
+The Sharing wizard can fill one queue from local files, the configured Nextcloud, and established external VFS connections. Files and folders already on that Nextcloud are copied into the generated share folder with server-side WebDAV `COPY`; their originals are never moved or deleted. External files are read one at a time through the selected provider and then sent through the normal NC Connector upload engine. No temporary disk folder is created.
+
+The VFS Toolkit currently supplies each external file as a complete `File`, not as a streaming cloud-to-cloud transfer. Large external files can therefore require corresponding Thunderbird memory while that one file is being transferred. Queue collection finishes before the upload starts, and a failure or cancellation removes only the generated share root, never a selected source.
 
 ## 6. Enterprise rollout
 

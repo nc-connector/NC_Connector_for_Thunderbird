@@ -10,6 +10,7 @@ NC Connector ist die Thunderbird-native Nextcloud-Integration für Organisatione
 ## Was das Add-on macht
 
 - Nextcloud-Freigaben direkt aus neuen Mails, Antworten und Weiterleitungen erstellen
+- lokale Dateien, vorhandene Dateien aus der eingerichteten Nextcloud sowie Dateien und Ordner kompatibler Thunderbird-VFS-Anbieter in einer Freigabe-Warteschlange kombinieren
 - Dateien über Nextcloud 32 WebDAV mit parallelen Direkt-Uploads, Chunked Upload v2 und bei Serverunterstützung per DAV-Bulk-Upload hochladen
 - Passwort, Ablaufdatum, Berechtigungen und separate Passwortzustellung steuern
 - Passwörter wahlweise als Klartext-Mail oder als Nextcloud Secret-Link senden
@@ -37,6 +38,7 @@ Weitere Punkte:
 
 - verfügbar in Compose-Fenstern, Antworten und Weiterleitungen
 - automatische Auswahl des High-Speed-Uploadwegs mit Fortschritt für Ordnervorbereitung, abgeschlossene Dateien, übertragene Daten und aktuelle Übertragungsrate
+- Dateien aus der eingerichteten Nextcloud serverseitig kopieren; Inhalte externer VFS-Anbieter werden in Thunderbird gelesen und ohne Zwischenordner auf der Festplatte in diese Nextcloud hochgeladen
 - optionales Ablaufdatum und eigene Berechtigungen pro Freigabe
 - Anhangsautomatisierung für große Anhänge oder immer über NC Connector, mit wählbarem Linkziel `ZIP-Download` oder `Nextcloud-Freigabeseite`; ZIP ist der eingebaute Fallback, wenn kein gültiger effektiver Wert vorliegt, auch bei einem fehlenden oder ungültigen gesperrten Backendwert
 - separate Passwortmails werden erst nach erfolgreichem Versand der Hauptmail verschickt
@@ -70,6 +72,7 @@ Mit Backend kann Thunderbird zentral verwaltete E-Mail-Signaturen einfügen oder
 - für Talk-Funktionen: Nextcloud Talk
 - für Benutzer-/Moderatorensuche: Nextcloud-Systemadressbuch
 - für Secret-Link-Passwortzustellung: Nextcloud Secrets und NC Connector Backend
+- für andere Cloud-Quellen: ein kompatibler Thunderbird-VFS-Anbieter; die Erkennung wird mit einer optionalen Berechtigung im VFS-Tab aktiviert
 
 ## Sprache
 
