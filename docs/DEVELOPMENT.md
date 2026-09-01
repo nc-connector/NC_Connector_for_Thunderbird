@@ -123,7 +123,7 @@ Key files you’ll touch most:
 - `modules/nextcloudDav.js` — shared DAV request, retry, path, XML, quota, and server-side copy helpers
 - `modules/fileLinkUploadProgress.js` — aggregate and per-item progress throttling
 - `modules/fileLinkBulkUpload.js` — Nextcloud DAV bulk multipart construction, MD5 calculation, and response handling
-- `modules/fileLinkUpload.js` — root reservation plus Direct, Chunked, and Bulk orchestration
+- `modules/fileLinkUpload.js` — root reservation plus the shared Direct/Chunked selector and Bulk queue orchestration
 - `modules/fileLinkShare.js` — public-share creation and ambiguous-response recovery
 - `modules/fileLinkSources.js` — mixed-source normalization and materialization into the reserved share root
 - `modules/nextcloudVfsStorage.js` — full read/write VFS storage adapter over the configured Nextcloud account
@@ -896,6 +896,8 @@ Missing, numeric, or different values keep DAV bulk disabled. Direct and chunked
 
 Direct and chunked files run in a pool of at most three workers. Chunks belonging to one file are sent in order. Bulk batches are sent one at a time before the Direct/Chunked pool starts.
 
+`NCFileLinkUpload.uploadFile()` is the only Direct-versus-Chunked selector. The normal FileLink plan, external VFS files, and VFS-provider writes all enter that function. Provider `writeFile()` builds a one-file plan, so it receives the same retry, progress, cancellation, and completion behavior; Bulk remains a queue optimization and is not synthesized across independent provider calls.
+
 Directory planning creates:
 
 - every directory needed by chunked or Bulk destinations
@@ -1021,7 +1023,7 @@ NC Connector uses the vendored Thunderbird VFS Toolkit in two roles:
 
 There is no second Nextcloud login. `modules/nextcloudVfsStorage.js` resolves the canonical Nextcloud UID through the existing core runtime, while Basic Auth continues to use the configured login alias and app password. A provider storage ID is bound to the normalized server plus canonical UID. Changing either rotates that ID and removes every previous grant; an app-password or login-alias change for the same canonical account does not.
 
-The provider implements live list, quota, read, write, add, move, copy, and delete operations through the common DAV module. Toolkit ports are authorized by the runtime-supplied sender ID and the exact consumer/storage pair. Setup uses a one-time token tied to the requesting port. Each active request has its own abort controller, and every operation rechecks the captured account binding before DAV access.
+The provider implements live list, quota, read, add, move, copy, and delete operations through the common DAV module. `writeFile()` validates the same Nextcloud 32 capability contract as FileLink and delegates to the existing one-file upload plan instead of issuing a separate PUT. Files up to 20 MiB therefore use the shared Direct path; larger files use the shared chunked-v2 path. The VFS `overwrite` flag maps to `If-None-Match: *` for Direct creates and `Overwrite: F` for the final chunk MOVE, while provider writes never create a missing parent implicitly. Existing upload log messages are retained and receive `origin: vfs_provider` metadata. Toolkit ports are authorized by the runtime-supplied sender ID and the exact consumer/storage pair. Setup uses a one-time token tied to the requesting port. Each active request has its own abort controller, and every operation rechecks the captured account binding before DAV access.
 
 The Sharing wizard first builds one immutable queue of descriptors. Each row carries a source kind (`local`, `nextcloud`, or `external-vfs`), provider label, source path, target path, item kind, size, and transfer-group metadata. Folder enumeration includes empty directories. Exact and prefix conflicts are resolved before any remote share mutation; removing a selected folder removes its complete transfer group.
 
@@ -1031,7 +1033,7 @@ Materialization begins only after queue collection is complete and the share roo
 
 1. local `File` objects use the established Direct, Chunked, or Bulk planner;
 2. roots selected from the same configured Nextcloud use one server-side WebDAV `COPY` each, with `Overwrite: F`; sources are never moved or deleted;
-3. external provider files are read sequentially as complete Toolkit `File` objects and immediately passed to the established Direct or Chunked uploader; no extension storage, IndexedDB, or disk staging path is used.
+3. external provider files are read sequentially as complete Toolkit `File` objects and immediately passed to the same `uploadFile()` selector as local FileLink files; no extension storage, IndexedDB, or disk staging path is used.
 
 The complete-`File` contract means one large external file can temporarily require similar Thunderbird memory. Sequential read/upload bounds this to one external file at a time. There is deliberately no fallback that downloads a same-Nextcloud source or silently switches transfer protocols. Cancellation closes the exact picker/request, waits for active transfer work to settle, and then uses the existing background-owned share-root cleanup.
 

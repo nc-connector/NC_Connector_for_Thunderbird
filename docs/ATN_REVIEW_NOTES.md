@@ -258,14 +258,14 @@ password-dispatch, header, or body mutation cannot be exposed as committed.
 
 - The vendored Thunderbird VFS Toolkit is pinned to API 1.3 and an exact upstream commit. Local picker/runtime assets are packaged with the add-on; no module is fetched remotely.
 - `VENDOR.md` records every vendored file hash. Only the documented self-provider discovery, request/grant lifecycle, and selection-toolbar CSS patches differ from upstream.
-- NC Connector is a full read/write provider for its existing configured Nextcloud account. Access is disabled by default, requires an explicit per-add-on grant, and can be revoked in the VFS options tab.
+- NC Connector is a full read/write provider for its existing configured Nextcloud account. Access is disabled by default, requires an explicit per-add-on grant, and can be revoked in the VFS options tab. Provider `writeFile()` enforces the same Nextcloud 32 gate and enters the existing one-file Direct/Chunked upload plan; it does not maintain a second PUT implementation. Existing upload messages carry `origin: vfs_provider` metadata.
 - Grants use verified runtime sender IDs, one-time setup tokens, and exact consumer/storage pairs. A change of Nextcloud server or canonical user rotates the opaque storage ID and removes old grants.
 - External-provider discovery is disabled by default. The optional `management` permission is requested only through the user's VFS setting; the NC Connector self provider is excluded from external enumeration.
 - Toolkit-owned runtime messages are not answered by NC Connector's general message router. External connection removal uses the Toolkit's provider-side `deleteProviderConnection()` flow and verifies that the exact storage reference disappeared locally.
 - The co-located Nextcloud provider refreshes its descriptor in the Toolkit session cache before selection and uses a local loopback port that enters the normal authenticated provider command handler. External providers continue to use cross-extension messaging.
 - The packaged picker hides its management/search toolbar because this integration uses it only for source selection. Directory navigation and selection remain unchanged.
 - The wizard queue supports files, folders, empty directories, source labels, duplicate/prefix validation, and mixed local/Nextcloud/external selections before upload begins.
-- Same-Nextcloud selections use server-side WebDAV `COPY` with no download, move, or source deletion. External providers return complete `File` values; NC Connector reads and uploads them sequentially through its existing Direct/Chunked paths without persistent or disk staging.
+- Same-Nextcloud selections use server-side WebDAV `COPY` with no download, move, or source deletion. External providers return complete `File` values; NC Connector reads them sequentially and passes each one to the same Direct/Chunked selector used by local FileLink files, without persistent or disk staging.
 - Picker, list, and read cancellation is request-specific. Wizard disconnect uses the established background cleanup lifecycle and never deletes a selected source.
 - VFS storage, Toolkit integration, mixed-source transfer, localization, and vendor-integrity checks are registered in the normal review aggregate and therefore run in GitHub Actions.
 

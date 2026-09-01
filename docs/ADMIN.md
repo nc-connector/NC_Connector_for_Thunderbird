@@ -148,6 +148,8 @@ The **VFS** options tab controls two independent functions:
 
 There is no second Nextcloud login for VFS. Changing the configured Nextcloud server or canonical user invalidates all existing provider grants so they cannot silently point to another account. Changing only the app password for the same account keeps the storage identity.
 
+Uploads requested by a granted add-on use the normal NC Connector Direct or chunked transfer and appear under the existing upload log messages with `origin=vfs_provider`.
+
 ### 4.3 Talk and system address book
 
 Talk user search, moderator selection, and participant controls require the Nextcloud system address book.
