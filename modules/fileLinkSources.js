@@ -235,28 +235,16 @@
           contentType: sourceFile.type || item.contentType,
           lastModified: Number(sourceFile.lastModified) || item.lastModified
         });
-        if (uploadFile.size > global.NCFileLinkUploadPolicy.DIRECT_UPLOAD_LIMIT_BYTES){
-          await global.NCFileLinkUpload.uploadChunked({
-            file: uploadFile,
-            davRoot,
-            uploadRoot,
-            shareRoot,
-            authHeader,
-            signal,
-            log,
-            progress
-          });
-        }else{
-          await global.NCFileLinkUpload.uploadDirect({
-            file: uploadFile,
-            davRoot,
-            shareRoot,
-            authHeader,
-            signal,
-            log,
-            progress
-          });
-        }
+        await global.NCFileLinkUpload.uploadFile({
+          file: uploadFile,
+          davRoot,
+          uploadRoot,
+          shareRoot,
+          authHeader,
+          signal,
+          log,
+          progress
+        });
         completed++;
         onStatus?.({
           phase: 'source_transfer',

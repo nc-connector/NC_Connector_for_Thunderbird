@@ -81,7 +81,9 @@
     authHeader,
     signal,
     log,
-    progress
+    progress,
+    overwrite,
+    autoMkcol = true
   } = {}){
     const targetPath = NCNextcloudDav.joinPath(
       shareRoot,
@@ -95,13 +97,14 @@
       displayPath: file.displayPath
     });
     try{
-      await NCNextcloudDav.xhrWithRetry({
+      const result = await NCNextcloudDav.xhrWithRetry({
         method: "PUT",
         url: targetUrl,
         headers: {
           "Authorization": authHeader,
           "Content-Type": file.contentType || "application/octet-stream",
-          [NCNextcloudDav.AUTO_MKCOL_HEADER]: "1"
+          ...(autoMkcol !== false ? { [NCNextcloudDav.AUTO_MKCOL_HEADER]: "1" } : {}),
+          ...(overwrite === false ? { "If-None-Match": "*" } : {})
         },
         createBody: async () => NCNextcloudDav.getSourceBlob(file),
         signal,
@@ -123,6 +126,7 @@
         fileName: file.fileName,
         displayPath: file.displayPath
       });
+      return result;
     }catch(error){
       progress.reportItem({
         phase: "error",
@@ -142,7 +146,8 @@
     lastModified,
     authHeader,
     signal,
-    log
+    log,
+    overwrite
   } = {}){
     const probeCompletedTarget = async () => {
       const probe = await NCNextcloudDav.probePath({
@@ -170,7 +175,8 @@
             "Authorization": authHeader,
             "Destination": targetUrl,
             "OC-Total-Length": String(totalSize),
-            "X-OC-Mtime": String(Math.max(0, Math.floor((Number(lastModified) || Date.now()) / 1000)))
+            "X-OC-Mtime": String(Math.max(0, Math.floor((Number(lastModified) || Date.now()) / 1000))),
+            ...(typeof overwrite === "boolean" ? { "Overwrite": overwrite ? "T" : "F" } : {})
           },
           signal: requestSignal
         })
@@ -180,7 +186,7 @@
         throw NCNextcloudDav.createAbortError();
       }
       if (await probeCompletedTarget()){
-        return;
+        return Object.freeze({ status: 0, recovered: true });
       }
       const uploadError = NCNextcloudDav.createTechnicalError(
         error?.message || String(error)
@@ -196,16 +202,17 @@
       }catch(error){
         if ([408, 502, 503, 504].includes(status)
           && await probeCompletedTarget()){
-          return;
+          return Object.freeze({ status: 0, recovered: true });
         }
         throw error;
       }
       if ([408, 502, 503, 504].includes(status) && await probeCompletedTarget()){
-        return;
+        return Object.freeze({ status: 0, recovered: true });
       }
       throw NCNextcloudDav.createUploadError(status, detail);
     }
     await NCNextcloudDav.closeResponse(response);
+    return Object.freeze({ status: Number(response.status) || 0, recovered: false });
   }
 
   async function uploadChunked({
@@ -216,7 +223,8 @@
     authHeader,
     signal,
     log,
-    progress
+    progress,
+    overwrite
   } = {}){
     const targetPath = NCNextcloudDav.joinPath(
       shareRoot,
@@ -284,14 +292,15 @@
         });
         progress.setLoaded(file, end);
       }
-      await moveChunkIntoPlace({
+      const result = await moveChunkIntoPlace({
         uploadFolderUrl,
         targetUrl,
         totalSize: file.size,
         lastModified: file.lastModified,
         authHeader,
         signal,
-        log
+        log,
+        overwrite
       });
       cleanupRequired = false;
       progress.complete(file);
@@ -301,6 +310,7 @@
         fileName: file.fileName,
         displayPath: file.displayPath
       });
+      return result;
     }catch(error){
       progress.reportItem({
         phase: "error",
@@ -320,6 +330,44 @@
         });
       }
     }
+  }
+
+  async function uploadFile({
+    file,
+    davRoot,
+    uploadRoot,
+    shareRoot,
+    authHeader,
+    signal,
+    log,
+    progress,
+    overwrite,
+    autoMkcol
+  } = {}){
+    if (file.size > NCFileLinkUploadPolicy.DIRECT_UPLOAD_LIMIT_BYTES){
+      return uploadChunked({
+        file,
+        davRoot,
+        uploadRoot,
+        shareRoot,
+        authHeader,
+        signal,
+        log,
+        progress,
+        overwrite
+      });
+    }
+    return uploadDirect({
+      file,
+      davRoot,
+      shareRoot,
+      authHeader,
+      signal,
+      log,
+      progress,
+      overwrite,
+      autoMkcol
+    });
   }
 
   async function reserveRoot({
@@ -602,7 +650,8 @@
     signal,
     log,
     onStatus,
-    progress: sharedProgress
+    progress: sharedProgress,
+    fileUploadOptions
   } = {}){
     if (!plan.files.length){
       return;
@@ -612,6 +661,7 @@
       onStatus,
       log
     });
+    const results = new Map();
     const startedAt = Date.now();
     try{
       for (const batch of plan.bulkBatches){
@@ -630,28 +680,18 @@
       }
       const nonBulkFiles = [...plan.directFiles, ...plan.chunkedFiles];
       await NCNextcloudDav.runPool(nonBulkFiles, async (file, _index, workerSignal) => {
-        if (file.size > NCFileLinkUploadPolicy.DIRECT_UPLOAD_LIMIT_BYTES){
-          await uploadChunked({
-            file,
-            davRoot,
-            uploadRoot,
-            shareRoot,
-            authHeader,
-            signal: workerSignal,
-            log,
-            progress
-          });
-        }else{
-          await uploadDirect({
-            file,
-            davRoot,
-            shareRoot,
-            authHeader,
-            signal: workerSignal,
-            log,
-            progress
-          });
-        }
+        const result = await uploadFile({
+          file,
+          davRoot,
+          uploadRoot,
+          shareRoot,
+          authHeader,
+          signal: workerSignal,
+          log,
+          progress,
+          ...(fileUploadOptions || {})
+        });
+        results.set(file.internalId, result);
       }, signal, NCFileLinkUploadPolicy.MAX_PARALLEL_REQUESTS);
       const elapsedMs = Math.max(1, Date.now() - startedAt);
       if (typeof log === "function"){
@@ -667,6 +707,62 @@
         progress.stop();
       }
     }
+    return results;
+  }
+
+  function logUploadPlan(plan, log){
+    if (typeof log !== "function"){
+      return;
+    }
+    log("Upload plan ready", {
+      files: plan.files.length,
+      foldersToCreate: plan.directories.length,
+      bytes: plan.totalBytes,
+      direct: plan.directFiles.length,
+      chunked: plan.chunkedFiles.length,
+      bulkFiles: plan.bulkFiles.length,
+      bulkBatches: plan.bulkBatches.length
+    });
+  }
+
+  async function uploadSingleFile({
+    file,
+    davRoot,
+    uploadRoot,
+    shareRoot,
+    authHeader,
+    signal,
+    log,
+    onStatus,
+    overwrite,
+    autoMkcol = false
+  } = {}){
+    // A provider write is one VFS operation. Reusing a one-file plan preserves
+    // the transfer contract without inventing Bulk batches across callers.
+    const plan = NCFileLinkUploadPolicy.buildPlan({
+      files: [file],
+      bulkSupported: false
+    });
+    logUploadPlan(plan, log);
+    const results = await uploadPlan({
+      plan,
+      davRoot,
+      uploadRoot,
+      shareRoot,
+      authHeader,
+      checksums: new Map(),
+      signal,
+      log,
+      onStatus,
+      fileUploadOptions: {
+        overwrite,
+        autoMkcol
+      }
+    });
+    return Object.freeze({
+      plan,
+      result: results.get(plan.files[0].internalId) || null
+    });
   }
 
   async function prepareAndUpload({
@@ -705,17 +801,7 @@
           })
         )
       : new Map();
-    if (typeof log === "function"){
-      log("Upload plan ready", {
-        files: plan.files.length,
-        foldersToCreate: plan.directories.length,
-        bytes: plan.totalBytes,
-        direct: plan.directFiles.length,
-        chunked: plan.chunkedFiles.length,
-        bulkFiles: plan.bulkFiles.length,
-        bulkBatches: plan.bulkBatches.length
-      });
-    }
+    logUploadPlan(plan, log);
 
     const directories = Array.from(new Set([
       ...plan.directories,
@@ -821,6 +907,8 @@
     moveChunkIntoPlace,
     uploadDirect,
     uploadChunked,
+    uploadFile,
+    uploadSingleFile,
     reserveRoot,
     prepareAndUpload
   });

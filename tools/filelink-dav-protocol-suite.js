@@ -479,6 +479,7 @@ async function checkDirectAndChunkRequests(){
   loadUploadModules(context, [
     "modules/fileLinkUploadPolicy.js",
     "modules/nextcloudDav.js",
+    "modules/fileLinkUploadProgress.js",
     "modules/fileLinkUpload.js"
   ]);
   const upload = context.NCFileLinkUpload;
@@ -545,6 +546,36 @@ async function checkDirectAndChunkRequests(){
   assert(xhrCalls[0].body === directFile.sourceFile, "Direct retries must rebuild from the source Blob");
 
   xhrCalls.length = 0;
+  const singleLogs = [];
+  const singleStatus = [];
+  await upload.uploadSingleFile({
+    file: directFile,
+    davRoot: "https://cloud.example.test/remote.php/dav/files/user",
+    uploadRoot: "https://cloud.example.test/remote.php/dav/uploads/user",
+    shareRoot: "Provider Folder",
+    authHeader: "Basic provider",
+    overwrite: false,
+    autoMkcol: false,
+    log: (...args) => singleLogs.push(args),
+    onStatus: (event) => singleStatus.push(event)
+  });
+  assert(xhrCalls.length === 1, "A single provider file must use one shared upload-plan transfer");
+  assert(
+    xhrCalls[0].options.headers["If-None-Match"] === "*"
+      && !Object.prototype.hasOwnProperty.call(xhrCalls[0].options.headers, "X-NC-WebDAV-Auto-Mkcol"),
+    "A provider create must remain atomic and must not create missing parents"
+  );
+  assert(
+    singleLogs.some(([message]) => message === "Upload plan ready")
+      && singleLogs.some(([message]) => message === "Upload completed"),
+    "Provider writes must emit the existing upload-plan and completion messages"
+  );
+  assert(
+    singleStatus.some((event) => event.phase === "summary" && event.totalBytes === directFile.size),
+    "Provider writes must use the existing aggregate upload progress"
+  );
+
+  xhrCalls.length = 0;
   const chunkRanges = [];
   const chunkSize = context.NCFileLinkUploadPolicy.DEFAULT_CHUNK_SIZE_BYTES;
   const chunkedFile = {
@@ -563,13 +594,14 @@ async function checkDirectAndChunkRequests(){
     lastModified: 1700000000000,
     contentType: "application/octet-stream"
   };
-  await upload.uploadChunked({
+  await upload.uploadFile({
     file: chunkedFile,
     davRoot: "https://cloud.example.test/remote.php/dav/files/user",
     uploadRoot: "https://cloud.example.test/remote.php/dav/uploads/user",
     shareRoot: "NC Connector/Share",
     authHeader: "Basic chunk",
-    progress
+    progress,
+    overwrite: false
   });
   assert(collectionCalls.length === 1, "Chunked upload must create one upload collection");
   assert(xhrCalls.length === 2, "A file one byte above the chunk size must use two chunk PUTs");
@@ -597,8 +629,9 @@ async function checkDirectAndChunkRequests(){
     moveCalls.length === 1
       && moveCalls[0].url.endsWith("/.file")
       && moveCalls[0].options.method === "MOVE"
-      && moveCalls[0].options.headers.Destination.endsWith("/NC%20Connector/Share/large.bin"),
-    "Chunk completion must MOVE .file to the final DAV target"
+      && moveCalls[0].options.headers.Destination.endsWith("/NC%20Connector/Share/large.bin")
+      && moveCalls[0].options.headers.Overwrite === "F",
+    "The shared selector must route large provider files through an atomic chunked MOVE"
   );
   assert(cleanupCalls === 0, "Successful chunk completion must not delete its upload collection");
 }

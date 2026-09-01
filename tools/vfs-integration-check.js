@@ -675,11 +675,11 @@ async function checkMixedSourcePlan(){
       DIRECT_UPLOAD_LIMIT_BYTES: 20
     },
     NCFileLinkUpload: {
-      async uploadDirect({ file }){
-        transferOrder.push(`upload-direct:${file.itemId}`);
-      },
-      async uploadChunked({ file }){
-        transferOrder.push(`upload-chunked:${file.itemId}`);
+      async uploadFile({ file }){
+        const mode = file.size > context.NCFileLinkUploadPolicy.DIRECT_UPLOAD_LIMIT_BYTES
+          ? "chunked"
+          : "direct";
+        transferOrder.push(`upload-${mode}:${file.itemId}`);
       }
     },
     NCVfsProviderRuntime: {
@@ -865,6 +865,7 @@ function checkManifestAndReviewSurface(){
   const scripts = manifest.background.scripts;
   const expectedOrder = [
     "modules/nextcloudDav.js",
+    "modules/fileLinkUpload.js",
     "modules/nextcloudVfsStorage.js",
     "modules/vfsProviderRuntime.js",
     "modules/vfsClientRuntime.js",
@@ -946,6 +947,12 @@ function checkManifestAndReviewSurface(){
     providerRuntime.includes("copyIntoShare(storageRef")
       && !sourceRuntime.includes("getStorage()"),
     "Same-Nextcloud share copies must use the provider runtime's storage/account lease"
+  );
+  assert(
+    sourceRuntime.includes("NCFileLinkUpload.uploadFile({")
+      && !sourceRuntime.includes("NCFileLinkUpload.uploadDirect({")
+      && !sourceRuntime.includes("NCFileLinkUpload.uploadChunked({"),
+    "External VFS files must use the shared Direct/Chunked upload selector"
   );
   assert(
     providerRuntime.includes("authorization changed during setup")
