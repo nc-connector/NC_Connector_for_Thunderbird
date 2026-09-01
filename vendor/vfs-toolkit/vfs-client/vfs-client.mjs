@@ -167,6 +167,28 @@ async function _addConnection(providerId, storageId, name, capabilities) {
   });
 }
 
+function _handleConnectionMessage(msg, sender) {
+  if (msg?.type !== 'vfs-toolkit-add-connection' &&
+      msg?.type !== 'vfs-toolkit-remove-connection') {
+    return false;
+  }
+  return _readProviderList().then(list => {
+    if (!list.some(provider => provider.providerId === sender.id)) return;
+    switch (msg.type) {
+      case 'vfs-toolkit-add-connection':
+        return _addConnection(sender.id, msg.storageId, msg.name, msg.capabilities);
+      case 'vfs-toolkit-remove-connection':
+        return _removeConnection(sender.id, msg.storageId).then(() => {
+          browser.runtime.sendMessage({
+            type: 'vfs-remove-connection',
+            providerId: sender.id,
+            storageId: msg.storageId,
+          }).catch(() => { });
+        });
+    }
+  });
+}
+
 
 /**
  * Probes a single extension to check if it is a vfs-toolkit provider.
@@ -247,6 +269,10 @@ export function init(options = {}) {
         return true;
       }
     });
+    browser.runtime.onMessage.addListener((msg, sender) => {
+      if (sender.id !== browser.runtime.id) return false;
+      return _handleConnectionMessage(msg, sender);
+    });
   }
 
   if (!options.enableExternalProviders) return;
@@ -269,32 +295,7 @@ export function init(options = {}) {
   browser.management.onDisabled.addListener(ext => _removeProvider(ext.id));
   browser.management.onUninstalled.addListener(ext => _removeProvider(ext.id));
 
-  // Listen for providers reporting new or removed connections.
-  browser.runtime.onMessageExternal.addListener((msg, sender) => {
-    // Only claim our own message types. Returning false for everything else
-    // lets other onMessageExternal listeners respond instead.
-    if (msg?.type !== 'vfs-toolkit-add-connection' && msg?.type !== 'vfs-toolkit-remove-connection') {
-      return false;
-    }
-    // Only accept messages from known providers.
-    return _readProviderList().then(list => {
-      if (!list.some(p => p.providerId === sender.id)) return;
-      switch (msg.type) {
-        case 'vfs-toolkit-add-connection':
-          // New connections are picked up automatically when the user next opens the
-          // provider dropdown - no broadcast needed.
-          _addConnection(sender.id, msg.storageId, msg.name, msg.capabilities);
-          break;
-        case 'vfs-toolkit-remove-connection':
-          // Removed connections must be broadcast immediately so that any picker
-          // currently showing the removed connection can switch away from it.
-          _removeConnection(sender.id, msg.storageId).then(() => {
-            browser.runtime.sendMessage({ type: 'vfs-remove-connection', providerId: sender.id, storageId: msg.storageId }).catch(() => { });
-          });
-          break;
-      }
-    });
-  });
+  browser.runtime.onMessageExternal.addListener(_handleConnectionMessage);
 }
 
 /**
@@ -410,6 +411,33 @@ export async function fetchProviderConnections() {
   }
 }
 
+async function _hasProviderConnection(providerId, storageId) {
+  const providers = await fetchProviderConnections();
+  return providers.some(provider =>
+    provider.providerId === providerId &&
+    provider.connections.some(connection =>
+      connection.storageRef.storageId === storageId
+    )
+  );
+}
+
+async function _waitForProviderConnection(providerId, storageId) {
+  if (await _hasProviderConnection(providerId, storageId)) return;
+  await new Promise(resolve => {
+    let settled = false;
+    const check = async () => {
+      if (settled || !await _hasProviderConnection(providerId, storageId)) return;
+      settled = true;
+      _connectionsChangedEvent.removeListener(check);
+      resolve();
+    };
+    _connectionsChangedEvent.addListener(check);
+    // Check again after registration so an update between the first check and
+    // listener installation cannot be missed.
+    void check();
+  });
+}
+
 /**
  * Asks the provider to open its setup page as a popup window. Resolves to
  * `{providerId, storageId}` after the user completes the setup, or rejects
@@ -422,6 +450,10 @@ export async function fetchProviderConnections() {
 export async function openProviderSetup(providerId, addonName = '') {
   const addonId = browser.runtime.id;
   const storageId = await _providerSend(providerId, 'openSetup', { addonId, addonName });
+  if (typeof storageId !== 'string' || !storageId) {
+    throw new Error('Provider setup returned an invalid storage ID');
+  }
+  await _waitForProviderConnection(providerId, storageId);
   return { providerId, storageId };
 }
 
@@ -446,6 +478,14 @@ export async function deleteProviderConnection(storageRef) {
   const { providerId, storageId } = storageRef;
   const addonId = browser.runtime.id;
   await _providerSend(providerId, 'deleteConnection', { storageId, addonId });
+  if (providerId === browser.runtime.id) {
+    const message = { type: 'vfs-toolkit-remove-connection', storageId };
+    if (_isBackground) {
+      await _handleConnectionMessage(message, { id: providerId });
+    } else {
+      await browser.runtime.sendMessage(message);
+    }
+  }
 }
 
 /**
