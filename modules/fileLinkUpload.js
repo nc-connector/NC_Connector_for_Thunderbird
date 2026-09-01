@@ -651,7 +651,8 @@
     log,
     onStatus,
     progress: sharedProgress,
-    fileUploadOptions
+    fileUploadOptions,
+    logCompletion = true
   } = {}){
     if (!plan.files.length){
       return;
@@ -693,14 +694,8 @@
         });
         results.set(file.internalId, result);
       }, signal, NCFileLinkUploadPolicy.MAX_PARALLEL_REQUESTS);
-      const elapsedMs = Math.max(1, Date.now() - startedAt);
-      if (typeof log === "function"){
-        log("Upload completed", {
-          files: plan.files.length,
-          bytes: plan.totalBytes,
-          elapsedMs,
-          bytesPerSecond: Math.round(plan.totalBytes / (elapsedMs / 1000))
-        });
+      if (logCompletion){
+        logUploadCompleted(buildUploadSummary(plan), startedAt, log);
       }
     }finally{
       if (!sharedProgress){
@@ -710,18 +705,54 @@
     return results;
   }
 
-  function logUploadPlan(plan, log){
-    if (typeof log !== "function"){
+  function buildUploadSummary(plan, {
+    additionalPlan = null,
+    foldersToCreate = null,
+    serverCopies = null
+  } = {}){
+    const extra = additionalPlan || {
+      files: [],
+      directFiles: [],
+      chunkedFiles: [],
+      bulkFiles: [],
+      bulkBatches: [],
+      totalBytes: 0
+    };
+    const summary = {
+      files: plan.files.length + extra.files.length,
+      foldersToCreate: foldersToCreate == null
+        ? plan.directories.length
+        : Math.max(0, Number(foldersToCreate) || 0),
+      bytes: plan.totalBytes + extra.totalBytes,
+      direct: plan.directFiles.length + extra.directFiles.length,
+      chunked: plan.chunkedFiles.length + extra.chunkedFiles.length,
+      bulkFiles: plan.bulkFiles.length + extra.bulkFiles.length,
+      bulkBatches: plan.bulkBatches.length + extra.bulkBatches.length
+    };
+    if (serverCopies != null){
+      summary.serverCopies = Math.max(0, Number(serverCopies) || 0);
+    }
+    return Object.freeze(summary);
+  }
+
+  function logUploadPlan(plan, log, options){
+    const summary = buildUploadSummary(plan, options);
+    if (typeof log === "function"){
+      log("Upload plan ready", summary);
+    }
+    return summary;
+  }
+
+  function logUploadCompleted(summary, startedAt, log){
+    if (typeof log !== "function" || summary.files < 1){
       return;
     }
-    log("Upload plan ready", {
-      files: plan.files.length,
-      foldersToCreate: plan.directories.length,
-      bytes: plan.totalBytes,
-      direct: plan.directFiles.length,
-      chunked: plan.chunkedFiles.length,
-      bulkFiles: plan.bulkFiles.length,
-      bulkBatches: plan.bulkBatches.length
+    const elapsedMs = Math.max(1, Date.now() - startedAt);
+    log("Upload completed", {
+      files: summary.files,
+      bytes: summary.bytes,
+      elapsedMs,
+      bytesPerSecond: Math.round(summary.bytes / (elapsedMs / 1000))
     });
   }
 
@@ -781,7 +812,8 @@
     onRootCreated,
     collisionMessage,
     additionalDirectories = [],
-    additionalProgressFiles = [],
+    additionalUploadFiles = [],
+    serverCopyCount = 0,
     transferAdditionalSources
   } = {}){
     onStatus?.({ phase: "scanning" });
@@ -801,7 +833,10 @@
           })
         )
       : new Map();
-    logUploadPlan(plan, log);
+    const additionalPlan = NCFileLinkUploadPolicy.buildPlan({
+      files: additionalUploadFiles,
+      bulkSupported: false
+    });
 
     const directories = Array.from(new Set([
       ...plan.directories,
@@ -812,8 +847,13 @@
     });
     const progressFiles = [
       ...plan.files,
-      ...(Array.isArray(additionalProgressFiles) ? additionalProgressFiles : [])
+      ...additionalPlan.files
     ];
+    const uploadSummary = logUploadPlan(plan, log, {
+      additionalPlan,
+      foldersToCreate: directories.length,
+      serverCopies: serverCopyCount
+    });
     const progress = NCFileLinkUploadProgress.create({
       files: progressFiles,
       onStatus,
@@ -868,6 +908,7 @@
         }
       });
       folderStatus.flush();
+      const uploadStartedAt = Date.now();
       await uploadPlan({
         plan,
         davRoot,
@@ -879,7 +920,8 @@
         signal,
         log,
         onStatus,
-        progress
+        progress,
+        logCompletion: false
       });
       if (typeof transferAdditionalSources === "function"){
         await transferAdditionalSources({
@@ -894,6 +936,7 @@
           progress
         });
       }
+      logUploadCompleted(uploadSummary, uploadStartedAt, log);
       return Object.freeze({ plan, root });
     }finally{
       folderStatus.stop();
@@ -903,6 +946,7 @@
 
   global.NCFileLinkUpload = Object.freeze({
     createFolderStatusReporter,
+    buildUploadSummary,
     moveRootReservation,
     moveChunkIntoPlace,
     uploadDirect,

@@ -1069,7 +1069,8 @@
         log: (...args) => logDebug(opts, ...args),
         onStatus: statusCallback,
         additionalDirectories: sourcePlan.additionalDirectories,
-        additionalProgressFiles: sourcePlan.additionalProgressFiles,
+        additionalUploadFiles: sourcePlan.deferredUploadFiles,
+        serverCopyCount: sourcePlan.nextcloudCopies.length,
         transferAdditionalSources: (context) => NCFileLinkSources.transferAdditionalSources({
           ...context,
           plan: sourcePlan

@@ -138,6 +138,31 @@ async function run(){
   assert(!noCapabilityPlan.useBulkUpload, "Missing DAV capability must keep Direct PUT");
   assert(noCapabilityPlan.directFiles.length === 20, "Direct PUT must remain the planned path without bulk");
 
+  const deferredPlan = policy.buildPlan({
+    files: [{
+      itemId: "external-large",
+      fileName: "external-large.bin",
+      relativeDir: "external",
+      size: 20 * MIB + 1
+    }],
+    bulkSupported: false
+  });
+  const mixedSummary = context.NCFileLinkUpload.buildUploadSummary(sharedPlan, {
+    additionalPlan: deferredPlan,
+    foldersToCreate: 3,
+    serverCopies: 2
+  });
+  assert(
+    mixedSummary.files === 3
+      && mixedSummary.bytes === sharedPlan.totalBytes + deferredPlan.totalBytes
+      && mixedSummary.direct === 2
+      && mixedSummary.chunked === 1
+      && mixedSummary.bulkFiles === 0
+      && mixedSummary.foldersToCreate === 3
+      && mixedSummary.serverCopies === 2,
+    "Mixed-source upload summaries must include deferred VFS files and server-side copies"
+  );
+
   assert(context.SparkMD5.hash("") === "d41d8cd98f00b204e9800998ecf8427e", "SparkMD5 empty-string vector must match");
   assert(context.SparkMD5.hash("abc") === "900150983cd24fb0d6963f7d28e17f72", "SparkMD5 abc vector must match");
 
@@ -277,6 +302,19 @@ async function run(){
     uploadSource.includes('phase: "checksums"')
       && wizardSource.includes("sharing_status_calculating_checksums"),
     "Bulk checksum progress must reach the Sharing wizard"
+  );
+  const mixedTransferStart = uploadSource.indexOf("async function prepareAndUpload");
+  const mixedTransferEnd = uploadSource.indexOf("global.NCFileLinkUpload", mixedTransferStart);
+  const mixedTransferSource = uploadSource.slice(mixedTransferStart, mixedTransferEnd);
+  const localUploadEnd = mixedTransferSource.indexOf("await uploadPlan({");
+  const additionalTransferEnd = mixedTransferSource.indexOf("await transferAdditionalSources({");
+  const completionLog = mixedTransferSource.indexOf("logUploadCompleted(uploadSummary");
+  assert(
+    mixedTransferSource.includes("logCompletion: false")
+      && localUploadEnd >= 0
+      && additionalTransferEnd > localUploadEnd
+      && completionLog > additionalTransferEnd,
+    "Mixed-source completion must be logged after every source transfer"
   );
 
   console.log("[OK] filelink-upload-check passed");

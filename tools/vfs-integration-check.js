@@ -802,6 +802,11 @@ async function checkMixedSourcePlan(){
   assert(sourcePlan.nextcloudCopies.length === 2, "Only same-Nextcloud selection roots may issue COPY");
   assert(sourcePlan.externalFiles.length === 2, "External files must remain individual transfer items");
   assert(
+    sourcePlan.deferredUploadFiles.length === 2
+      && sourcePlan.deferredUploadFiles.every((item) => item.sourceFile == null),
+    "External file metadata must enter the aggregate upload plan without staging file content"
+  );
+  assert(
     sourcePlan.additionalDirectories.includes("External/Empty"),
     "External folder trees must preserve empty and parent directories"
   );

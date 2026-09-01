@@ -1037,6 +1037,8 @@ Materialization begins only after queue collection is complete and the share roo
 
 The complete-`File` contract means one large external file can temporarily require similar Thunderbird memory. Sequential read/upload bounds this to one external file at a time. There is deliberately no fallback that downloads a same-Nextcloud source or silently switches transfer protocols. Cancellation closes the exact picker/request, waits for active transfer work to settle, and then uses the existing background-owned share-root cleanup.
 
+The upload-plan log combines local files with external VFS metadata before transfer. External files are classified as Direct or Chunked but stay outside DAV Bulk, while same-Nextcloud COPY roots are reported separately. The completion log is emitted only after every source transfer has finished.
+
 The Toolkit is pinned to API 1.3 and loaded only from `vendor/vfs-toolkit/**` as local `.mjs` modules. `VENDOR.md` records its commit, license, hashes, and the narrow local patches required for co-located provider registration plus request/grant lifecycle safety. The provider descriptor is refreshed before opening an own-Nextcloud picker; its local loopback port enters the same authenticated Toolkit handler as an external port. Toolkit-owned runtime messages remain with the Toolkit listeners, so the NC Connector background router returns `undefined` for those types. The upstream picker has no selection-only option, so NC Connector's packaged picker hides `#vfs-toolbar` with CSS. This deliberately removes management actions and search from the source-selection popup without changing directory navigation or selection. No remote code is loaded.
 
 ---

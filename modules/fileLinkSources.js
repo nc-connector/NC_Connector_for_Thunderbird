@@ -128,7 +128,7 @@
       ...externalFiles.map((item) => item.relativeDir),
       ...nextcloudCopies.map((item) => item.relativeDir)
     ];
-    const additionalProgressFiles = externalFiles.map((item) => Object.freeze({
+    const deferredUploadFiles = externalFiles.map((item) => Object.freeze({
       ...item,
       sourceFile: null
     }));
@@ -139,7 +139,7 @@
       externalFiles: Object.freeze(externalFiles),
       externalDirectories: Object.freeze(externalDirectories),
       additionalDirectories: collectDirectoryTree(directoryPaths),
-      additionalProgressFiles: Object.freeze(additionalProgressFiles)
+      deferredUploadFiles: Object.freeze(deferredUploadFiles)
     });
   }
 
