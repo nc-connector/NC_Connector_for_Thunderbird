@@ -86,6 +86,8 @@
     shareFolderCheckInProgress: false,
     sourceSelectionInProgress: false,
     sourceSelectionPort: null,
+    vfsPickerReturnFocusSeen: false,
+    skipNextVfsFocusRefresh: false,
     vfsAvailability: {
       nextcloud: false,
       external: false
@@ -454,7 +456,15 @@
   }
 
   function handleWindowFocus(){
-    if (!state.sourceSelectionInProgress && !state.uploadInProgress && !state.finalizeStarted){
+    if (state.sourceSelectionInProgress){
+      state.vfsPickerReturnFocusSeen = true;
+      return;
+    }
+    if (state.skipNextVfsFocusRefresh){
+      state.skipNextVfsFocusRefresh = false;
+      return;
+    }
+    if (!state.uploadInProgress && !state.finalizeStarted){
       void refreshVfsSourceAvailability();
     }
   }
@@ -1385,11 +1395,16 @@
         }
         storageRef = connection.storageRef || null;
       }
+      state.vfsPickerReturnFocusSeen = false;
+      state.skipNextVfsFocusRefresh = false;
       const result = await runVfsSourceSelection({
         sourceKind,
         entryKind,
         storageRef
       });
+      // The Toolkit resolves before Thunderbird finishes removing the picker
+      // actor. Its return-focus must not broadcast status requests to that actor.
+      state.skipNextVfsFocusRefresh = !state.vfsPickerReturnFocusSeen;
       if (result?.cancelled){
         setMessage('');
         return;

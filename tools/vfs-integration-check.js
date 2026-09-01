@@ -902,6 +902,13 @@ function checkManifestAndReviewSurface(){
       && wizardHtml.includes("min-height:44px"),
     "The source actions must give localized labels enough width and line height"
   );
+  const wizardRuntime = readText("ui/nextcloudSharingWizard.js");
+  assert(
+    wizardRuntime.includes("state.vfsPickerReturnFocusSeen = true;")
+      && wizardRuntime.includes("state.skipNextVfsFocusRefresh = !state.vfsPickerReturnFocusSeen;")
+      && /if \(state\.skipNextVfsFocusRefresh\)\{\s*state\.skipNextVfsFocusRefresh = false;\s*return;\s*\}/s.test(wizardRuntime),
+    "Returning from a VFS picker must not refresh while its runtime actor is closing"
+  );
   const sourceRuntime = readText("modules/fileLinkSources.js");
   assert(!sourceRuntime.includes("storage.local"), "External File content must not be staged in extension storage");
   assert(!sourceRuntime.includes("indexedDB"), "External File content must not be staged in IndexedDB");
