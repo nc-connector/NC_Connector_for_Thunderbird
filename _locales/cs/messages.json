@@ -1205,6 +1205,45 @@
   "sharing_source_local": {
     "message": "Místní"
   },
+  "sharing_queue_entries_summary": {
+    "message": "Položky: $1"
+  },
+  "sharing_queue_sources_summary": {
+    "message": "Zdroje: $1"
+  },
+  "sharing_queue_total_summary": {
+    "message": "Celkem: $1"
+  },
+  "sharing_queue_size_unknown": {
+    "message": "neznámá"
+  },
+  "sharing_queue_storage_loading": {
+    "message": "Cílové úložiště: načítání..."
+  },
+  "sharing_queue_storage_available": {
+    "message": "Cílové úložiště: $1 volných z $2"
+  },
+  "sharing_queue_storage_unlimited": {
+    "message": "Cílové úložiště: bez omezení"
+  },
+  "sharing_queue_storage_unknown": {
+    "message": "Cílové úložiště: nelze zjistit"
+  },
+  "sharing_queue_storage_insufficient": {
+    "message": "Požadováno: $1 · Dostupné: $2"
+  },
+  "sharing_queue_expand_folder": {
+    "message": "Rozbalit složku „$1“"
+  },
+  "sharing_queue_collapse_folder": {
+    "message": "Sbalit složku „$1“"
+  },
+  "sharing_queue_remove_item": {
+    "message": "Odebrat „$1“"
+  },
+  "sharing_queue_source_group": {
+    "message": "Zdroj: $1"
+  },
   "sharing_status_fetching_source": {
     "message": "Načítání souboru…"
   },
@@ -1258,5 +1297,44 @@
   },
   "vfs_setup_failed": {
     "message": "Přístup se nepodařilo udělit."
+  },
+  "sharing_queue_entries_summary": {
+    "message": "Položky: $1"
+  },
+  "sharing_queue_sources_summary": {
+    "message": "Zdroje: $1"
+  },
+  "sharing_queue_total_summary": {
+    "message": "Celkem: $1"
+  },
+  "sharing_queue_size_unknown": {
+    "message": "neznámá"
+  },
+  "sharing_queue_storage_loading": {
+    "message": "Cílové úložiště: načítání…"
+  },
+  "sharing_queue_storage_available": {
+    "message": "$1 volných z $2"
+  },
+  "sharing_queue_storage_unlimited": {
+    "message": "Cílové úložiště: bez omezení"
+  },
+  "sharing_queue_storage_unknown": {
+    "message": "Cílové úložiště: nelze zjistit"
+  },
+  "sharing_queue_storage_insufficient": {
+    "message": "Vyžadováno: $1 · K dispozici: $2"
+  },
+  "sharing_queue_expand_folder": {
+    "message": "Rozbalit složku $1"
+  },
+  "sharing_queue_collapse_folder": {
+    "message": "Sbalit složku $1"
+  },
+  "sharing_queue_remove_item": {
+    "message": "Odebrat $1"
+  },
+  "sharing_queue_source_group": {
+    "message": "Zdroj: $1"
   }
 }

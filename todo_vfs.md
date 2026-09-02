@@ -12,6 +12,9 @@ approval.
   by the upload session.
 - [x] Reuse one set of sharing defaults and backend policy key mappings in
   options, wizard, and background code.
+- [x] Replace the flat mixed-source table with a recursive source-grouped tree,
+  stable folder expansion, file sizes, queue totals, root-level removal, and
+  target-storage capacity feedback.
 
 ## Completed
 
@@ -47,8 +50,12 @@ approval.
 
 ## UX follow-up
 
-- [ ] Redesign the mixed-source queue table for clearer path, source, and
-  status scanning without changing selection or upload behavior.
+- [x] Redesign the mixed-source queue for clearer hierarchy, source, size, and
+  status scanning without changing transfer behavior.
+- [ ] Clarify whether individual files and nested folders inside a selected
+  folder can be deselected safely. If implemented, rebuild the transfer
+  descriptor deliberately so empty parents, same-Nextcloud COPY roots, and
+  queue path-conflict checks remain correct.
 
 ## Deliberate boundaries
 

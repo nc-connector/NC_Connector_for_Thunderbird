@@ -1205,6 +1205,45 @@
   "sharing_source_local": {
     "message": "ローカル"
   },
+  "sharing_queue_entries_summary": {
+    "message": "項目数: $1"
+  },
+  "sharing_queue_sources_summary": {
+    "message": "ソース数: $1"
+  },
+  "sharing_queue_total_summary": {
+    "message": "合計サイズ: $1"
+  },
+  "sharing_queue_size_unknown": {
+    "message": "不明"
+  },
+  "sharing_queue_storage_loading": {
+    "message": "保存先ストレージ: 読み込み中..."
+  },
+  "sharing_queue_storage_available": {
+    "message": "保存先ストレージ: $2 中 $1 空き"
+  },
+  "sharing_queue_storage_unlimited": {
+    "message": "保存先ストレージ: 容量無制限"
+  },
+  "sharing_queue_storage_unknown": {
+    "message": "保存先ストレージ: 取得できません"
+  },
+  "sharing_queue_storage_insufficient": {
+    "message": "必要: $1 · 利用可能: $2"
+  },
+  "sharing_queue_expand_folder": {
+    "message": "フォルダー「$1」を展開"
+  },
+  "sharing_queue_collapse_folder": {
+    "message": "フォルダー「$1」を折りたたむ"
+  },
+  "sharing_queue_remove_item": {
+    "message": "「$1」を削除"
+  },
+  "sharing_queue_source_group": {
+    "message": "ソース: $1"
+  },
   "sharing_status_fetching_source": {
     "message": "ファイルを読み取り中…"
   },
@@ -1258,5 +1297,44 @@
   },
   "vfs_setup_failed": {
     "message": "アクセスを許可できませんでした。"
+  },
+  "sharing_queue_entries_summary": {
+    "message": "項目: $1"
+  },
+  "sharing_queue_sources_summary": {
+    "message": "ソース: $1"
+  },
+  "sharing_queue_total_summary": {
+    "message": "合計: $1"
+  },
+  "sharing_queue_size_unknown": {
+    "message": "不明"
+  },
+  "sharing_queue_storage_loading": {
+    "message": "保存先ストレージを読み込み中…"
+  },
+  "sharing_queue_storage_available": {
+    "message": "$2 中 $1 空き"
+  },
+  "sharing_queue_storage_unlimited": {
+    "message": "保存先ストレージ: 無制限"
+  },
+  "sharing_queue_storage_unknown": {
+    "message": "保存先ストレージ: 取得不可"
+  },
+  "sharing_queue_storage_insufficient": {
+    "message": "必要: $1 · 利用可能: $2"
+  },
+  "sharing_queue_expand_folder": {
+    "message": "フォルダー $1 を展開"
+  },
+  "sharing_queue_collapse_folder": {
+    "message": "フォルダー $1 を折りたたむ"
+  },
+  "sharing_queue_remove_item": {
+    "message": "$1 を削除"
+  },
+  "sharing_queue_source_group": {
+    "message": "ソース: $1"
   }
 }

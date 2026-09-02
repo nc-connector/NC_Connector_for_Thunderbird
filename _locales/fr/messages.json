@@ -1205,6 +1205,45 @@
   "sharing_source_local": {
     "message": "Stockage local"
   },
+  "sharing_queue_entries_summary": {
+    "message": "Éléments : $1"
+  },
+  "sharing_queue_sources_summary": {
+    "message": "Sources : $1"
+  },
+  "sharing_queue_total_summary": {
+    "message": "Taille totale : $1"
+  },
+  "sharing_queue_size_unknown": {
+    "message": "inconnue"
+  },
+  "sharing_queue_storage_loading": {
+    "message": "Stockage cible : chargement..."
+  },
+  "sharing_queue_storage_available": {
+    "message": "Stockage cible : $1 libres sur $2"
+  },
+  "sharing_queue_storage_unlimited": {
+    "message": "Stockage cible : illimité"
+  },
+  "sharing_queue_storage_unknown": {
+    "message": "Stockage cible : indéterminable"
+  },
+  "sharing_queue_storage_insufficient": {
+    "message": "Requis : $1 · Disponible : $2"
+  },
+  "sharing_queue_expand_folder": {
+    "message": "Développer le dossier « $1 »"
+  },
+  "sharing_queue_collapse_folder": {
+    "message": "Réduire le dossier « $1 »"
+  },
+  "sharing_queue_remove_item": {
+    "message": "Supprimer « $1 »"
+  },
+  "sharing_queue_source_group": {
+    "message": "Source : $1"
+  },
   "sharing_status_fetching_source": {
     "message": "Lecture du fichier…"
   },
@@ -1258,5 +1297,44 @@
   },
   "vfs_setup_failed": {
     "message": "L’accès n’a pas pu être autorisé."
+  },
+  "sharing_queue_entries_summary": {
+    "message": "Éléments : $1"
+  },
+  "sharing_queue_sources_summary": {
+    "message": "Sources : $1"
+  },
+  "sharing_queue_total_summary": {
+    "message": "Total : $1"
+  },
+  "sharing_queue_size_unknown": {
+    "message": "inconnue"
+  },
+  "sharing_queue_storage_loading": {
+    "message": "Chargement du stockage cible…"
+  },
+  "sharing_queue_storage_available": {
+    "message": "$1 libres sur $2"
+  },
+  "sharing_queue_storage_unlimited": {
+    "message": "Stockage cible : illimité"
+  },
+  "sharing_queue_storage_unknown": {
+    "message": "Stockage cible : indisponible"
+  },
+  "sharing_queue_storage_insufficient": {
+    "message": "Requis : $1 · Disponible : $2"
+  },
+  "sharing_queue_expand_folder": {
+    "message": "Développer le dossier $1"
+  },
+  "sharing_queue_collapse_folder": {
+    "message": "Réduire le dossier $1"
+  },
+  "sharing_queue_remove_item": {
+    "message": "Supprimer $1"
+  },
+  "sharing_queue_source_group": {
+    "message": "Source : $1"
   }
 }

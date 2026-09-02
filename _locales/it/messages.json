@@ -1205,6 +1205,45 @@
   "sharing_source_local": {
     "message": "Locale"
   },
+  "sharing_queue_entries_summary": {
+    "message": "Elementi: $1"
+  },
+  "sharing_queue_sources_summary": {
+    "message": "Origini: $1"
+  },
+  "sharing_queue_total_summary": {
+    "message": "Dimensione totale: $1"
+  },
+  "sharing_queue_size_unknown": {
+    "message": "sconosciuta"
+  },
+  "sharing_queue_storage_loading": {
+    "message": "Spazio di destinazione: caricamento..."
+  },
+  "sharing_queue_storage_available": {
+    "message": "Spazio di destinazione: $1 liberi su $2"
+  },
+  "sharing_queue_storage_unlimited": {
+    "message": "Spazio di destinazione: illimitato"
+  },
+  "sharing_queue_storage_unknown": {
+    "message": "Spazio di destinazione: non determinabile"
+  },
+  "sharing_queue_storage_insufficient": {
+    "message": "Richiesto: $1 · Disponibile: $2"
+  },
+  "sharing_queue_expand_folder": {
+    "message": "Espandi la cartella «$1»"
+  },
+  "sharing_queue_collapse_folder": {
+    "message": "Comprimi la cartella «$1»"
+  },
+  "sharing_queue_remove_item": {
+    "message": "Rimuovi «$1»"
+  },
+  "sharing_queue_source_group": {
+    "message": "Origine: $1"
+  },
   "sharing_status_fetching_source": {
     "message": "Lettura del file…"
   },
@@ -1258,5 +1297,44 @@
   },
   "vfs_setup_failed": {
     "message": "Impossibile concedere l’accesso."
+  },
+  "sharing_queue_entries_summary": {
+    "message": "Elementi: $1"
+  },
+  "sharing_queue_sources_summary": {
+    "message": "Origini: $1"
+  },
+  "sharing_queue_total_summary": {
+    "message": "Totale: $1"
+  },
+  "sharing_queue_size_unknown": {
+    "message": "sconosciuta"
+  },
+  "sharing_queue_storage_loading": {
+    "message": "Caricamento dello spazio di destinazione…"
+  },
+  "sharing_queue_storage_available": {
+    "message": "$1 liberi su $2"
+  },
+  "sharing_queue_storage_unlimited": {
+    "message": "Spazio di destinazione: illimitato"
+  },
+  "sharing_queue_storage_unknown": {
+    "message": "Spazio di destinazione: non disponibile"
+  },
+  "sharing_queue_storage_insufficient": {
+    "message": "Necessari: $1 · Disponibili: $2"
+  },
+  "sharing_queue_expand_folder": {
+    "message": "Espandi cartella $1"
+  },
+  "sharing_queue_collapse_folder": {
+    "message": "Comprimi cartella $1"
+  },
+  "sharing_queue_remove_item": {
+    "message": "Rimuovi $1"
+  },
+  "sharing_queue_source_group": {
+    "message": "Origine: $1"
   }
 }

@@ -1205,6 +1205,45 @@
   "sharing_source_local": {
     "message": "本地存储"
   },
+  "sharing_queue_entries_summary": {
+    "message": "项目数：$1"
+  },
+  "sharing_queue_sources_summary": {
+    "message": "来源数：$1"
+  },
+  "sharing_queue_total_summary": {
+    "message": "总大小：$1"
+  },
+  "sharing_queue_size_unknown": {
+    "message": "未知"
+  },
+  "sharing_queue_storage_loading": {
+    "message": "目标存储：正在加载..."
+  },
+  "sharing_queue_storage_available": {
+    "message": "目标存储：$2 中有 $1 可用"
+  },
+  "sharing_queue_storage_unlimited": {
+    "message": "目标存储：无限制"
+  },
+  "sharing_queue_storage_unknown": {
+    "message": "目标存储：无法确定"
+  },
+  "sharing_queue_storage_insufficient": {
+    "message": "需要：$1 · 可用：$2"
+  },
+  "sharing_queue_expand_folder": {
+    "message": "展开文件夹“$1”"
+  },
+  "sharing_queue_collapse_folder": {
+    "message": "折叠文件夹“$1”"
+  },
+  "sharing_queue_remove_item": {
+    "message": "移除“$1”"
+  },
+  "sharing_queue_source_group": {
+    "message": "来源：$1"
+  },
   "sharing_status_fetching_source": {
     "message": "正在读取文件…"
   },
@@ -1258,5 +1297,44 @@
   },
   "vfs_setup_failed": {
     "message": "无法授予访问权限。"
+  },
+  "sharing_queue_entries_summary": {
+    "message": "项目：$1"
+  },
+  "sharing_queue_sources_summary": {
+    "message": "来源：$1"
+  },
+  "sharing_queue_total_summary": {
+    "message": "总计：$1"
+  },
+  "sharing_queue_size_unknown": {
+    "message": "未知"
+  },
+  "sharing_queue_storage_loading": {
+    "message": "正在加载目标存储空间…"
+  },
+  "sharing_queue_storage_available": {
+    "message": "$2 中有 $1 可用"
+  },
+  "sharing_queue_storage_unlimited": {
+    "message": "目标存储空间：无限制"
+  },
+  "sharing_queue_storage_unknown": {
+    "message": "目标存储空间：无法获取"
+  },
+  "sharing_queue_storage_insufficient": {
+    "message": "需要：$1 · 可用：$2"
+  },
+  "sharing_queue_expand_folder": {
+    "message": "展开文件夹 $1"
+  },
+  "sharing_queue_collapse_folder": {
+    "message": "折叠文件夹 $1"
+  },
+  "sharing_queue_remove_item": {
+    "message": "移除 $1"
+  },
+  "sharing_queue_source_group": {
+    "message": "来源：$1"
   }
 }

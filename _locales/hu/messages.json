@@ -1205,6 +1205,45 @@
   "sharing_source_local": {
     "message": "Helyi"
   },
+  "sharing_queue_entries_summary": {
+    "message": "Elemek: $1"
+  },
+  "sharing_queue_sources_summary": {
+    "message": "Források: $1"
+  },
+  "sharing_queue_total_summary": {
+    "message": "Összesen: $1"
+  },
+  "sharing_queue_size_unknown": {
+    "message": "ismeretlen"
+  },
+  "sharing_queue_storage_loading": {
+    "message": "Céltárhely: betöltés..."
+  },
+  "sharing_queue_storage_available": {
+    "message": "Céltárhely: $1 szabad / $2"
+  },
+  "sharing_queue_storage_unlimited": {
+    "message": "Céltárhely: korlátlan"
+  },
+  "sharing_queue_storage_unknown": {
+    "message": "Céltárhely: nem határozható meg"
+  },
+  "sharing_queue_storage_insufficient": {
+    "message": "Szükséges: $1 · Elérhető: $2"
+  },
+  "sharing_queue_expand_folder": {
+    "message": "Mappa kibontása: „$1“"
+  },
+  "sharing_queue_collapse_folder": {
+    "message": "Mappa összecsukása: „$1“"
+  },
+  "sharing_queue_remove_item": {
+    "message": "„$1“ eltávolítása"
+  },
+  "sharing_queue_source_group": {
+    "message": "Forrás: $1"
+  },
   "sharing_status_fetching_source": {
     "message": "Fájl beolvasása…"
   },
@@ -1258,5 +1297,44 @@
   },
   "vfs_setup_failed": {
     "message": "A hozzáférést nem sikerült megadni."
+  },
+  "sharing_queue_entries_summary": {
+    "message": "Elemek: $1"
+  },
+  "sharing_queue_sources_summary": {
+    "message": "Források: $1"
+  },
+  "sharing_queue_total_summary": {
+    "message": "Összesen: $1"
+  },
+  "sharing_queue_size_unknown": {
+    "message": "ismeretlen"
+  },
+  "sharing_queue_storage_loading": {
+    "message": "Céltárhely betöltése…"
+  },
+  "sharing_queue_storage_available": {
+    "message": "$1 szabad / $2"
+  },
+  "sharing_queue_storage_unlimited": {
+    "message": "Céltárhely: korlátlan"
+  },
+  "sharing_queue_storage_unknown": {
+    "message": "Céltárhely: nem állapítható meg"
+  },
+  "sharing_queue_storage_insufficient": {
+    "message": "Szükséges: $1 · Elérhető: $2"
+  },
+  "sharing_queue_expand_folder": {
+    "message": "$1 mappa kibontása"
+  },
+  "sharing_queue_collapse_folder": {
+    "message": "$1 mappa összecsukása"
+  },
+  "sharing_queue_remove_item": {
+    "message": "$1 eltávolítása"
+  },
+  "sharing_queue_source_group": {
+    "message": "Forrás: $1"
   }
 }

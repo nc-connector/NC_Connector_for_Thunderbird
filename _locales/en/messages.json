@@ -1205,6 +1205,45 @@
   "sharing_source_local": {
     "message": "Local"
   },
+  "sharing_queue_entries_summary": {
+    "message": "Entries: $1"
+  },
+  "sharing_queue_sources_summary": {
+    "message": "Sources: $1"
+  },
+  "sharing_queue_total_summary": {
+    "message": "Total: $1"
+  },
+  "sharing_queue_size_unknown": {
+    "message": "unknown"
+  },
+  "sharing_queue_storage_loading": {
+    "message": "Target storage: loading..."
+  },
+  "sharing_queue_storage_available": {
+    "message": "Target storage: $1 free of $2"
+  },
+  "sharing_queue_storage_unlimited": {
+    "message": "Target storage: unlimited"
+  },
+  "sharing_queue_storage_unknown": {
+    "message": "Target storage: unavailable"
+  },
+  "sharing_queue_storage_insufficient": {
+    "message": "Required: $1 · Available: $2"
+  },
+  "sharing_queue_expand_folder": {
+    "message": "Expand folder $1"
+  },
+  "sharing_queue_collapse_folder": {
+    "message": "Collapse folder $1"
+  },
+  "sharing_queue_remove_item": {
+    "message": "Remove $1"
+  },
+  "sharing_queue_source_group": {
+    "message": "Source: $1"
+  },
   "sharing_status_fetching_source": {
     "message": "Reading file..."
   },
@@ -1258,5 +1297,44 @@
   },
   "vfs_setup_failed": {
     "message": "Access could not be granted."
+  },
+  "sharing_queue_entries_summary": {
+    "message": "Entries: $1"
+  },
+  "sharing_queue_sources_summary": {
+    "message": "Sources: $1"
+  },
+  "sharing_queue_total_summary": {
+    "message": "Total: $1"
+  },
+  "sharing_queue_size_unknown": {
+    "message": "unknown"
+  },
+  "sharing_queue_storage_loading": {
+    "message": "Loading target storage..."
+  },
+  "sharing_queue_storage_available": {
+    "message": "$1 free of $2"
+  },
+  "sharing_queue_storage_unlimited": {
+    "message": "Target storage: unlimited"
+  },
+  "sharing_queue_storage_unknown": {
+    "message": "Target storage: unavailable"
+  },
+  "sharing_queue_storage_insufficient": {
+    "message": "Required: $1 · Available: $2"
+  },
+  "sharing_queue_expand_folder": {
+    "message": "Expand folder $1"
+  },
+  "sharing_queue_collapse_folder": {
+    "message": "Collapse folder $1"
+  },
+  "sharing_queue_remove_item": {
+    "message": "Remove $1"
+  },
+  "sharing_queue_source_group": {
+    "message": "Source: $1"
   }
 }

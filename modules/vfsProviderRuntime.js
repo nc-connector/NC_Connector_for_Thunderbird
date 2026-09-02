@@ -234,7 +234,14 @@
 
       async onStorageUsage(storageId){
         const state = await requireStorageAccess(storageId);
-        return storage.storageUsage({ expectedAccountKey: state.accountKey });
+        const result = await storage.storageUsage({ expectedAccountKey: state.accountKey });
+        // The public VFS contract deliberately stays limited to usage/quota.
+        // Wizard-only capacity details never become a Toolkit compatibility
+        // dependency for consumers using older VFS versions.
+        return Object.freeze({
+          usage: Number.isFinite(result?.usage) ? result.usage : null,
+          quota: Number.isFinite(result?.quota) ? result.quota : null
+        });
       }
 
       async onList(requestId, storageId, path){
@@ -440,6 +447,12 @@
     });
   }
 
+  async function getDestinationStorageUsage(){
+    await readyPromise;
+    const { state } = await reconcileAccount();
+    return storage.storageUsage({ expectedAccountKey: state.accountKey });
+  }
+
   function connectLocal(){
     if (!provider){
       throw global.NCNextcloudVfsStorage.createVfsError(
@@ -458,6 +471,7 @@
     grantConsumer,
     revokeGrant,
     reconcileAccount,
+    getDestinationStorageUsage,
     copyIntoShare,
     connectLocal
   });

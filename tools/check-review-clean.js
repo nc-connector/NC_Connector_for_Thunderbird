@@ -28,6 +28,7 @@ const CHECKS = [
   "tools/vfs-toolkit-vendor-check.js",
   "tools/nextcloud-vfs-storage-check.js",
   "tools/vfs-integration-check.js",
+  "tools/sharing-queue-ui-check.js",
   "tools/vendor-security-check.js",
   "tools/background-state-security-check.js",
   "tools/url-subfolder-contract-check.js",

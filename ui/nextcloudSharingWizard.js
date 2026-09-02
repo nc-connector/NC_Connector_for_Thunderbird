@@ -19,8 +19,8 @@
   });
   let pendingUploadScroll = null;
   let uploadRenderTimer = null;
+  let queueView = null;
   const fileEntriesById = new Map();
-  const fileRowsById = new Map();
   const pendingUploadRowIds = new Set();
   const TOTAL_STEPS = 4;
   const ATTACHMENT_DEFAULT_SHARE_NAME = "email_attachment";
@@ -68,7 +68,6 @@
   const state = {
     currentStep: 1,
     files: [],
-    selectedFileId: null,
     basePath: '',
     shareContext: createShareContext(),
     defaults: {
@@ -90,7 +89,17 @@
     skipNextVfsFocusRefresh: false,
     vfsAvailability: {
       nextcloud: false,
-      external: false
+      external: false,
+      destinationRef: ''
+    },
+    destinationStorage: {
+      status: 'idle',
+      state: 'unknown',
+      usage: null,
+      quota: null,
+      available: null,
+      fetchedAt: 0,
+      requestId: 0
     },
     uploadInProgress: false,
     uploadCompleted: false,
@@ -113,7 +122,6 @@
     attachmentReason: null,
     debugEnabled: false,
     wizardWindowId: 0,
-    pathColumnScrollLeft: 0,
     policy: {
       status: null,
       active: false,
@@ -195,6 +203,7 @@
     setWizardReady(false);
     NCTalkDomI18n.translatePage(i18n, { titleKey: "sharing_dialog_title" });
     dom.vfsConnectionList?.setAttribute('aria-label', i18n('sharing_vfs_connection_label'));
+    initializeQueueView();
     try{
       state.tabId = parseTabId();
       state.launchContextId = parseLaunchContextId();
@@ -225,7 +234,7 @@
       }else{
         setDefaultShareName();
       }
-      renderFileTable();
+      renderFileQueue();
       updateStep(state.mode === "attachments" ? 3 : 1);
       updateAttachmentModeInfo();
       log('Wizard initialized', {
@@ -287,15 +296,19 @@
     dom.addNextcloudFolderBtn = document.getElementById('addNextcloudFolderBtn');
     dom.addExternalFilesBtn = document.getElementById('addExternalFilesBtn');
     dom.addExternalFolderBtn = document.getElementById('addExternalFolderBtn');
-    dom.removeFileBtn = document.getElementById('removeFileBtn');
     dom.fileInput = document.getElementById('fileInput');
     dom.folderInput = document.getElementById('folderInput');
     dom.vfsConnectionDialog = document.getElementById('vfsConnectionDialog');
     dom.vfsConnectionList = document.getElementById('vfsConnectionList');
     dom.vfsProviderFallbackIcon = document.getElementById('vfsProviderFallbackIcon');
-    dom.fileTableBody = document.getElementById('fileTableBody');
-    dom.fileTableWrapper = document.querySelector('.file-table-wrapper');
+    dom.queueSummaryBar = document.getElementById('queueSummaryBar');
+    dom.queueSummaryText = document.getElementById('queueSummaryText');
+    dom.queueStorageText = document.getElementById('queueStorageText');
+    dom.fileQueueTree = document.getElementById('fileQueueTree');
+    dom.fileQueueWrapper = document.getElementById('fileQueueWrapper');
     dom.fileEmptyPlaceholder = document.getElementById('fileEmptyPlaceholder');
+    dom.queueToggleIcon = document.getElementById('queueToggleIcon');
+    dom.queueRemoveIcon = document.getElementById('queueRemoveIcon');
     dom.overallUploadProgress = document.getElementById('overallUploadProgress');
     dom.overallUploadProgressBar = document.getElementById('overallUploadProgressBar');
     dom.uploadStatus = document.getElementById('uploadStatus');
@@ -309,6 +322,44 @@
     dom.uploadBtn = document.getElementById('uploadBtn');
     dom.finishBtn = document.getElementById('finishBtn');
     dom.cancelBtn = document.getElementById('cancelBtn');
+  }
+
+  function cloneTemplateContent(template){
+    return template?.content?.firstElementChild?.cloneNode(true) || null;
+  }
+
+  function getQueueSourceIcon(source){
+    const summary = source?.kind === 'nextcloud'
+      ? dom.nextcloudSourceSummary
+      : (source?.kind === 'external-vfs'
+        ? dom.externalSourceSummary
+        : dom.localSourceSummary);
+    const icon = summary?.querySelector('.source-icon')?.cloneNode(true) || null;
+    icon?.classList.remove('source-icon');
+    return icon;
+  }
+
+  function initializeQueueView(){
+    if (!globalThis.NCSharingQueueTree?.createView){
+      throw new Error('sharing_queue_tree_runtime_unavailable');
+    }
+    queueView = NCSharingQueueTree.createView({
+      container: dom.fileQueueTree,
+      scrollContainer: dom.fileQueueWrapper,
+      getSourceLabel: getEntrySourceLabel,
+      getTargetPath: getTargetRelativePath,
+      formatSize: formatTransferSize,
+      buildStatusNode,
+      canRemove: () => true,
+      onRemove: (_node, removalTarget) => removeQueueEntry(removalTarget),
+      getSourceIcon: getQueueSourceIcon,
+      getToggleContent: () => cloneTemplateContent(dom.queueToggleIcon),
+      getRemoveContent: () => cloneTemplateContent(dom.queueRemoveIcon),
+      getSourceAriaLabel: (source) => i18n('sharing_queue_source_group', [source.label]),
+      getExpandAriaLabel: (node) => i18n('sharing_queue_expand_folder', [node.label]),
+      getCollapseAriaLabel: (node) => i18n('sharing_queue_collapse_folder', [node.label]),
+      getRemoveAriaLabel: (node) => i18n('sharing_queue_remove_item', [node.label])
+    });
   }
 
   function parseTabId(){
@@ -429,7 +480,6 @@
     });
     dom.fileInput.addEventListener('change', (event) => handleFileSelection(event, 'file'));
     dom.folderInput?.addEventListener('change', (event) => handleFileSelection(event, 'folder'));
-    dom.removeFileBtn.addEventListener('click', removeSelectedEntry);
     dom.backBtn.addEventListener('click', () => {
       if (state.currentStep > 1 && !state.uploadInProgress){
         updateStep(state.currentStep - 1);
@@ -710,7 +760,6 @@
         };
       });
     rebuildFileEntryIndex();
-    state.selectedFileId = null;
     log('Attachment queue prepared', { files: state.files.length });
   }
 
@@ -981,6 +1030,7 @@
     });
     if (state.currentStep === 3){
       setUploadStatus(state.uploadCompleted ? i18n('sharing_status_ready') : '');
+      void refreshDestinationStorageUsage();
     }else{
       setUploadStatus('');
     }
@@ -993,6 +1043,7 @@
       || state.uploadInProgress
       || state.finalizeInProgress;
     const sourceControlsDisabled = state.finalizeStarted || busy;
+    queueView?.setRemovalDisabled(sourceControlsDisabled);
     [
       dom.addFilesBtn,
       dom.addFolderBtn
@@ -1032,6 +1083,7 @@
       closeSourceMenus();
     }
     dom.cancelBtn.disabled = state.finalizeInProgress;
+    const insufficientStorage = hasInsufficientDestinationStorage();
     if (state.mode === "attachments"){
       dom.backBtn.style.visibility = 'hidden';
       dom.nextBtn.style.visibility = 'hidden';
@@ -1040,8 +1092,9 @@
       dom.finishBtn.disabled = busy
         || (state.finalizeStarted && !state.finalizeRetryAllowed)
         || state.finalized
+        || (!state.uploadCompleted && insufficientStorage)
         || (!state.uploadCompleted && state.files.length === 0);
-      dom.removeFileBtn.disabled = state.finalizeStarted || !state.selectedFileId || busy;
+      setPrimaryAction(dom.finishBtn);
       return;
     }
     dom.backBtn.disabled = state.finalizeStarted || state.currentStep === 1 || busy;
@@ -1051,13 +1104,26 @@
       || (state.currentStep === 1 && !getRawShareName())
       || (state.currentStep === 3 && !state.uploadCompleted && !canSkipUpload());
     dom.uploadBtn.style.visibility = state.currentStep === 3 ? 'visible' : 'hidden';
-    dom.uploadBtn.disabled = state.finalizeStarted || busy || !state.files.length || state.uploadCompleted;
+    dom.uploadBtn.disabled = state.finalizeStarted
+      || busy
+      || insufficientStorage
+      || !state.files.length
+      || state.uploadCompleted;
     dom.finishBtn.style.visibility = state.currentStep === TOTAL_STEPS ? 'visible' : 'hidden';
     dom.finishBtn.disabled = !state.uploadCompleted
       || busy
       || (state.finalizeStarted && !state.finalizeRetryAllowed)
       || state.finalized;
-    dom.removeFileBtn.disabled = state.finalizeStarted || !state.selectedFileId || busy;
+    const primaryAction = state.currentStep === 3
+      ? (state.uploadCompleted || !state.files.length ? dom.nextBtn : dom.uploadBtn)
+      : (state.currentStep === TOTAL_STEPS ? dom.finishBtn : dom.nextBtn);
+    setPrimaryAction(primaryAction);
+  }
+
+  function setPrimaryAction(primaryButton){
+    [dom.backBtn, dom.nextBtn, dom.uploadBtn, dom.finishBtn].forEach((button) => {
+      button?.classList.toggle('primary', button === primaryButton);
+    });
   }
 
   function setSourceActionState({ action, summary, disabled, unavailableTitle = '' } = {}){
@@ -1069,7 +1135,9 @@
       const availabilityBlocked = unavailableTitle
         && ((action === dom.nextcloudSourceAction && !state.vfsAvailability.nextcloud)
           || (action === dom.externalSourceAction && !state.vfsAvailability.external));
-      summary.title = availabilityBlocked ? unavailableTitle : '';
+      summary.title = availabilityBlocked
+        ? unavailableTitle
+        : String(summary.querySelector('span')?.textContent || '').trim();
     }
     if (isDisabled && action){
       action.open = false;
@@ -1095,6 +1163,13 @@
       && !!nextcloudStatus?.selfStorageRef?.providerId
       && !!nextcloudStatus?.selfStorageRef?.storageId;
     state.vfsAvailability.external = externalConnections.length > 0;
+    const destinationRef = state.vfsAvailability.nextcloud
+      ? `${nextcloudStatus.selfStorageRef.providerId}:${nextcloudStatus.selfStorageRef.storageId}`
+      : '';
+    if (state.vfsAvailability.destinationRef !== destinationRef){
+      state.vfsAvailability.destinationRef = destinationRef;
+      resetDestinationStorageUsage();
+    }
     updateButtons();
   }
 
@@ -1390,7 +1465,6 @@
       state.files.push(...entries);
       rebuildFileEntryIndex();
       pendingUploadScroll = '__bottom__';
-      state.selectedFileId = null;
       invalidateUpload();
       setMessage('');
       log('VFS source selection completed', {
@@ -1429,6 +1503,11 @@
       firstHasMozFullPath: !!first?.mozFullPath,
       firstHasPath: !!first?.path
     });
+    // Local folder grouping is presentation-only. VFS transfer groups carry
+    // copy semantics in the background and must not be reused for local files.
+    const queueGroupId = source === 'folder'
+      ? `local-folder-${Date.now()}-${Math.random().toString(36).slice(2)}`
+      : '';
     const entries = files.map((file) => {
       const relativePath = (file.webkitRelativePath || file.relativePath || '').replace(/\\/g, '/');
       let relativeDir = '';
@@ -1453,6 +1532,7 @@
         displayPath,
         displayDir,
         relativeDir,
+        queueGroupId,
         renamedName: '',
         status: 'pending',
         progress: 0,
@@ -1464,23 +1544,34 @@
     state.files.push(...entries);
     rebuildFileEntryIndex();
     pendingUploadScroll = '__bottom__';
-    state.selectedFileId = null;
     event.target.value = '';
     invalidateUpload();
   }
 
-  function removeSelectedEntry(){
-    if (!state.selectedFileId || state.uploadInProgress){
+  function removeQueueEntry(removalTarget){
+    if (state.sourceSelectionInProgress || state.uploadInProgress || state.finalizeStarted){
       return;
     }
-    const removed = state.files.find((entry) => entry.id === state.selectedFileId);
-    state.files = removed?.transferGroupId
-      ? state.files.filter((entry) => entry.transferGroupId !== removed.transferGroupId)
-      : state.files.filter((entry) => entry.id !== state.selectedFileId);
+    const kind = String(removalTarget?.kind || '');
+    const entryId = String(removalTarget?.entryId || '');
+    const groupId = String(removalTarget?.groupId || '');
+    const belongsToGroup = (entry) =>
+      String(entry?.queueGroupId || entry?.transferGroupId || '') === groupId;
+    const removed = kind === 'group'
+      ? state.files.filter(belongsToGroup)
+      : state.files.filter((entry) => entry.id === entryId);
+    if (!removed.length){
+      return;
+    }
+    state.files = kind === 'group'
+      ? state.files.filter((entry) => !belongsToGroup(entry))
+      : state.files.filter((entry) => entry.id !== entryId);
     rebuildFileEntryIndex();
-    state.selectedFileId = null;
     invalidateUpload();
-    log('Entry removed', removed?.displayPath || '');
+    log('Queue selection removed', {
+      entries: removed.length,
+      path: removed[0]?.displayPath || removed[0]?.name || ''
+    });
   }
 
   function rebuildFileEntryIndex(){
@@ -1490,59 +1581,19 @@
     }
   }
 
-  function renderFileTable(){
-    fileRowsById.clear();
+  function renderFileQueue(){
     pendingUploadRowIds.clear();
-    dom.fileTableBody.replaceChildren();
+    const model = queueView.render(state.files);
     if (!state.files.length){
       dom.fileEmptyPlaceholder.style.display = 'block';
+      dom.fileQueueTree.hidden = true;
+      renderQueueSummary(model);
       ensureUploadListVisible({ targetId: '__top__', force: true });
       return;
     }
     dom.fileEmptyPlaceholder.style.display = 'none';
-    const rows = document.createDocumentFragment();
-    state.files.forEach((entry) => {
-      const row = document.createElement('tr');
-      row.dataset.id = entry.id;
-      if (state.selectedFileId === entry.id){
-        row.classList.add('selected');
-      }
-      if (['uploading', 'fetching', 'copying', 'preparing'].includes(entry.status)){
-        row.classList.add('uploading');
-      }
-      const pathCell = document.createElement('td');
-      pathCell.className = 'path-cell';
-      const pathScroll = document.createElement('div');
-      pathScroll.className = 'path-scroll';
-      pathScroll.textContent = entry.displayPath || entry.name || entry.file?.name || '';
-      attachPathWheelScroll(pathScroll);
-      pathScroll.scrollLeft = state.pathColumnScrollLeft;
-      pathCell.appendChild(pathScroll);
-      const typeCell = document.createElement('td');
-      typeCell.className = 'type-cell';
-      typeCell.textContent = entry.kind === 'folder'
-        ? i18n('sharing_file_type_folder')
-        : i18n('sharing_file_type_file');
-      const sourceCell = document.createElement('td');
-      sourceCell.className = 'source-cell';
-      sourceCell.textContent = getEntrySourceLabel(entry);
-      sourceCell.title = sourceCell.textContent;
-      const statusCell = document.createElement('td');
-      statusCell.className = 'status-cell';
-      statusCell.appendChild(buildStatusNode(entry));
-      row.append(pathCell, typeCell, sourceCell, statusCell);
-      row.addEventListener('click', () => {
-        const previousId = state.selectedFileId;
-        state.selectedFileId = entry.id;
-        fileRowsById.get(previousId)?.classList.remove('selected');
-        row.classList.add('selected');
-        updateButtons();
-      });
-      rows.appendChild(row);
-      fileRowsById.set(entry.id, row);
-    });
-    dom.fileTableBody.appendChild(rows);
-    applySharedPathColumnScroll(state.pathColumnScrollLeft);
+    dom.fileQueueTree.hidden = false;
+    renderQueueSummary(model);
     ensureUploadListVisible();
   }
 
@@ -1556,12 +1607,154 @@
     return i18n('sharing_source_local');
   }
 
+  function getQueueSummary(model = queueView?.getModel()){
+    return NCSharingQueueTree.summarize(model || NCSharingQueueTree.buildModel([], {}));
+  }
+
+  function setQueueStorageSummary(text, displayState){
+    dom.queueStorageText.textContent = text;
+    dom.queueStorageText.title = text;
+    dom.queueStorageText.dataset.state = displayState;
+  }
+
+  function renderQueueSummary(model = queueView?.getModel()){
+    if (!dom.queueSummaryText || !dom.queueStorageText){
+      return;
+    }
+    const summary = getQueueSummary(model);
+    const sizeValue = summary.hasUnknownSize
+      ? (summary.knownFileBytes > 0
+        ? `≥ ${formatTransferSize(summary.knownFileBytes)}`
+        : i18n('sharing_queue_size_unknown'))
+      : formatTransferSize(summary.knownFileBytes);
+    dom.queueSummaryText.textContent = [
+      i18n('sharing_queue_entries_summary', [String(summary.entryCount)]),
+      i18n('sharing_queue_sources_summary', [String(summary.sourceCount)]),
+      i18n('sharing_queue_total_summary', [sizeValue])
+    ].join(' · ');
+
+    const destination = state.destinationStorage;
+    if (!state.vfsAvailability.destinationRef){
+      setQueueStorageSummary(i18n('sharing_queue_storage_unknown'), 'unknown');
+      return;
+    }
+    if (destination.status === 'idle' || destination.status === 'loading'){
+      setQueueStorageSummary(i18n('sharing_queue_storage_loading'), 'loading');
+      return;
+    }
+    if (destination.state === 'unlimited'){
+      setQueueStorageSummary(i18n('sharing_queue_storage_unlimited'), 'unlimited');
+      return;
+    }
+    if (destination.state !== 'finite'){
+      setQueueStorageSummary(i18n('sharing_queue_storage_unknown'), 'unknown');
+      return;
+    }
+    if (NCSharingQueueTree.evaluateCapacity(summary, destination).blocked){
+      setQueueStorageSummary(i18n('sharing_queue_storage_insufficient', [
+        formatTransferSize(summary.knownFileBytes),
+        formatTransferSize(destination.available)
+      ]), 'insufficient');
+      return;
+    }
+    setQueueStorageSummary(i18n('sharing_queue_storage_available', [
+      formatTransferSize(destination.available),
+      formatTransferSize(destination.quota)
+    ]), 'finite');
+  }
+
+  function hasInsufficientDestinationStorage(){
+    return NCSharingQueueTree.evaluateCapacity(
+      getQueueSummary(),
+      state.destinationStorage
+    ).blocked;
+  }
+
+  function resetDestinationStorageUsage(){
+    state.destinationStorage.requestId++;
+    state.destinationStorage.status = 'idle';
+    state.destinationStorage.state = 'unknown';
+    state.destinationStorage.usage = null;
+    state.destinationStorage.quota = null;
+    state.destinationStorage.available = null;
+    state.destinationStorage.fetchedAt = 0;
+    renderQueueSummary();
+  }
+
+  async function refreshDestinationStorageUsage({ force = false } = {}){
+    const destination = state.destinationStorage;
+    if (!state.vfsAvailability.destinationRef){
+      resetDestinationStorageUsage();
+      return;
+    }
+    const fresh = destination.fetchedAt > 0
+      && Date.now() - destination.fetchedAt < 5 * 60 * 1000;
+    if (destination.status === 'loading' || (!force && fresh)){
+      return;
+    }
+    const requestId = ++destination.requestId;
+    destination.status = 'loading';
+    renderQueueSummary();
+    try{
+      const response = await browser.runtime.sendMessage({
+        type: 'sharing:getDestinationStorageUsage'
+      });
+      if (requestId !== destination.requestId){
+        return;
+      }
+      const usage = response?.ok ? response.usage : null;
+      const usageState = String(usage?.state || 'unknown');
+      if (usageState === 'finite'
+        && Number.isFinite(usage?.usage)
+        && Number.isFinite(usage?.quota)
+        && Number.isFinite(usage?.available)
+        && usage.usage >= 0
+        && usage.quota >= 0
+        && usage.available >= 0){
+        destination.state = 'finite';
+        destination.usage = usage.usage;
+        destination.quota = usage.quota;
+        destination.available = usage.available;
+      }else if (usageState === 'unlimited' && Number.isFinite(usage?.usage)){
+        destination.state = 'unlimited';
+        destination.usage = Math.max(0, usage.usage);
+        destination.quota = null;
+        destination.available = null;
+      }else{
+        destination.state = 'unknown';
+        destination.usage = Number.isFinite(usage?.usage) ? Math.max(0, usage.usage) : null;
+        destination.quota = null;
+        destination.available = null;
+      }
+      destination.status = 'ready';
+      destination.fetchedAt = Date.now();
+    }catch(error){
+      if (requestId !== destination.requestId){
+        return;
+      }
+      destination.status = 'ready';
+      destination.state = 'unknown';
+      destination.usage = null;
+      destination.quota = null;
+      destination.available = null;
+      destination.fetchedAt = Date.now();
+      log('Destination storage usage unavailable', {
+        reason: error?.message || String(error)
+      });
+    }finally{
+      if (requestId === destination.requestId){
+        renderQueueSummary();
+        updateButtons();
+      }
+    }
+  }
+
   /**
    * Ensure the upload list scroll position matches the target.
    * @param {{targetId?:string,force?:boolean}} options
    */
   function ensureUploadListVisible({ targetId = null, force = false } = {}){
-    if (!dom.fileTableWrapper){
+    if (!queueView){
       return;
     }
     let desiredTarget = targetId || pendingUploadScroll;
@@ -1571,31 +1764,8 @@
     if (!force && !desiredTarget){
       return;
     }
-    const wrapper = dom.fileTableWrapper;
-    const tableBody = dom.fileTableBody;
     pendingUploadScroll = null;
-    /**
-     * Perform the actual scroll adjustment.
-     */
-    const scrollTask = () => {
-      if (desiredTarget === '__top__'){
-        wrapper.scrollTop = 0;
-        return;
-      }
-      if (desiredTarget && desiredTarget !== '__bottom__'){
-        const row = tableBody?.querySelector(`tr[data-id="${desiredTarget}"]`);
-        if (row){
-          row.scrollIntoView({ block: 'nearest' });
-          return;
-        }
-      }
-      wrapper.scrollTop = wrapper.scrollHeight;
-    };
-    if (typeof window.requestAnimationFrame === 'function'){
-      window.requestAnimationFrame(scrollTask);
-    }else{
-      window.setTimeout(scrollTask, 0);
-    }
+    queueView.scrollTo(desiredTarget);
   }
 
   function formatUploadSpeedKbps(kbps){
@@ -1637,20 +1807,7 @@
   }
 
   function patchUploadRow(entry){
-    const row = fileRowsById.get(entry?.id);
-    if (!row){
-      return false;
-    }
-    row.classList.toggle(
-      'uploading',
-      ['uploading', 'fetching', 'copying', 'preparing'].includes(entry.status)
-    );
-    const statusCell = row.querySelector('.status-cell');
-    if (!statusCell){
-      return false;
-    }
-    statusCell.replaceChildren(buildStatusNode(entry));
-    return true;
+    return queueView?.patchEntry(entry) === true;
   }
 
   function scheduleUploadRender(itemIds = [], force = false){
@@ -1664,7 +1821,7 @@
         clearTimeout(uploadRenderTimer);
         uploadRenderTimer = null;
       }
-      renderFileTable();
+      renderFileQueue();
       return;
     }
     if (uploadRenderTimer){
@@ -1678,7 +1835,7 @@
         !patchUploadRow(fileEntriesById.get(itemId))
       );
       if (missingRow){
-        renderFileTable();
+        renderFileQueue();
       }
     }, 100);
   }
@@ -1751,7 +1908,7 @@
     });
     setUploadStatus('');
     setOverallProgress({ visible: false });
-    renderFileTable();
+    renderFileQueue();
     updateButtons();
   }
 
@@ -1806,6 +1963,10 @@
       setMessage(i18n('sharing_message_no_files'), 'error');
       return;
     }
+    if (hasInsufficientDestinationStorage()){
+      setMessage(i18n('sharing_insufficient_storage'), 'error');
+      return;
+    }
     log('Upload started', { files: state.files.length });
     if (!validatePasswordIfNeeded()){
       log('Upload cancelled: invalid password');
@@ -1830,7 +1991,7 @@
       setUploadStatus(i18n('sharing_status_creating'));
       setOverallProgress({ visible: true, indeterminate: true });
     }
-    renderFileTable();
+    renderFileQueue();
     updateButtons();
     const noteEnabled = state.mode === "attachments" ? false : !!dom.noteToggle.checked;
     const noteValue = noteEnabled ? dom.noteInput.value.trim() : '';
@@ -1894,7 +2055,7 @@
       log('Upload failed', error?.message);
     }finally{
       state.uploadInProgress = false;
-      renderFileTable();
+      renderFileQueue();
       updateButtons();
     }
   }
@@ -2192,7 +2353,6 @@
       dom.addNextcloudFolderBtn,
       dom.addExternalFilesBtn,
       dom.addExternalFolderBtn,
-      dom.removeFileBtn,
       dom.fileInput,
       dom.folderInput
     ];
@@ -2342,7 +2502,7 @@
         nestedPath: conflict.nestedPath
       });
     }
-    renderFileTable();
+    renderFileQueue();
     return true;
   }
 
@@ -2640,58 +2800,6 @@
     return normalized.slice(0, idx);
   }
 
-  function getMaxPathColumnScrollLeft(){
-    const nodes = dom.fileTableBody?.querySelectorAll('.path-scroll');
-    if (!nodes?.length){
-      return 0;
-    }
-    let max = 0;
-    for (const node of nodes){
-      const localMax = Math.max(0, (node.scrollWidth || 0) - (node.clientWidth || 0));
-      if (localMax > max){
-        max = localMax;
-      }
-    }
-    return max;
-  }
-
-  function applySharedPathColumnScroll(nextScrollLeft){
-    const maxScrollLeft = getMaxPathColumnScrollLeft();
-    const clamped = Math.min(maxScrollLeft, Math.max(0, Number(nextScrollLeft) || 0));
-    state.pathColumnScrollLeft = clamped;
-    const nodes = dom.fileTableBody?.querySelectorAll('.path-scroll');
-    if (!nodes?.length){
-      return;
-    }
-    for (const node of nodes){
-      if (node.scrollLeft !== clamped){
-        node.scrollLeft = clamped;
-      }
-    }
-  }
-
-  /**
-   * Translate mouse-wheel movement into shared horizontal scrolling for path cells.
-   * Wheel input inside the path column updates all path cells in sync.
-   * @param {HTMLElement} element
-   */
-  function attachPathWheelScroll(element){
-    if (!element){
-      return;
-    }
-    element.addEventListener('wheel', (event) => {
-      const scrollable = element.scrollWidth > element.clientWidth;
-      if (!scrollable){
-        return;
-      }
-      const delta = Math.abs(event.deltaX) > 0 ? event.deltaX : event.deltaY;
-      if (!delta){
-        return;
-      }
-      applySharedPathColumnScroll(state.pathColumnScrollLeft + delta);
-      event.preventDefault();
-    }, { passive: false });
-  }
   /**
    * Prompt the user to rename an entry to avoid collisions.
    * @param {object} entry
@@ -2746,6 +2854,8 @@
       clearTimeout(uploadRenderTimer);
       uploadRenderTimer = null;
     }
+    queueView?.dispose();
+    queueView = null;
     disposeDebugFlagMirror?.();
     disposeDebugFlagMirror = null;
     state.debugEnabled = false;

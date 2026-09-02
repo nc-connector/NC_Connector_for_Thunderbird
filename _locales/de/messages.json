@@ -1205,6 +1205,45 @@
   "sharing_source_local": {
     "message": "Lokal"
   },
+  "sharing_queue_entries_summary": {
+    "message": "Einträge: $1"
+  },
+  "sharing_queue_sources_summary": {
+    "message": "Quellen: $1"
+  },
+  "sharing_queue_total_summary": {
+    "message": "Gesamt: $1"
+  },
+  "sharing_queue_size_unknown": {
+    "message": "unbekannt"
+  },
+  "sharing_queue_storage_loading": {
+    "message": "Zielspeicher: wird geladen ..."
+  },
+  "sharing_queue_storage_available": {
+    "message": "Zielspeicher: $1 frei von $2"
+  },
+  "sharing_queue_storage_unlimited": {
+    "message": "Zielspeicher: unbegrenzt"
+  },
+  "sharing_queue_storage_unknown": {
+    "message": "Zielspeicher: nicht ermittelbar"
+  },
+  "sharing_queue_storage_insufficient": {
+    "message": "Benötigt: $1 · Verfügbar: $2"
+  },
+  "sharing_queue_expand_folder": {
+    "message": "Ordner „$1“ aufklappen"
+  },
+  "sharing_queue_collapse_folder": {
+    "message": "Ordner „$1“ zuklappen"
+  },
+  "sharing_queue_remove_item": {
+    "message": "„$1“ entfernen"
+  },
+  "sharing_queue_source_group": {
+    "message": "Quelle: $1"
+  },
   "sharing_status_fetching_source": {
     "message": "Datei wird gelesen ..."
   },
@@ -1258,5 +1297,44 @@
   },
   "vfs_setup_failed": {
     "message": "Der Zugriff konnte nicht erteilt werden."
+  },
+  "sharing_queue_entries_summary": {
+    "message": "Einträge: $1"
+  },
+  "sharing_queue_sources_summary": {
+    "message": "Quellen: $1"
+  },
+  "sharing_queue_total_summary": {
+    "message": "Gesamt: $1"
+  },
+  "sharing_queue_size_unknown": {
+    "message": "unbekannt"
+  },
+  "sharing_queue_storage_loading": {
+    "message": "Zielspeicher wird geladen ..."
+  },
+  "sharing_queue_storage_available": {
+    "message": "$1 frei von $2"
+  },
+  "sharing_queue_storage_unlimited": {
+    "message": "Zielspeicher: unbegrenzt"
+  },
+  "sharing_queue_storage_unknown": {
+    "message": "Zielspeicher: nicht ermittelbar"
+  },
+  "sharing_queue_storage_insufficient": {
+    "message": "Benötigt: $1 · Verfügbar: $2"
+  },
+  "sharing_queue_expand_folder": {
+    "message": "Ordner $1 aufklappen"
+  },
+  "sharing_queue_collapse_folder": {
+    "message": "Ordner $1 zuklappen"
+  },
+  "sharing_queue_remove_item": {
+    "message": "$1 entfernen"
+  },
+  "sharing_queue_source_group": {
+    "message": "Quelle: $1"
   }
 }

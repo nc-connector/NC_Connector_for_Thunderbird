@@ -1205,6 +1205,45 @@
   "sharing_source_local": {
     "message": "Локальное хранилище"
   },
+  "sharing_queue_entries_summary": {
+    "message": "Элементы: $1"
+  },
+  "sharing_queue_sources_summary": {
+    "message": "Источники: $1"
+  },
+  "sharing_queue_total_summary": {
+    "message": "Общий размер: $1"
+  },
+  "sharing_queue_size_unknown": {
+    "message": "неизвестен"
+  },
+  "sharing_queue_storage_loading": {
+    "message": "Целевое хранилище: загрузка..."
+  },
+  "sharing_queue_storage_available": {
+    "message": "Целевое хранилище: свободно $1 из $2"
+  },
+  "sharing_queue_storage_unlimited": {
+    "message": "Целевое хранилище: без ограничений"
+  },
+  "sharing_queue_storage_unknown": {
+    "message": "Целевое хранилище: не удалось определить"
+  },
+  "sharing_queue_storage_insufficient": {
+    "message": "Требуется: $1 · Доступно: $2"
+  },
+  "sharing_queue_expand_folder": {
+    "message": "Развернуть папку «$1»"
+  },
+  "sharing_queue_collapse_folder": {
+    "message": "Свернуть папку «$1»"
+  },
+  "sharing_queue_remove_item": {
+    "message": "Удалить «$1»"
+  },
+  "sharing_queue_source_group": {
+    "message": "Источник: $1"
+  },
   "sharing_status_fetching_source": {
     "message": "Чтение файла…"
   },
@@ -1258,5 +1297,44 @@
   },
   "vfs_setup_failed": {
     "message": "Не удалось предоставить доступ."
+  },
+  "sharing_queue_entries_summary": {
+    "message": "Элементы: $1"
+  },
+  "sharing_queue_sources_summary": {
+    "message": "Источники: $1"
+  },
+  "sharing_queue_total_summary": {
+    "message": "Всего: $1"
+  },
+  "sharing_queue_size_unknown": {
+    "message": "неизвестно"
+  },
+  "sharing_queue_storage_loading": {
+    "message": "Загрузка целевого хранилища…"
+  },
+  "sharing_queue_storage_available": {
+    "message": "Свободно $1 из $2"
+  },
+  "sharing_queue_storage_unlimited": {
+    "message": "Целевое хранилище: без ограничений"
+  },
+  "sharing_queue_storage_unknown": {
+    "message": "Целевое хранилище: недоступно"
+  },
+  "sharing_queue_storage_insufficient": {
+    "message": "Требуется: $1 · Доступно: $2"
+  },
+  "sharing_queue_expand_folder": {
+    "message": "Развернуть папку $1"
+  },
+  "sharing_queue_collapse_folder": {
+    "message": "Свернуть папку $1"
+  },
+  "sharing_queue_remove_item": {
+    "message": "Удалить $1"
+  },
+  "sharing_queue_source_group": {
+    "message": "Источник: $1"
   }
 }

@@ -1205,6 +1205,45 @@
   "sharing_source_local": {
     "message": "Lokalne"
   },
+  "sharing_queue_entries_summary": {
+    "message": "Elementy: $1"
+  },
+  "sharing_queue_sources_summary": {
+    "message": "Źródła: $1"
+  },
+  "sharing_queue_total_summary": {
+    "message": "Łączny rozmiar: $1"
+  },
+  "sharing_queue_size_unknown": {
+    "message": "nieznany"
+  },
+  "sharing_queue_storage_loading": {
+    "message": "Pamięć docelowa: wczytywanie..."
+  },
+  "sharing_queue_storage_available": {
+    "message": "Pamięć docelowa: $1 wolnego z $2"
+  },
+  "sharing_queue_storage_unlimited": {
+    "message": "Pamięć docelowa: nieograniczona"
+  },
+  "sharing_queue_storage_unknown": {
+    "message": "Pamięć docelowa: nie można określić"
+  },
+  "sharing_queue_storage_insufficient": {
+    "message": "Wymagane: $1 · Dostępne: $2"
+  },
+  "sharing_queue_expand_folder": {
+    "message": "Rozwiń folder „$1”"
+  },
+  "sharing_queue_collapse_folder": {
+    "message": "Zwiń folder „$1”"
+  },
+  "sharing_queue_remove_item": {
+    "message": "Usuń „$1”"
+  },
+  "sharing_queue_source_group": {
+    "message": "Źródło: $1"
+  },
   "sharing_status_fetching_source": {
     "message": "Odczytywanie pliku…"
   },
@@ -1258,5 +1297,44 @@
   },
   "vfs_setup_failed": {
     "message": "Nie udało się udzielić dostępu."
+  },
+  "sharing_queue_entries_summary": {
+    "message": "Elementy: $1"
+  },
+  "sharing_queue_sources_summary": {
+    "message": "Źródła: $1"
+  },
+  "sharing_queue_total_summary": {
+    "message": "Łącznie: $1"
+  },
+  "sharing_queue_size_unknown": {
+    "message": "nieznany"
+  },
+  "sharing_queue_storage_loading": {
+    "message": "Wczytywanie pamięci docelowej…"
+  },
+  "sharing_queue_storage_available": {
+    "message": "$1 wolne z $2"
+  },
+  "sharing_queue_storage_unlimited": {
+    "message": "Pamięć docelowa: bez limitu"
+  },
+  "sharing_queue_storage_unknown": {
+    "message": "Pamięć docelowa: niedostępna"
+  },
+  "sharing_queue_storage_insufficient": {
+    "message": "Wymagane: $1 · Dostępne: $2"
+  },
+  "sharing_queue_expand_folder": {
+    "message": "Rozwiń folder $1"
+  },
+  "sharing_queue_collapse_folder": {
+    "message": "Zwiń folder $1"
+  },
+  "sharing_queue_remove_item": {
+    "message": "Usuń $1"
+  },
+  "sharing_queue_source_group": {
+    "message": "Źródło: $1"
   }
 }

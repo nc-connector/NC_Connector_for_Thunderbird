@@ -20,8 +20,54 @@ function immediateTimers(){
   };
 }
 
+class QuotaDOMParser {
+  parseFromString(source){
+    const xml = String(source || "");
+    const readValue = (name) => {
+      const match = xml.match(new RegExp(`<[^>]*${name}[^>]*>([^<]*)<\\/[^>]+>`, "i"));
+      return match ? match[1] : null;
+    };
+    const quotaNode = (value) => value == null ? [] : [{ textContent: value }];
+    const prop = {
+      getElementsByTagNameNS: (_namespace, name) => {
+        if (name === "quota-used-bytes"){
+          return quotaNode(readValue("quota-used-bytes"));
+        }
+        if (name === "quota-available-bytes"){
+          return quotaNode(readValue("quota-available-bytes"));
+        }
+        return [];
+      },
+      getElementsByTagName(name){
+        return this.getElementsByTagNameNS("DAV:", name);
+      }
+    };
+    const response = {
+      getElementsByTagNameNS: (_namespace, name) => name === "prop" ? [prop] : [],
+      getElementsByTagName(name){
+        return this.getElementsByTagNameNS("DAV:", name);
+      }
+    };
+    return {
+      getElementsByTagName: (name) => name === "parsererror" ? [] : [],
+      getElementsByTagNameNS: (_namespace, name) => name === "response" ? [response] : []
+    };
+  }
+}
+
+function makeQuotaXml(used, available){
+  const usedProperty = used == null ? "" : `<d:quota-used-bytes>${used}</d:quota-used-bytes>`;
+  const availableProperty = available == null
+    ? ""
+    : `<d:quota-available-bytes>${available}</d:quota-available-bytes>`;
+  return `<d:multistatus xmlns:d="DAV:"><d:response><d:prop>${usedProperty}${availableProperty}</d:prop></d:response></d:multistatus>`;
+}
+
 async function checkRetryRules(){
-  const context = createUploadContext(immediateTimers());
+  const context = createUploadContext({
+    ...immediateTimers(),
+    DOMParser: QuotaDOMParser
+  });
   loadUploadModules(context, [
     "modules/fileLinkUploadPolicy.js",
     "modules/nextcloudDav.js"
@@ -145,6 +191,35 @@ async function checkRetryRules(){
   assert(
     quotaError.ncUserMessage === "sharing_insufficient_storage",
     "HTTP 507 must use the storage-specific user text"
+  );
+
+  assert(
+    JSON.stringify(dav.parseDavQuota(makeQuotaXml(80, 20)))
+      === JSON.stringify({ usage: 80, quota: 100, available: 20, state: "finite" }),
+    "Finite DAV quota must retain used, available and total bytes"
+  );
+  assert(
+    JSON.stringify(dav.parseDavQuota(makeQuotaXml(80, -3)))
+      === JSON.stringify({ usage: 80, quota: null, available: null, state: "unlimited" }),
+    "DAV quota sentinel -3 must mean unlimited"
+  );
+  for (const unavailable of [-1, -2, null]){
+    const result = dav.parseDavQuota(makeQuotaXml(80, unavailable));
+    assert(
+      result.usage === 80
+        && result.quota === null
+        && result.available === null
+        && result.state === "unknown",
+      "Unavailable DAV quota values must remain unknown"
+    );
+  }
+  const zeroQuota = dav.parseDavQuota(makeQuotaXml(0, 0));
+  assert(
+    zeroQuota.usage === 0
+      && zeroQuota.quota === 0
+      && zeroQuota.available === 0
+      && zeroQuota.state === "finite",
+    "A finite zero-byte DAV quota must not be mistaken for missing data"
   );
 }
 

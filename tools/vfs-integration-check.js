@@ -76,10 +76,18 @@ function createPort(senderId){
   };
 }
 
-function checkRouterLeavesToolkitMessagesUnclaimed(){
+async function checkRouterLeavesToolkitMessagesUnclaimed(){
   let listener = null;
+  let usageCalls = 0;
   const context = {
     console,
+    L: () => {},
+    NCVfsProviderRuntime: {
+      async getDestinationStorageUsage(){
+        usageCalls++;
+        return { usage: 25, quota: 100, available: 75, state: "finite" };
+      }
+    },
     browser: {
       runtime: {
         onMessage: {
@@ -106,6 +114,16 @@ function checkRouterLeavesToolkitMessagesUnclaimed(){
       `Background router must leave ${type} to the Toolkit listener`
     );
   }
+  const usageResponse = await listener({
+    type: "sharing:getDestinationStorageUsage"
+  }, {});
+  assert(
+    usageCalls === 1
+      && usageResponse?.ok === true
+      && usageResponse.usage?.available === 75
+      && usageResponse.usage?.state === "finite",
+    "Sharing capacity requests must return the provider runtime's account-bound storage usage"
+  );
 }
 
 function moduleUrl(relativePath, caseName){
@@ -903,9 +921,15 @@ function checkManifestAndReviewSurface(){
     "The NC Connector picker must hide the management toolbar in selection mode"
   );
   assert(
-    wizardHtml.includes("grid-template-columns:minmax(110px,.75fr) minmax(145px,1fr) minmax(190px,1.3fr)")
-      && wizardHtml.includes("min-height:44px"),
-    "The source actions must give localized labels enough width and line height"
+    wizardHtml.includes("grid-template-columns:repeat(3,minmax(0,1fr))")
+      && wizardHtml.includes('id="fileQueueTree"')
+      && wizardHtml.includes('id="queueSummaryText"')
+      && wizardHtml.includes('id="queueStorageText"')
+      && wizardHtml.includes('<script src="sharingQueueTree.js"></script>')
+      && (wizardHtml.match(/class="source-icon"/g) || []).length === 3
+      && wizardHtml.includes('id="queueRemoveIcon"')
+      && !wizardHtml.includes('id="removeFileBtn"'),
+    "The queue must retain three icon actions and use its grouped tree, summary, and row removal UI"
   );
   const wizardRuntime = readText("ui/nextcloudSharingWizard.js");
   assert(
@@ -985,6 +1009,15 @@ function checkManifestAndReviewSurface(){
     "Authorized provider operations must stay bound to the account identity they validated"
   );
   assert(
+    wizardRuntime.includes("sharing:getDestinationStorageUsage")
+      && !wizardRuntime.includes("quota-available-bytes")
+      && !wizardRuntime.includes("cloud/user")
+      && backgroundRouter.includes('msg.type === "sharing:getDestinationStorageUsage"')
+      && backgroundRouter.includes("NCVfsProviderRuntime.getDestinationStorageUsage()")
+      && providerRuntime.includes("storage.storageUsage({ expectedAccountKey: state.accountKey })"),
+    "Wizard capacity must reuse the account-bound provider storage usage path without owning network code"
+  );
+  assert(
     providerRuntime.includes("copyIntoShare(storageRef")
       && !sourceRuntime.includes("getStorage()"),
     "Same-Nextcloud share copies must use the provider runtime's storage/account lease"
@@ -1004,7 +1037,7 @@ function checkManifestAndReviewSurface(){
 
 async function run(){
   checkManifestAndReviewSurface();
-  checkRouterLeavesToolkitMessagesUnclaimed();
+  await checkRouterLeavesToolkitMessagesUnclaimed();
   await checkProviderSenderBinding();
   await checkClientLifecycle();
   await checkExternalDiscoverySkipsSelf();

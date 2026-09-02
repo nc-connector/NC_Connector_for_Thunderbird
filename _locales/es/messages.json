@@ -1205,6 +1205,45 @@
   "sharing_source_local": {
     "message": "Almacenamiento local"
   },
+  "sharing_queue_entries_summary": {
+    "message": "Elementos: $1"
+  },
+  "sharing_queue_sources_summary": {
+    "message": "Fuentes: $1"
+  },
+  "sharing_queue_total_summary": {
+    "message": "Tamaño total: $1"
+  },
+  "sharing_queue_size_unknown": {
+    "message": "desconocido"
+  },
+  "sharing_queue_storage_loading": {
+    "message": "Almacenamiento de destino: cargando..."
+  },
+  "sharing_queue_storage_available": {
+    "message": "Almacenamiento de destino: $1 libres de $2"
+  },
+  "sharing_queue_storage_unlimited": {
+    "message": "Almacenamiento de destino: ilimitado"
+  },
+  "sharing_queue_storage_unknown": {
+    "message": "Almacenamiento de destino: no se puede determinar"
+  },
+  "sharing_queue_storage_insufficient": {
+    "message": "Necesario: $1 · Disponible: $2"
+  },
+  "sharing_queue_expand_folder": {
+    "message": "Expandir la carpeta «$1»"
+  },
+  "sharing_queue_collapse_folder": {
+    "message": "Contraer la carpeta «$1»"
+  },
+  "sharing_queue_remove_item": {
+    "message": "Eliminar «$1»"
+  },
+  "sharing_queue_source_group": {
+    "message": "Fuente: $1"
+  },
   "sharing_status_fetching_source": {
     "message": "Leyendo archivo…"
   },
@@ -1258,5 +1297,44 @@
   },
   "vfs_setup_failed": {
     "message": "No se pudo conceder el acceso."
+  },
+  "sharing_queue_entries_summary": {
+    "message": "Elementos: $1"
+  },
+  "sharing_queue_sources_summary": {
+    "message": "Fuentes: $1"
+  },
+  "sharing_queue_total_summary": {
+    "message": "Tamaño total: $1"
+  },
+  "sharing_queue_size_unknown": {
+    "message": "desconocido"
+  },
+  "sharing_queue_storage_loading": {
+    "message": "Cargando almacenamiento de destino…"
+  },
+  "sharing_queue_storage_available": {
+    "message": "$1 libres de $2"
+  },
+  "sharing_queue_storage_unlimited": {
+    "message": "Almacenamiento de destino: ilimitado"
+  },
+  "sharing_queue_storage_unknown": {
+    "message": "Almacenamiento de destino: no disponible"
+  },
+  "sharing_queue_storage_insufficient": {
+    "message": "Necesario: $1 · Disponible: $2"
+  },
+  "sharing_queue_expand_folder": {
+    "message": "Expandir carpeta $1"
+  },
+  "sharing_queue_collapse_folder": {
+    "message": "Contraer carpeta $1"
+  },
+  "sharing_queue_remove_item": {
+    "message": "Quitar $1"
+  },
+  "sharing_queue_source_group": {
+    "message": "Fuente: $1"
   }
 }

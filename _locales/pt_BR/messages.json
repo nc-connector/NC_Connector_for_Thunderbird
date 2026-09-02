@@ -1205,6 +1205,45 @@
   "sharing_source_local": {
     "message": "Armazenamento local"
   },
+  "sharing_queue_entries_summary": {
+    "message": "Itens: $1"
+  },
+  "sharing_queue_sources_summary": {
+    "message": "Fontes: $1"
+  },
+  "sharing_queue_total_summary": {
+    "message": "Tamanho total: $1"
+  },
+  "sharing_queue_size_unknown": {
+    "message": "desconhecido"
+  },
+  "sharing_queue_storage_loading": {
+    "message": "Armazenamento de destino: carregando..."
+  },
+  "sharing_queue_storage_available": {
+    "message": "Armazenamento de destino: $1 livres de $2"
+  },
+  "sharing_queue_storage_unlimited": {
+    "message": "Armazenamento de destino: ilimitado"
+  },
+  "sharing_queue_storage_unknown": {
+    "message": "Armazenamento de destino: não foi possível determinar"
+  },
+  "sharing_queue_storage_insufficient": {
+    "message": "Necessário: $1 · Disponível: $2"
+  },
+  "sharing_queue_expand_folder": {
+    "message": "Expandir a pasta “$1”"
+  },
+  "sharing_queue_collapse_folder": {
+    "message": "Recolher a pasta “$1”"
+  },
+  "sharing_queue_remove_item": {
+    "message": "Remover “$1”"
+  },
+  "sharing_queue_source_group": {
+    "message": "Fonte: $1"
+  },
   "sharing_status_fetching_source": {
     "message": "Lendo arquivo…"
   },
@@ -1258,5 +1297,44 @@
   },
   "vfs_setup_failed": {
     "message": "Não foi possível conceder o acesso."
+  },
+  "sharing_queue_entries_summary": {
+    "message": "Itens: $1"
+  },
+  "sharing_queue_sources_summary": {
+    "message": "Fontes: $1"
+  },
+  "sharing_queue_total_summary": {
+    "message": "Tamanho total: $1"
+  },
+  "sharing_queue_size_unknown": {
+    "message": "desconhecido"
+  },
+  "sharing_queue_storage_loading": {
+    "message": "Carregando armazenamento de destino…"
+  },
+  "sharing_queue_storage_available": {
+    "message": "$1 livres de $2"
+  },
+  "sharing_queue_storage_unlimited": {
+    "message": "Armazenamento de destino: ilimitado"
+  },
+  "sharing_queue_storage_unknown": {
+    "message": "Armazenamento de destino: indisponível"
+  },
+  "sharing_queue_storage_insufficient": {
+    "message": "Necessário: $1 · Disponível: $2"
+  },
+  "sharing_queue_expand_folder": {
+    "message": "Expandir pasta $1"
+  },
+  "sharing_queue_collapse_folder": {
+    "message": "Recolher pasta $1"
+  },
+  "sharing_queue_remove_item": {
+    "message": "Remover $1"
+  },
+  "sharing_queue_source_group": {
+    "message": "Fonte: $1"
   }
 }

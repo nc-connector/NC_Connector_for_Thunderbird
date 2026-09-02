@@ -235,19 +235,49 @@
     const response = firstDavElement(document, "response");
     const prop = successfulDavProp(response);
     if (!prop){
-      return Object.freeze({ usage: null, quota: null });
+      return Object.freeze({
+        usage: null,
+        quota: null,
+        available: null,
+        state: "unknown"
+      });
     }
     const usedText = String(firstDavElement(prop, "quota-used-bytes")?.textContent || "").trim();
     const availableText = String(firstDavElement(prop, "quota-available-bytes")?.textContent || "").trim();
     const usage = usedText ? Number(usedText) : Number.NaN;
     const available = availableText ? Number(availableText) : Number.NaN;
     if (!Number.isFinite(usage) || usage < 0){
-      return Object.freeze({ usage: null, quota: null });
+      return Object.freeze({
+        usage: null,
+        quota: null,
+        available: null,
+        state: "unknown"
+      });
     }
-    const quota = Number.isFinite(available) && available >= 0
-      ? usage + available
-      : null;
-    return Object.freeze({ usage, quota });
+    if (Number.isFinite(available) && available >= 0){
+      return Object.freeze({
+        usage,
+        quota: usage + available,
+        available,
+        state: "finite"
+      });
+    }
+    // Nextcloud uses separate negative sentinels here. Only -3 means
+    // unlimited; -1/-2 must stay unknown instead of enabling a false promise.
+    if (available === -3){
+      return Object.freeze({
+        usage,
+        quota: null,
+        available: null,
+        state: "unlimited"
+      });
+    }
+    return Object.freeze({
+      usage,
+      quota: null,
+      available: null,
+      state: "unknown"
+    });
   }
 
   function createAbortError(){

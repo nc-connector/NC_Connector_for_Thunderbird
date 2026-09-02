@@ -1205,6 +1205,45 @@
   "sharing_source_local": {
     "message": "Lokaal"
   },
+  "sharing_queue_entries_summary": {
+    "message": "Items: $1"
+  },
+  "sharing_queue_sources_summary": {
+    "message": "Bronnen: $1"
+  },
+  "sharing_queue_total_summary": {
+    "message": "Totale grootte: $1"
+  },
+  "sharing_queue_size_unknown": {
+    "message": "onbekend"
+  },
+  "sharing_queue_storage_loading": {
+    "message": "Doelopslag: laden..."
+  },
+  "sharing_queue_storage_available": {
+    "message": "Doelopslag: $1 vrij van $2"
+  },
+  "sharing_queue_storage_unlimited": {
+    "message": "Doelopslag: onbeperkt"
+  },
+  "sharing_queue_storage_unknown": {
+    "message": "Doelopslag: niet te bepalen"
+  },
+  "sharing_queue_storage_insufficient": {
+    "message": "Vereist: $1 · Beschikbaar: $2"
+  },
+  "sharing_queue_expand_folder": {
+    "message": "Map ‘$1’ uitvouwen"
+  },
+  "sharing_queue_collapse_folder": {
+    "message": "Map ‘$1’ invouwen"
+  },
+  "sharing_queue_remove_item": {
+    "message": "‘$1’ verwijderen"
+  },
+  "sharing_queue_source_group": {
+    "message": "Bron: $1"
+  },
   "sharing_status_fetching_source": {
     "message": "Bestand wordt gelezen…"
   },
@@ -1258,5 +1297,44 @@
   },
   "vfs_setup_failed": {
     "message": "Toegang kon niet worden verleend."
+  },
+  "sharing_queue_entries_summary": {
+    "message": "Items: $1"
+  },
+  "sharing_queue_sources_summary": {
+    "message": "Bronnen: $1"
+  },
+  "sharing_queue_total_summary": {
+    "message": "Totaal: $1"
+  },
+  "sharing_queue_size_unknown": {
+    "message": "onbekend"
+  },
+  "sharing_queue_storage_loading": {
+    "message": "Doelopslag laden…"
+  },
+  "sharing_queue_storage_available": {
+    "message": "$1 vrij van $2"
+  },
+  "sharing_queue_storage_unlimited": {
+    "message": "Doelopslag: onbeperkt"
+  },
+  "sharing_queue_storage_unknown": {
+    "message": "Doelopslag: niet beschikbaar"
+  },
+  "sharing_queue_storage_insufficient": {
+    "message": "Vereist: $1 · Beschikbaar: $2"
+  },
+  "sharing_queue_expand_folder": {
+    "message": "Map $1 uitvouwen"
+  },
+  "sharing_queue_collapse_folder": {
+    "message": "Map $1 samenvouwen"
+  },
+  "sharing_queue_remove_item": {
+    "message": "$1 verwijderen"
+  },
+  "sharing_queue_source_group": {
+    "message": "Bron: $1"
   }
 }

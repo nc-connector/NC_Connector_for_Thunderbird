@@ -1205,6 +1205,45 @@
   "sharing_source_local": {
     "message": "本機儲存空間"
   },
+  "sharing_queue_entries_summary": {
+    "message": "項目數：$1"
+  },
+  "sharing_queue_sources_summary": {
+    "message": "來源數：$1"
+  },
+  "sharing_queue_total_summary": {
+    "message": "總大小：$1"
+  },
+  "sharing_queue_size_unknown": {
+    "message": "未知"
+  },
+  "sharing_queue_storage_loading": {
+    "message": "目標儲存空間：載入中..."
+  },
+  "sharing_queue_storage_available": {
+    "message": "目標儲存空間：$2 中有 $1 可用"
+  },
+  "sharing_queue_storage_unlimited": {
+    "message": "目標儲存空間：無限制"
+  },
+  "sharing_queue_storage_unknown": {
+    "message": "目標儲存空間：無法判定"
+  },
+  "sharing_queue_storage_insufficient": {
+    "message": "需要：$1 · 可用：$2"
+  },
+  "sharing_queue_expand_folder": {
+    "message": "展開資料夾「$1」"
+  },
+  "sharing_queue_collapse_folder": {
+    "message": "收合資料夾「$1」"
+  },
+  "sharing_queue_remove_item": {
+    "message": "移除「$1」"
+  },
+  "sharing_queue_source_group": {
+    "message": "來源：$1"
+  },
   "sharing_status_fetching_source": {
     "message": "正在讀取檔案…"
   },
@@ -1258,5 +1297,44 @@
   },
   "vfs_setup_failed": {
     "message": "無法授予存取權限。"
+  },
+  "sharing_queue_entries_summary": {
+    "message": "項目：$1"
+  },
+  "sharing_queue_sources_summary": {
+    "message": "來源：$1"
+  },
+  "sharing_queue_total_summary": {
+    "message": "總計：$1"
+  },
+  "sharing_queue_size_unknown": {
+    "message": "未知"
+  },
+  "sharing_queue_storage_loading": {
+    "message": "正在載入目標儲存空間…"
+  },
+  "sharing_queue_storage_available": {
+    "message": "$2 中有 $1 可用"
+  },
+  "sharing_queue_storage_unlimited": {
+    "message": "目標儲存空間：無限制"
+  },
+  "sharing_queue_storage_unknown": {
+    "message": "目標儲存空間：無法取得"
+  },
+  "sharing_queue_storage_insufficient": {
+    "message": "需要：$1 · 可用：$2"
+  },
+  "sharing_queue_expand_folder": {
+    "message": "展開資料夾 $1"
+  },
+  "sharing_queue_collapse_folder": {
+    "message": "收合資料夾 $1"
+  },
+  "sharing_queue_remove_item": {
+    "message": "移除 $1"
+  },
+  "sharing_queue_source_group": {
+    "message": "來源：$1"
   }
 }

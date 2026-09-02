@@ -136,6 +136,14 @@ browser.runtime.onMessage.addListener((msg, sender) => {
         return messageError("vfs:getStatus", error);
       }
     }
+    if (msg.type === "sharing:getDestinationStorageUsage"){
+      try{
+        const usage = await NCVfsProviderRuntime.getDestinationStorageUsage();
+        return { ok:true, usage };
+      }catch(error){
+        return messageError("sharing:getDestinationStorageUsage", error);
+      }
+    }
     if (msg.type === "vfs:grantConsumer"){
       try{
         const result = await NCVfsProviderRuntime.grantConsumer({
