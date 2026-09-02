@@ -75,7 +75,7 @@ function createCoreHarness(responses, { backgroundLogger = true } = {}){
   return { context, requests };
 }
 
-function createSharingHarness(){
+function createSharingHarness(buildDavAccountContext){
   const requests = [];
   const transferCalls = [];
   const davProbes = [];
@@ -105,7 +105,8 @@ function createSharingHarness(){
       getCurrentUserId: async (options) => {
         assert(options.user === credentials.user, "UID resolution must receive the authentication login");
         return "canonical-user";
-      }
+      },
+      buildDavAccountContext
     },
     NCOcs: {
       buildAuthHeader: (user, appPass) =>
@@ -263,6 +264,17 @@ async function run(){
   assert(cachedUserId === "canonical-user", "Resolved canonical UID should be reused from the session cache");
   assert(core.requests.length === 2, "Cached UID resolution should not repeat the OCS request");
 
+  const davAccount = core.context.__NCCore.buildDavAccountContext({
+    ...credentials,
+    userId: "canonical/user"
+  });
+  assert(davAccount.baseUrl === "https://cloud.example.test/nextcloud", "DAV account data must normalize the Nextcloud base URL");
+  assert(davAccount.davRoot === "https://cloud.example.test/nextcloud/remote.php/dav/files/canonical%2Fuser", "File DAV roots must encode the canonical UID");
+  assert(davAccount.uploadRoot === "https://cloud.example.test/nextcloud/remote.php/dav/uploads/canonical%2Fuser", "Upload DAV roots must encode the canonical UID");
+  assert(davAccount.bulkUrl === "https://cloud.example.test/nextcloud/remote.php/dav/bulk", "Bulk DAV URL must preserve the Nextcloud subfolder");
+  assert(davAccount.accountIdentity === JSON.stringify([davAccount.baseUrl, "canonical/user"]), "DAV account identity must use only server and canonical UID");
+  assert(davAccount.authHeader === "Basic " + Buffer.from("login@example.test:app-password").toString("base64"), "DAV Basic Auth must use the configured login alias");
+
   const nextcloud31 = createCoreHarness([
     makeResponse(200, {
       ocs: {
@@ -408,7 +420,7 @@ async function run(){
   const missingResult = await missingId.context.__NCCore.testCredentials(credentials);
   assert(missingResult.ok === false && missingResult.code === "identity", "Missing ocs.data.id must fail without falling back to email");
 
-  const sharing = createSharingHarness();
+  const sharing = createSharingHarness(core.context.__NCCore.buildDavAccountContext);
   const preflightRequest = {
     shareName: "Customer",
     basePath: "Team Shares",
@@ -561,8 +573,14 @@ async function run(){
   );
 
   const sharingSource = readText("modules/ncSharing.js");
+  const coreSource = readText("modules/nccore.js");
+  const storageSource = readText("modules/nextcloudVfsStorage.js");
+  const cleanupSource = readText("modules/bgShareCleanupStore.js");
   const addressbookSource = readText("modules/talkAddressbook.js");
-  assert(sharingSource.includes("/remote.php/dav/uploads/${encodeURIComponent(userId)}"), "Chunked upload path must use the canonical UID");
+  assert(coreSource.includes("/remote.php/dav/uploads/${encodedUserId}"), "Core DAV account data must own the chunked-upload root");
+  assert((sharingSource.match(/NCCore\.buildDavAccountContext/g) || []).length === 2, "Sharing must reuse core DAV account data for upload and cleanup");
+  assert(storageSource.includes("core.buildDavAccountContext({ ...opts, userId })"), "Nextcloud VFS must reuse core DAV account data");
+  assert(cleanupSource.includes("NCCore.buildDavAccountContext({ ...opts, userId: currentUserId })"), "Persistent cleanup must reuse core DAV account data");
   assert(addressbookSource.includes("encodeURIComponent(userId)"), "System addressbook path must use the canonical UID");
   assert(!addressbookSource.includes("encodeURIComponent(user) + \"/z-server-generated"), "System addressbook path must not use the authentication login");
 

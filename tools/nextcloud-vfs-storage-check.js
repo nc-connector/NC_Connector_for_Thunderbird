@@ -169,9 +169,6 @@ function createStorageHarness(){
   };
 
   const core = {
-    normalizeBaseUrl(value){
-      return String(value || "").replace(/\/+$/, "");
-    },
     async getOpts(){
       return { ...state.opts };
     },
@@ -183,12 +180,20 @@ function createStorageHarness(){
       state.capabilityChecks++;
       assert(options.user === state.opts.user, "Upload capability checks must use the configured login");
       return { versionMajor: 32, bulkUploadSupported: true };
-    }
-  };
-  const ocs = {
-    buildAuthHeader(user, password){
-      assert(user === state.opts.user && password === state.opts.appPass, "DAV auth must use the effective NC Connector account");
-      return "Basic internal-only";
+    },
+    buildDavAccountContext({ baseUrl, user, appPass, userId }){
+      assert(user === state.opts.user && appPass === state.opts.appPass, "DAV auth must use the effective NC Connector account");
+      const normalizedBaseUrl = String(baseUrl || "").replace(/\/+$/, "");
+      const encodedUserId = encodeURIComponent(userId);
+      return Object.freeze({
+        baseUrl: normalizedBaseUrl,
+        userId,
+        authHeader: "Basic internal-only",
+        davRoot: `${normalizedBaseUrl}/remote.php/dav/files/${encodedUserId}`,
+        uploadRoot: `${normalizedBaseUrl}/remote.php/dav/uploads/${encodedUserId}`,
+        bulkUrl: `${normalizedBaseUrl}/remote.php/dav/bulk`,
+        accountIdentity: JSON.stringify([normalizedBaseUrl, userId])
+      });
     }
   };
   const hostPermissions = {
@@ -258,7 +263,6 @@ function createStorageHarness(){
   };
   const storage = context.NCNextcloudVfsStorage.create({
     core,
-    ocs,
     dav,
     hostPermissions,
     fileUpload,
@@ -272,6 +276,7 @@ async function checkIdentityAndListing(){
   const first = await storage.getAccountIdentity();
   assert(first.baseUrl === state.opts.baseUrl, "Account identity must expose the normalized base URL internally");
   assert(first.userId === state.userId, "Account identity must use the canonical UID");
+  assert(first.key === JSON.stringify([state.opts.baseUrl, state.userId]), "Account identity must use the normalized server and canonical UID");
   assert(!JSON.stringify(first).includes(state.opts.appPass), "Account identity must never contain the app password");
   assert(!("authHeader" in first), "Account identity must never expose the authorization header");
   assert(storage.resolveContext === undefined, "Credential-bearing DAV context must remain private to the adapter");

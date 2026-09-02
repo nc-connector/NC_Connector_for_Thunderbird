@@ -938,16 +938,15 @@
     const basePathSetting = sanitizeRelativeDir(rawBasePath)
       || sanitizeRelativeDir(DEFAULT_BASE_PATH);
     const shareDate = request?.shareDate ? new Date(request.shareDate) : new Date();
-    const authHeader = NCOcs.buildAuthHeader(opts.user, opts.appPass);
-    const davBase = opts.baseUrl.replace(/\/+$/, "");
+    const account = NCCore.buildDavAccountContext({ ...opts, userId });
     return {
       capabilities,
       basePathSetting,
       shareDate,
-      authHeader,
-      davRoot: `${davBase}/remote.php/dav/files/${encodeURIComponent(userId)}`,
-      uploadRoot: `${davBase}/remote.php/dav/uploads/${encodeURIComponent(userId)}`,
-      bulkUrl: `${davBase}/remote.php/dav/bulk`
+      authHeader: account.authHeader,
+      davRoot: account.davRoot,
+      uploadRoot: account.uploadRoot,
+      bulkUrl: account.bulkUrl
     };
   }
 
@@ -1208,12 +1207,11 @@
     }
     await ensureHostPermission(opts.baseUrl);
     const userId = await NCCore.getCurrentUserId(opts);
-    const authHeader = NCOcs.buildAuthHeader(opts.user, opts.appPass);
-    const davRoot = `${opts.baseUrl.replace(/\/+$/, "")}/remote.php/dav/files/${encodeURIComponent(userId)}`;
+    const account = NCCore.buildDavAccountContext({ ...opts, userId });
     logDebug(opts, "folders:delete", { relativeFolder: folderInfo.relativeFolder });
     return NCNextcloudDav.deleteRemotePath({
-      url: NCNextcloudDav.buildFileUrl(davRoot, folderInfo.relativeFolder),
-      authHeader,
+      url: NCNextcloudDav.buildFileUrl(account.davRoot, folderInfo.relativeFolder),
+      authHeader: account.authHeader,
       log: (...args) => logDebug(opts, ...args)
     });
   }

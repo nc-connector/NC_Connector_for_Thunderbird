@@ -24,11 +24,11 @@ approval.
 - [x] Keep provider grants bound to the verified add-on ID, storage ID, and
   configured Nextcloud account.
 - [x] Consolidate repeated wizard port request/listener bookkeeping.
+- [x] Centralize authenticated DAV account data used by sharing, VFS, and
+  persistent cleanup.
 
 ## Later cleanup
 
-- [ ] Centralize construction of authenticated DAV account data currently used
-  by sharing, the Nextcloud VFS adapter, and persistent cleanup.
 - [ ] Replace direct compose lifecycle map mutations with focused query and
   transition functions owned by the corresponding lifecycle modules.
 - [ ] Split the sharing wizard, sharing renderer/network service, upload engine,

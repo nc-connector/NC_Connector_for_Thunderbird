@@ -672,23 +672,22 @@ async function deletePersistedShareCleanupDescriptor(descriptor){
   if (String(currentUserId || "").trim() !== normalized.userId){
     throw new Error("share_cleanup_account_user_mismatch");
   }
-  const authHeader = NCOcs.buildAuthHeader(opts.user, opts.appPass);
-  const davRoot = `${currentBaseUrl}/remote.php/dav/files/${encodeURIComponent(currentUserId)}`;
+  const account = NCCore.buildDavAccountContext({ ...opts, userId: currentUserId });
   await NCNextcloudDav.deleteTrackedRoot({
-    url: NCNextcloudDav.buildFileUrl(davRoot, normalized.relativeFolder),
+    url: NCNextcloudDav.buildFileUrl(account.davRoot, normalized.relativeFolder),
     reservationUrl: normalized.reservationRelativeFolder
-      ? NCNextcloudDav.buildFileUrl(davRoot, normalized.reservationRelativeFolder)
+      ? NCNextcloudDav.buildFileUrl(account.davRoot, normalized.reservationRelativeFolder)
       : "",
     targetUrl: normalized.targetRelativeFolder
-      ? NCNextcloudDav.buildFileUrl(davRoot, normalized.targetRelativeFolder)
+      ? NCNextcloudDav.buildFileUrl(account.davRoot, normalized.targetRelativeFolder)
       : "",
-    authHeader,
+    authHeader: account.authHeader,
     log: (...args) => L(...args)
   });
   await NCFileLinkShare.clearIndeterminate({
     baseUrl: currentBaseUrl,
     relativeFolder: normalized.relativeFolder,
-    authHeader
+    authHeader: account.authHeader
   });
 }
 

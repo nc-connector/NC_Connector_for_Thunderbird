@@ -184,13 +184,23 @@ async function createCleanupHarness(deleteRemotePath, overrides = {}){
         user: TEST_LOGIN,
         appPass: TEST_APP_PASSWORD
       }),
-      getCurrentUserId: async () => TEST_USER_ID
+      getCurrentUserId: async () => TEST_USER_ID,
+      buildDavAccountContext({ baseUrl, user, appPass, userId }){
+        const normalizedBaseUrl = normalizeTestBaseUrl(baseUrl);
+        const encodedUserId = encodeURIComponent(userId);
+        return Object.freeze({
+          baseUrl: normalizedBaseUrl,
+          userId,
+          authHeader: `Basic ${user}:${appPass}`,
+          davRoot: `${normalizedBaseUrl}/remote.php/dav/files/${encodedUserId}`,
+          uploadRoot: `${normalizedBaseUrl}/remote.php/dav/uploads/${encodedUserId}`,
+          bulkUrl: `${normalizedBaseUrl}/remote.php/dav/bulk`,
+          accountIdentity: JSON.stringify([normalizedBaseUrl, userId])
+        });
+      }
     },
     NCHostPermissions: {
       requireOriginPermission: async () => true
-    },
-    NCOcs: {
-      buildAuthHeader: (user, appPass) => `Basic ${user}:${appPass}`
     },
     NCNextcloudDav: {
       normalizeRelativePath: normalizeTestRelativePath,

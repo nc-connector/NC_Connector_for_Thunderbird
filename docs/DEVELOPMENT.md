@@ -144,7 +144,7 @@ Key files you’ll touch most:
 - `modules/hostPermissions.js` — single host-permission gate used by core/talk/sharing runtime modules
 - `modules/managedSetup.js` — reads managed Nextcloud URL values from Thunderbird Enterprise Policy (`storage.managed`)
 - `modules/shareTemplateContract.js` — shared share-template marker rules used by render + insert modules
-- `modules/nccore.js` — Nextcloud auth/login-flow helpers
+- `modules/nccore.js` — Nextcloud auth/login-flow helpers and shared DAV account data
 - `modules/talkAddressbook.js` — system-addressbook CardDAV fetch/cache/search/status helpers
 - `modules/talkcore.js` — Nextcloud Talk API helpers (OCS, room lifecycle, capabilities)
 - `modules/ncSharing.js` — Nextcloud sharing/DAV helpers used by the sharing wizard
@@ -1022,7 +1022,7 @@ NC Connector uses the vendored Thunderbird VFS Toolkit in two roles:
 - As a provider, it exposes the already configured Nextcloud account with full read/write file and folder capabilities after an explicit grant.
 - As a client, it uses its own provider for **From Nextcloud** and can discover separately installed providers only after the user enables external providers and grants Thunderbird's optional `management` permission.
 
-There is no second Nextcloud login. `modules/nextcloudVfsStorage.js` resolves the canonical Nextcloud UID through the existing core runtime, while Basic Auth continues to use the configured login alias and app password. A provider storage ID is bound to the normalized server plus canonical UID. Changing either rotates that ID and removes every previous grant; an app-password or login-alias change for the same canonical account does not.
+There is no second Nextcloud login. `modules/nccore.js` resolves the canonical Nextcloud UID and constructs the authenticated File, Upload, and Bulk DAV targets shared by FileLink, VFS, and persistent cleanup. Basic Auth continues to use the configured login alias and app password. A provider storage ID is bound to the normalized server plus canonical UID. Changing either rotates that ID and removes every previous grant; an app-password or login-alias change for the same canonical account does not.
 
 The provider implements live list, quota, read, add, move, copy, and delete operations through the common DAV module. `writeFile()` validates the same Nextcloud 32 capability contract as FileLink and delegates to the existing one-file upload plan instead of issuing a separate PUT. Files up to 20 MiB therefore use the shared Direct path; larger files use the shared chunked-v2 path. The VFS `overwrite` flag maps to `If-None-Match: *` for Direct creates and `Overwrite: F` for the final chunk MOVE, while provider writes never create a missing parent implicitly. Existing upload log messages are retained and receive `origin: vfs_provider` metadata. Toolkit ports are authorized by the runtime-supplied sender ID and the exact consumer/storage pair. Setup uses a one-time token tied to the requesting port. Each active request has its own abort controller, and every operation rechecks the captured account binding before DAV access.
 

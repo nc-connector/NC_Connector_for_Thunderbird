@@ -127,14 +127,13 @@
 
   function create(options = {}){
     const core = options.core || global.NCCore;
-    const ocs = options.ocs || global.NCOcs;
     const dav = options.dav || global.NCNextcloudDav;
     const hostPermissions = options.hostPermissions || global.NCHostPermissions;
     const log = typeof options.log === "function" ? options.log : null;
     const uploadLog = typeof options.uploadLog === "function" ? options.uploadLog : log;
     const fileUpload = options.fileUpload || global.NCFileLinkUpload;
 
-    if (!core?.getOpts || !core?.getCurrentUserId || !ocs?.buildAuthHeader || !dav?.requestPath){
+    if (!core?.getOpts || !core?.getCurrentUserId || !core?.buildDavAccountContext || !dav?.requestPath){
       throw createVfsError("E:PROVIDER", "Nextcloud storage dependencies are unavailable", {
         id: "dependencies",
         title: "Nextcloud storage unavailable",
@@ -188,27 +187,16 @@
         throw mapDavError(error, "identity");
       }
       dav.throwIfAborted(signal);
-      const normalizedBase = typeof core.normalizeBaseUrl === "function"
-        ? core.normalizeBaseUrl(opts.baseUrl)
-        : String(opts.baseUrl || "").replace(/\/+$/, "");
-      const davRoot = dav.normalizeDavRoot(
-        `${normalizedBase.replace(/\/+$/, "")}/remote.php/dav/files/${encodeURIComponent(userId)}`
-      );
-      const uploadRoot = dav.normalizeDavRoot(
-        `${normalizedBase.replace(/\/+$/, "")}/remote.php/dav/uploads/${encodeURIComponent(userId)}`
-      );
-      const accountIdentity = JSON.stringify([normalizedBase, userId]);
-      if (expectedAccountKey && expectedAccountKey !== accountIdentity){
+      const account = core.buildDavAccountContext({ ...opts, userId });
+      const context = Object.freeze({
+        ...account,
+        davRoot: dav.normalizeDavRoot(account.davRoot),
+        uploadRoot: dav.normalizeDavRoot(account.uploadRoot)
+      });
+      if (expectedAccountKey && expectedAccountKey !== context.accountIdentity){
         throw createVfsError("E:AUTH", "The authorized Nextcloud storage connection has changed");
       }
-      return Object.freeze({
-        davRoot,
-        uploadRoot,
-        authHeader: ocs.buildAuthHeader(opts.user, opts.appPass),
-        normalizedBase,
-        userId,
-        accountIdentity
-      });
+      return context;
     }
 
     async function getAccountIdentity(operationOptions = {}){
@@ -219,7 +207,7 @@
         );
         return Object.freeze({
           key: context.accountIdentity,
-          baseUrl: context.normalizedBase,
+          baseUrl: context.baseUrl,
           userId: context.userId
         });
       });
