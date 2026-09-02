@@ -27,6 +27,13 @@ approval.
 - [x] Centralize authenticated DAV account data used by sharing, VFS, and
   persistent cleanup.
 
+## Verified fixes
+
+- [ ] Make provider `writeFile()` and `addFolder()` create missing parent
+  directories as required by the VFS Toolkit API.
+- [ ] Emit the transfer-completion log for shares containing only
+  same-Nextcloud server-side copies.
+
 ## Later cleanup
 
 - [ ] Replace direct compose lifecycle map mutations with focused query and
@@ -35,8 +42,13 @@ approval.
   and password dispatch module by their existing responsibilities without
   changing behavior.
 - [ ] Share the live and persistent cleanup retry schedule.
-- [ ] Remove the descriptorless cleanup fallback after confirming that no
-  supported persisted record can reach it.
+- [ ] Remove the unreachable descriptorless cleanup fallback now that every
+  supported live and persisted record has a validated descriptor.
+
+## UX follow-up
+
+- [ ] Redesign the mixed-source queue table for clearer path, source, and
+  status scanning without changing selection or upload behavior.
 
 ## Deliberate boundaries
 
