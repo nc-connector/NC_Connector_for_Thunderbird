@@ -45,7 +45,7 @@ approval.
   and password dispatch module by their existing responsibilities without
   changing behavior.
 - [x] Share the live and persistent cleanup retry schedule.
-- [ ] Remove the unreachable descriptorless cleanup fallback now that every
+- [x] Remove the unreachable descriptorless cleanup fallback now that every
   supported live and persisted record has a validated descriptor.
 
 ## UX follow-up

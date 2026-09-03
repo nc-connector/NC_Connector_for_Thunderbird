@@ -578,7 +578,7 @@ async function run(){
   const cleanupSource = readText("modules/bgShareCleanupStore.js");
   const addressbookSource = readText("modules/talkAddressbook.js");
   assert(coreSource.includes("/remote.php/dav/uploads/${encodedUserId}"), "Core DAV account data must own the chunked-upload root");
-  assert((sharingSource.match(/NCCore\.buildDavAccountContext/g) || []).length === 2, "Sharing must reuse core DAV account data for upload and cleanup");
+  assert((sharingSource.match(/NCCore\.buildDavAccountContext/g) || []).length === 1, "Sharing uploads must reuse core DAV account data");
   assert(storageSource.includes("core.buildDavAccountContext({ ...opts, userId })"), "Nextcloud VFS must reuse core DAV account data");
   assert(cleanupSource.includes("NCCore.buildDavAccountContext({ ...opts, userId: currentUserId })"), "Persistent cleanup must reuse core DAV account data");
   assert(addressbookSource.includes("encodeURIComponent(userId)"), "System addressbook path must use the canonical UID");

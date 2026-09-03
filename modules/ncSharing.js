@@ -1197,25 +1197,6 @@
     logDebug(null, "share:updateNote:done", { shareId: normalizedShareId });
   }
 
-  async function deleteShareFolder({ folderInfo } = {}){
-    if (!folderInfo?.relativeFolder){
-      return false;
-    }
-    const opts = await NCCore.getOpts();
-    if (!opts.baseUrl || !opts.user || !opts.appPass){
-      throw new Error(i18n("error_credentials_missing"));
-    }
-    await ensureHostPermission(opts.baseUrl);
-    const userId = await NCCore.getCurrentUserId(opts);
-    const account = NCCore.buildDavAccountContext({ ...opts, userId });
-    logDebug(opts, "folders:delete", { relativeFolder: folderInfo.relativeFolder });
-    return NCNextcloudDav.deleteRemotePath({
-      url: NCNextcloudDav.buildFileUrl(account.davRoot, folderInfo.relativeFolder),
-      authHeader: account.authHeader,
-      log: (...args) => logDebug(opts, ...args)
-    });
-  }
-
   const api = {
     DEFAULT_BASE_PATH,
     prepareFileLinkRequest,
@@ -1228,8 +1209,7 @@
     sanitizeShareName,
     sanitizeFileName,
     sanitizeRelativeDir,
-    updateShareNote,
-    deleteShareFolder
+    updateShareNote
   };
 
   if (__context){

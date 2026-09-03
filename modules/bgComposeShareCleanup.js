@@ -119,10 +119,7 @@ async function deleteShareCleanupEntry(entry, groupId = ""){
     }
     return;
   }
-  if (entry?.cleanupTarget){
-    throw new Error("share_cleanup_descriptor_invalid");
-  }
-  await NCSharing.deleteShareFolder({ folderInfo: entry?.folderInfo });
+  throw new Error("share_cleanup_descriptor_invalid");
 }
 
 function clearSharingWizardRemoteCleanup(windowId, reason = "", expectedEntry = null){

@@ -226,9 +226,6 @@ async function createCleanupHarness(deleteRemotePath, overrides = {}){
         return true;
       }
     },
-    NCSharing: {
-      deleteShareFolder: async () => {}
-    },
     browser: {
       ...browserOverrides,
       storage: {
@@ -419,10 +416,39 @@ async function checkCleanupRetry(){
 
 async function checkCleanupGenerations(){
   const deleteCalls = [];
+  let descriptorlessFallbackCalls = 0;
   const cleanup = await createCleanupHarness(async (options) => {
     deleteCalls.push(options);
     return true;
+  }, {
+    NCSharing: {
+      async deleteShareFolder(){
+        descriptorlessFallbackCalls++;
+      }
+    }
   });
+  const descriptorlessEntry = {
+    cleanupId: "descriptorless-cleanup",
+    folderInfo: { relativeFolder: "NC Connector/Descriptorless" },
+    retryTimerId: null
+  };
+  cleanup.wizardEntries.set(6, descriptorlessEntry);
+  const descriptorlessRemoved = await cleanup.context.deleteSharingWizardRemoteCleanupNow(
+    6,
+    "invalid_descriptor",
+    descriptorlessEntry.cleanupId
+  );
+  assert(
+    descriptorlessRemoved === false
+      && cleanup.wizardEntries.get(6) === descriptorlessEntry,
+    "Descriptorless cleanup state must fail closed and remain available for diagnosis"
+  );
+  assert(
+    descriptorlessFallbackCalls === 0 && deleteCalls.length === 0,
+    "Descriptorless cleanup state must not delete through a current-account fallback"
+  );
+  cleanup.wizardEntries.delete(6);
+
   const payload = createCleanupPayload("Share", {
     tabId: 17,
     authHeader: "Basic original"
@@ -615,7 +641,6 @@ async function createBackgroundHarness({
       })
     },
     NCSharing: {
-      deleteShareFolder: async () => {},
       prepareFileLinkRequest,
       createFileLink: (prepared) => createFileLink(prepared.request)
     },

@@ -194,11 +194,6 @@ function createComposeHarness(){
         return String(value || "");
       }
     },
-    NCSharing: {
-      async deleteShareFolder(){
-        calls.remoteDeletes.push("legacy");
-      }
-    },
     setTimeout: timers.setTimeout,
     clearTimeout: timers.clearTimeout,
     console: {
