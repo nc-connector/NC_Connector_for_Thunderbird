@@ -30,10 +30,42 @@ approval.
 - [x] Centralize authenticated DAV account data used by sharing, VFS, and
   persistent cleanup.
 
-## Verified fixes
+## Verified bugs / required fixes
 
-- [ ] Make provider `writeFile()` and `addFolder()` create missing parent
-  directories as required by the VFS Toolkit API.
+- [ ] **A-03 - release blocker:** Block sending the compose message while an
+  attachment-routing handoff or attachment-mode wizard is active. The current
+  send guard starts only with background finalization/compose cleanup, so a
+  user can send while the originals are already detached but no share block
+  has been inserted.
+- [ ] **A-01 - release blocker:** Make compose-attachment handoff transactional.
+  Collect every attachment first, then ensure the wizard/context handoff can be
+  completed; if attachment
+  removal fails part-way or popup/context bootstrap fails, add back every
+  attachment already removed with its original file and name. The deliberate
+  product rule that user cancellation does not restore attachments starts only
+  after the wizard has adopted a complete launch context.
+- [ ] **S-01 - release blocker:** Transfer exactly the enumerated queue snapshot
+  for folders selected from the configured Nextcloud. A recursive
+  `Depth: infinity` COPY of the source root can include files added after
+  selection which were never shown in the queue or included in its capacity
+  calculation.
+- [ ] **A-02 - high:** Serialize attachment automation per compose tab and
+  reserve the threshold prompt before asynchronous popup creation. Resolve or
+  discard attachment
+  batches deterministically when a prompt closes so overlapping evaluations
+  cannot open duplicate prompts or start competing detach flows.
+- [ ] **F-01 - medium:** Allow the Sharing wizard to close after a finalize
+  attempt has settled.
+  The Cancel button is enabled after an insertion/finalize error, but
+  `finalizeStarted` currently ignores every click, including the non-retryable
+  state whose message explicitly asks the user to close the window.
+- [ ] **P-01 - medium:** Reconcile ambiguous non-overwrite VFS-provider writes.
+  A successful Direct PUT whose response is lost is retried and then reported
+  as HTTP 412, while an
+  unclear chunk MOVE accepts any existing same-size target as the just-written
+  file. Recovery must distinguish the requested content from an older target.
+- [ ] **P-02 - VFS contract:** Make provider `writeFile()` and `addFolder()`
+  create missing parent directories as required by the VFS Toolkit API.
 - [x] Emit the transfer-completion log for shares containing only
   same-Nextcloud server-side copies.
 
@@ -44,6 +76,10 @@ approval.
 - [ ] Split the sharing wizard, sharing renderer/network service, upload engine,
   and password dispatch module by their existing responsibilities without
   changing behavior.
+- [ ] Remove the wizard's one-shot finalize bookkeeping after the close/error
+  state is corrected. `finalizeCloseOnly` is written but never read, and the
+  four `finalizeProgress` flags are set only after the atomic background
+  transaction has already succeeded and the wizard is closing.
 - [x] Share the live and persistent cleanup retry schedule.
 - [x] Remove the unreachable descriptorless cleanup fallback now that every
   supported live and persisted record has a validated descriptor.
@@ -70,3 +106,14 @@ approval.
 
 - `npm run test:review`
 - `npm run test:webext-linter`
+
+## Missing regression coverage
+
+- [ ] Add an attachment-automation lifecycle harness covering debounce batches,
+  one prompt/flow per compose tab, partial removal, popup creation failure,
+  missing or incomplete launch context, send blocking during attachment mode,
+  and the post-handoff no-restore product boundary.
+- [ ] Add a wizard UI lifecycle check for retryable and non-retryable finalize
+  failures, including Retry, Cancel, and window-close behavior.
+- [ ] Add exact-snapshot coverage for same-Nextcloud folder COPY and ambiguity
+  tests for Direct and chunked non-overwrite provider writes.
