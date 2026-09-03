@@ -177,6 +177,13 @@ function createComposeHarness(){
     SHARING_WIZARD_CLEANUP_BY_WINDOW: wizardCleanup,
     ATTACHMENT_PROMPT_BY_WINDOW: new Map(),
     COMPOSE_SHARE_CLEANUP_SEND_GRACE_MS: 15000,
+    SHARE_CLEANUP_RETRY_DELAYS_MS: Object.freeze([
+      2000,
+      5000,
+      10000,
+      30000,
+      60000
+    ]),
     PERSISTED_SHARE_CLEANUP_READY: Promise.resolve(),
     NCShareTemplateContract: {
       RIGHTS_SEGMENT_START: "[[NCC_RIGHTS_START]]",

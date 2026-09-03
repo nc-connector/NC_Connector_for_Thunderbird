@@ -44,7 +44,7 @@ approval.
 - [ ] Split the sharing wizard, sharing renderer/network service, upload engine,
   and password dispatch module by their existing responsibilities without
   changing behavior.
-- [ ] Share the live and persistent cleanup retry schedule.
+- [x] Share the live and persistent cleanup retry schedule.
 - [ ] Remove the unreachable descriptorless cleanup fallback now that every
   supported live and persisted record has a validated descriptor.
 

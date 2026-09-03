@@ -12,13 +12,6 @@
 
 const SHARE_CLEANUP_STORE_KEY = "nccShareCleanupGroupsV1";
 const SHARE_CLEANUP_STORE_VERSION = 1;
-const PERSISTED_SHARE_CLEANUP_RETRY_DELAYS_MS = Object.freeze([
-  2000,
-  5000,
-  10000,
-  30000,
-  60000
-]);
 const PERSISTED_SHARE_CLEANUP_RETRY_TIMER_BY_GROUP = new Map();
 let PERSISTED_SHARE_CLEANUP_GROUPS = {};
 let PERSISTED_SHARE_CLEANUP_WRITE_QUEUE = Promise.resolve();
@@ -721,7 +714,7 @@ async function runPersistedShareCleanupAttempt(groupId, reason = ""){
         return { changed: false, value: null };
       }
       current.attempt += 1;
-      current.state = current.attempt >= PERSISTED_SHARE_CLEANUP_RETRY_DELAYS_MS.length
+      current.state = current.attempt >= SHARE_CLEANUP_RETRY_DELAYS_MS.length
         ? "exhausted"
         : "pending";
       current.updated = Date.now();
@@ -758,13 +751,13 @@ function schedulePersistedShareCleanupRetry(groupId, reason = ""){
     return false;
   }
   const retryIndex = Math.max(0, Math.min(
-    PERSISTED_SHARE_CLEANUP_RETRY_DELAYS_MS.length - 1,
+    SHARE_CLEANUP_RETRY_DELAYS_MS.length - 1,
     group.attempt
   ));
   const timerId = setTimeout(() => {
     PERSISTED_SHARE_CLEANUP_RETRY_TIMER_BY_GROUP.delete(groupId);
     void runPersistedShareCleanupAttempt(groupId, reason);
-  }, PERSISTED_SHARE_CLEANUP_RETRY_DELAYS_MS[retryIndex]);
+  }, SHARE_CLEANUP_RETRY_DELAYS_MS[retryIndex]);
   PERSISTED_SHARE_CLEANUP_RETRY_TIMER_BY_GROUP.set(groupId, timerId);
   return true;
 }
@@ -808,7 +801,7 @@ async function markPersistentShareCleanupExhausted(groupId){
     group.saved = false;
     group.sendPending = false;
     group.sendPendingPreviousState = "";
-    group.attempt = PERSISTED_SHARE_CLEANUP_RETRY_DELAYS_MS.length;
+    group.attempt = SHARE_CLEANUP_RETRY_DELAYS_MS.length;
     group.updated = Date.now();
     return { changed: true, value: true };
   });
@@ -826,7 +819,7 @@ async function markPersistentShareCleanupTainted(groupId){
     group.lifecycleTainted = true;
     group.sendPending = false;
     group.sendPendingPreviousState = "";
-    group.attempt = PERSISTED_SHARE_CLEANUP_RETRY_DELAYS_MS.length;
+    group.attempt = SHARE_CLEANUP_RETRY_DELAYS_MS.length;
     group.updated = Date.now();
     return { changed: true, value: true };
   });
@@ -847,7 +840,7 @@ async function resumePersistedShareCleanup(reason = "", options = {}){
           && group.passwordHandoffComplete !== true;
         group.state = passwordRecoveryRequired ? "exhausted" : "pending";
         group.attempt = passwordRecoveryRequired
-          ? PERSISTED_SHARE_CLEANUP_RETRY_DELAYS_MS.length
+          ? SHARE_CLEANUP_RETRY_DELAYS_MS.length
           : 0;
         group.updated = Date.now();
         changed = true;

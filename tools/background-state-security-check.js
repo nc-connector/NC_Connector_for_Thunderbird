@@ -85,6 +85,28 @@ async function checkHydrationFailsClosed(){
   assert(rejected === failure, "Background hydration must propagate storage read failures");
 }
 
+async function checkSharedCleanupRetrySchedule(){
+  const harness = createStateHarness(async () => ({
+    debugEnabled: false,
+    nctalkRoomMeta: {},
+    nctalkEventTokenMap: {},
+    nctalkRoomDeleteRetry: {}
+  }));
+  await vm.runInContext("BG_STATE_READY", harness.context);
+  const delays = vm.runInContext(
+    "Array.from(SHARE_CLEANUP_RETRY_DELAYS_MS)",
+    harness.context
+  );
+  assert(
+    JSON.stringify(delays) === JSON.stringify([2000, 5000, 10000, 30000, 60000]),
+    "Share cleanup consumers must use the shared bounded retry schedule"
+  );
+  assert(
+    vm.runInContext("Object.isFrozen(SHARE_CLEANUP_RETRY_DELAYS_MS)", harness.context),
+    "The shared cleanup retry schedule must be immutable"
+  );
+}
+
 async function checkBackgroundDebugRedaction(){
   const harness = createStateHarness(async () => ({
     debugEnabled: true,
@@ -125,6 +147,7 @@ async function checkBackgroundDebugRedaction(){
 
 async function run(){
   await checkHydrationFailsClosed();
+  await checkSharedCleanupRetrySchedule();
   await checkBackgroundDebugRedaction();
   console.log("[OK] background-state-security-check passed");
 }

@@ -336,6 +336,13 @@ function createStoreHarness(){
     Date,
     structuredClone,
     COMPOSE_SHARE_DRAFT_ID_PATTERN: /^[A-Za-z0-9_-]{16,80}$/,
+    SHARE_CLEANUP_RETRY_DELAYS_MS: Object.freeze([
+      2000,
+      5000,
+      10000,
+      30000,
+      60000
+    ]),
     browser: {
       storage: {
         local: storage

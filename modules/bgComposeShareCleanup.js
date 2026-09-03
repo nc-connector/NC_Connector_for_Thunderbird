@@ -9,14 +9,6 @@
  * Owns compose-tab and sharing-wizard remote cleanup lifecycle.
  */
 
-const SHARING_WIZARD_CLEANUP_RETRY_DELAYS_MS = Object.freeze([
-  2000,
-  5000,
-  10000,
-  30000,
-  60000
-]);
-
 function normalizeComposeShareCleanupFolderInfo(folderInfo){
   if (!folderInfo || typeof folderInfo !== "object"){
     return null;
@@ -255,7 +247,7 @@ function scheduleSharingWizardRemoteCleanupRetry(
     return false;
   }
   const retryIndex = Math.max(0, Number(attempt) || 0);
-  if (retryIndex >= SHARING_WIZARD_CLEANUP_RETRY_DELAYS_MS.length){
+  if (retryIndex >= SHARE_CLEANUP_RETRY_DELAYS_MS.length){
     console.error("[NCBG] sharing wizard cleanup retries exhausted", {
       windowId,
       reason: reason || ""
@@ -298,7 +290,7 @@ function scheduleSharingWizardRemoteCleanupRetry(
         );
       }
     });
-  }, SHARING_WIZARD_CLEANUP_RETRY_DELAYS_MS[retryIndex]);
+  }, SHARE_CLEANUP_RETRY_DELAYS_MS[retryIndex]);
   return true;
 }
 
@@ -836,7 +828,7 @@ function scheduleComposeShareCleanupRetry(
     return false;
   }
   const retryIndex = Math.max(0, Number(attempt) || 0);
-  if (retryIndex >= SHARING_WIZARD_CLEANUP_RETRY_DELAYS_MS.length){
+  if (retryIndex >= SHARE_CLEANUP_RETRY_DELAYS_MS.length){
     console.error("[NCBG] compose share cleanup retries exhausted", {
       tabId,
       reason: reason || ""
@@ -879,7 +871,7 @@ function scheduleComposeShareCleanupRetry(
         );
       }
     });
-  }, SHARING_WIZARD_CLEANUP_RETRY_DELAYS_MS[retryIndex]);
+  }, SHARE_CLEANUP_RETRY_DELAYS_MS[retryIndex]);
   return true;
 }
 

@@ -172,6 +172,13 @@ async function createCleanupHarness(deleteRemotePath, overrides = {}){
     },
     structuredClone,
     COMPOSE_SHARE_DRAFT_ID_PATTERN: /^[A-Za-z0-9_-]{16,80}$/,
+    SHARE_CLEANUP_RETRY_DELAYS_MS: Object.freeze([
+      2000,
+      5000,
+      10000,
+      30000,
+      60000
+    ]),
     createSecureRuntimeId: nextRuntimeId,
     bgShortId: (value, maxLength = 24) => String(value || "").slice(0, maxLength),
     SHARING_WIZARD_CLEANUP_BY_WINDOW: wizardEntries,
@@ -293,6 +300,64 @@ async function checkCleanupRetry(){
   assert(attempts === 3, "The second delayed cleanup retry must run");
   assert(!cleanup.composeEntries.has(12), "A successful retry must clear compose cleanup state");
   assert(clock.pendingCount() === 0, "Successful cleanup must leave no retry timer");
+
+  const persistentClock = createFakeClock(1500);
+  let persistentAttempts = 0;
+  const persistentCleanup = await createCleanupHarness(async () => {
+    persistentAttempts++;
+    if (persistentAttempts === 1){
+      throw new Error("offline");
+    }
+    return true;
+  }, {
+    setTimeout: persistentClock.setTimeout,
+    clearTimeout: persistentClock.clearTimeout
+  });
+  await persistentCleanup.context.armSharingWizardRemoteCleanup(
+    115,
+    createCleanupPayload("Persistent")
+  );
+  const persistentGroupId = persistentCleanup.wizardEntries.get(115).cleanupId;
+  await persistentCleanup.context.markPersistentShareCleanupPending(
+    persistentGroupId,
+    "test_retry_schedule"
+  );
+  assert(
+    persistentClock.pendingCount() === 1,
+    "Persistent cleanup must schedule its first attempt"
+  );
+  persistentClock.advance(1999);
+  await flushMicrotasks(10);
+  assert(
+    persistentAttempts === 0,
+    "Persistent cleanup must wait for the first two-second delay"
+  );
+  persistentClock.advance(1);
+  await flushMicrotasks(30);
+  assert(
+    persistentAttempts === 1 && persistentClock.pendingCount() === 1,
+    "A failed persistent cleanup attempt must schedule the five-second retry"
+  );
+  persistentClock.advance(4999);
+  await flushMicrotasks(10);
+  assert(
+    persistentAttempts === 1,
+    "Persistent cleanup must wait for the full five-second retry delay"
+  );
+  persistentClock.advance(1);
+  await flushMicrotasks(40);
+  assert(
+    persistentAttempts === 2,
+    "The persistent cleanup retry must run after five seconds"
+  );
+  assert(
+    !persistentCleanup.context.getPersistentShareCleanupGroup(persistentGroupId),
+    "Successful persistent cleanup must remove its stored group"
+  );
+  assert(
+    persistentClock.pendingCount() === 0,
+    "Successful persistent cleanup must leave no retry timer"
+  );
 
   const multiClock = createFakeClock(2000);
   const multiCalls = [];
