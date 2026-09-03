@@ -744,13 +744,15 @@
   }
 
   function logUploadCompleted(summary, startedAt, log){
-    if (typeof log !== "function" || summary.files < 1){
+    const serverCopies = Math.max(0, Number(summary.serverCopies) || 0);
+    if (typeof log !== "function" || (summary.files < 1 && serverCopies < 1)){
       return;
     }
     const elapsedMs = Math.max(1, Date.now() - startedAt);
     log("Upload completed", {
       files: summary.files,
       bytes: summary.bytes,
+      ...(serverCopies > 0 ? { serverCopies } : {}),
       elapsedMs,
       bytesPerSecond: Math.round(summary.bytes / (elapsedMs / 1000))
     });

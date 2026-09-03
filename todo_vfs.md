@@ -34,7 +34,7 @@ approval.
 
 - [ ] Make provider `writeFile()` and `addFolder()` create missing parent
   directories as required by the VFS Toolkit API.
-- [ ] Emit the transfer-completion log for shares containing only
+- [x] Emit the transfer-completion log for shares containing only
   same-Nextcloud server-side copies.
 
 ## Later cleanup

@@ -237,6 +237,77 @@ async function checkSharingPortRequest(){
   );
 }
 
+async function checkCopyOnlyCompletionLog(){
+  const context = createContext();
+  context.NCNextcloudDav = {
+    ...context.NCNextcloudDav,
+    prepareFolderPath: async () => {},
+    createCollection: async () => true,
+    createPlannedDirectories: async () => {},
+    fetchWithTimeout: async () => ({ ok: true, status: 201 }),
+    closeResponse: async () => {}
+  };
+
+  const runPlan = async ({ serverCopyCount, transferAdditionalSources }) => {
+    const logs = [];
+    const trace = [];
+    await context.NCFileLinkUpload.prepareAndUpload({
+      files: [],
+      bulkSupported: false,
+      fixedRequestCount: 2,
+      davRoot: "https://cloud.example.test/remote.php/dav/files/user",
+      uploadRoot: "https://cloud.example.test/remote.php/dav/uploads/user",
+      bulkUrl: "https://cloud.example.test/remote.php/dav/bulk",
+      basePath: "Shares",
+      rootCandidates: [{
+        shareName: "Copy only",
+        folderInfo: {
+          relativeBase: "Shares",
+          relativeFolder: "Shares/Copy only",
+          folderName: "Copy only"
+        }
+      }],
+      authHeader: "Basic test",
+      serverCopyCount,
+      transferAdditionalSources: typeof transferAdditionalSources === "function"
+        ? async (transferContext) => {
+            await transferAdditionalSources(transferContext);
+            trace.push("copy");
+          }
+        : undefined,
+      log: (...args) => {
+        logs.push(args);
+        trace.push(args[0]);
+      }
+    });
+    return { logs, trace };
+  };
+
+  const copyRun = await runPlan({
+    serverCopyCount: 1,
+    transferAdditionalSources: async () => {}
+  });
+  const copyCompletion = copyRun.logs.filter(
+    ([message]) => message === "Upload completed"
+  );
+  assert(
+    copyCompletion.length === 1
+      && copyCompletion[0][1].files === 0
+      && copyCompletion[0][1].serverCopies === 1,
+    "Copy-only plans must emit one completion log with their server copy count"
+  );
+  assert(
+    copyRun.trace.indexOf("Upload completed") > copyRun.trace.indexOf("copy"),
+    "Copy-only completion must be logged after the server-side transfer"
+  );
+
+  const emptyRun = await runPlan({ serverCopyCount: 0 });
+  assert(
+    !emptyRun.logs.some(([message]) => message === "Upload completed"),
+    "Plans without files or server copies must not emit a completion log"
+  );
+}
+
 function plannedFile(index, size, relativeDir = ""){
   return Object.freeze({
     itemId: `item-${index}`,
@@ -252,6 +323,7 @@ function plannedFile(index, size, relativeDir = ""){
 
 async function run(){
   await checkSharingPortRequest();
+  await checkCopyOnlyCompletionLog();
   const context = createContext();
   const policy = context.NCFileLinkUploadPolicy;
   const dav = context.NCNextcloudDav;
