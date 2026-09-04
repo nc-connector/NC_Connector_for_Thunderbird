@@ -941,7 +941,6 @@ function checkManifestAndReviewSurface(){
   }
   assert(!scripts.includes("modules/fileLinkDav.js"), "The replaced DAV module must not remain loaded");
   const wizardHtml = readText("ui/nextcloudSharingWizard.html");
-  const pickerCss = readText("vendor/vfs-toolkit/vfs-client/picker.css");
   for (const elementId of [
     "localSourceAction",
     "nextcloudSourceAction",
@@ -953,10 +952,6 @@ function checkManifestAndReviewSurface(){
   ]){
     assert(wizardHtml.includes(`id="${elementId}"`), `${elementId} must be available in the queue UI`);
   }
-  assert(
-    /#vfs-toolbar\s*\{[^}]*display:\s*none\s*;/s.test(pickerCss),
-    "The NC Connector picker must hide the management toolbar in selection mode"
-  );
   assert(
     wizardHtml.includes("grid-template-columns:repeat(3,minmax(0,1fr))")
       && wizardHtml.includes('id="fileQueueTree"')
@@ -996,6 +991,10 @@ function checkManifestAndReviewSurface(){
   assert(!sourceRuntime.includes("indexedDB"), "External File content must not be staged in IndexedDB");
   assert(!sourceRuntime.includes("showSaveFilePicker"), "External File content must not be staged on disk");
   const clientRuntime = readText("modules/vfsClientRuntime.js");
+  assert(
+    /const pickerOptions = \{[\s\S]*?showToolbarActions: false,[\s\S]*?showContextMenu: false,[\s\S]*?signal: selection\.controller\.signal[\s\S]*?\};/.test(clientRuntime),
+    "NC Connector source pickers must hide Toolkit management actions and context menus through public options"
+  );
   const providerRuntime = readText("modules/vfsProviderRuntime.js");
   const storageRuntime = readText("modules/nextcloudVfsStorage.js");
   assert(

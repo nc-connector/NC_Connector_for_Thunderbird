@@ -439,6 +439,8 @@
       width: 860,
       height: 640,
       id: `nc-connector-${sourceKind}-${entryKind}`,
+      showToolbarActions: false,
+      showContextMenu: false,
       signal: selection.controller.signal
     };
     const selected = entryKind === 'folder'

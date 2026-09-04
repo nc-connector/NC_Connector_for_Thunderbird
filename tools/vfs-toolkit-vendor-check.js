@@ -10,7 +10,16 @@ const {
   readText
 } = require("./review-check-utils");
 
-const PINNED_COMMIT = "3476faa0870bb6dbe63c7c72fc3dab2b67731f4e";
+const BASE_COMMIT = "3476faa0870bb6dbe63c7c72fc3dab2b67731f4e";
+const APPLIED_PR_COMMITS = Object.freeze([
+  "e1a6a69dfaf7cee34999987dff1b63ba710d9409",
+  "95f9a744fef07f2b8fb89b39d23b3a49672ef3ca",
+  "7bfe56256d11d430c66a9bf4a4a321b4d70f2b7f",
+  "a82f2b767f4183f582ed33e81cd35a1c45639430",
+  "979429022cc074122c655d7210a9d746f7e33f05",
+  "f50d445dc52c4b4a0b79f7b7a5e7984144d1958c",
+  "baf1c7673ec22208a563afc02b9c7c7bb97c8d3d"
+]);
 const VENDOR_ROOT = "vendor/vfs-toolkit";
 const VENDORED_SHA256 = Object.freeze({
   "LICENSE": "1F256ECAD192880510E84AD60474EAB7589218784B9A50BC7CEEE34C2B91F1D5",
@@ -31,21 +40,11 @@ const VENDORED_SHA256 = Object.freeze({
   "vfs-client/locales/zh_CN.json": "20B309D382D7EAE6223A2DB1A54F8BE7DDA73F26A21AEE01919F29B873F9325D",
   "vfs-client/locales/zh_TW.json": "050785EE513CCB848C2EF173598D1B1BB4E3F73BADF5068653137FBD56E288DE",
   "vfs-client/opfs-provider.mjs": "2EC8C521071101624D39EC03E1F8D59DD0C0DC39C9CE564397DBE9B86B6A9F8B",
-  "vfs-client/picker.css": "72B87D51DB12DAB2A2ED05F51F93674611E539837F96A27AD0BC731A663A7137",
-  "vfs-client/picker.html": "C1AE76743748E346A1766AFE2A8CF94B196F1533D5417EBF0302A37B8590EDC7",
-  "vfs-client/picker.mjs": "D81DBE7DBA8346EBD3A0D57E2FDA5EA8892AC4968844A712DB3CE325B8E32F42",
-  "vfs-client/vfs-client.mjs": "D0C65EE761944526F956A1DB43D4E71F9A7FF69241197218F8AB9B3B392A0EE7",
+  "vfs-client/picker.css": "DA375628F769E336B74B4311130DE1324E8AE2221AC1A803776793DE3802A5F1",
+  "vfs-client/picker.html": "7E2F34DCC449CBB9A9F6183B0E7221D1DE6D5A547303A174B34846DC27AB85C7",
+  "vfs-client/picker.mjs": "185A0AF304C3F176DAB42A96FB6A6A416AFA50F19B91B7C6CA9FB03E52799199",
+  "vfs-client/vfs-client.mjs": "4ED076F703F7AB4A0E5E660094EA0A6954385FD3C7FD67C3DB0223ECB5B9561B",
   "vfs-provider/vfs-provider.mjs": "CDF9BED9683AF96505C2AAE8F3798CC3BD0D835388A8C9F908B17BF67596329D"
-});
-const UPSTREAM_SHA256 = Object.freeze({
-  "vfs-client/locales/nl.json": null,
-  "vfs-client/locales/pl.json": null,
-  "vfs-client/locales/zh_CN.json": null,
-  "vfs-client/locales/zh_TW.json": null,
-  "vfs-client/picker.css": "41211B8092E588C2468BC08A1F41C0FC362E64CFC21E09A6D5E6AA4190CD5B95",
-  "vfs-client/picker.mjs": "6DA0F305C3BE9FBFD9541437F3E3948E0D99447F1EBA93FBCE1032877F0DD924",
-  "vfs-client/vfs-client.mjs": "7C69AD748EAC21680E2C97C98FE8725549B6D2406E388A407A09A29DFAF54DFA",
-  "vfs-provider/vfs-provider.mjs": "0A9D4F9F5841254F6AA517EC5CD7A7D87B557EB2D3814B670529BF66BEDE73E9"
 });
 
 function sha256(buffer){
@@ -58,11 +57,23 @@ function placeholders(value){
 }
 
 function checkPickerIntegration(){
+  const client = readText(`${VENDOR_ROOT}/vfs-client/vfs-client.mjs`);
   const picker = readText(`${VENDOR_ROOT}/vfs-client/picker.mjs`);
   const pickerCss = readText(`${VENDOR_ROOT}/vfs-client/picker.css`);
+  const pickerHtml = readText(`${VENDOR_ROOT}/vfs-client/picker.html`);
   assert(
-    /#vfs-toolbar\s*\{[^}]*display:\s*none\s*;/s.test(pickerCss),
-    "The source-selection picker must hide the VFS management toolbar"
+    /#vfs-toolbar\s*\{[^}]*display:\s*flex\s*;/s.test(pickerCss)
+      && !/#vfs-toolbar\s*\{[^}]*display:\s*none\s*;/s.test(pickerCss),
+    "The vendored picker must not contain the removed local toolbar CSS patch"
+  );
+  assert(
+    (client.match(/pickerParams\.set\('showToolbarActions', '0'\)/g) || []).length === 4
+      && (client.match(/pickerParams\.set\('showContextMenu', '0'\)/g) || []).length === 4
+      && picker.includes("const SHOW_TOOLBAR_ACTIONS = params.get('showToolbarActions') !== '0';")
+      && picker.includes("const SHOW_CONTEXT_MENU = params.get('showContextMenu') !== '0';")
+      && pickerCss.includes("html.toolbar-actions-hidden #vfs-toolbar .vfs-toolbar-action")
+      && pickerHtml.includes('class="vfs-toolbar-action"'),
+    "The vendored picker must expose the upstream toolbar and context-menu options"
   );
   for (const locale of ["nl", "pl", "zh_CN", "zh_TW"]){
     assert(picker.includes(`'${locale}'`), `The picker must advertise locale ${locale}`);
@@ -107,7 +118,7 @@ function checkFiles(){
   }
 }
 
-function checkSelfProviderPatch(){
+function checkProviderFeatures(){
   const client = readText(`${VENDOR_ROOT}/vfs-client/vfs-client.mjs`);
   const provider = readText(`${VENDOR_ROOT}/vfs-provider/vfs-provider.mjs`);
 
@@ -207,22 +218,22 @@ function checkSelfProviderPatch(){
 
 function checkDocumentation(){
   const vendorDoc = readText("VENDOR.md");
-  assert(vendorDoc.includes(PINNED_COMMIT), "VENDOR.md must record the exact VFS Toolkit commit");
+  assert(vendorDoc.includes(BASE_COMMIT), "VENDOR.md must record the exact VFS Toolkit base commit");
+  for (const commit of APPLIED_PR_COMMITS){
+    assert(vendorDoc.includes(commit), `VENDOR.md must record applied upstream commit ${commit}`);
+  }
   assert(vendorDoc.includes("API version: `1.3`"), "VENDOR.md must record VFS Toolkit API version 1.3");
   assert(vendorDoc.includes("License: MPL-2.0"), "VENDOR.md must record the VFS Toolkit license");
 
   for (const [relativePath, vendoredHash] of Object.entries(VENDORED_SHA256)){
-    const hasExplicitUpstreamHash = Object.prototype.hasOwnProperty.call(UPSTREAM_SHA256, relativePath);
-    const upstreamHash = hasExplicitUpstreamHash ? UPSTREAM_SHA256[relativePath] : vendoredHash;
-    const upstreamCell = upstreamHash === null ? "—" : `\`${upstreamHash}\``;
-    const tableRow = `| \`${relativePath}\` | ${upstreamCell} | \`${vendoredHash}\` |`;
+    const tableRow = `| \`${relativePath}\` | \`${vendoredHash}\` | \`${vendoredHash}\` |`;
     assert(vendorDoc.includes(tableRow), `VENDOR.md must record both hashes for ${relativePath}`);
   }
 }
 
 function run(){
   checkFiles();
-  checkSelfProviderPatch();
+  checkProviderFeatures();
   checkPickerIntegration();
   checkDocumentation();
   console.log("[OK] vfs-toolkit-vendor-check passed");

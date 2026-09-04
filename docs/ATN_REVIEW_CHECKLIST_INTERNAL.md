@@ -157,7 +157,7 @@ It is intended to guide ongoing and future maintenance.
 
 ## 13. VFS Integration Constraints
 
-- Vendor the Thunderbird VFS Toolkit from one pinned commit. Keep upstream files unchanged except for narrowly documented, integrity-checked patches that are required by this integration.
+- Vendor the Thunderbird VFS Toolkit from one pinned upstream base plus explicitly documented upstream PR commits. Vendored runtime files must match that combined upstream source after LF normalization; do not carry NC Connector-specific functional or CSS patches.
 - Keep VFS business logic in ordinary WebExtension/background modules; do not add an Experiment API for storage access.
 - Use the existing NC Connector account as the sole Nextcloud credential owner. Never duplicate credentials in Toolkit connection or queue records.
 - A provider grant must be explicit, revocable, bound to the verified runtime sender and exact storage ID, and invalidated when server or canonical user changes.

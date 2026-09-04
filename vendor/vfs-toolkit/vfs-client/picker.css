@@ -89,7 +89,7 @@ body {
 /* ── Toolbar ─────────────────────────────────────── */
 
 #vfs-toolbar {
-  display: none;
+  display: flex;
   align-items: center;
   gap: 6px;
   padding: 5px 8px;
@@ -155,6 +155,10 @@ body {
 
 #vfs-custom-buttons {
   display: contents;
+}
+
+html.toolbar-actions-hidden #vfs-toolbar .vfs-toolbar-action {
+  display: none;
 }
 
 /* Filter input */

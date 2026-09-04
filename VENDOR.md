@@ -75,20 +75,25 @@
 - Module format:
   - The client and provider APIs are native ES modules (`.mjs`).
   - Picker assets and translations are local package resources; no remote script or module is loaded.
-- Applied lifecycle patch series (pending in the upstream contribution branch):
-  - `e1a6a69` — co-located VFS clients and providers use the same authenticated command handler as external ports.
-  - `95f9a744` — connection setup waits until the client-side connection cache is usable.
-  - `7bfe5625` — grants are bound to the verified runtime consumer and storage pair.
-  - `a82f2b76` — list, read, and picker requests support request-scoped cancellation.
-- NC Connector integration patches:
-  - The source-selection picker hides `#vfs-toolbar`; file management and search are outside this workflow.
-  - Picker locale resolution preserves regional locale tags and adds Dutch, Polish, Simplified Chinese, and Traditional Chinese resources used by NC Connector.
+- Applied upstream contribution series:
+  - [PR #96](https://github.com/thunderbird/webext-support/pull/96)
+    - `e1a6a69dfaf7cee34999987dff1b63ba710d9409` — co-located VFS clients and providers use the same authenticated command handler as external ports.
+    - `95f9a744fef07f2b8fb89b39d23b3a49672ef3ca` — connection setup waits until the client-side connection cache is usable.
+    - `7bfe56256d11d430c66a9bf4a4a321b4d70f2b7f` — grants are bound to the verified runtime consumer and storage pair.
+    - `a82f2b767f4183f582ed33e81cd35a1c45639430` — list, read, and picker requests support request-scoped cancellation.
+  - [PR #97](https://github.com/thunderbird/webext-support/pull/97)
+    - `979429022cc074122c655d7210a9d746f7e33f05` — Dutch, Polish, Simplified Chinese, and Traditional Chinese picker translations and regional locale matching.
+  - [PR #98](https://github.com/thunderbird/webext-support/pull/98)
+    - `f50d445dc52c4b4a0b79f7b7a5e7984144d1958c` — picker clients can hide toolbar management actions while retaining search and filters.
+    - `baf1c7673ec22208a563afc02b9c7c7bb97c8d3d` — picker clients can hide file and folder context menus.
+- The vendored runtime is the combined result of the pinned base plus those upstream PR commits, normalized to LF. It contains no NC Connector-specific functional or CSS changes.
+- The overlapping `vfs-client.mjs` changes retain request cancellation together with the two picker visibility options.
 
 ### SHA-256 integrity
 
-`Upstream base` is calculated from the pinned Git revision with LF line endings. `—` means that the localized resource was added by NC Connector.
+`Combined upstream PR` is calculated after applying the listed PR commits to the pinned base and normalizing files to LF. Both columns must match.
 
-| Local file | Upstream base SHA-256 | Vendored SHA-256 |
+| Local file | Combined upstream PR SHA-256 | Vendored SHA-256 |
 | --- | --- | --- |
 | `LICENSE` | `1F256ECAD192880510E84AD60474EAB7589218784B9A50BC7CEEE34C2B91F1D5` | `1F256ECAD192880510E84AD60474EAB7589218784B9A50BC7CEEE34C2B91F1D5` |
 | `vfs-client/icon-configure.svg` | `342E9E9627EA98D308874F3C3D72C319FAD7919E2C22F1EEC6150705701CACDD` | `342E9E9627EA98D308874F3C3D72C319FAD7919E2C22F1EEC6150705701CACDD` |
@@ -100,16 +105,16 @@
 | `vfs-client/locales/hu.json` | `DB41C82FCB05045C9E1E98F848DE2657C1296AD31833181AF52B3139154C47A6` | `DB41C82FCB05045C9E1E98F848DE2657C1296AD31833181AF52B3139154C47A6` |
 | `vfs-client/locales/it.json` | `C57F3AF7DF20D66ACB23280616470497BF7E302B7DBF36CD1D06971FF717A5FC` | `C57F3AF7DF20D66ACB23280616470497BF7E302B7DBF36CD1D06971FF717A5FC` |
 | `vfs-client/locales/ja.json` | `FEF7A3C12A714E51E748AEBADF47E9E045FB560F3D980AA3DDEED54C3B06BB7E` | `FEF7A3C12A714E51E748AEBADF47E9E045FB560F3D980AA3DDEED54C3B06BB7E` |
-| `vfs-client/locales/nl.json` | — | `1DC9DB9B88AE69CE5627D8D70FC09ED3AE782404BAD673F459D3F48967C2A022` |
-| `vfs-client/locales/pl.json` | — | `CD9B58C640AFB698AC0F69B74D853E7CB5B3DE961C76B6B7E96D8538999C40BB` |
+| `vfs-client/locales/nl.json` | `1DC9DB9B88AE69CE5627D8D70FC09ED3AE782404BAD673F459D3F48967C2A022` | `1DC9DB9B88AE69CE5627D8D70FC09ED3AE782404BAD673F459D3F48967C2A022` |
+| `vfs-client/locales/pl.json` | `CD9B58C640AFB698AC0F69B74D853E7CB5B3DE961C76B6B7E96D8538999C40BB` | `CD9B58C640AFB698AC0F69B74D853E7CB5B3DE961C76B6B7E96D8538999C40BB` |
 | `vfs-client/locales/pt.json` | `609046036B6A8EAEB2B2B87F2778CA6B412F647339E0FF1B9360B0C7E43F4DAE` | `609046036B6A8EAEB2B2B87F2778CA6B412F647339E0FF1B9360B0C7E43F4DAE` |
 | `vfs-client/locales/ru.json` | `135445974363054187A52100D882995DB3CF1D2FC1112A1E656D950E6081235A` | `135445974363054187A52100D882995DB3CF1D2FC1112A1E656D950E6081235A` |
 | `vfs-client/locales/sv.json` | `71140065A0528C22949781DD31A8DC2F89103C52EF5B80F2EAC96199158E43A7` | `71140065A0528C22949781DD31A8DC2F89103C52EF5B80F2EAC96199158E43A7` |
-| `vfs-client/locales/zh_CN.json` | — | `20B309D382D7EAE6223A2DB1A54F8BE7DDA73F26A21AEE01919F29B873F9325D` |
-| `vfs-client/locales/zh_TW.json` | — | `050785EE513CCB848C2EF173598D1B1BB4E3F73BADF5068653137FBD56E288DE` |
+| `vfs-client/locales/zh_CN.json` | `20B309D382D7EAE6223A2DB1A54F8BE7DDA73F26A21AEE01919F29B873F9325D` | `20B309D382D7EAE6223A2DB1A54F8BE7DDA73F26A21AEE01919F29B873F9325D` |
+| `vfs-client/locales/zh_TW.json` | `050785EE513CCB848C2EF173598D1B1BB4E3F73BADF5068653137FBD56E288DE` | `050785EE513CCB848C2EF173598D1B1BB4E3F73BADF5068653137FBD56E288DE` |
 | `vfs-client/opfs-provider.mjs` | `2EC8C521071101624D39EC03E1F8D59DD0C0DC39C9CE564397DBE9B86B6A9F8B` | `2EC8C521071101624D39EC03E1F8D59DD0C0DC39C9CE564397DBE9B86B6A9F8B` |
-| `vfs-client/picker.css` | `41211B8092E588C2468BC08A1F41C0FC362E64CFC21E09A6D5E6AA4190CD5B95` | `72B87D51DB12DAB2A2ED05F51F93674611E539837F96A27AD0BC731A663A7137` |
-| `vfs-client/picker.html` | `C1AE76743748E346A1766AFE2A8CF94B196F1533D5417EBF0302A37B8590EDC7` | `C1AE76743748E346A1766AFE2A8CF94B196F1533D5417EBF0302A37B8590EDC7` |
-| `vfs-client/picker.mjs` | `6DA0F305C3BE9FBFD9541437F3E3948E0D99447F1EBA93FBCE1032877F0DD924` | `D81DBE7DBA8346EBD3A0D57E2FDA5EA8892AC4968844A712DB3CE325B8E32F42` |
-| `vfs-client/vfs-client.mjs` | `7C69AD748EAC21680E2C97C98FE8725549B6D2406E388A407A09A29DFAF54DFA` | `D0C65EE761944526F956A1DB43D4E71F9A7FF69241197218F8AB9B3B392A0EE7` |
-| `vfs-provider/vfs-provider.mjs` | `0A9D4F9F5841254F6AA517EC5CD7A7D87B557EB2D3814B670529BF66BEDE73E9` | `CDF9BED9683AF96505C2AAE8F3798CC3BD0D835388A8C9F908B17BF67596329D` |
+| `vfs-client/picker.css` | `DA375628F769E336B74B4311130DE1324E8AE2221AC1A803776793DE3802A5F1` | `DA375628F769E336B74B4311130DE1324E8AE2221AC1A803776793DE3802A5F1` |
+| `vfs-client/picker.html` | `7E2F34DCC449CBB9A9F6183B0E7221D1DE6D5A547303A174B34846DC27AB85C7` | `7E2F34DCC449CBB9A9F6183B0E7221D1DE6D5A547303A174B34846DC27AB85C7` |
+| `vfs-client/picker.mjs` | `185A0AF304C3F176DAB42A96FB6A6A416AFA50F19B91B7C6CA9FB03E52799199` | `185A0AF304C3F176DAB42A96FB6A6A416AFA50F19B91B7C6CA9FB03E52799199` |
+| `vfs-client/vfs-client.mjs` | `4ED076F703F7AB4A0E5E660094EA0A6954385FD3C7FD67C3DB0223ECB5B9561B` | `4ED076F703F7AB4A0E5E660094EA0A6954385FD3C7FD67C3DB0223ECB5B9561B` |
+| `vfs-provider/vfs-provider.mjs` | `CDF9BED9683AF96505C2AAE8F3798CC3BD0D835388A8C9F908B17BF67596329D` | `CDF9BED9683AF96505C2AAE8F3798CC3BD0D835388A8C9F908B17BF67596329D` |

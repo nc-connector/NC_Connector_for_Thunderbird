@@ -1,11 +1,14 @@
 # VFS and share architecture follow-ups
 
 This file tracks verified work from the share architecture review. Keep the
-vendored VFS Toolkit unchanged unless an upstream-compatible patch has explicit
-approval.
+vendored VFS Toolkit unchanged from the documented upstream base plus approved
+upstream PR commits.
 
 ## Completed in this pass
 
+- [x] Replace the local picker toolbar CSS override with the visibility options
+  from upstream PR #98 and vendor the combined PR #96/#97/#98 state without
+  NC Connector-specific functional patches.
 - [x] Resolve effective FileLink settings in the background and reject queue
   path conflicts before the first remote mutation.
 - [x] Finalize changed share notes in the background with the account captured
