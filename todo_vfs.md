@@ -37,7 +37,7 @@ approval.
   send guard starts only with background finalization/compose cleanup, so a
   user can send while the originals are already detached but no share block
   has been inserted.
-- [ ] **A-01 - release blocker:** Make compose-attachment handoff transactional.
+- [x] **A-01 - release blocker:** Make compose-attachment handoff transactional.
   Collect every attachment first, then ensure the wizard/context handoff can be
   completed; if attachment
   removal fails part-way or popup/context bootstrap fails, add back every

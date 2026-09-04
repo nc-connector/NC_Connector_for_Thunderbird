@@ -68,6 +68,10 @@ password-dispatch, header, or body mutation cannot be exposed as committed.
 14) Attachment automation is serialized per compose tab. Prompt ownership is
   reserved before popup creation, and additions made while a prompt is open are
   either consumed, removed, or deliberately ignored with that prompt decision.
+15) Compose attachments are journaled while they move into the sharing wizard.
+  A partial detach or failed wizard bootstrap restores every removed file. The
+  no-restore cancellation boundary starts only after the complete queue has
+  acknowledged the launch context.
 
 ---
 

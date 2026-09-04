@@ -731,7 +731,7 @@ async function handleComposeWindowRemoved(windowId){
     });
     resolveAttachmentPrompt(promptId, "dismiss", "prompt_window_closed");
   }
-  releaseComposeAttachmentWizard(windowId, "wizard_window_closed");
+  await releaseComposeAttachmentWizard(windowId, "wizard_window_closed");
   if (SHARING_WIZARD_CLEANUP_BY_WINDOW.has(windowId)){
     const cleanupId = SHARING_WIZARD_CLEANUP_BY_WINDOW.get(windowId)?.cleanupId || "";
     try{

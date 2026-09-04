@@ -44,10 +44,21 @@ function createFakeTimers(){
 function createHarness(){
   const timers = createFakeTimers();
   const calls = {
-    windowsCreate: 0
+    windowsCreate: 0,
+    windowsRemove: [],
+    attachmentsRemoved: [],
+    attachmentsAdded: []
   };
   const control = {
-    windowCreate: async () => ({ id: 91 })
+    windowCreate: async () => ({ id: 91 }),
+    removeAttachment: async () => {},
+    addAttachment: async () => {}
+  };
+  const TestFile = class File {
+    constructor(name, size = 0){
+      this.name = name;
+      this.size = size;
+    }
   };
   const context = {
     URL,
@@ -58,7 +69,7 @@ function createHarness(){
     Number,
     String,
     Date,
-    File: class File {},
+    File: TestFile,
     setTimeout: timers.setTimeout,
     clearTimeout: timers.clearTimeout,
     console: { error(){} },
@@ -98,8 +109,24 @@ function createHarness(){
         async create(options){
           calls.windowsCreate += 1;
           return control.windowCreate(options);
+        },
+        async remove(windowId){
+          calls.windowsRemove.push(windowId);
+        }
+      },
+      compose: {
+        async removeAttachment(tabId, attachmentId){
+          calls.attachmentsRemoved.push({ tabId, attachmentId });
+          return control.removeAttachment(tabId, attachmentId);
+        },
+        async addAttachment(tabId, attachment){
+          calls.attachmentsAdded.push({ tabId, attachment });
+          return control.addAttachment(tabId, attachment);
         }
       }
+    },
+    async focusPopupWindowBestEffort(){
+      return true;
     }
   };
   context.globalThis = context;
@@ -196,15 +223,198 @@ function checkPromptBatchSettlement(){
   );
 }
 
-function checkWizardOwnership(){
+function createCollectedAttachments(harness, names){
+  return names.map((name, index) => ({
+    attachmentId: index + 1,
+    name,
+    size: 100 + index,
+    displayPath: name,
+    file: new harness.context.File(name, 100 + index)
+  }));
+}
+
+function installCollectedFlow(harness, collected){
+  harness.context.assertAttachmentAutomationAllowed = async () => ({ ok:true });
+  harness.context.listComposeAttachments = async () => collected.map((item) => ({
+    id: item.attachmentId,
+    name: item.name,
+    size: item.size
+  }));
+  harness.context.collectComposeAttachmentFiles = async () => collected;
+}
+
+async function checkWizardOwnership(){
   const harness = createHarness();
-  harness.context.activateComposeAttachmentWizard(16, 93);
+  const file = new harness.context.File("one.txt", 10);
+  harness.context.getComposeAttachmentAutomationState(16);
+  const handoff = harness.context.beginComposeAttachmentHandoff(16, {
+    mode: "attachments",
+    attachments: [{ name:file.name, file }]
+  });
+  harness.context.activateComposeAttachmentWizard(16, handoff.contextId, 93);
   void harness.context.requestComposeAttachmentEvaluation(16);
   const state = harness.context.ATTACHMENT_AUTOMATION_BY_TAB.get(16);
   assert(state?.rerunRequested === true, "An active attachment wizard must defer later evaluations");
-  assert(harness.context.releaseComposeAttachmentWizard(93, "test") === true, "The owning wizard must release its compose tab");
+  assert(await harness.context.releaseComposeAttachmentWizard(93, "test") === true, "The owning wizard must release its compose tab");
   assert(state.phase === "idle", "Closing the attachment wizard must release the tab flow");
   assert(harness.context.ATTACHMENT_EVAL_TIMER_BY_TAB.has(16), "Deferred additions must be evaluated after the wizard closes");
+}
+
+async function checkPartialRemovalRollback(){
+  const harness = createHarness();
+  const collected = createCollectedAttachments(harness, ["one.txt", "two.txt", "three.txt"]);
+  installCollectedFlow(harness, collected);
+  harness.control.removeAttachment = async (_tabId, attachmentId) => {
+    if (attachmentId === 2){
+      throw new Error("remove_failed");
+    }
+  };
+
+  let failed = false;
+  try{
+    await harness.context.startComposeAttachmentShareFlow(18, { trigger:"always" });
+  }catch(error){
+    failed = error?.message === "remove_failed";
+  }
+  assert(failed, "A partial removal failure must reject the attachment flow");
+  assert(
+    harness.calls.attachmentsRemoved.map((call) => call.attachmentId).join(",") === "1,2",
+    "Removal must stop at the first failed attachment"
+  );
+  assert(harness.calls.attachmentsAdded.length === 1, "Every successfully removed attachment must be restored");
+  assert(harness.calls.attachmentsAdded[0].attachment.file === collected[0].file, "Restore must reuse the original File");
+  assert(harness.calls.attachmentsAdded[0].attachment.name === "one.txt", "Restore must preserve the attachment name");
+  assert(harness.context.SHARING_LAUNCH_CONTEXTS.size === 0, "Failed handoff context must be discarded");
+}
+
+async function checkPopupFailureRollback(){
+  const harness = createHarness();
+  const collected = createCollectedAttachments(harness, ["one.txt", "two.txt"]);
+  installCollectedFlow(harness, collected);
+  harness.control.windowCreate = async () => {
+    throw new Error("popup_failed");
+  };
+
+  try{
+    await harness.context.startComposeAttachmentShareFlow(19, { trigger:"always" });
+  }catch(error){
+    assert(error?.message === "popup_failed", "Popup failure must remain visible to the caller");
+  }
+  assert(harness.calls.attachmentsAdded.length === 2, "Popup failure must restore all detached attachments");
+  assert(harness.context.SHARING_LAUNCH_CONTEXTS.size === 0, "Popup failure must discard the launch context");
+}
+
+async function checkLaunchContextAdoption(){
+  const harness = createHarness();
+  const collected = createCollectedAttachments(harness, ["one.txt", "two.txt"]);
+  installCollectedFlow(harness, collected);
+  const windowCreated = createDeferred();
+  harness.control.windowCreate = () => windowCreated.promise;
+
+  const flow = harness.context.startComposeAttachmentShareFlow(20, { trigger:"always" });
+  await waitFor(
+    () => harness.context.ATTACHMENT_AUTOMATION_BY_TAB.get(20)?.handoff?.detached?.length === 2,
+    "Attachments must be detached before the wizard receives its context"
+  );
+  const handoff = harness.context.ATTACHMENT_AUTOMATION_BY_TAB.get(20).handoff;
+  let contextReadFinished = false;
+  const contextRead = harness.context.getComposeAttachmentLaunchContext(
+    handoff.contextId,
+    20,
+    91
+  ).then((result) => {
+    contextReadFinished = true;
+    return result;
+  });
+  await Promise.resolve();
+  assert(!contextReadFinished, "An early context request must wait for popup binding");
+
+  windowCreated.resolve({ id:91 });
+  await flow;
+  const response = await contextRead;
+  assert(response.ok === true, "The bound wizard must receive its attachment context");
+  assert(response.context.attachments.length === 2, "The complete attachment context must be retained until adoption");
+  assert(harness.context.SHARING_LAUNCH_CONTEXTS.has(handoff.contextId), "Reading must not consume the context");
+
+  const mismatch = harness.context.adoptComposeAttachmentLaunchContext(handoff.contextId, 20, 91, 1);
+  assert(mismatch.ok === false, "A queue count mismatch must reject adoption");
+  const adopted = harness.context.adoptComposeAttachmentLaunchContext(handoff.contextId, 20, 91, 2);
+  assert(adopted.ok === true, "The complete queue must adopt its attachment context");
+  assert(!harness.context.SHARING_LAUNCH_CONTEXTS.has(handoff.contextId), "Adoption must release context File references");
+  assert(await harness.context.releaseComposeAttachmentWizard(91, "test") === true, "The adopted wizard must release its state");
+  assert(harness.calls.attachmentsAdded.length === 0, "Closing after adoption must not restore attachments");
+}
+
+async function checkCloseBeforeAdoptionRollback(){
+  const harness = createHarness();
+  const collected = createCollectedAttachments(harness, ["one.txt", "two.txt"]);
+  installCollectedFlow(harness, collected);
+  await harness.context.startComposeAttachmentShareFlow(21, { trigger:"always" });
+
+  assert(await harness.context.releaseComposeAttachmentWizard(91, "test") === true, "Closing before adoption must release the wizard");
+  assert(harness.calls.attachmentsAdded.length === 2, "Closing before adoption must restore every attachment");
+  assert(await harness.context.releaseComposeAttachmentWizard(91, "repeat") === false, "Repeated close must not start another rollback");
+  assert(harness.calls.attachmentsAdded.length === 2, "Repeated close must not restore attachments twice");
+}
+
+async function checkRestoreAttemptsAllAttachments(){
+  const harness = createHarness();
+  const collected = createCollectedAttachments(harness, ["one.txt", "two.txt", "three.txt"]);
+  installCollectedFlow(harness, collected);
+  harness.control.windowCreate = async () => {
+    throw new Error("popup_failed");
+  };
+  harness.control.addAttachment = async (_tabId, attachment) => {
+    if (attachment.name === "two.txt"){
+      throw new Error("restore_failed");
+    }
+  };
+
+  try{
+    await harness.context.startComposeAttachmentShareFlow(22, { trigger:"always" });
+  }catch(_error){}
+  assert(harness.calls.attachmentsAdded.length === 3, "Rollback must attempt every detached attachment");
+  const state = harness.context.ATTACHMENT_AUTOMATION_BY_TAB.get(22);
+  assert(state?.phase === "rollback_failed", "A failed restore must keep the compose flow blocked");
+  assert(state?.handoff?.detached?.length === 1, "Only unrestored attachments must remain journaled");
+}
+
+function checkClosedComposeCannotRestartHandoff(){
+  const harness = createHarness();
+  const state = harness.context.getComposeAttachmentAutomationState(23);
+  harness.context.cleanupComposeAttachmentTabState(23, "tab_removed");
+  let rejected = false;
+  try{
+    const file = new harness.context.File("one.txt", 10);
+    harness.context.beginComposeAttachmentHandoff(23, {
+      mode: "attachments",
+      attachments: [{ name:file.name, file }]
+    });
+  }catch(error){
+    rejected = error?.message === "attachment_handoff_missing";
+  }
+  assert(state.disposed === true, "Closing the compose tab must dispose its attachment state");
+  assert(rejected, "A closed compose tab must not create a replacement handoff state");
+  assert(harness.context.SHARING_LAUNCH_CONTEXTS.size === 0, "Closed compose tabs must not retain launch contexts");
+}
+
+function checkWizardAdoptionCode(){
+  const wizard = readText("ui/nextcloudSharingWizard.js");
+  const router = readText("modules/bgRouter.js");
+  assert(
+    wizard.includes("list.length !== expectedCount")
+      && wizard.includes("validCount !== expectedCount"),
+    "The wizard must reject incomplete attachment contexts"
+  );
+  assert(
+    wizard.indexOf("renderFileQueue();") < wizard.indexOf("await adoptAttachmentLaunchContext();"),
+    "The wizard must build the queue before adopting the context"
+  );
+  assert(
+    router.includes('msg.type === "sharing:adoptAttachmentLaunchContext"')
+      && router.includes('msg.type === "sharing:rejectAttachmentLaunchContext"'),
+    "The background router must expose explicit attachment adoption and rejection"
+  );
 }
 
 async function checkSuppressedAttachmentAdds(){
@@ -228,7 +438,14 @@ async function run(){
   await checkSerializedEvaluation();
   await checkPromptReservation();
   checkPromptBatchSettlement();
-  checkWizardOwnership();
+  await checkWizardOwnership();
+  await checkPartialRemovalRollback();
+  await checkPopupFailureRollback();
+  await checkLaunchContextAdoption();
+  await checkCloseBeforeAdoptionRollback();
+  await checkRestoreAttemptsAllAttachments();
+  checkClosedComposeCannotRestartHandoff();
+  checkWizardAdoptionCode();
   await checkSuppressedAttachmentAdds();
   console.log("[OK] compose-attachment-lifecycle-check passed");
 }

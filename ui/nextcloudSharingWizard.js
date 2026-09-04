@@ -118,6 +118,7 @@
     },
     tabId: null,
     launchContextId: null,
+    launchContextAdopted: false,
     mode: 'default',
     attachmentReason: null,
     debugEnabled: false,
@@ -227,7 +228,10 @@
       }catch(error){
         logUiError('init', error);
       }
-      await loadLaunchContext();
+      const launchContextLoaded = await loadLaunchContext();
+      if (!launchContextLoaded){
+        return;
+      }
       await refreshVfsSourceAvailability();
       if (state.mode === "attachments"){
         await applyAttachmentModeDefaults();
@@ -237,14 +241,29 @@
       renderFileQueue();
       updateStep(state.mode === "attachments" ? 3 : 1);
       updateAttachmentModeInfo();
+      const launchContextAdopted = await adoptAttachmentLaunchContext();
+      if (!launchContextAdopted){
+        return;
+      }
       log('Wizard initialized', {
         tabId: state.tabId,
         mode: state.mode,
         launchContextId: state.launchContextId || ""
       });
+    }catch(error){
+      if (!state.launchContextId || state.launchContextAdopted){
+        throw error;
+      }
+      logUiError('attachment wizard bootstrap', error);
+      await rejectAttachmentLaunchContext(
+        error?.message || 'attachment_wizard_bootstrap_failed'
+      );
+      await closeWizardWindow();
     }finally{
-      setWizardReady(true);
-      setupWindowSizing();
+      if (!isPageUnloading){
+        setWizardReady(true);
+        setupWindowSizing();
+      }
     }
   }
 
@@ -689,76 +708,140 @@
 
   /**
    * Load launch context passed by the background.
-   * @returns {Promise<void>}
+   * @returns {Promise<boolean>}
    */
   async function loadLaunchContext(){
     if (!state.launchContextId){
       log('Launch context not set (normal start)');
-      return;
+      return true;
     }
     try{
       log('Request launch context', { contextId: state.launchContextId });
       const response = await browser.runtime.sendMessage({
         type: "sharing:getLaunchContext",
-        payload: { contextId: state.launchContextId }
+        payload: {
+          contextId: state.launchContextId,
+          tabId: state.tabId,
+          windowId: state.wizardWindowId
+        }
       });
       if (!response?.ok || !response.context){
-        log('Launch context not found', state.launchContextId);
-        return;
+        throw new Error(response?.error || 'attachment_launch_context_missing');
       }
       const context = response.context;
       log('Launch context received', {
         mode: context.mode || '',
         attachmentCount: Array.isArray(context.attachments) ? context.attachments.length : 0
       });
-      if (context.mode === "attachments"){
-        state.mode = "attachments";
-        state.attachmentReason = context.reason || null;
-        preloadAttachmentEntries(context.attachments);
+      if (context.mode !== "attachments"){
+        throw new Error('attachment_launch_context_mode_invalid');
       }
+      const expectedCount = Number(context.expectedAttachmentCount);
+      preloadAttachmentEntries(context.attachments, expectedCount);
+      state.mode = "attachments";
+      state.attachmentReason = context.reason || null;
+      return true;
     }catch(error){
       logUiError('launch context', error);
       log('Launch context error', error?.message || String(error));
+      await rejectAttachmentLaunchContext(error?.message || 'attachment_launch_context_invalid');
+      await closeWizardWindow();
+      return false;
+    }
+  }
+
+  async function adoptAttachmentLaunchContext(){
+    if (!state.launchContextId || state.mode !== "attachments"){
+      return true;
+    }
+    try{
+      const response = await browser.runtime.sendMessage({
+        type: "sharing:adoptAttachmentLaunchContext",
+        payload: {
+          contextId: state.launchContextId,
+          tabId: state.tabId,
+          windowId: state.wizardWindowId,
+          attachmentCount: state.files.length
+        }
+      });
+      if (!response?.ok){
+        throw new Error(response?.error || 'attachment_launch_context_adoption_failed');
+      }
+      state.launchContextAdopted = true;
+      log('Attachment launch context adopted', { files: state.files.length });
+      return true;
+    }catch(error){
+      logUiError('launch context adoption', error);
+      await rejectAttachmentLaunchContext(error?.message || 'attachment_launch_context_adoption_failed');
+      await closeWizardWindow();
+      return false;
+    }
+  }
+
+  async function rejectAttachmentLaunchContext(reason){
+    if (!state.launchContextId || state.launchContextAdopted){
+      return;
+    }
+    try{
+      await browser.runtime.sendMessage({
+        type: "sharing:rejectAttachmentLaunchContext",
+        payload: {
+          contextId: state.launchContextId,
+          tabId: state.tabId,
+          windowId: state.wizardWindowId,
+          reason: String(reason || 'attachment_launch_context_rejected')
+        }
+      });
+    }catch(error){
+      logUiError('launch context rejection', error);
     }
   }
 
   /**
    * Fill the upload queue from attachment launch context.
    * @param {Array<object>} attachments
+   * @param {number} expectedCount
    */
-  function preloadAttachmentEntries(attachments){
+  function preloadAttachmentEntries(attachments, expectedCount){
     const list = Array.isArray(attachments) ? attachments : [];
     const validCount = list.filter((item) => item && item.file instanceof File).length;
     log('Attachment launch context preload', {
       received: list.length,
       valid: validCount
     });
-    state.files = list
-      .filter((item) => item && item.file instanceof File)
-      .map((item) => {
-        const file = item.file;
-        const fileName = NCSharing.sanitizeFileName(item.name || file.name || 'File');
-        const sourceDisplayPath = resolveEntryDisplayPath({
-          file,
-          source: 'launch',
-          fallbackName: fileName,
-          providedPath: item.displayPath || item.path || item.fullPath || item.name || file.name || ''
-        });
-        const displayDir = extractDisplayDir(sourceDisplayPath);
-        return {
-          id: `entry_${Date.now()}_${Math.random().toString(36).slice(2)}`,
-          file,
-          displayPath: buildDisplayPath(displayDir, fileName),
-          displayDir,
-          relativeDir: '',
-          renamedName: '',
-          status: 'pending',
-          progress: 0,
-          error: '',
-          speedKbps: 0,
-          progressStartedAt: 0
-        };
+    if (!Number.isInteger(expectedCount)
+      || expectedCount <= 0
+      || list.length !== expectedCount
+      || validCount !== expectedCount){
+      throw new Error('attachment_launch_context_incomplete');
+    }
+    state.files = list.map((item) => {
+      const file = item.file;
+      const fileName = NCSharing.sanitizeFileName(item.name || file.name || 'File');
+      const sourceDisplayPath = resolveEntryDisplayPath({
+        file,
+        source: 'launch',
+        fallbackName: fileName,
+        providedPath: item.displayPath || item.path || item.fullPath || item.name || file.name || ''
       });
+      const displayDir = extractDisplayDir(sourceDisplayPath);
+      return {
+        id: `entry_${Date.now()}_${Math.random().toString(36).slice(2)}`,
+        file,
+        displayPath: buildDisplayPath(displayDir, fileName),
+        displayDir,
+        relativeDir: '',
+        renamedName: '',
+        status: 'pending',
+        progress: 0,
+        error: '',
+        speedKbps: 0,
+        progressStartedAt: 0
+      };
+    });
+    if (state.files.length !== expectedCount){
+      throw new Error('attachment_launch_queue_incomplete');
+    }
     rebuildFileEntryIndex();
     log('Attachment queue prepared', { files: state.files.length });
   }

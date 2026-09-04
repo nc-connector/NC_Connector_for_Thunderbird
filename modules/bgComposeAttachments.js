@@ -13,6 +13,11 @@ function pruneSharingLaunchContexts(){
   const cutoff = Date.now() - SHARING_LAUNCH_CONTEXT_TTL_MS;
   for (const [contextId, entry] of SHARING_LAUNCH_CONTEXTS.entries()){
     if (!entry || typeof entry.created !== "number" || entry.created < cutoff){
+      const attachmentHandoffActive = Array.from(ATTACHMENT_AUTOMATION_BY_TAB.values())
+        .some((state) => state?.handoff?.contextId === contextId);
+      if (attachmentHandoffActive){
+        continue;
+      }
       SHARING_LAUNCH_CONTEXTS.delete(contextId);
     }
   }
@@ -36,12 +41,11 @@ function setSharingLaunchContext(entry){
   return contextId;
 }
 
-function takeSharingLaunchContext(contextId){
+function getSharingLaunchContext(contextId){
   if (!contextId) return null;
   pruneSharingLaunchContexts();
   const entry = SHARING_LAUNCH_CONTEXTS.get(contextId) || null;
-  SHARING_LAUNCH_CONTEXTS.delete(contextId);
-  L("sharing launch context consumed", {
+  L("sharing launch context read", {
     contextId: bgShortId(contextId, 24),
     found: !!entry
   });
@@ -101,7 +105,9 @@ function getComposeAttachmentAutomationState(tabId){
       evaluationTask: null,
       rerunRequested: false,
       promptId: "",
-      wizardWindowId: 0
+      wizardWindowId: 0,
+      handoff: null,
+      disposed: false
     };
     ATTACHMENT_AUTOMATION_BY_TAB.set(tabId, state);
   }
@@ -109,8 +115,234 @@ function getComposeAttachmentAutomationState(tabId){
 }
 
 function isComposeAttachmentWizardActive(tabId){
-  const phase = ATTACHMENT_AUTOMATION_BY_TAB.get(tabId)?.phase || "";
-  return phase === "handoff" || phase === "wizard";
+  const state = ATTACHMENT_AUTOMATION_BY_TAB.get(tabId);
+  return !!state?.handoff || state?.phase === "handoff" || state?.phase === "wizard";
+}
+
+function settleComposeAttachmentHandoffReady(handoff, result){
+  if (!handoff || handoff.readySettled){
+    return;
+  }
+  handoff.readySettled = true;
+  handoff.resolveReady(result);
+}
+
+function claimComposeAttachmentWizard(tabId, contextId, windowId){
+  const normalizedWindowId = Number(windowId);
+  if (!Number.isInteger(normalizedWindowId) || normalizedWindowId <= 0){
+    throw new Error("sharing_wizard_window_invalid");
+  }
+  const state = ATTACHMENT_AUTOMATION_BY_TAB.get(tabId);
+  const handoff = state?.handoff;
+  if (!state || state.disposed || !handoff || handoff.contextId !== contextId){
+    throw new Error("attachment_launch_context_missing");
+  }
+  if (state.wizardWindowId > 0 && state.wizardWindowId !== normalizedWindowId){
+    throw new Error("attachment_launch_window_mismatch");
+  }
+  const currentOwner = ATTACHMENT_AUTOMATION_TAB_BY_WINDOW.get(normalizedWindowId);
+  if (Number.isInteger(currentOwner) && currentOwner !== tabId){
+    throw new Error("attachment_launch_window_owned");
+  }
+  state.wizardWindowId = normalizedWindowId;
+  ATTACHMENT_AUTOMATION_TAB_BY_WINDOW.set(normalizedWindowId, tabId);
+  return handoff;
+}
+
+function beginComposeAttachmentHandoff(tabId, launchContext){
+  const state = ATTACHMENT_AUTOMATION_BY_TAB.get(tabId);
+  if (!state || state.disposed){
+    throw new Error("attachment_handoff_missing");
+  }
+  if (state.handoff){
+    throw new Error("attachment_handoff_active");
+  }
+  const attachments = Array.isArray(launchContext?.attachments)
+    ? launchContext.attachments
+    : [];
+  if (!attachments.length){
+    throw new Error("attachment_launch_context_empty");
+  }
+  const contextId = setSharingLaunchContext({
+    ...launchContext,
+    sourceTabId: tabId,
+    expectedAttachmentCount: attachments.length
+  });
+  let resolveReady;
+  // The popup may request its context before windows.create() returns. Keep
+  // that request pending until the background has bound the actual window.
+  const readyPromise = new Promise((resolve) => {
+    resolveReady = resolve;
+  });
+  const handoff = {
+    contextId,
+    expectedAttachmentCount: attachments.length,
+    detached: [],
+    adopted: false,
+    readyPromise,
+    resolveReady,
+    readySettled: false,
+    rollbackTask: null
+  };
+  state.handoff = handoff;
+  state.phase = "handoff";
+  return handoff;
+}
+
+async function getComposeAttachmentLaunchContext(contextId, tabId, windowId){
+  const normalizedTabId = Number(tabId);
+  const state = ATTACHMENT_AUTOMATION_BY_TAB.get(normalizedTabId);
+  const handoff = state?.handoff;
+  if (!handoff || handoff.contextId !== contextId || handoff.adopted){
+    return { ok:false, error:"context_not_found" };
+  }
+  try{
+    claimComposeAttachmentWizard(normalizedTabId, contextId, windowId);
+  }catch(error){
+    return { ok:false, error:error?.message || String(error) };
+  }
+  const ready = await handoff.readyPromise;
+  if (!ready?.ok){
+    return { ok:false, error:ready?.error || "context_not_ready" };
+  }
+  if (ATTACHMENT_AUTOMATION_BY_TAB.get(normalizedTabId)?.handoff !== handoff){
+    return { ok:false, error:"context_not_found" };
+  }
+  const context = getSharingLaunchContext(contextId);
+  if (!context
+    || Number(context.sourceTabId) !== normalizedTabId
+    || Number(context.expectedAttachmentCount) !== handoff.expectedAttachmentCount){
+    return { ok:false, error:"context_not_found" };
+  }
+  return { ok:true, context };
+}
+
+async function rollbackComposeAttachmentHandoff(tabId, reason = ""){
+  const state = ATTACHMENT_AUTOMATION_BY_TAB.get(tabId);
+  const handoff = state?.handoff;
+  if (!handoff){
+    return { ok:true, restored:0, failed:0 };
+  }
+  if (handoff.adopted){
+    return { ok:false, error:"context_already_adopted", restored:0, failed:0 };
+  }
+  if (handoff.rollbackTask){
+    return handoff.rollbackTask;
+  }
+
+  state.phase = "rollback";
+  settleComposeAttachmentHandoffReady(handoff, {
+    ok:false,
+    error:reason || "attachment_handoff_rolled_back"
+  });
+  SHARING_LAUNCH_CONTEXTS.delete(handoff.contextId);
+  if (state.wizardWindowId > 0){
+    ATTACHMENT_AUTOMATION_TAB_BY_WINDOW.delete(state.wizardWindowId);
+  }
+
+  const task = (async () => {
+    const failed = [];
+    const detached = handoff.detached.slice();
+    if (detached.length){
+      markComposeAttachmentSuppressed(tabId, true);
+    }
+    try{
+      for (const item of detached){
+        try{
+          await browser.compose.addAttachment(tabId, {
+            file: item.file,
+            name: item.name || item.file?.name || ""
+          });
+        }catch(error){
+          failed.push(item);
+          console.error("[NCBG] compose attachment restore failed", {
+            tabId,
+            error: error?.message || String(error)
+          });
+        }
+      }
+    }finally{
+      if (detached.length){
+        setTimeout(() => {
+          markComposeAttachmentSuppressed(tabId, false);
+        }, 0);
+      }
+    }
+
+    if (ATTACHMENT_AUTOMATION_BY_TAB.get(tabId)?.handoff === handoff){
+      handoff.detached = failed;
+      state.wizardWindowId = 0;
+      if (failed.length){
+        state.phase = "rollback_failed";
+      }else{
+        state.handoff = null;
+        state.phase = state.evaluationTask ? "evaluating" : "idle";
+      }
+    }
+    L("compose attachment handoff rolled back", {
+      tabId,
+      reason: String(reason || ""),
+      restored: detached.length - failed.length,
+      failed: failed.length
+    });
+    return {
+      ok: failed.length === 0,
+      error: failed.length ? "attachment_restore_failed" : "",
+      restored: detached.length - failed.length,
+      failed: failed.length
+    };
+  })();
+  handoff.rollbackTask = task;
+  return task;
+}
+
+function adoptComposeAttachmentLaunchContext(contextId, tabId, windowId, attachmentCount){
+  const normalizedTabId = Number(tabId);
+  const normalizedWindowId = Number(windowId);
+  const normalizedCount = Number(attachmentCount);
+  const state = ATTACHMENT_AUTOMATION_BY_TAB.get(normalizedTabId);
+  const handoff = state?.handoff;
+  if (!handoff
+    || handoff.contextId !== contextId
+    || state.wizardWindowId !== normalizedWindowId
+    || handoff.expectedAttachmentCount !== normalizedCount
+    || state.phase !== "wizard"){
+    return { ok:false, error:"attachment_launch_context_mismatch" };
+  }
+  if (!handoff.adopted){
+    handoff.adopted = true;
+    handoff.detached = [];
+    // From here on the wizard owns the complete queue. Closing it is a user
+    // cancellation and must not put the original attachments back.
+    SHARING_LAUNCH_CONTEXTS.delete(contextId);
+    L("compose attachment launch context adopted", {
+      tabId: normalizedTabId,
+      windowId: normalizedWindowId,
+      attachmentCount: normalizedCount
+    });
+  }
+  return { ok:true };
+}
+
+async function rejectComposeAttachmentLaunchContext(contextId, tabId, windowId, reason = ""){
+  const normalizedTabId = Number(tabId);
+  const state = ATTACHMENT_AUTOMATION_BY_TAB.get(normalizedTabId);
+  const handoff = state?.handoff;
+  if (!handoff || handoff.contextId !== contextId || handoff.adopted){
+    return { ok:false, error:"context_not_found" };
+  }
+  const normalizedWindowId = Number(windowId);
+  if (Number.isInteger(normalizedWindowId) && normalizedWindowId > 0){
+    try{
+      claimComposeAttachmentWizard(normalizedTabId, contextId, normalizedWindowId);
+    }catch(error){
+      return { ok:false, error:error?.message || String(error) };
+    }
+  }
+  return rollbackComposeAttachmentHandoff(
+    normalizedTabId,
+    reason || "attachment_launch_context_rejected"
+  );
 }
 
 function requestComposeAttachmentEvaluation(tabId){
@@ -153,18 +385,17 @@ function settleComposeAttachmentPromptBatch(tabId, decision){
   state.rerunRequested = false;
 }
 
-function activateComposeAttachmentWizard(tabId, windowId){
-  const normalizedWindowId = Number(windowId);
-  if (!Number.isInteger(normalizedWindowId) || normalizedWindowId <= 0){
-    throw new Error("sharing_wizard_window_invalid");
+function activateComposeAttachmentWizard(tabId, contextId, windowId){
+  const state = ATTACHMENT_AUTOMATION_BY_TAB.get(tabId);
+  if (!state){
+    throw new Error("attachment_handoff_missing");
   }
-  const state = getComposeAttachmentAutomationState(tabId);
+  const handoff = claimComposeAttachmentWizard(tabId, contextId, windowId);
   state.phase = "wizard";
-  state.wizardWindowId = normalizedWindowId;
-  ATTACHMENT_AUTOMATION_TAB_BY_WINDOW.set(normalizedWindowId, tabId);
+  settleComposeAttachmentHandoffReady(handoff, { ok:true });
 }
 
-function releaseComposeAttachmentWizard(windowId, reason = ""){
+async function releaseComposeAttachmentWizard(windowId, reason = ""){
   const normalizedWindowId = Number(windowId);
   const tabId = ATTACHMENT_AUTOMATION_TAB_BY_WINDOW.get(normalizedWindowId);
   if (!Number.isInteger(tabId) || tabId <= 0){
@@ -176,13 +407,22 @@ function releaseComposeAttachmentWizard(windowId, reason = ""){
     return false;
   }
   state.wizardWindowId = 0;
-  state.phase = "idle";
+  if (state.handoff && !state.handoff.adopted){
+    await rollbackComposeAttachmentHandoff(
+      tabId,
+      reason || "attachment_wizard_closed_before_adoption"
+    );
+  }else{
+    state.handoff = null;
+    state.phase = "idle";
+  }
   L("compose attachment wizard released", {
     tabId,
     windowId: normalizedWindowId,
     reason: String(reason || "")
   });
-  if (state.rerunRequested || ATTACHMENT_PENDING_ADDED_BY_TAB.has(tabId)){
+  if (state.phase !== "rollback_failed"
+    && (state.rerunRequested || ATTACHMENT_PENDING_ADDED_BY_TAB.has(tabId))){
     scheduleComposeAttachmentEvaluation(tabId);
   }
   return true;
@@ -484,17 +724,21 @@ function resolveAttachmentPrompt(promptId, decision = "dismiss", source = ""){
 }
 
 /**
- * Open sharing wizard popup and optionally attach a one-time launch context.
+ * Open sharing wizard popup and optionally attach a pending launch context.
  * @param {number} tabId
  * @param {object|null} launchContext
+ * @param {string} launchContextId
  * @returns {Promise<object>}
  */
-async function openSharingWizardWindow(tabId, launchContext = null){
+async function openSharingWizardWindow(tabId, launchContext = null, launchContextId = ""){
   const popupUrl = new URL(browser.runtime.getURL("ui/nextcloudSharingWizard.html"));
   popupUrl.searchParams.set("tabId", String(tabId));
   let contextId = "";
   if (launchContext && typeof launchContext === "object"){
-    contextId = setSharingLaunchContext(launchContext);
+    contextId = String(launchContextId || "");
+    if (!contextId){
+      throw new Error("attachment_launch_context_missing");
+    }
     popupUrl.searchParams.set("launchContextId", contextId);
   }
   const windowInfo = await browser.windows.create({
@@ -503,13 +747,27 @@ async function openSharingWizardWindow(tabId, launchContext = null){
     width: SHARING_POPUP_WIDTH,
     height: SHARING_POPUP_HEIGHT
   });
-  const requestContext = bindSharingWizardRequestContext(
-    windowInfo?.id,
-    tabId,
-    launchContext
-  );
-  if (requestContext.attachmentMode){
-    activateComposeAttachmentWizard(tabId, windowInfo?.id);
+  let requestContext;
+  try{
+    requestContext = bindSharingWizardRequestContext(
+      windowInfo?.id,
+      tabId,
+      launchContext
+    );
+    if (requestContext.attachmentMode){
+      activateComposeAttachmentWizard(tabId, contextId, windowInfo?.id);
+    }
+  }catch(error){
+    const windowId = Number(windowInfo?.id) || 0;
+    clearSharingWizardRequestContext(windowId);
+    if (windowId > 0){
+      try{
+        await browser.windows.remove(windowId);
+      }catch(closeError){
+        console.error("[NCBG] sharing wizard bootstrap close failed", closeError);
+      }
+    }
+    throw error;
   }
   const focusApplied = await focusPopupWindowBestEffort(windowInfo, {
     label: "sharing wizard popup"
@@ -567,19 +825,28 @@ async function collectComposeAttachmentFiles(tabId, attachments){
   return out;
 }
 
-async function removeComposeAttachments(tabId, attachmentIds){
+async function removeComposeAttachments(tabId, attachmentIds, options = {}){
   const ids = Array.isArray(attachmentIds) ? attachmentIds : [];
+  const suppressEvents = options.suppressEvents !== false;
+  const onRemoved = typeof options.onRemoved === "function"
+    ? options.onRemoved
+    : null;
   L("compose attachments remove requested", { tabId, count: ids.length });
-  markComposeAttachmentSuppressed(tabId, true);
+  if (suppressEvents){
+    markComposeAttachmentSuppressed(tabId, true);
+  }
   try{
     for (const attachmentId of ids){
       await browser.compose.removeAttachment(tabId, attachmentId);
+      onRemoved?.(attachmentId);
     }
     L("compose attachments removed", { tabId, count: ids.length });
   }finally{
-    setTimeout(() => {
-      markComposeAttachmentSuppressed(tabId, false);
-    }, 0);
+    if (suppressEvents){
+      setTimeout(() => {
+        markComposeAttachmentSuppressed(tabId, false);
+      }, 0);
+    }
   }
 }
 
@@ -631,6 +898,10 @@ async function startComposeAttachmentShareFlow(tabId, context = {}){
       L("compose attachment flow skipped (no collectible files)", { tabId });
       return;
     }
+    if (automationState.disposed
+      || ATTACHMENT_AUTOMATION_BY_TAB.get(tabId) !== automationState){
+      return;
+    }
     const launchContext = {
       mode: "attachments",
       reason: buildAttachmentLaunchReason(context),
@@ -647,8 +918,29 @@ async function startComposeAttachmentShareFlow(tabId, context = {}){
       trigger: launchContext.reason?.trigger || "",
       attachmentCount: launchContext.attachments.length
     });
-    await removeComposeAttachments(tabId, collected.map((item) => item.attachmentId));
-    await openSharingWizardWindow(tabId, launchContext);
+    const handoff = beginComposeAttachmentHandoff(tabId, launchContext);
+    const collectedById = new Map(collected.map((item) => [item.attachmentId, item]));
+    try{
+      await removeComposeAttachments(
+        tabId,
+        collected.map((item) => item.attachmentId),
+        {
+          // Only restored additions need suppression. Suppressing this removal
+          // would leave a timer that could expose later restore events.
+          suppressEvents: false,
+          onRemoved(attachmentId){
+            const removed = collectedById.get(attachmentId);
+            if (removed){
+              handoff.detached.push(removed);
+            }
+          }
+        }
+      );
+      await openSharingWizardWindow(tabId, launchContext, handoff.contextId);
+    }catch(error){
+      await rollbackComposeAttachmentHandoff(tabId, "attachment_handoff_failed");
+      throw error;
+    }
   }finally{
     if (automationState.phase === "handoff"){
       automationState.phase = "evaluating";
@@ -871,6 +1163,17 @@ function cleanupComposeAttachmentTabState(tabId, reason = ""){
     resolveAttachmentPrompt(promptId, "dismiss", reason || "tab_closed");
   }
   const automationState = ATTACHMENT_AUTOMATION_BY_TAB.get(tabId);
+  if (automationState?.handoff){
+    settleComposeAttachmentHandoffReady(automationState.handoff, {
+      ok:false,
+      error: reason || "tab_closed"
+    });
+    SHARING_LAUNCH_CONTEXTS.delete(automationState.handoff.contextId);
+  }
+  if (automationState){
+    // The compose surface no longer exists, so there is nowhere to restore to.
+    automationState.disposed = true;
+  }
   if (Number.isInteger(automationState?.wizardWindowId)
     && automationState.wizardWindowId > 0){
     ATTACHMENT_AUTOMATION_TAB_BY_WINDOW.delete(automationState.wizardWindowId);
