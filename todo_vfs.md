@@ -44,7 +44,7 @@ approval.
   attachment already removed with its original file and name. The deliberate
   product rule that user cancellation does not restore attachments starts only
   after the wizard has adopted a complete launch context.
-- [ ] **S-01 - release blocker:** Transfer exactly the enumerated queue snapshot
+- [x] **S-01 - release blocker:** Transfer exactly the enumerated queue snapshot
   for folders selected from the configured Nextcloud. A recursive
   `Depth: infinity` COPY of the source root can include files added after
   selection which were never shown in the queue or included in its capacity
@@ -115,5 +115,5 @@ approval.
   and the post-handoff no-restore product boundary.
 - [ ] Add a wizard UI lifecycle check for retryable and non-retryable finalize
   failures, including Retry, Cancel, and window-close behavior.
-- [ ] Add exact-snapshot coverage for same-Nextcloud folder COPY and ambiguity
-  tests for Direct and chunked non-overwrite provider writes.
+- [x] Add exact-snapshot coverage for same-Nextcloud folder COPY.
+- [ ] Add ambiguity tests for Direct and chunked non-overwrite provider writes.

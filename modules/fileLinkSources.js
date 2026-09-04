@@ -115,7 +115,10 @@
       .filter((item) => item.sourceKind === 'local')
       .map((item) => Object.freeze({ ...item }));
     const nextcloudCopies = items.filter((item) =>
-      item.sourceKind === 'nextcloud' && item.transferRole === 'copy-root'
+      item.sourceKind === 'nextcloud' && item.kind === 'file'
+    );
+    const nextcloudDirectories = items.filter((item) =>
+      item.sourceKind === 'nextcloud' && item.kind === 'folder'
     );
     const externalFiles = items.filter((item) =>
       item.sourceKind === 'external-vfs' && item.kind === 'file'
@@ -124,9 +127,10 @@
       item.sourceKind === 'external-vfs' && item.kind === 'folder'
     );
     const directoryPaths = [
+      ...nextcloudDirectories.map((item) => targetPath(item)),
+      ...nextcloudCopies.map((item) => item.relativeDir),
       ...externalDirectories.map((item) => targetPath(item)),
-      ...externalFiles.map((item) => item.relativeDir),
-      ...nextcloudCopies.map((item) => item.relativeDir)
+      ...externalFiles.map((item) => item.relativeDir)
     ];
     const deferredUploadFiles = externalFiles.map((item) => Object.freeze({
       ...item,
@@ -136,6 +140,7 @@
       items: Object.freeze(items),
       localFiles: Object.freeze(localFiles),
       nextcloudCopies: Object.freeze(nextcloudCopies),
+      nextcloudDirectories: Object.freeze(nextcloudDirectories),
       externalFiles: Object.freeze(externalFiles),
       externalDirectories: Object.freeze(externalDirectories),
       additionalDirectories: collectDirectoryTree(directoryPaths),
@@ -153,13 +158,6 @@
     }));
   }
 
-  function groupMembers(plan, root){
-    if (!root.transferGroupId){
-      return [root];
-    }
-    return plan.items.filter((item) => item.transferGroupId === root.transferGroupId);
-  }
-
   async function copyNextcloudSources({
     plan,
     shareRoot,
@@ -172,8 +170,7 @@
     let completed = 0;
     for (const item of plan.nextcloudCopies){
       global.NCNextcloudDav.throwIfAborted(signal);
-      const members = groupMembers(plan, item);
-      members.forEach((member) => emitItem(onStatus, member, 'source_copy'));
+      emitItem(onStatus, item, 'source_copy');
       onStatus?.({
         phase: 'source_transfer',
         mode: 'copy',
@@ -184,10 +181,10 @@
         await global.NCVfsProviderRuntime.copyIntoShare(item.storageRef, {
           sourcePath: item.sourcePath,
           destinationPath: `/${global.NCNextcloudDav.joinPath(shareRoot, targetPath(item))}`,
-          kind: item.kind === 'folder' ? 'directory' : 'file',
+          kind: 'file',
           signal
         });
-        members.forEach((member) => emitItem(onStatus, member, 'done'));
+        emitItem(onStatus, item, 'done');
         completed++;
         onStatus?.({
           phase: 'source_transfer',
@@ -196,9 +193,9 @@
           total: plan.nextcloudCopies.length
         });
       }catch(error){
-        members.forEach((member) => emitItem(onStatus, member, 'error', {
+        emitItem(onStatus, item, 'error', {
           error: error?.message || bgI18n('sharing_status_error')
-        }));
+        });
         throw error;
       }
     }
@@ -285,15 +282,18 @@
     }
   }
 
-  function markExternalDirectoriesDone(plan, onStatus){
-    for (const item of plan.externalDirectories){
+  function markSourceDirectoriesDone(plan, onStatus){
+    for (const item of [
+      ...plan.nextcloudDirectories,
+      ...plan.externalDirectories
+    ]){
       emitItem(onStatus, item, 'done');
     }
   }
 
   async function transferAdditionalSources(context){
     const { plan, onStatus } = context;
-    markExternalDirectoriesDone(plan, onStatus);
+    markSourceDirectoriesDone(plan, onStatus);
     await copyNextcloudSources(context);
     await uploadExternalSources(context);
   }

@@ -776,6 +776,18 @@ async function checkMixedSourcePlan(){
       transferRole: "copy-child"
     },
     {
+      id: "nextcloud-empty-folder",
+      sourceKind: "nextcloud",
+      kind: "folder",
+      name: "Empty",
+      relativeDir: "Photos",
+      displayPath: "Photos/Empty",
+      sourcePath: "/Photos/Empty",
+      storageRef: selfStorageRef,
+      transferGroupId: "nc-folder",
+      transferRole: "copy-child"
+    },
+    {
       id: "external-folder",
       sourceKind: "external-vfs",
       kind: "folder",
@@ -817,7 +829,8 @@ async function checkMixedSourcePlan(){
   });
 
   assert(sourcePlan.localFiles.length === 1, "Local files must remain on the existing upload path");
-  assert(sourcePlan.nextcloudCopies.length === 2, "Only same-Nextcloud selection roots may issue COPY");
+  assert(sourcePlan.nextcloudCopies.length === 2, "Each enumerated same-Nextcloud file must issue COPY");
+  assert(sourcePlan.nextcloudDirectories.length === 2, "Same-Nextcloud directory rows must remain in the plan");
   assert(sourcePlan.externalFiles.length === 2, "External files must remain individual transfer items");
   assert(
     sourcePlan.deferredUploadFiles.length === 2
@@ -827,6 +840,11 @@ async function checkMixedSourcePlan(){
   assert(
     sourcePlan.additionalDirectories.includes("External/Empty"),
     "External folder trees must preserve empty and parent directories"
+  );
+  assert(
+    sourcePlan.additionalDirectories.includes("Photos")
+      && sourcePlan.additionalDirectories.includes("Photos/Empty"),
+    "Same-Nextcloud folder trees must preserve empty and parent directories"
   );
 
   const controller = new AbortController();
@@ -840,10 +858,24 @@ async function checkMixedSourcePlan(){
     onStatus: (event) => itemEvents.push(event),
     progress: {}
   });
-  assert(copyCalls.length === 2, "Each same-Nextcloud selection root must use one server-side COPY");
+  assert(copyCalls.length === 2, "Each enumerated same-Nextcloud file must use one server-side COPY");
   assert(
-    copyCalls.every((entry) => entry.destinationPath.startsWith("/Shares/Target/")),
-    "Server-side COPY destinations must stay inside the generated share root"
+    JSON.stringify(copyCalls.map((entry) => entry.sourcePath)) === JSON.stringify([
+      "/Documents/cloud.txt",
+      "/Photos/one.jpg"
+    ]),
+    "Server-side COPY must transfer exactly the enumerated file snapshot"
+  );
+  assert(
+    copyCalls.every((entry) => entry.kind === "file"),
+    "Same-Nextcloud file snapshots must never use recursive directory COPY"
+  );
+  assert(
+    JSON.stringify(copyCalls.map((entry) => entry.destinationPath)) === JSON.stringify([
+      "/Shares/Target/cloud.txt",
+      "/Shares/Target/Photos/one.jpg"
+    ]),
+    "Server-side COPY destinations must match the enumerated queue paths"
   );
   assert(maximumActiveReads === 1, "External VFS files must be read one at a time");
   assert(
@@ -858,6 +890,11 @@ async function checkMixedSourcePlan(){
   assert(
     itemEvents.some((entry) => entry.itemId === "external-folder" && entry.phase === "done"),
     "Created external directories must be reflected in the queue"
+  );
+  assert(
+    itemEvents.some((entry) => entry.itemId === "nextcloud-folder" && entry.phase === "done")
+      && itemEvents.some((entry) => entry.itemId === "nextcloud-empty-folder" && entry.phase === "done"),
+    "Created same-Nextcloud directories must be reflected in the queue"
   );
 
   let metadataRejected = false;
