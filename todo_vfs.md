@@ -75,10 +75,8 @@ approval.
 - [ ] Split the sharing wizard, sharing renderer/network service, upload engine,
   and password dispatch module by their existing responsibilities without
   changing behavior.
-- [ ] Remove the wizard's one-shot finalize bookkeeping after the close/error
-  state is corrected. `finalizeCloseOnly` is written but never read, and the
-  four `finalizeProgress` flags are set only after the atomic background
-  transaction has already succeeded and the wizard is closing.
+- [x] Remove the wizard's unused one-shot finalize bookkeeping. The background
+  transaction remains the sole owner of staged progress and rollback.
 - [x] Share the live and persistent cleanup retry schedule.
 - [x] Remove the unreachable descriptorless cleanup fallback now that every
   supported live and persisted record has a validated descriptor.

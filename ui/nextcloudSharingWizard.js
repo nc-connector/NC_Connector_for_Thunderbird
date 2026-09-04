@@ -108,14 +108,7 @@
     finalizeStarted: false,
     finalizeInProgress: false,
     finalizeRetryAllowed: false,
-    finalizeCloseOnly: false,
     finalized: false,
-    finalizeProgress: {
-      composeCleanupArmed: false,
-      blockInserted: false,
-      passwordDispatchRegistered: false,
-      wizardCleanupCleared: false
-    },
     tabId: null,
     launchContextId: null,
     launchContextAdopted: false,
@@ -2294,7 +2287,6 @@
     state.finalizeStarted = true;
     state.finalizeInProgress = true;
     state.finalizeRetryAllowed = false;
-    state.finalizeCloseOnly = false;
     lockFinalizeInputs();
     updateButtons();
     const attachmentMode = state.mode === "attachments";
@@ -2326,15 +2318,11 @@
         hidePassword: separatePasswordMail,
         showPasswordSeparateHint: separatePasswordMail
       };
-      let html = "";
-      let plainText = "";
+      const html = await NCSharing.buildHtmlBlock(state.uploadResult.shareInfo, renderOptions);
+      const plainText = await NCSharing.buildPlainTextBlock(state.uploadResult.shareInfo, renderOptions);
       let passwordMailHtml = "";
       let passwordMailPlainText = "";
-      if (!state.finalizeProgress.blockInserted){
-        html = await NCSharing.buildHtmlBlock(state.uploadResult.shareInfo, renderOptions);
-        plainText = await NCSharing.buildPlainTextBlock(state.uploadResult.shareInfo, renderOptions);
-      }
-      if (separatePasswordMail && !state.finalizeProgress.passwordDispatchRegistered){
+      if (separatePasswordMail){
         const passwordRenderOptions = {
           policyShare: state.policy.active ? state.policy.share : null,
           policyEditableShare: state.policy.active ? state.policy.editable : null,
@@ -2349,43 +2337,37 @@
           passwordRenderOptions
         );
       }
-      if (!state.finalizeProgress.blockInserted){
-        await finalizeRenderedShare({
-          tabId: Number(state.tabId),
-          html,
-          plainText,
-          cleanup: {
-            shareId: state.uploadResult.shareInfo?.shareId || "",
+      await finalizeRenderedShare({
+        tabId: Number(state.tabId),
+        html,
+        plainText,
+        cleanup: {
+          shareId: state.uploadResult.shareInfo?.shareId || "",
+          shareLabel: state.uploadResult.shareInfo?.label || getSanitizedShareName(),
+          shareUrl: state.uploadResult.shareInfo?.shareUrl || "",
+          folderInfo: state.uploadResult.shareInfo?.folderInfo || null
+        },
+        shareNote: {
+          noteEnabled,
+          note
+        },
+        passwordDispatch: separatePasswordMail
+          ? {
             shareLabel: state.uploadResult.shareInfo?.label || getSanitizedShareName(),
             shareUrl: state.uploadResult.shareInfo?.shareUrl || "",
-            folderInfo: state.uploadResult.shareInfo?.folderInfo || null
-          },
-          shareNote: {
-            noteEnabled,
-            note
-          },
-          passwordDispatch: separatePasswordMail
-            ? {
-              shareLabel: state.uploadResult.shareInfo?.label || getSanitizedShareName(),
-              shareUrl: state.uploadResult.shareInfo?.shareUrl || "",
-              shareId: state.uploadResult.shareInfo?.shareId || "",
-              folderInfo: state.uploadResult.shareInfo?.folderInfo || null,
-              password: state.uploadResult.shareInfo?.password || "",
-              deliveryMode: getSelectedPasswordDeliveryMode(),
-              secretsExpireDays: NCSharePasswordDelivery.resolveSecretsExpireDays(state.policy.status),
-              renderShareInfo: state.uploadResult.shareInfo,
-              policyShare: state.policy.active ? state.policy.share : null,
-              policyEditableShare: state.policy.active ? state.policy.editable : null,
-              html: passwordMailHtml,
-              plainText: passwordMailPlainText
-            }
-            : null
-        });
-        state.finalizeProgress.composeCleanupArmed = true;
-        state.finalizeProgress.passwordDispatchRegistered = true;
-        state.finalizeProgress.blockInserted = true;
-        state.finalizeProgress.wizardCleanupCleared = true;
-      }
+            shareId: state.uploadResult.shareInfo?.shareId || "",
+            folderInfo: state.uploadResult.shareInfo?.folderInfo || null,
+            password: state.uploadResult.shareInfo?.password || "",
+            deliveryMode: getSelectedPasswordDeliveryMode(),
+            secretsExpireDays: NCSharePasswordDelivery.resolveSecretsExpireDays(state.policy.status),
+            renderShareInfo: state.uploadResult.shareInfo,
+            policyShare: state.policy.active ? state.policy.share : null,
+            policyEditableShare: state.policy.active ? state.policy.editable : null,
+            html: passwordMailHtml,
+            plainText: passwordMailPlainText
+          }
+          : null
+      });
       state.finalized = true;
       await closeWizardWindow();
     }catch(error){
@@ -2395,7 +2377,6 @@
         setMessage(i18n('sharing_error_insert_failed'), 'error');
       }else{
         state.finalizeRetryAllowed = false;
-        state.finalizeCloseOnly = true;
         setMessage(
           i18n('sharing_error_insert_failed_close')
             || i18n('sharing_error_insert_failed'),

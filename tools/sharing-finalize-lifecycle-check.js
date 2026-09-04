@@ -754,6 +754,11 @@ function verifyWizardDelegatesShareNoteFinalization(){
       && wizardSource.includes("noteEnabled: payload.shareNote?.noteEnabled === true"),
     "The wizard must pass only the requested note into background finalization"
   );
+  assert(
+    !wizardSource.includes("finalizeCloseOnly")
+      && !wizardSource.includes("finalizeProgress"),
+    "The wizard must not mirror the atomic background transaction with unused progress flags"
+  );
 }
 
 async function verifyWizardFinalizeCancelLifecycle(){
