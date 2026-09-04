@@ -2685,7 +2685,7 @@
    */
   async function handleCancel(event){
     event?.preventDefault?.();
-    if (state.finalizeStarted){
+    if (state.finalizeInProgress){
       log('Wizard cancel ignored during finalize');
       return;
     }

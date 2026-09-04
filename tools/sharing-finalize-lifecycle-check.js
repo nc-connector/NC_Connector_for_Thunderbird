@@ -756,6 +756,59 @@ function verifyWizardDelegatesShareNoteFinalization(){
   );
 }
 
+async function verifyWizardFinalizeCancelLifecycle(){
+  const wizardSource = readText("ui/nextcloudSharingWizard.js");
+  const functionMatch = wizardSource.match(
+    /async function handleCancel\(event\)\{([\s\S]*?)\n  \}\n\n  function getRawShareName/
+  );
+  assert(functionMatch, "The Sharing wizard cancel handler must remain testable");
+  assert(
+    wizardSource.includes("dom.cancelBtn.disabled = state.finalizeInProgress;"),
+    "Cancel must be disabled only while finalization is running"
+  );
+  assert(
+    wizardSource.includes("|| (state.finalizeStarted && !state.finalizeRetryAllowed)"),
+    "A retryable finalize failure must reactivate Finish"
+  );
+  assert(
+    /async function closeWizardWindow\(\)\{[\s\S]*?window\.close\(\);[\s\S]*?\n  \}/.test(wizardSource),
+    "The settled Cancel path must still close the wizard window"
+  );
+
+  const handlerSource = `(async function handleCancel(event){${functionMatch[1]}\n})`;
+  for (const scenario of [
+    { name: "running finalize", inProgress: true, retryAllowed: false, expectedCloseCalls: 0 },
+    { name: "settled retryable failure", inProgress: false, retryAllowed: true, expectedCloseCalls: 1 },
+    { name: "settled non-retryable failure", inProgress: false, retryAllowed: false, expectedCloseCalls: 1 }
+  ]){
+    let closeCalls = 0;
+    let preventDefaultCalls = 0;
+    const context = {
+      state: {
+        finalizeStarted: true,
+        finalizeInProgress: scenario.inProgress,
+        finalizeRetryAllowed: scenario.retryAllowed
+      },
+      log(){},
+      async closeWizardWindow(){
+        closeCalls++;
+      }
+    };
+    vm.createContext(context);
+    const handleCancel = vm.runInContext(handlerSource, context);
+    await handleCancel({
+      preventDefault(){
+        preventDefaultCalls++;
+      }
+    });
+    assert(preventDefaultCalls === 1, `${scenario.name} must suppress the button default`);
+    assert(
+      closeCalls === scenario.expectedCloseCalls,
+      `${scenario.name} produced an unexpected close result`
+    );
+  }
+}
+
 async function verifyInsertFailureRollback(){
   const harness = createFinalizeHarness({ insertFailure: true });
   const previousState = {
@@ -898,6 +951,7 @@ async function verifySuccessfulCommit(){
 
 async function run(){
   verifyWizardDelegatesShareNoteFinalization();
+  await verifyWizardFinalizeCancelLifecycle();
   await verifyShareNoteFinalization();
   await verifyInsertFailureRollback();
   await verifyDelayedStageTimeoutRollback();

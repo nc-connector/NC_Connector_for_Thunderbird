@@ -277,6 +277,7 @@ password-dispatch, header, or body mutation cannot be exposed as committed.
 - Same-Nextcloud selections use server-side WebDAV `COPY` with no download, move, or source deletion. External providers return complete `File` values; NC Connector reads them sequentially and passes each one to the same Direct/Chunked selector used by local FileLink files, without persistent or disk staging.
 - Same-Nextcloud folder selections create only the directories and copy only the files captured by the picker. Every file remains server-side and is transferred with its own WebDAV `COPY`; later additions to the source folder are not included.
 - Picker, list, and read cancellation is request-specific. Wizard disconnect uses the established background cleanup lifecycle and never deletes a selected source.
+- The Sharing wizard blocks Cancel only while its background finalization request is running. After a retryable or terminal failure has settled, Cancel closes the window and leaves the armed cleanup entry to the established background window-removal path.
 - VFS storage, Toolkit integration, mixed-source transfer, localization, and vendor-integrity checks are registered in the normal review aggregate and therefore run in GitHub Actions.
 
 Known temporary deviation:

@@ -54,11 +54,10 @@ approval.
   discard attachment
   batches deterministically when a prompt closes so overlapping evaluations
   cannot open duplicate prompts or start competing detach flows.
-- [ ] **F-01 - medium:** Allow the Sharing wizard to close after a finalize
+- [x] **F-01 - medium:** Allow the Sharing wizard to close after a finalize
   attempt has settled.
-  The Cancel button is enabled after an insertion/finalize error, but
-  `finalizeStarted` currently ignores every click, including the non-retryable
-  state whose message explicitly asks the user to close the window.
+  Cancel remains blocked while the request is running and closes the wizard
+  after retryable and non-retryable insertion/finalize failures.
 - [ ] **P-01 - medium:** Reconcile ambiguous non-overwrite VFS-provider writes.
   A successful Direct PUT whose response is lost is retried and then reported
   as HTTP 412, while an
@@ -113,7 +112,7 @@ approval.
   one prompt/flow per compose tab, partial removal, popup creation failure,
   missing or incomplete launch context, send blocking during attachment mode,
   and the post-handoff no-restore product boundary.
-- [ ] Add a wizard UI lifecycle check for retryable and non-retryable finalize
+- [x] Add a wizard UI lifecycle check for retryable and non-retryable finalize
   failures, including Retry, Cancel, and window-close behavior.
 - [x] Add exact-snapshot coverage for same-Nextcloud folder COPY.
 - [ ] Add ambiguity tests for Direct and chunked non-overwrite provider writes.
