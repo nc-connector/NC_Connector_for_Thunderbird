@@ -49,7 +49,7 @@ approval.
   `Depth: infinity` COPY of the source root can include files added after
   selection which were never shown in the queue or included in its capacity
   calculation.
-- [ ] **A-02 - high:** Serialize attachment automation per compose tab and
+- [x] **A-02 - high:** Serialize attachment automation per compose tab and
   reserve the threshold prompt before asynchronous popup creation. Resolve or
   discard attachment
   batches deterministically when a prompt closes so overlapping evaluations

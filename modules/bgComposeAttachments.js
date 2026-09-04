@@ -93,6 +93,101 @@ function clearComposeAttachmentEvalTimer(tabId){
   ATTACHMENT_EVAL_TIMER_BY_TAB.delete(tabId);
 }
 
+function getComposeAttachmentAutomationState(tabId){
+  let state = ATTACHMENT_AUTOMATION_BY_TAB.get(tabId);
+  if (!state){
+    state = {
+      phase: "idle",
+      evaluationTask: null,
+      rerunRequested: false,
+      promptId: "",
+      wizardWindowId: 0
+    };
+    ATTACHMENT_AUTOMATION_BY_TAB.set(tabId, state);
+  }
+  return state;
+}
+
+function isComposeAttachmentWizardActive(tabId){
+  const phase = ATTACHMENT_AUTOMATION_BY_TAB.get(tabId)?.phase || "";
+  return phase === "handoff" || phase === "wizard";
+}
+
+function requestComposeAttachmentEvaluation(tabId){
+  const state = getComposeAttachmentAutomationState(tabId);
+  if (state.evaluationTask){
+    state.rerunRequested = true;
+    return state.evaluationTask;
+  }
+  if (isComposeAttachmentWizardActive(tabId)){
+    state.rerunRequested = true;
+    return Promise.resolve();
+  }
+  const task = (async () => {
+    do{
+      state.rerunRequested = false;
+      state.phase = "evaluating";
+      await evaluateComposeAttachmentThreshold(tabId);
+    }while (state.rerunRequested && !isComposeAttachmentWizardActive(tabId));
+  })();
+  state.evaluationTask = task;
+  return task.finally(() => {
+    if (state.evaluationTask === task){
+      state.evaluationTask = null;
+    }
+    if (state.phase === "evaluating"){
+      state.phase = "idle";
+    }
+  });
+}
+
+function settleComposeAttachmentPromptBatch(tabId, decision){
+  const state = getComposeAttachmentAutomationState(tabId);
+  if (decision === "remove_last"){
+    state.rerunRequested = ATTACHMENT_PENDING_ADDED_BY_TAB.has(tabId);
+    return;
+  }
+  // Share consumes the current compose set; dismiss deliberately ignores all
+  // additions made while the same prompt was open.
+  ATTACHMENT_PENDING_ADDED_BY_TAB.delete(tabId);
+  state.rerunRequested = false;
+}
+
+function activateComposeAttachmentWizard(tabId, windowId){
+  const normalizedWindowId = Number(windowId);
+  if (!Number.isInteger(normalizedWindowId) || normalizedWindowId <= 0){
+    throw new Error("sharing_wizard_window_invalid");
+  }
+  const state = getComposeAttachmentAutomationState(tabId);
+  state.phase = "wizard";
+  state.wizardWindowId = normalizedWindowId;
+  ATTACHMENT_AUTOMATION_TAB_BY_WINDOW.set(normalizedWindowId, tabId);
+}
+
+function releaseComposeAttachmentWizard(windowId, reason = ""){
+  const normalizedWindowId = Number(windowId);
+  const tabId = ATTACHMENT_AUTOMATION_TAB_BY_WINDOW.get(normalizedWindowId);
+  if (!Number.isInteger(tabId) || tabId <= 0){
+    return false;
+  }
+  ATTACHMENT_AUTOMATION_TAB_BY_WINDOW.delete(normalizedWindowId);
+  const state = ATTACHMENT_AUTOMATION_BY_TAB.get(tabId);
+  if (!state || state.wizardWindowId !== normalizedWindowId){
+    return false;
+  }
+  state.wizardWindowId = 0;
+  state.phase = "idle";
+  L("compose attachment wizard released", {
+    tabId,
+    windowId: normalizedWindowId,
+    reason: String(reason || "")
+  });
+  if (state.rerunRequested || ATTACHMENT_PENDING_ADDED_BY_TAB.has(tabId)){
+    scheduleComposeAttachmentEvaluation(tabId);
+  }
+  return true;
+}
+
 function scheduleComposeAttachmentEvaluation(tabId){
   if (!Number.isInteger(tabId) || tabId <= 0){
     return;
@@ -100,8 +195,8 @@ function scheduleComposeAttachmentEvaluation(tabId){
   clearComposeAttachmentEvalTimer(tabId);
   const timerId = setTimeout(() => {
     ATTACHMENT_EVAL_TIMER_BY_TAB.delete(tabId);
-    evaluateComposeAttachmentThreshold(tabId).catch((error) => {
-      console.error("[NCBG] evaluateComposeAttachmentThreshold failed", error);
+    requestComposeAttachmentEvaluation(tabId).catch((error) => {
+      console.error("[NCBG] compose attachment evaluation failed", error);
     });
   }, ATTACHMENT_EVAL_DEBOUNCE_MS);
   ATTACHMENT_EVAL_TIMER_BY_TAB.set(tabId, timerId);
@@ -369,6 +464,13 @@ function resolveAttachmentPrompt(promptId, decision = "dismiss", source = ""){
   if (Number.isInteger(entry.windowId) && ATTACHMENT_PROMPT_BY_WINDOW.get(entry.windowId) === promptId){
     ATTACHMENT_PROMPT_BY_WINDOW.delete(entry.windowId);
   }
+  const automationState = ATTACHMENT_AUTOMATION_BY_TAB.get(entry.tabId);
+  if (automationState?.promptId === promptId){
+    automationState.promptId = "";
+    if (automationState.phase === "prompt"){
+      automationState.phase = "evaluating";
+    }
+  }
   if (typeof entry.resolve === "function"){
     entry.resolve(decision);
   }
@@ -406,6 +508,9 @@ async function openSharingWizardWindow(tabId, launchContext = null){
     tabId,
     launchContext
   );
+  if (requestContext.attachmentMode){
+    activateComposeAttachmentWizard(tabId, windowInfo?.id);
+  }
   const focusApplied = await focusPopupWindowBestEffort(windowInfo, {
     label: "sharing wizard popup"
   });
@@ -502,40 +607,53 @@ function buildAttachmentLaunchReason({ trigger, totalBytes, thresholdMb, lastAdd
  * @returns {Promise<void>}
  */
 async function startComposeAttachmentShareFlow(tabId, context = {}){
-  const guard = await assertAttachmentAutomationAllowed("start_flow", tabId, {
-    trigger: String(context?.trigger || "")
-  });
-  if (!guard.ok){
+  const automationState = getComposeAttachmentAutomationState(tabId);
+  if (isComposeAttachmentWizardActive(tabId)){
+    automationState.rerunRequested = true;
+    L("compose attachment flow skipped (already active)", { tabId });
     return;
   }
-  const attachments = await listComposeAttachments(tabId);
-  if (!attachments.length){
-    L("compose attachment flow skipped (no attachments)", { tabId });
-    return;
+  automationState.phase = "handoff";
+  try{
+    const guard = await assertAttachmentAutomationAllowed("start_flow", tabId, {
+      trigger: String(context?.trigger || "")
+    });
+    if (!guard.ok){
+      return;
+    }
+    const attachments = await listComposeAttachments(tabId);
+    if (!attachments.length){
+      L("compose attachment flow skipped (no attachments)", { tabId });
+      return;
+    }
+    const collected = await collectComposeAttachmentFiles(tabId, attachments);
+    if (!collected.length){
+      L("compose attachment flow skipped (no collectible files)", { tabId });
+      return;
+    }
+    const launchContext = {
+      mode: "attachments",
+      reason: buildAttachmentLaunchReason(context),
+      attachments: collected.map((item) => ({
+        sourceAttachmentId: item.attachmentId,
+        name: item.name,
+        sizeBytes: item.size,
+        displayPath: item.displayPath || item.name || "",
+        file: item.file
+      }))
+    };
+    L("compose attachment flow start", {
+      tabId,
+      trigger: launchContext.reason?.trigger || "",
+      attachmentCount: launchContext.attachments.length
+    });
+    await removeComposeAttachments(tabId, collected.map((item) => item.attachmentId));
+    await openSharingWizardWindow(tabId, launchContext);
+  }finally{
+    if (automationState.phase === "handoff"){
+      automationState.phase = "evaluating";
+    }
   }
-  const collected = await collectComposeAttachmentFiles(tabId, attachments);
-  if (!collected.length){
-    L("compose attachment flow skipped (no collectible files)", { tabId });
-    return;
-  }
-  const launchContext = {
-    mode: "attachments",
-    reason: buildAttachmentLaunchReason(context),
-    attachments: collected.map((item) => ({
-      sourceAttachmentId: item.attachmentId,
-      name: item.name,
-      sizeBytes: item.size,
-      displayPath: item.displayPath || item.name || "",
-      file: item.file
-    }))
-  };
-  L("compose attachment flow start", {
-    tabId,
-    trigger: launchContext.reason?.trigger || "",
-    attachmentCount: launchContext.attachments.length
-  });
-  await removeComposeAttachments(tabId, collected.map((item) => item.attachmentId));
-  await openSharingWizardWindow(tabId, launchContext);
 }
 
 /**
@@ -569,6 +687,10 @@ async function showComposeAttachmentThresholdPrompt({
       resolve
     });
   });
+  ATTACHMENT_PROMPT_BY_TAB.set(tabId, promptId);
+  const automationState = getComposeAttachmentAutomationState(tabId);
+  automationState.phase = "prompt";
+  automationState.promptId = promptId;
 
   try{
     const promptWindow = await browser.windows.create({
@@ -582,7 +704,6 @@ async function showComposeAttachmentThresholdPrompt({
       return "dismiss";
     }
     entry.windowId = Number(promptWindow?.id) || 0;
-    ATTACHMENT_PROMPT_BY_TAB.set(tabId, promptId);
     if (entry.windowId > 0){
       ATTACHMENT_PROMPT_BY_WINDOW.set(entry.windowId, promptId);
     }
@@ -683,8 +804,10 @@ async function evaluateComposeAttachmentThreshold(tabId){
     decision
   });
   if (!guardAfterPrompt.ok){
+    settleComposeAttachmentPromptBatch(tabId, "dismiss");
     return;
   }
+  settleComposeAttachmentPromptBatch(tabId, decision);
   if (decision === "share"){
     L("compose attachment threshold decision", {
       tabId,
@@ -722,6 +845,10 @@ async function handleComposeAttachmentAdded(tab, attachment){
   if (!Number.isInteger(tabId) || tabId <= 0){
     return;
   }
+  if (ATTACHMENT_SUPPRESSED_TABS.has(tabId)){
+    L("compose attachment add ignored (suppressed)", { tabId });
+    return;
+  }
   queueComposeAddedAttachment(tabId, attachment);
   L("compose attachment added", {
     tabId,
@@ -743,5 +870,11 @@ function cleanupComposeAttachmentTabState(tabId, reason = ""){
   if (promptId){
     resolveAttachmentPrompt(promptId, "dismiss", reason || "tab_closed");
   }
+  const automationState = ATTACHMENT_AUTOMATION_BY_TAB.get(tabId);
+  if (Number.isInteger(automationState?.wizardWindowId)
+    && automationState.wizardWindowId > 0){
+    ATTACHMENT_AUTOMATION_TAB_BY_WINDOW.delete(automationState.wizardWindowId);
+  }
+  ATTACHMENT_AUTOMATION_BY_TAB.delete(tabId);
   L("compose attachment tab state cleaned", { tabId, reason: reason || "" });
 }

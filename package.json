@@ -16,6 +16,7 @@
     "test:policy-editability": "node tools/policy-editability-check.js",
     "test:password-delivery-contract": "node tools/password-delivery-contract-check.js",
     "test:password-dispatch-regression": "node tools/password-dispatch-regression-check.js",
+    "test:compose-attachment-lifecycle": "node tools/compose-attachment-lifecycle-check.js",
     "test:compose-send-lifecycle": "node tools/compose-send-lifecycle-check.js",
     "test:sharing-finalize-lifecycle": "node tools/sharing-finalize-lifecycle-check.js",
     "test:password-policy-runtime": "node tools/password-policy-runtime-check.js",

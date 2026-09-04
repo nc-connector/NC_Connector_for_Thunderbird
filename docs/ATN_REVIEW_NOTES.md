@@ -65,6 +65,9 @@ password-dispatch, header, or body mutation cannot be exposed as committed.
 13) Mixed local, same-Nextcloud, and external VFS sources are fully collected
   before upload. Same-Nextcloud content is copied server-side; external content
   is read and uploaded one file at a time without disk staging.
+14) Attachment automation is serialized per compose tab. Prompt ownership is
+  reserved before popup creation, and additions made while a prompt is open are
+  either consumed, removed, or deliberately ignored with that prompt decision.
 
 ---
 
