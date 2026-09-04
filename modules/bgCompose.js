@@ -363,6 +363,11 @@ browser.compose.onBeforeSend.addListener(async (tab, details) => {
   if (!Number.isInteger(tabId) || tabId <= 0){
     return {};
   }
+  if (isComposeAttachmentRoutingActive(tabId)){
+    L("compose send blocked by attachment routing", { tabId });
+    void showComposeShareBlockedNotification("sharing_attachment_routing_active");
+    return { cancel: true };
+  }
   if (isComposeFinalizeTransactionActive(tabId)){
     void showComposeShareBlockedNotification();
     return { cancel: true };

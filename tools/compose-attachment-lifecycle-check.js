@@ -333,6 +333,7 @@ async function checkLaunchContextAdoption(){
   await flow;
   const response = await contextRead;
   assert(response.ok === true, "The bound wizard must receive its attachment context");
+  assert(harness.context.isComposeAttachmentRoutingActive(20), "Attachment routing must stay active before adoption");
   assert(response.context.attachments.length === 2, "The complete attachment context must be retained until adoption");
   assert(harness.context.SHARING_LAUNCH_CONTEXTS.has(handoff.contextId), "Reading must not consume the context");
 
@@ -340,8 +341,10 @@ async function checkLaunchContextAdoption(){
   assert(mismatch.ok === false, "A queue count mismatch must reject adoption");
   const adopted = harness.context.adoptComposeAttachmentLaunchContext(handoff.contextId, 20, 91, 2);
   assert(adopted.ok === true, "The complete queue must adopt its attachment context");
+  assert(harness.context.isComposeAttachmentRoutingActive(20), "The adopted attachment wizard must keep send blocked");
   assert(!harness.context.SHARING_LAUNCH_CONTEXTS.has(handoff.contextId), "Adoption must release context File references");
   assert(await harness.context.releaseComposeAttachmentWizard(91, "test") === true, "The adopted wizard must release its state");
+  assert(!harness.context.isComposeAttachmentRoutingActive(20), "Closing the adopted wizard must release the send guard");
   assert(harness.calls.attachmentsAdded.length === 0, "Closing after adoption must not restore attachments");
 }
 
@@ -376,6 +379,7 @@ async function checkRestoreAttemptsAllAttachments(){
   assert(harness.calls.attachmentsAdded.length === 3, "Rollback must attempt every detached attachment");
   const state = harness.context.ATTACHMENT_AUTOMATION_BY_TAB.get(22);
   assert(state?.phase === "rollback_failed", "A failed restore must keep the compose flow blocked");
+  assert(harness.context.isComposeAttachmentRoutingActive(22), "A failed restore must keep sending blocked");
   assert(state?.handoff?.detached?.length === 1, "Only unrestored attachments must remain journaled");
 }
 

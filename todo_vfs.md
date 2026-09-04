@@ -32,7 +32,7 @@ approval.
 
 ## Verified bugs / required fixes
 
-- [ ] **A-03 - release blocker:** Block sending the compose message while an
+- [x] **A-03 - release blocker:** Block sending the compose message while an
   attachment-routing handoff or attachment-mode wizard is active. The current
   send guard starts only with background finalization/compose cleanup, so a
   user can send while the originals are already detached but no share block
@@ -109,7 +109,7 @@ approval.
 
 ## Missing regression coverage
 
-- [ ] Add an attachment-automation lifecycle harness covering debounce batches,
+- [x] Add an attachment-automation lifecycle harness covering debounce batches,
   one prompt/flow per compose tab, partial removal, popup creation failure,
   missing or incomplete launch context, send blocking during attachment mode,
   and the post-handoff no-restore product boundary.

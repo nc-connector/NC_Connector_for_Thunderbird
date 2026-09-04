@@ -74,7 +74,8 @@ function createComposeHarness(){
   const control = {
     storeAvailable: true,
     saveDeferred: null,
-    captureRecipientsError: null
+    captureRecipientsError: null,
+    attachmentRoutingActive: false
   };
   const calls = {
     composeWrites: [],
@@ -398,6 +399,9 @@ function createComposeHarness(){
       }
     },
     async openSharingWizardWindow(){},
+    isComposeAttachmentRoutingActive(){
+      return control.attachmentRoutingActive;
+    },
     async handleComposeAttachmentAdded(){},
     async captureSeparatePasswordDispatchIdentityChange(){},
     async captureSeparatePasswordDispatchRecipients(tabId){
@@ -875,6 +879,38 @@ async function verifyPasswordRefreshFailure(){
   );
 }
 
+async function verifyAttachmentRoutingSendGuard(){
+  const harness = createComposeHarness();
+  harness.setDetails(52, {
+    type: "new",
+    body: "<body><p>Message</p></body>",
+    plainTextBody: "Message",
+    isPlainText: false,
+    customHeaders: []
+  });
+  harness.control.attachmentRoutingActive = true;
+  const blocked = await harness.beforeSend(
+    { id:52 },
+    harness.composeDetails.get(52)
+  );
+  assert(blocked?.cancel === true, "Active attachment routing must block compose send");
+  await waitFor(
+    () => harness.calls.notifications.length === 1,
+    "Blocked attachment routing must show its notification"
+  );
+  assert(
+    harness.calls.notifications[0].options.message === "sharing_attachment_routing_active",
+    "Attachment routing must use its dedicated send-blocked message"
+  );
+
+  harness.control.attachmentRoutingActive = false;
+  const allowed = await harness.beforeSend(
+    { id:52 },
+    harness.composeDetails.get(52)
+  );
+  assert(allowed?.cancel !== true, "A normal compose without attachment routing must remain sendable");
+}
+
 async function verifySavedBaselineRetention(){
   const harness = createComposeHarness();
   const tabId = 56;
@@ -1092,6 +1128,7 @@ async function run(){
   await verifyDraftRecordValidation();
   await verifyForeignMarkerHandling();
   await verifyPasswordRefreshFailure();
+  await verifyAttachmentRoutingSendGuard();
   await verifySavedBaselineRetention();
   await verifyTabCloseWaitsForSave();
   await verifySendLaterManualPasswordDraft();

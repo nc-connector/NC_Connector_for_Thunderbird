@@ -629,6 +629,9 @@
   "sharing_error_insert_failed_close": {
     "message": "Die Freigabe konnte nicht sicher abgeschlossen werden. Schließen Sie das Freigabefenster und prüfen Sie die Nachricht, bevor Sie es erneut versuchen."
   },
+  "sharing_attachment_routing_active": {
+    "message": "Die Dateifreigabe läuft noch. Schließen Sie den Freigabevorgang ab oder das Freigabefenster, bevor Sie die Nachricht senden."
+  },
   "sharing_saved_template_unsupported": {
     "message": "Nachrichten mit einer NC-Connector-Freigabe können nicht als Thunderbird-Vorlage gespeichert oder gesendet werden. Erstellen Sie eine neue Nachricht und geben Sie die Dateien erneut frei."
   },

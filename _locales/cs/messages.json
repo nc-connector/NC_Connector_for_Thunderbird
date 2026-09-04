@@ -629,6 +629,9 @@
   "sharing_error_insert_failed_close": {
     "message": "Sdílení se nepodařilo bezpečně dokončit. Zavřete okno sdílení a před dalším pokusem zprávu zkontrolujte."
   },
+  "sharing_attachment_routing_active": {
+    "message": "Sdílení souborů stále probíhá. Před odesláním zprávy ho dokončete nebo zavřete okno sdílení."
+  },
   "sharing_saved_template_unsupported": {
     "message": "Zprávy se sdílením NC Connector nelze uložit ani odeslat jako šablony Thunderbirdu. Vytvořte novou zprávu a soubory znovu nasdílejte."
   },

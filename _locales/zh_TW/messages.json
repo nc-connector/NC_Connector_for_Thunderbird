@@ -629,6 +629,9 @@
   "sharing_error_insert_failed_close": {
     "message": "無法安全完成分享。請關閉分享視窗，並在重試前檢查郵件。"
   },
+  "sharing_attachment_routing_active": {
+    "message": "檔案分享仍在處理中。請先完成分享或關閉分享視窗，再傳送郵件。"
+  },
   "sharing_saved_template_unsupported": {
     "message": "包含 NC Connector 分享的郵件無法儲存或作為 Thunderbird 範本傳送。請建立新郵件並重新分享檔案。"
   },

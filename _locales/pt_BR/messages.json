@@ -629,6 +629,9 @@
   "sharing_error_insert_failed_close": {
     "message": "Não foi possível concluir o compartilhamento com segurança. Feche a janela de compartilhamento e verifique a mensagem antes de tentar novamente."
   },
+  "sharing_attachment_routing_active": {
+    "message": "O compartilhamento de arquivos ainda está em andamento. Conclua-o ou feche a janela de compartilhamento antes de enviar a mensagem."
+  },
   "sharing_saved_template_unsupported": {
     "message": "Mensagens com um compartilhamento do NC Connector não podem ser salvas nem enviadas como modelos do Thunderbird. Crie uma nova mensagem e compartilhe os arquivos novamente."
   },

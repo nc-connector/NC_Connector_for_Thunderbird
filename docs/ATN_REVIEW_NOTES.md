@@ -72,6 +72,8 @@ password-dispatch, header, or body mutation cannot be exposed as committed.
   A partial detach or failed wizard bootstrap restores every removed file. The
   no-restore cancellation boundary starts only after the complete queue has
   acknowledged the launch context.
+16) Sending is blocked only while automated attachment routing owns the compose
+  tab. A manually opened sharing wizard does not participate in that guard.
 
 ---
 

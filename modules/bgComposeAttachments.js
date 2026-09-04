@@ -114,9 +114,9 @@ function getComposeAttachmentAutomationState(tabId){
   return state;
 }
 
-function isComposeAttachmentWizardActive(tabId){
+function isComposeAttachmentRoutingActive(tabId){
   const state = ATTACHMENT_AUTOMATION_BY_TAB.get(tabId);
-  return !!state?.handoff || state?.phase === "handoff" || state?.phase === "wizard";
+  return !!state?.handoff || state?.phase === "handoff";
 }
 
 function settleComposeAttachmentHandoffReady(handoff, result){
@@ -351,7 +351,7 @@ function requestComposeAttachmentEvaluation(tabId){
     state.rerunRequested = true;
     return state.evaluationTask;
   }
-  if (isComposeAttachmentWizardActive(tabId)){
+  if (isComposeAttachmentRoutingActive(tabId)){
     state.rerunRequested = true;
     return Promise.resolve();
   }
@@ -360,7 +360,7 @@ function requestComposeAttachmentEvaluation(tabId){
       state.rerunRequested = false;
       state.phase = "evaluating";
       await evaluateComposeAttachmentThreshold(tabId);
-    }while (state.rerunRequested && !isComposeAttachmentWizardActive(tabId));
+    }while (state.rerunRequested && !isComposeAttachmentRoutingActive(tabId));
   })();
   state.evaluationTask = task;
   return task.finally(() => {
@@ -875,7 +875,7 @@ function buildAttachmentLaunchReason({ trigger, totalBytes, thresholdMb, lastAdd
  */
 async function startComposeAttachmentShareFlow(tabId, context = {}){
   const automationState = getComposeAttachmentAutomationState(tabId);
-  if (isComposeAttachmentWizardActive(tabId)){
+  if (isComposeAttachmentRoutingActive(tabId)){
     automationState.rerunRequested = true;
     L("compose attachment flow skipped (already active)", { tabId });
     return;

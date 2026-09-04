@@ -629,6 +629,9 @@
   "sharing_error_insert_failed_close": {
     "message": "Could not complete the share safely. Close the Sharing window and check the message before trying again."
   },
+  "sharing_attachment_routing_active": {
+    "message": "File sharing is still in progress. Finish it or close the sharing window before sending the message."
+  },
   "sharing_saved_template_unsupported": {
     "message": "Messages with an NC Connector share cannot be saved or sent as Thunderbird templates. Create a new message and share the files again."
   },

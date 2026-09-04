@@ -629,6 +629,9 @@
   "sharing_error_insert_failed_close": {
     "message": "No se pudo completar la compartición de forma segura. Cierre la ventana de compartición y revise el mensaje antes de volver a intentarlo."
   },
+  "sharing_attachment_routing_active": {
+    "message": "El uso compartido de archivos sigue en curso. Finalícelo o cierre la ventana de uso compartido antes de enviar el mensaje."
+  },
   "sharing_saved_template_unsupported": {
     "message": "Los mensajes con una compartición de NC Connector no pueden guardarse ni enviarse como plantillas de Thunderbird. Cree un mensaje nuevo y vuelva a compartir los archivos."
   },

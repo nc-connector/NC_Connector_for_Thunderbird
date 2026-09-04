@@ -629,6 +629,9 @@
   "sharing_error_insert_failed_close": {
     "message": "无法安全完成共享。请关闭共享窗口，并在重试前检查邮件。"
   },
+  "sharing_attachment_routing_active": {
+    "message": "文件共享仍在处理中。请先完成共享或关闭共享窗口，然后再发送邮件。"
+  },
   "sharing_saved_template_unsupported": {
     "message": "包含 NC Connector 共享的邮件无法保存或作为 Thunderbird 模板发送。请新建邮件并重新共享文件。"
   },

@@ -629,6 +629,9 @@
   "sharing_error_insert_failed_close": {
     "message": "A megosztást nem sikerült biztonságosan befejezni. Zárja be a megosztási ablakot, és az újabb próbálkozás előtt ellenőrizze az üzenetet."
   },
+  "sharing_attachment_routing_active": {
+    "message": "A fájlmegosztás még folyamatban van. Az üzenet elküldése előtt fejezze be, vagy zárja be a megosztási ablakot."
+  },
   "sharing_saved_template_unsupported": {
     "message": "NC Connector-megosztást tartalmazó üzenet nem menthető és nem küldhető Thunderbird-sablonként. Hozzon létre új üzenetet, és ossza meg újra a fájlokat."
   },

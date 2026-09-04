@@ -629,6 +629,9 @@
   "sharing_error_insert_failed_close": {
     "message": "Nie udało się bezpiecznie zakończyć udostępniania. Zamknij okno udostępniania i sprawdź wiadomość przed ponowną próbą."
   },
+  "sharing_attachment_routing_active": {
+    "message": "Udostępnianie plików nadal trwa. Przed wysłaniem wiadomości zakończ je lub zamknij okno udostępniania."
+  },
   "sharing_saved_template_unsupported": {
     "message": "Wiadomości z udostępnieniem NC Connector nie można zapisać ani wysłać jako szablonu Thunderbirda. Utwórz nową wiadomość i ponownie udostępnij pliki."
   },

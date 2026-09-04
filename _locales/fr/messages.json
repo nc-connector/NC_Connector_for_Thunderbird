@@ -629,6 +629,9 @@
   "sharing_error_insert_failed_close": {
     "message": "Le partage n’a pas pu être finalisé en toute sécurité. Fermez la fenêtre de partage et vérifiez le message avant de réessayer."
   },
+  "sharing_attachment_routing_active": {
+    "message": "Le partage de fichiers est toujours en cours. Terminez-le ou fermez la fenêtre de partage avant d’envoyer le message."
+  },
   "sharing_saved_template_unsupported": {
     "message": "Les messages contenant un partage NC Connector ne peuvent pas être enregistrés ni envoyés comme modèles Thunderbird. Créez un nouveau message et partagez à nouveau les fichiers."
   },
