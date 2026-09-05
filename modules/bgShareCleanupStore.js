@@ -12,20 +12,13 @@
 
 const SHARE_CLEANUP_STORE_KEY = "nccShareCleanupGroupsV1";
 const SHARE_CLEANUP_STORE_VERSION = 1;
-const PERSISTED_SHARE_CLEANUP_RETRY_DELAYS_MS = Object.freeze([
-  2000,
-  5000,
-  10000,
-  30000,
-  60000
-]);
 const PERSISTED_SHARE_CLEANUP_RETRY_TIMER_BY_GROUP = new Map();
 let PERSISTED_SHARE_CLEANUP_GROUPS = {};
 let PERSISTED_SHARE_CLEANUP_WRITE_QUEUE = Promise.resolve();
 let PERSISTED_SHARE_CLEANUP_LOAD_ERROR = null;
 
 function normalizePersistedCleanupRelativePath(value){
-  const normalized = NCFileLinkDav.normalizeRelativePath(String(value || ""));
+  const normalized = NCNextcloudDav.normalizeRelativePath(String(value || ""));
   if (!normalized){
     return "";
   }
@@ -672,23 +665,22 @@ async function deletePersistedShareCleanupDescriptor(descriptor){
   if (String(currentUserId || "").trim() !== normalized.userId){
     throw new Error("share_cleanup_account_user_mismatch");
   }
-  const authHeader = NCOcs.buildAuthHeader(opts.user, opts.appPass);
-  const davRoot = `${currentBaseUrl}/remote.php/dav/files/${encodeURIComponent(currentUserId)}`;
-  await NCFileLinkDav.deleteTrackedRoot({
-    url: NCFileLinkDav.buildFileUrl(davRoot, normalized.relativeFolder),
+  const account = NCCore.buildDavAccountContext({ ...opts, userId: currentUserId });
+  await NCNextcloudDav.deleteTrackedRoot({
+    url: NCNextcloudDav.buildFileUrl(account.davRoot, normalized.relativeFolder),
     reservationUrl: normalized.reservationRelativeFolder
-      ? NCFileLinkDav.buildFileUrl(davRoot, normalized.reservationRelativeFolder)
+      ? NCNextcloudDav.buildFileUrl(account.davRoot, normalized.reservationRelativeFolder)
       : "",
     targetUrl: normalized.targetRelativeFolder
-      ? NCFileLinkDav.buildFileUrl(davRoot, normalized.targetRelativeFolder)
+      ? NCNextcloudDav.buildFileUrl(account.davRoot, normalized.targetRelativeFolder)
       : "",
-    authHeader,
+    authHeader: account.authHeader,
     log: (...args) => L(...args)
   });
   await NCFileLinkShare.clearIndeterminate({
     baseUrl: currentBaseUrl,
     relativeFolder: normalized.relativeFolder,
-    authHeader
+    authHeader: account.authHeader
   });
 }
 
@@ -722,7 +714,7 @@ async function runPersistedShareCleanupAttempt(groupId, reason = ""){
         return { changed: false, value: null };
       }
       current.attempt += 1;
-      current.state = current.attempt >= PERSISTED_SHARE_CLEANUP_RETRY_DELAYS_MS.length
+      current.state = current.attempt >= SHARE_CLEANUP_RETRY_DELAYS_MS.length
         ? "exhausted"
         : "pending";
       current.updated = Date.now();
@@ -759,13 +751,13 @@ function schedulePersistedShareCleanupRetry(groupId, reason = ""){
     return false;
   }
   const retryIndex = Math.max(0, Math.min(
-    PERSISTED_SHARE_CLEANUP_RETRY_DELAYS_MS.length - 1,
+    SHARE_CLEANUP_RETRY_DELAYS_MS.length - 1,
     group.attempt
   ));
   const timerId = setTimeout(() => {
     PERSISTED_SHARE_CLEANUP_RETRY_TIMER_BY_GROUP.delete(groupId);
     void runPersistedShareCleanupAttempt(groupId, reason);
-  }, PERSISTED_SHARE_CLEANUP_RETRY_DELAYS_MS[retryIndex]);
+  }, SHARE_CLEANUP_RETRY_DELAYS_MS[retryIndex]);
   PERSISTED_SHARE_CLEANUP_RETRY_TIMER_BY_GROUP.set(groupId, timerId);
   return true;
 }
@@ -809,7 +801,7 @@ async function markPersistentShareCleanupExhausted(groupId){
     group.saved = false;
     group.sendPending = false;
     group.sendPendingPreviousState = "";
-    group.attempt = PERSISTED_SHARE_CLEANUP_RETRY_DELAYS_MS.length;
+    group.attempt = SHARE_CLEANUP_RETRY_DELAYS_MS.length;
     group.updated = Date.now();
     return { changed: true, value: true };
   });
@@ -827,7 +819,7 @@ async function markPersistentShareCleanupTainted(groupId){
     group.lifecycleTainted = true;
     group.sendPending = false;
     group.sendPendingPreviousState = "";
-    group.attempt = PERSISTED_SHARE_CLEANUP_RETRY_DELAYS_MS.length;
+    group.attempt = SHARE_CLEANUP_RETRY_DELAYS_MS.length;
     group.updated = Date.now();
     return { changed: true, value: true };
   });
@@ -848,7 +840,7 @@ async function resumePersistedShareCleanup(reason = "", options = {}){
           && group.passwordHandoffComplete !== true;
         group.state = passwordRecoveryRequired ? "exhausted" : "pending";
         group.attempt = passwordRecoveryRequired
-          ? PERSISTED_SHARE_CLEANUP_RETRY_DELAYS_MS.length
+          ? SHARE_CLEANUP_RETRY_DELAYS_MS.length
           : 0;
         group.updated = Date.now();
         changed = true;

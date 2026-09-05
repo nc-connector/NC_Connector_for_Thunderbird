@@ -75,7 +75,7 @@ function createCoreHarness(responses, { backgroundLogger = true } = {}){
   return { context, requests };
 }
 
-function createSharingHarness(){
+function createSharingHarness(buildDavAccountContext){
   const requests = [];
   const transferCalls = [];
   const davProbes = [];
@@ -105,7 +105,8 @@ function createSharingHarness(){
       getCurrentUserId: async (options) => {
         assert(options.user === credentials.user, "UID resolution must receive the authentication login");
         return "canonical-user";
-      }
+      },
+      buildDavAccountContext
     },
     NCOcs: {
       buildAuthHeader: (user, appPass) =>
@@ -181,7 +182,7 @@ function createSharingHarness(){
       },
       clearIndeterminate: async () => true
     },
-    NCFileLinkDav: {
+    NCNextcloudDav: {
       throwIfAborted: (signal) => {
         if (signal?.aborted){
           const error = new Error("aborted");
@@ -215,8 +216,11 @@ function createSharingHarness(){
   loadScript("modules/ocs.js", context);
   context.NCOcs.ocsRequest = testOcsRequest;
   context.NCOcs.buildAuthHeader = testBuildAuthHeader;
+  loadScript("modules/sharingStorage.js", context);
   loadScript("modules/shareTemplateContract.js", context);
   loadScript("modules/textUtils.js", context);
+  loadScript("modules/fileQueuePathConflicts.js", context);
+  loadScript("modules/fileLinkSources.js", context);
   loadScript("modules/ncSharing.js", context);
   return { context, requests, transferCalls, davProbes, credentials };
 }
@@ -259,6 +263,17 @@ async function run(){
   const cachedUserId = await core.context.__NCCore.getCurrentUserId(credentials);
   assert(cachedUserId === "canonical-user", "Resolved canonical UID should be reused from the session cache");
   assert(core.requests.length === 2, "Cached UID resolution should not repeat the OCS request");
+
+  const davAccount = core.context.__NCCore.buildDavAccountContext({
+    ...credentials,
+    userId: "canonical/user"
+  });
+  assert(davAccount.baseUrl === "https://cloud.example.test/nextcloud", "DAV account data must normalize the Nextcloud base URL");
+  assert(davAccount.davRoot === "https://cloud.example.test/nextcloud/remote.php/dav/files/canonical%2Fuser", "File DAV roots must encode the canonical UID");
+  assert(davAccount.uploadRoot === "https://cloud.example.test/nextcloud/remote.php/dav/uploads/canonical%2Fuser", "Upload DAV roots must encode the canonical UID");
+  assert(davAccount.bulkUrl === "https://cloud.example.test/nextcloud/remote.php/dav/bulk", "Bulk DAV URL must preserve the Nextcloud subfolder");
+  assert(davAccount.accountIdentity === JSON.stringify([davAccount.baseUrl, "canonical/user"]), "DAV account identity must use only server and canonical UID");
+  assert(davAccount.authHeader === "Basic " + Buffer.from("login@example.test:app-password").toString("base64"), "DAV Basic Auth must use the configured login alias");
 
   const nextcloud31 = createCoreHarness([
     makeResponse(200, {
@@ -405,7 +420,7 @@ async function run(){
   const missingResult = await missingId.context.__NCCore.testCredentials(credentials);
   assert(missingResult.ok === false && missingResult.code === "identity", "Missing ocs.data.id must fail without falling back to email");
 
-  const sharing = createSharingHarness();
+  const sharing = createSharingHarness(core.context.__NCCore.buildDavAccountContext);
   const preflightRequest = {
     shareName: "Customer",
     basePath: "Team Shares",
@@ -427,7 +442,7 @@ async function run(){
       === "Basic " + Buffer.from("login@example.test:app-password").toString("base64"),
     "Manual share preflight must authenticate with the configured login"
   );
-  sharing.context.NCFileLinkDav.probePath = async () => ({
+  sharing.context.NCNextcloudDav.probePath = async () => ({
     exists: true,
     collection: true,
     contentLength: null
@@ -436,13 +451,15 @@ async function run(){
     await sharing.context.NCSharing.checkFileLinkFolderExists(preflightRequest),
     "An existing manual share folder must fail wizard preflight"
   );
-  await sharing.context.NCSharing.createFileLink({
-    shareName: "Customer",
-    basePath: "Team Shares",
-    shareDate: new Date("2026-07-16T12:00:00Z").toISOString(),
-    permissions: { read: true },
-    files: []
-  });
+  await sharing.context.NCSharing.createFileLink(
+    sharing.context.NCSharing.prepareFileLinkRequest({
+      shareName: "Customer",
+      basePath: "Team Shares",
+      shareDate: new Date("2026-07-16T12:00:00Z").toISOString(),
+      permissions: { read: true },
+      files: []
+    })
+  );
   assert(sharing.transferCalls.length === 1, "FileLink upload should create one transfer plan");
   assert(sharing.transferCalls[0].davRoot.includes("/remote.php/dav/files/canonical-user"), "FileLink DAV path must use the canonical UID");
   assert(sharing.transferCalls[0].uploadRoot.includes("/remote.php/dav/uploads/canonical-user"), "Chunk path must use the canonical UID");
@@ -467,17 +484,23 @@ async function run(){
       }
     };
   };
-  await sharing.context.NCSharing.updateShareDetails({
-    shareInfo: {
-      shareId: "42",
-      label: "Customer",
-      folderInfo: { folderName: "Customer" },
-      permissions: { read: true, write: true, create: false, delete: false }
-    },
+  await sharing.context.NCSharing.updateShareNote({
+    baseUrl: "https://upload-account.example.test",
+    authHeader: "Basic upload-account",
+    shareId: "42",
+    permissions: { read: true, write: true, create: false, delete: false },
     noteEnabled: false,
     note: ""
   });
   assert(metadataRequest.method === "PUT", "Share metadata must use the OCS update endpoint");
+  assert(
+    metadataRequest.url.startsWith("https://upload-account.example.test/"),
+    "Share note updates must keep the account captured by the upload"
+  );
+  assert(
+    metadataRequest.headers.Authorization === "Basic upload-account",
+    "Share note updates must keep the authorization captured by the upload"
+  );
   assert(metadataRequest.body.get("permissions") === "3", "Read and edit must retain the Nextcloud READ|UPDATE mask");
   assert(!metadataRequest.body.has("publicUpload"), "Share metadata must not override the exact mask with legacy publicUpload");
 
@@ -497,13 +520,11 @@ async function run(){
     }
   });
   const metadataFailure = await expectRejected(
-    () => sharing.context.NCSharing.updateShareDetails({
-      shareInfo: {
-        shareId: "42",
-        label: "Customer",
-        folderInfo: { folderName: "Customer" },
-        permissions: { read: true }
-      },
+    () => sharing.context.NCSharing.updateShareNote({
+      baseUrl: "https://upload-account.example.test",
+      authHeader: "Basic upload-account",
+      shareId: "42",
+      permissions: { read: true },
       noteEnabled: true,
       note: "Test"
     }),
@@ -515,7 +536,7 @@ async function run(){
   );
 
   let trackedRootCleanup = null;
-  sharing.context.NCFileLinkDav.deleteTrackedRoot = async (options) => {
+  sharing.context.NCNextcloudDav.deleteTrackedRoot = async (options) => {
     trackedRootCleanup = options;
     return "reservation";
   };
@@ -534,13 +555,15 @@ async function run(){
     throw new Error("share create failed");
   };
   await expectRejected(
-    () => sharing.context.NCSharing.createFileLink({
-      shareName: "Customer",
-      basePath: "Team Shares",
-      shareDate: new Date("2026-07-16T12:00:00Z").toISOString(),
-      permissions: { read: true },
-      files: []
-    }),
+    () => sharing.context.NCSharing.createFileLink(
+      sharing.context.NCSharing.prepareFileLinkRequest({
+        shareName: "Customer",
+        basePath: "Team Shares",
+        shareDate: new Date("2026-07-16T12:00:00Z").toISOString(),
+        permissions: { read: true },
+        files: []
+      })
+    ),
     "A failed share create must clean its reserved root"
   );
   assert(
@@ -550,8 +573,14 @@ async function run(){
   );
 
   const sharingSource = readText("modules/ncSharing.js");
+  const coreSource = readText("modules/nccore.js");
+  const storageSource = readText("modules/nextcloudVfsStorage.js");
+  const cleanupSource = readText("modules/bgShareCleanupStore.js");
   const addressbookSource = readText("modules/talkAddressbook.js");
-  assert(sharingSource.includes("/remote.php/dav/uploads/${encodeURIComponent(userId)}"), "Chunked upload path must use the canonical UID");
+  assert(coreSource.includes("/remote.php/dav/uploads/${encodedUserId}"), "Core DAV account data must own the chunked-upload root");
+  assert((sharingSource.match(/NCCore\.buildDavAccountContext/g) || []).length === 1, "Sharing uploads must reuse core DAV account data");
+  assert(storageSource.includes("core.buildDavAccountContext({ ...opts, userId })"), "Nextcloud VFS must reuse core DAV account data");
+  assert(cleanupSource.includes("NCCore.buildDavAccountContext({ ...opts, userId: currentUserId })"), "Persistent cleanup must reuse core DAV account data");
   assert(addressbookSource.includes("encodeURIComponent(userId)"), "System addressbook path must use the canonical UID");
   assert(!addressbookSource.includes("encodeURIComponent(user) + \"/z-server-generated"), "System addressbook path must not use the authentication login");
 

@@ -629,6 +629,9 @@
   "sharing_error_insert_failed_close": {
     "message": "De share kon niet veilig worden voltooid. Sluit het deelvenster en controleer het bericht voordat u het opnieuw probeert."
   },
+  "sharing_attachment_routing_active": {
+    "message": "Het delen van bestanden is nog bezig. Rond dit af of sluit het deelvenster voordat u het bericht verzendt."
+  },
   "sharing_saved_template_unsupported": {
     "message": "Berichten met een NC Connector-share kunnen niet als Thunderbird-sjabloon worden opgeslagen of verzonden. Maak een nieuw bericht en deel de bestanden opnieuw."
   },
@@ -682,12 +685,6 @@
   },
   "sharing_files_table_status": {
     "message": "Status"
-  },
-  "sharing_button_add_files": {
-    "message": "Bestanden toevoegen..."
-  },
-  "sharing_button_add_folder": {
-    "message": "Map toevoegen..."
   },
   "sharing_button_remove": {
     "message": "Verwijderen"
@@ -1009,5 +1006,338 @@
   },
   "sharing_status_speed_kbps": {
     "message": "$1 KB/s"
+  },
+  "options_tab_vfs": {
+    "message": "VFS"
+  },
+  "options_vfs_provider_heading": {
+    "message": "Mijn Nextcloud"
+  },
+  "options_vfs_provider_intro": {
+    "message": "Stelt de bestaande Nextcloud-verbinding beschikbaar aan geautoriseerde Thunderbird-add-ons."
+  },
+  "options_vfs_provider_enabled_label": {
+    "message": "NC Connector inschakelen als VFS-provider"
+  },
+  "options_vfs_provider_tooltip_title": {
+    "message": "VFS-toegang tot uw Nextcloud"
+  },
+  "options_vfs_provider_tooltip_text": {
+    "message": "Alleen expliciet geautoriseerde add-ons krijgen lees- en schrijftoegang. Aanmeldgegevens worden niet gedeeld."
+  },
+  "options_vfs_provider_status_label": {
+    "message": "Providerstatus"
+  },
+  "options_vfs_provider_status_active": {
+    "message": "Provider actief"
+  },
+  "options_vfs_provider_status_inactive": {
+    "message": "Provider inactief"
+  },
+  "options_vfs_provider_status_connection_required": {
+    "message": "Stel eerst de Nextcloud-verbinding in"
+  },
+  "options_vfs_provider_status_error": {
+    "message": "Providerfout"
+  },
+  "options_vfs_runtime_unavailable": {
+    "message": "De VFS-componenten zijn niet beschikbaar."
+  },
+  "options_vfs_grants_heading": {
+    "message": "Geautoriseerde add-ons"
+  },
+  "options_vfs_grants_hint": {
+    "message": "Elke autorisatie geldt voor één add-on en kan hier op elk moment worden ingetrokken."
+  },
+  "options_vfs_access_read_write": {
+    "message": "Lezen en schrijven"
+  },
+  "options_vfs_revoke_button": {
+    "message": "Toegang intrekken"
+  },
+  "options_vfs_no_grants": {
+    "message": "Nog geen add-on heeft toegang."
+  },
+  "options_vfs_revoke_confirm": {
+    "message": "Toegang voor $1 intrekken?"
+  },
+  "options_vfs_external_heading": {
+    "message": "Externe VFS-providers"
+  },
+  "options_vfs_external_intro": {
+    "message": "Bestanden van andere providers worden gelezen en vervolgens naar de share op uw Nextcloud geüpload."
+  },
+  "options_vfs_external_enabled_label": {
+    "message": "Externe VFS-providers inschakelen"
+  },
+  "options_vfs_external_tooltip_title": {
+    "message": "Andere opslagproviders verbinden"
+  },
+  "options_vfs_external_tooltip_text": {
+    "message": "NC Connector detecteert compatibele VFS-providers pas na uw uitdrukkelijke toestemming. Bestanden worden niet rechtstreeks tussen providers gekopieerd."
+  },
+  "options_vfs_external_permission_label": {
+    "message": "Thunderbird-machtiging"
+  },
+  "options_vfs_external_permission_granted": {
+    "message": "Verleend"
+  },
+  "options_vfs_external_permission_required": {
+    "message": "Niet verleend"
+  },
+  "options_vfs_external_permission_button": {
+    "message": "Machtiging verlenen"
+  },
+  "options_vfs_connections_heading": {
+    "message": "Gedetecteerde verbindingen"
+  },
+  "options_vfs_connections_hint": {
+    "message": "Hier verschijnen compatibele VFS-providers die in Thunderbird zijn ingesteld en bereikbaar zijn."
+  },
+  "options_vfs_refresh_button": {
+    "message": "Vernieuwen"
+  },
+  "options_vfs_connect_button": {
+    "message": "Verbinden"
+  },
+  "options_vfs_disconnect_button": {
+    "message": "Verbinding verbreken"
+  },
+  "options_vfs_disconnect_confirm": {
+    "message": "Verbinding met $1 verbreken?"
+  },
+  "options_vfs_no_connections": {
+    "message": "Geen VFS-verbinding gedetecteerd."
+  },
+  "options_vfs_connection_status_connected": {
+    "message": "Verbonden"
+  },
+  "options_vfs_connection_status_available": {
+    "message": "Beschikbaar"
+  },
+  "options_vfs_connection_status_unavailable": {
+    "message": "Niet beschikbaar"
+  },
+  "options_vfs_connection_status_error": {
+    "message": "Fout"
+  },
+  "options_vfs_loading": {
+    "message": "Laden…"
+  },
+  "options_vfs_action_failed": {
+    "message": "De VFS-actie kon niet worden voltooid."
+  },
+  "vfs_error_management_permission_missing": {
+    "message": "De machtiging om externe VFS-providers te detecteren ontbreekt."
+  },
+  "vfs_error_storage_changed": {
+    "message": "De opslagverbinding is gewijzigd. Selecteer de bestanden opnieuw."
+  },
+  "vfs_error_file_metadata_missing": {
+    "message": "De bestandsgegevens zijn onvolledig. Selecteer het bestand opnieuw."
+  },
+  "vfs_error_file_read_failed": {
+    "message": "Het bestand kon niet van de opslagprovider worden gelezen."
+  },
+  "vfs_error_file_changed": {
+    "message": "Het bestand is na de selectie gewijzigd. Selecteer het opnieuw."
+  },
+  "vfs_error_invalid_path": {
+    "message": "Het geselecteerde opslagpad is ongeldig."
+  },
+  "vfs_error_root_not_selectable": {
+    "message": "De hoofdmap van de opslag kan niet als map worden geselecteerd."
+  },
+  "vfs_error_external_connection_missing": {
+    "message": "De geselecteerde opslagverbinding is niet meer beschikbaar."
+  },
+  "vfs_error_duplicate_path": {
+    "message": "De selectie bevat hetzelfde pad meerdere keren."
+  },
+  "sharing_button_add_nextcloud": {
+    "message": "Uit Nextcloud…"
+  },
+  "sharing_button_add_nextcloud_files": {
+    "message": "Bestanden selecteren"
+  },
+  "sharing_button_add_nextcloud_folder": {
+    "message": "Map selecteren"
+  },
+  "sharing_button_add_external": {
+    "message": "Uit een andere opslag…"
+  },
+  "sharing_button_add_external_files": {
+    "message": "Bestanden selecteren"
+  },
+  "sharing_button_add_external_folder": {
+    "message": "Map selecteren"
+  },
+  "sharing_files_table_source": {
+    "message": "Bron"
+  },
+  "sharing_vfs_connection_heading": {
+    "message": "Opslag selecteren"
+  },
+  "sharing_vfs_connection_label": {
+    "message": "Opslag"
+  },
+  "sharing_vfs_external_unavailable": {
+    "message": "Er is geen externe opslagverbinding beschikbaar."
+  },
+  "sharing_vfs_nextcloud_unavailable_tooltip": {
+    "message": "Niet beschikbaar. Stel eerst een Nextcloud-verbinding in via de add-oninstellingen."
+  },
+  "sharing_vfs_external_unavailable_tooltip": {
+    "message": "Niet beschikbaar. Schakel externe providers in via Instellingen > VFS en verbind ten minste één opslag."
+  },
+  "sharing_vfs_scanning_source": {
+    "message": "Selectie wordt doorzocht ($1)…"
+  },
+  "sharing_vfs_opening_picker": {
+    "message": "Bestandsselectie wordt geopend…"
+  },
+  "sharing_file_type_folder": {
+    "message": "Map"
+  },
+  "sharing_source_nextcloud": {
+    "message": "Nextcloud-opslag"
+  },
+  "sharing_source_external": {
+    "message": "Externe opslag"
+  },
+  "sharing_source_local": {
+    "message": "Lokaal"
+  },
+  "sharing_queue_entries_summary": {
+    "message": "Items: $1"
+  },
+  "sharing_queue_sources_summary": {
+    "message": "Bronnen: $1"
+  },
+  "sharing_queue_total_summary": {
+    "message": "Totale grootte: $1"
+  },
+  "sharing_queue_size_unknown": {
+    "message": "onbekend"
+  },
+  "sharing_queue_storage_loading": {
+    "message": "Doelopslag: laden..."
+  },
+  "sharing_queue_storage_available": {
+    "message": "Doelopslag: $1 vrij van $2"
+  },
+  "sharing_queue_storage_unlimited": {
+    "message": "Doelopslag: onbeperkt"
+  },
+  "sharing_queue_storage_unknown": {
+    "message": "Doelopslag: niet te bepalen"
+  },
+  "sharing_queue_storage_insufficient": {
+    "message": "Vereist: $1 · Beschikbaar: $2"
+  },
+  "sharing_queue_expand_folder": {
+    "message": "Map ‘$1’ uitvouwen"
+  },
+  "sharing_queue_collapse_folder": {
+    "message": "Map ‘$1’ invouwen"
+  },
+  "sharing_queue_remove_item": {
+    "message": "‘$1’ verwijderen"
+  },
+  "sharing_queue_source_group": {
+    "message": "Bron: $1"
+  },
+  "sharing_status_fetching_source": {
+    "message": "Bestand wordt gelezen…"
+  },
+  "sharing_status_copying_source": {
+    "message": "Kopiëren…"
+  },
+  "sharing_status_preparing_source": {
+    "message": "Voorbereiden…"
+  },
+  "sharing_status_copying_sources": {
+    "message": "Nextcloud-items worden gekopieerd ($1 / $2)…"
+  },
+  "sharing_status_fetching_sources": {
+    "message": "Bestanden worden uit de opslag gelezen ($1 / $2)…"
+  },
+  "vfs_setup_title": {
+    "message": "Toegang tot Nextcloud"
+  },
+  "vfs_setup_heading": {
+    "message": "Toegang tot Nextcloud toestaan?"
+  },
+  "vfs_setup_access_heading": {
+    "message": "Lees- en schrijftoegang"
+  },
+  "vfs_setup_access_read": {
+    "message": "Bestanden en mappen doorzoeken en lezen"
+  },
+  "vfs_setup_access_write": {
+    "message": "Bestanden en mappen maken en wijzigen"
+  },
+  "vfs_setup_access_delete": {
+    "message": "Bestanden en mappen verwijderen"
+  },
+  "vfs_setup_allow": {
+    "message": "Toegang toestaan"
+  },
+  "vfs_setup_request": {
+    "message": "$1 vraagt toegang tot deze Nextcloud-opslag."
+  },
+  "vfs_setup_account": {
+    "message": "Nextcloud-account: $1"
+  },
+  "vfs_setup_invalid_request": {
+    "message": "Het toegangsverzoek is ongeldig."
+  },
+  "vfs_setup_provider_unavailable": {
+    "message": "De Nextcloud-opslagprovider is niet beschikbaar."
+  },
+  "vfs_setup_granting": {
+    "message": "Toegang wordt verleend…"
+  },
+  "vfs_setup_failed": {
+    "message": "Toegang kon niet worden verleend."
+  },
+  "sharing_queue_entries_summary": {
+    "message": "Items: $1"
+  },
+  "sharing_queue_sources_summary": {
+    "message": "Bronnen: $1"
+  },
+  "sharing_queue_total_summary": {
+    "message": "Totaal: $1"
+  },
+  "sharing_queue_size_unknown": {
+    "message": "onbekend"
+  },
+  "sharing_queue_storage_loading": {
+    "message": "Doelopslag laden…"
+  },
+  "sharing_queue_storage_available": {
+    "message": "$1 vrij van $2"
+  },
+  "sharing_queue_storage_unlimited": {
+    "message": "Doelopslag: onbeperkt"
+  },
+  "sharing_queue_storage_unknown": {
+    "message": "Doelopslag: niet beschikbaar"
+  },
+  "sharing_queue_storage_insufficient": {
+    "message": "Vereist: $1 · Beschikbaar: $2"
+  },
+  "sharing_queue_expand_folder": {
+    "message": "Map $1 uitvouwen"
+  },
+  "sharing_queue_collapse_folder": {
+    "message": "Map $1 samenvouwen"
+  },
+  "sharing_queue_remove_item": {
+    "message": "$1 verwijderen"
+  },
+  "sharing_queue_source_group": {
+    "message": "Bron: $1"
   }
 }

@@ -5,7 +5,7 @@
  */
 (function(__context){
   'use strict';
-  const DEFAULT_BASE_PATH = "NC Connector";
+  const DEFAULT_BASE_PATH = NCSharingStorage.DEFAULT_BASE_PATH;
   const BRAND_BLUE = "#0082C9";
   const PERMISSION_FLAGS = {
     read: 1,
@@ -319,11 +319,12 @@
    */
   async function resolveShareBlockLanguage(request){
     const localSetting = await getShareBlockLanguageSetting();
-    const policyLang = String(request?.policyShare?.language_share_html_block || "").trim();
+    const languageKey = NCSharingStorage.SHARE_POLICY_KEYS.blockLanguage;
+    const policyLang = String(request?.policyShare?.[languageKey] || "").trim();
     const editableShare = request?.policyEditableShare;
     const hasEditableMetadata = !!editableShare && typeof editableShare === "object";
     const localMayOverride = hasEditableMetadata
-      && editableShare.language_share_html_block !== false
+      && editableShare[languageKey] !== false
       && localSetting.hasLocalValue;
     const selectedLang = localMayOverride
       ? localSetting.value
@@ -920,9 +921,9 @@
     if (!opts.baseUrl || !opts.user || !opts.appPass){
       throw new Error(i18n("error_credentials_missing"));
     }
-    NCFileLinkDav.throwIfAborted(request?.signal);
+    NCNextcloudDav.throwIfAborted(request?.signal);
     await ensureHostPermission(opts.baseUrl);
-    NCFileLinkDav.throwIfAborted(request?.signal);
+    NCNextcloudDav.throwIfAborted(request?.signal);
     const requestOptions = {
       ...opts,
       signal: request?.signal || null
@@ -937,16 +938,15 @@
     const basePathSetting = sanitizeRelativeDir(rawBasePath)
       || sanitizeRelativeDir(DEFAULT_BASE_PATH);
     const shareDate = request?.shareDate ? new Date(request.shareDate) : new Date();
-    const authHeader = NCOcs.buildAuthHeader(opts.user, opts.appPass);
-    const davBase = opts.baseUrl.replace(/\/+$/, "");
+    const account = NCCore.buildDavAccountContext({ ...opts, userId });
     return {
       capabilities,
       basePathSetting,
       shareDate,
-      authHeader,
-      davRoot: `${davBase}/remote.php/dav/files/${encodeURIComponent(userId)}`,
-      uploadRoot: `${davBase}/remote.php/dav/uploads/${encodeURIComponent(userId)}`,
-      bulkUrl: `${davBase}/remote.php/dav/bulk`
+      authHeader: account.authHeader,
+      davRoot: account.davRoot,
+      uploadRoot: account.uploadRoot,
+      bulkUrl: account.bulkUrl
     };
   }
 
@@ -967,8 +967,8 @@
     logDebug(opts, "folders:preflight", {
       relativeFolder: folderInfo.relativeFolder
     });
-    const probe = await NCFileLinkDav.probePath({
-      url: NCFileLinkDav.buildFileUrl(context.davRoot, folderInfo.relativeFolder),
+    const probe = await NCNextcloudDav.probePath({
+      url: NCNextcloudDav.buildFileUrl(context.davRoot, folderInfo.relativeFolder),
       authHeader: context.authHeader,
       signal: request?.signal || null,
       log: (...args) => logDebug(opts, ...args)
@@ -976,12 +976,37 @@
     return probe.exists;
   }
 
+  function prepareFileLinkRequest(request){
+    if (!request || typeof request !== "object"){
+      throw new Error("file_link_request_missing");
+    }
+    const shareName = sanitizeShareName(request.shareName);
+    if (!shareName){
+      const error = new Error("file_link_share_name_missing");
+      error.ncUserMessage = i18n("sharing_message_invalid_share_name");
+      throw error;
+    }
+    const sourcePlan = NCFileLinkSources.normalizeItems(request.files, {
+      sanitizeFileName,
+      sanitizeRelativeDir
+    });
+    return Object.freeze({
+      request: Object.freeze({ ...request, shareName }),
+      sourcePlan
+    });
+  }
+
   /**
-   * Create a Nextcloud share, upload files, and return HTML output.
-   * @param {object} request
+   * Create a Nextcloud share from one validated upload request.
+   * @param {{request:object,sourcePlan:object}} prepared
    * @returns {Promise<{shareUrl:string, shareInfo:object}>}
    */
-  async function createFileLink(request){
+  async function createFileLink(prepared){
+    if (!prepared?.request || !prepared?.sourcePlan){
+      throw new Error("file_link_request_not_prepared");
+    }
+    const request = prepared.request;
+    const sourcePlan = prepared.sourcePlan;
     const opts = await NCCore.getOpts();
     logDebug(opts, "createFileLink:start", {
       shareName: request?.shareName || "",
@@ -1004,25 +1029,7 @@
     const noteEnabled = !!request?.noteEnabled;
     const noteValue = noteEnabled ? String(request?.note || "").trim() : "";
     const statusCallback = typeof request?.onUploadStatus === "function" ? request.onUploadStatus : null;
-    const sourceItems = Array.isArray(request?.files) ? request.files : [];
-    const files = sourceItems.map((item, index) => {
-      const sourceFile = item?.file;
-      if (!sourceFile || typeof sourceFile.slice !== "function"){
-        throw new Error(i18n("sharing_status_error"));
-      }
-      const fileName = sanitizeFileName(item.renamedName || sourceFile.name || "File");
-      return {
-        itemId: item.id || `file-${index + 1}`,
-        sourceFile,
-        fileName,
-        displayPath: item.displayPath || sourceFile.name || fileName,
-        relativeDir: sanitizeRelativeDir(item.relativeDir || ""),
-        size: Number(sourceFile.size) || 0,
-        lastModified: Number(sourceFile.lastModified) || Date.now(),
-        contentType: sourceFile.type || "application/octet-stream"
-      };
-    });
-    const baseShareName = sanitizeShareName(request?.shareName) || sanitizeShareName(i18n("sharing_share_default"));
+    const baseShareName = request.shareName;
     const candidateLimit = request?.attachmentMode ? 1000 : 1;
     const rootCandidates = Array.from({ length: candidateLimit }, (_, suffix) => {
       const shareName = suffix === 0 ? baseShareName : `${baseShareName}_${suffix}`;
@@ -1037,7 +1044,7 @@
       return Object.freeze({
         ...root,
         cleanupTarget: Object.freeze({
-          url: NCFileLinkDav.buildFileUrl(davRoot, root.folderInfo.relativeFolder),
+          url: NCNextcloudDav.buildFileUrl(davRoot, root.folderInfo.relativeFolder),
           authHeader,
           baseUrl: opts.baseUrl,
           relativeFolder: root.folderInfo.relativeFolder,
@@ -1048,7 +1055,7 @@
     };
     try{
       const transfer = await NCFileLinkUpload.prepareAndUpload({
-        files,
+        files: sourcePlan.localFiles,
         bulkSupported: capabilities.bulkUploadSupported,
         fixedRequestCount: normalizeRelativePath(basePathSetting).split("/").filter(Boolean).length + 2,
         davRoot,
@@ -1060,6 +1067,13 @@
         signal: request?.signal || null,
         log: (...args) => logDebug(opts, ...args),
         onStatus: statusCallback,
+        additionalDirectories: sourcePlan.additionalDirectories,
+        additionalUploadFiles: sourcePlan.deferredUploadFiles,
+        serverCopyCount: sourcePlan.nextcloudCopies.length,
+        transferAdditionalSources: (context) => NCFileLinkSources.transferAdditionalSources({
+          ...context,
+          plan: sourcePlan
+        }),
         collisionMessage: i18n("sharing_error_folder_exists"),
         onRootCreated: async (root) => {
           preparedRoot = buildTrackedRoot(root);
@@ -1098,7 +1112,7 @@
       };
       logDebug(opts, "createFileLink:done", {
         shareId: share.id || "",
-        files: files.length
+        files: sourcePlan.items.length
       });
       return {
         shareUrl: share.url,
@@ -1108,9 +1122,9 @@
       if (preparedRoot?.folderInfo?.relativeFolder){
         let cleaned = false;
         try{
-          await NCFileLinkDav.deleteTrackedRoot({
+          await NCNextcloudDav.deleteTrackedRoot({
             url: preparedRoot.cleanupTarget?.url
-              || NCFileLinkDav.buildFileUrl(davRoot, preparedRoot.folderInfo.relativeFolder),
+              || NCNextcloudDav.buildFileUrl(davRoot, preparedRoot.folderInfo.relativeFolder),
             reservationUrl: preparedRoot.cleanupTarget?.reservationUrl || "",
             targetUrl: preparedRoot.cleanupTarget?.targetUrl || "",
             authHeader,
@@ -1144,59 +1158,48 @@
   }
 
   /**
-   * Update note and label metadata for one existing share
-   * @param {{shareInfo:Object,noteEnabled:boolean,note:string}} options
+   * Update one existing share note with the account captured by its upload.
+   * @param {object} options
    */
-  async function updateShareDetails({ shareInfo, noteEnabled, note } = {}){
-    if (!shareInfo?.shareId){
+  async function updateShareNote({
+    baseUrl,
+    authHeader,
+    shareId,
+    permissions,
+    expireDate,
+    password,
+    noteEnabled,
+    note
+  } = {}){
+    const normalizedBaseUrl = String(baseUrl || "").trim().replace(/\/+$/, "");
+    const normalizedAuthHeader = String(authHeader || "").trim();
+    const normalizedShareId = String(shareId || "").trim();
+    if (!normalizedShareId){
       throw new Error(i18n("sharing_error_upload_required"));
     }
-    const opts = await NCCore.getOpts();
-    if (!opts.baseUrl || !opts.user || !opts.appPass){
+    if (!normalizedBaseUrl || !normalizedAuthHeader){
       throw new Error(i18n("error_credentials_missing"));
     }
-    await ensureHostPermission(opts.baseUrl);
-    const authHeader = NCOcs.buildAuthHeader(opts.user, opts.appPass);
-    const normalizedLabel = shareInfo.label || sanitizeShareName(shareInfo.folderInfo?.folderName || shareInfo.shareUrl);
-    logDebug(opts, "share:updateMeta", {
-      shareId: shareInfo.shareId,
-      label: normalizedLabel,
+    await ensureHostPermission(normalizedBaseUrl);
+    logDebug(null, "share:updateNote", {
+      shareId: normalizedShareId,
       noteEnabled: !!noteEnabled
     });
     await updateShareMetadata({
-      baseUrl: opts.baseUrl,
-      shareId: shareInfo.shareId,
-      authHeader,
+      baseUrl: normalizedBaseUrl,
+      shareId: normalizedShareId,
+      authHeader: normalizedAuthHeader,
       note: noteEnabled ? (note || "") : "",
-      permissions: shareInfo.permissions,
-      expireDate: shareInfo.expireDate || "",
-      password: shareInfo.password || ""
+      permissions,
+      expireDate: expireDate || "",
+      password: password || ""
     });
-    logDebug(opts, "share:updateMeta:done", { shareId: shareInfo.shareId });
-  }
-
-  async function deleteShareFolder({ folderInfo } = {}){
-    if (!folderInfo?.relativeFolder){
-      return false;
-    }
-    const opts = await NCCore.getOpts();
-    if (!opts.baseUrl || !opts.user || !opts.appPass){
-      throw new Error(i18n("error_credentials_missing"));
-    }
-    await ensureHostPermission(opts.baseUrl);
-    const userId = await NCCore.getCurrentUserId(opts);
-    const authHeader = NCOcs.buildAuthHeader(opts.user, opts.appPass);
-    const davRoot = `${opts.baseUrl.replace(/\/+$/, "")}/remote.php/dav/files/${encodeURIComponent(userId)}`;
-    logDebug(opts, "folders:delete", { relativeFolder: folderInfo.relativeFolder });
-    return NCFileLinkDav.deleteRemotePath({
-      url: NCFileLinkDav.buildFileUrl(davRoot, folderInfo.relativeFolder),
-      authHeader,
-      log: (...args) => logDebug(opts, ...args)
-    });
+    logDebug(null, "share:updateNote:done", { shareId: normalizedShareId });
   }
 
   const api = {
     DEFAULT_BASE_PATH,
+    prepareFileLinkRequest,
     createFileLink,
     checkFileLinkFolderExists,
     buildHtmlBlock,
@@ -1206,8 +1209,7 @@
     sanitizeShareName,
     sanitizeFileName,
     sanitizeRelativeDir,
-    updateShareDetails,
-    deleteShareFolder
+    updateShareNote
   };
 
   if (__context){

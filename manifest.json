@@ -23,6 +23,7 @@
     "notifications"
   ],
   "optional_permissions": [
+    "management",
     "https://*/*"
   ],
   "background": {
@@ -45,7 +46,7 @@
       "modules/nccore.js",
       "vendor/spark-md5.min.js",
       "modules/fileLinkUploadPolicy.js",
-      "modules/fileLinkDav.js",
+      "modules/nextcloudDav.js",
       "modules/fileLinkUploadProgress.js",
       "modules/fileLinkBulkUpload.js",
       "modules/fileLinkUpload.js",
@@ -53,10 +54,16 @@
       "modules/secretsCrypto.js",
       "modules/ncSecrets.js",
       "modules/policyState.js",
+      "modules/shareRequestRules.js",
       "modules/policyRuntime.js",
       "modules/passwordPolicyRuntime.js",
       "modules/talkAddressbook.js",
       "modules/talkcore.js",
+      "modules/nextcloudVfsStorage.js",
+      "modules/vfsProviderRuntime.js",
+      "modules/vfsClientRuntime.js",
+      "modules/fileQueuePathConflicts.js",
+      "modules/fileLinkSources.js",
       "modules/ncSharing.js",
       "modules/bgComposeAttachments.js",
       "modules/bgShareCleanupStore.js",

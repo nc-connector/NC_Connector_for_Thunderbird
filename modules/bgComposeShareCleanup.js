@@ -9,14 +9,6 @@
  * Owns compose-tab and sharing-wizard remote cleanup lifecycle.
  */
 
-const SHARING_WIZARD_CLEANUP_RETRY_DELAYS_MS = Object.freeze([
-  2000,
-  5000,
-  10000,
-  30000,
-  60000
-]);
-
 function normalizeComposeShareCleanupFolderInfo(folderInfo){
   if (!folderInfo || typeof folderInfo !== "object"){
     return null;
@@ -96,6 +88,27 @@ function normalizeShareCleanupTarget(cleanupTarget){
   });
 }
 
+function normalizeSharingWizardShareDetails(shareDetails){
+  if (!shareDetails || typeof shareDetails !== "object"){
+    return null;
+  }
+  const attachmentMode = shareDetails.attachmentMode === true;
+  const noteEnabled = !attachmentMode && shareDetails.noteEnabled === true;
+  return Object.freeze({
+    permissions: Object.freeze({
+      read: true,
+      create: shareDetails.permissions?.create === true,
+      write: shareDetails.permissions?.write === true,
+      delete: shareDetails.permissions?.delete === true
+    }),
+    expireDate: String(shareDetails.expireDate || "").trim(),
+    password: String(shareDetails.password || ""),
+    noteEnabled,
+    note: noteEnabled ? String(shareDetails.note || "").trim() : "",
+    attachmentMode
+  });
+}
+
 async function deleteShareCleanupEntry(entry, groupId = ""){
   const descriptor = entry?.cleanupDescriptor
     || createPersistedShareCleanupDescriptor(entry);
@@ -106,10 +119,7 @@ async function deleteShareCleanupEntry(entry, groupId = ""){
     }
     return;
   }
-  if (entry?.cleanupTarget){
-    throw new Error("share_cleanup_descriptor_invalid");
-  }
-  await NCSharing.deleteShareFolder({ folderInfo: entry?.folderInfo });
+  throw new Error("share_cleanup_descriptor_invalid");
 }
 
 function clearSharingWizardRemoteCleanup(windowId, reason = "", expectedEntry = null){
@@ -139,7 +149,7 @@ function clearSharingWizardRemoteCleanup(windowId, reason = "", expectedEntry = 
  * Arm a sharing-wizard remote cleanup entry for the wizard popup window.
  * If the popup closes without explicit clear, server-side folder cleanup runs.
  * @param {number} windowId
- * @param {{folderInfo?:object,shareId?:string,shareLabel?:string,shareUrl?:string,tabId?:number}} payload
+ * @param {{folderInfo?:object,shareId?:string,shareLabel?:string,shareUrl?:string,tabId?:number,shareDetails?:object}} payload
  */
 async function armSharingWizardRemoteCleanup(windowId, payload = {}){
   if (!Number.isInteger(windowId) || windowId <= 0){
@@ -169,6 +179,7 @@ async function armSharingWizardRemoteCleanup(windowId, payload = {}){
     shareLabel: String(payload.shareLabel || "").trim(),
     shareUrl: String(payload.shareUrl || "").trim(),
     cleanupTarget: normalizeShareCleanupTarget(payload.cleanupTarget),
+    shareDetails: normalizeSharingWizardShareDetails(payload.shareDetails),
     created: Date.now(),
     retryTimerId: null
   };
@@ -233,7 +244,7 @@ function scheduleSharingWizardRemoteCleanupRetry(
     return false;
   }
   const retryIndex = Math.max(0, Number(attempt) || 0);
-  if (retryIndex >= SHARING_WIZARD_CLEANUP_RETRY_DELAYS_MS.length){
+  if (retryIndex >= SHARE_CLEANUP_RETRY_DELAYS_MS.length){
     console.error("[NCBG] sharing wizard cleanup retries exhausted", {
       windowId,
       reason: reason || ""
@@ -276,7 +287,7 @@ function scheduleSharingWizardRemoteCleanupRetry(
         );
       }
     });
-  }, SHARING_WIZARD_CLEANUP_RETRY_DELAYS_MS[retryIndex]);
+  }, SHARE_CLEANUP_RETRY_DELAYS_MS[retryIndex]);
   return true;
 }
 
@@ -814,7 +825,7 @@ function scheduleComposeShareCleanupRetry(
     return false;
   }
   const retryIndex = Math.max(0, Number(attempt) || 0);
-  if (retryIndex >= SHARING_WIZARD_CLEANUP_RETRY_DELAYS_MS.length){
+  if (retryIndex >= SHARE_CLEANUP_RETRY_DELAYS_MS.length){
     console.error("[NCBG] compose share cleanup retries exhausted", {
       tabId,
       reason: reason || ""
@@ -857,7 +868,7 @@ function scheduleComposeShareCleanupRetry(
         );
       }
     });
-  }, SHARING_WIZARD_CLEANUP_RETRY_DELAYS_MS[retryIndex]);
+  }, SHARE_CLEANUP_RETRY_DELAYS_MS[retryIndex]);
   return true;
 }
 

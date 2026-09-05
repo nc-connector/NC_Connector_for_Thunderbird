@@ -39,12 +39,273 @@ function createContext(){
   vm.createContext(context);
   loadScript("vendor/spark-md5.min.js", context);
   loadScript("modules/fileLinkUploadPolicy.js", context);
-  loadScript("modules/fileLinkDav.js", context);
+  loadScript("modules/nextcloudDav.js", context);
   loadScript("modules/fileLinkUploadProgress.js", context);
   loadScript("modules/fileLinkBulkUpload.js", context);
   loadScript("modules/fileLinkUpload.js", context);
   loadScript("modules/fileLinkShare.js", context);
   return context;
+}
+
+function createTestEvent(){
+  const listeners = new Set();
+  return {
+    addListener(listener){
+      listeners.add(listener);
+    },
+    removeListener(listener){
+      listeners.delete(listener);
+    },
+    emit(value){
+      for (const listener of Array.from(listeners)){
+        listener(value);
+      }
+    },
+    get size(){
+      return listeners.size;
+    }
+  };
+}
+
+function createTestPort({ postError = null, disconnectError = null } = {}){
+  const onMessage = createTestEvent();
+  const onDisconnect = createTestEvent();
+  return {
+    posted: [],
+    disconnectCount: 0,
+    onMessage,
+    onDisconnect,
+    postMessage(message){
+      if (postError){
+        throw postError;
+      }
+      this.posted.push(message);
+    },
+    disconnect(){
+      if (disconnectError){
+        throw disconnectError;
+      }
+      this.disconnectCount++;
+      onDisconnect.emit();
+    }
+  };
+}
+
+function createPortRequestContext(){
+  const state = {
+    port: null,
+    connectError: null,
+    connectedNames: [],
+    lastError: null
+  };
+  const context = {
+    console,
+    Error,
+    TypeError,
+    Promise,
+    Object,
+    String,
+    browser: {
+      runtime: {
+        connect({ name }){
+          state.connectedNames.push(name);
+          if (state.connectError){
+            throw state.connectError;
+          }
+          return state.port;
+        },
+        get lastError(){
+          return state.lastError;
+        }
+      }
+    },
+    globalThis: null,
+    window: null
+  };
+  context.globalThis = context;
+  context.window = context;
+  vm.createContext(context);
+  loadScript("ui/sharingPortRequest.js", context);
+  return { context, state };
+}
+
+async function checkSharingPortRequest(){
+  const { context, state } = createPortRequestContext();
+  const runtime = context.NCSharingPortRequest;
+  const opened = [];
+  const closed = [];
+  const progress = [];
+  state.port = createTestPort();
+
+  const resultPromise = runtime.run({
+    portName: "nc-filelink-upload",
+    startMessage: { type: "start", request: { id: 1 } },
+    fallbackErrorMessage: "Upload failed",
+    onProgress: (message) => progress.push(message.current),
+    mapResult: (message) => message.result,
+    onPortOpened: (port) => opened.push(port),
+    onPortClosed: (port) => closed.push(port)
+  });
+  assert(state.connectedNames[0] === "nc-filelink-upload", "Port helper must connect with the requested name");
+  assert(state.port.posted[0]?.type === "start", "Port helper must post the start message after listener setup");
+  state.port.onMessage.emit({ type: "progress", current: 4 });
+  state.port.onMessage.emit({ type: "result", result: { shareId: "42" } });
+  const result = await resultPromise;
+  assert(result.shareId === "42", "Port helper must map the result message");
+  assert(progress[0] === 4, "Port helper must forward progress messages");
+  assert(opened[0] === state.port && closed[0] === state.port, "Port ownership callbacks must receive the same Port");
+  assert(
+    state.port.onMessage.size === 0
+      && state.port.onDisconnect.size === 0
+      && state.port.disconnectCount === 1,
+    "Completed Port requests must remove listeners and disconnect once"
+  );
+
+  state.port = createTestPort();
+  const errorPromise = runtime.run({
+    portName: "nc-filelink-upload",
+    startMessage: { type: "start" },
+    fallbackErrorMessage: "Upload failed",
+    mapError: (message) => {
+      const error = new Error(message.error.message);
+      error.code = message.error.code;
+      return error;
+    }
+  });
+  state.port.onMessage.emit({
+    type: "error",
+    error: { message: "Quota exceeded", code: "quota" }
+  });
+  let mappedFailure = null;
+  try{
+    await errorPromise;
+  }catch(error){
+    mappedFailure = error;
+  }
+  assert(
+    mappedFailure?.message === "Quota exceeded" && mappedFailure.code === "quota",
+    "Port helper must preserve the caller's serialized error mapping"
+  );
+
+  state.port = createTestPort();
+  state.lastError = { message: "Background closed" };
+  const disconnectPromise = runtime.run({
+    portName: "nc-vfs-source-selection",
+    startMessage: { type: "start" },
+    fallbackErrorMessage: "Selection failed"
+  });
+  state.port.onDisconnect.emit();
+  let disconnectFailure = null;
+  try{
+    await disconnectPromise;
+  }catch(error){
+    disconnectFailure = error;
+  }
+  assert(disconnectFailure?.message === "Background closed", "Port disconnects must expose runtime.lastError");
+  state.lastError = null;
+
+  const postFailure = new Error("Start failed");
+  state.port = createTestPort({ postError: postFailure });
+  let startFailure = null;
+  try{
+    await runtime.run({
+      portName: "nc-filelink-upload",
+      startMessage: { type: "start" },
+      fallbackErrorMessage: "Upload failed"
+    });
+  }catch(error){
+    startFailure = error;
+  }
+  assert(startFailure === postFailure, "A failed start post must reject with the original error");
+  assert(
+    state.port.onMessage.size === 0
+      && state.port.onDisconnect.size === 0
+      && state.port.disconnectCount === 1,
+    "A failed start post must release the Port"
+  );
+
+  const cancelPort = createTestPort();
+  assert(
+    runtime.cancel(cancelPort, { reason: "wizard_unload" }),
+    "An active request must accept wizard cancellation"
+  );
+  assert(
+    cancelPort.posted[0]?.type === "cancel"
+      && cancelPort.posted[0]?.reason === "wizard_unload"
+      && cancelPort.disconnectCount === 1,
+    "Wizard cancellation must post the reason before disconnecting"
+  );
+}
+
+async function checkCopyOnlyCompletionLog(){
+  const context = createContext();
+  context.NCNextcloudDav = {
+    ...context.NCNextcloudDav,
+    prepareFolderPath: async () => {},
+    createCollection: async () => true,
+    createPlannedDirectories: async () => {},
+    fetchWithTimeout: async () => ({ ok: true, status: 201 }),
+    closeResponse: async () => {}
+  };
+
+  const runPlan = async ({ serverCopyCount, transferAdditionalSources }) => {
+    const logs = [];
+    const trace = [];
+    await context.NCFileLinkUpload.prepareAndUpload({
+      files: [],
+      bulkSupported: false,
+      fixedRequestCount: 2,
+      davRoot: "https://cloud.example.test/remote.php/dav/files/user",
+      uploadRoot: "https://cloud.example.test/remote.php/dav/uploads/user",
+      bulkUrl: "https://cloud.example.test/remote.php/dav/bulk",
+      basePath: "Shares",
+      rootCandidates: [{
+        shareName: "Copy only",
+        folderInfo: {
+          relativeBase: "Shares",
+          relativeFolder: "Shares/Copy only",
+          folderName: "Copy only"
+        }
+      }],
+      authHeader: "Basic test",
+      serverCopyCount,
+      transferAdditionalSources: typeof transferAdditionalSources === "function"
+        ? async (transferContext) => {
+            await transferAdditionalSources(transferContext);
+            trace.push("copy");
+          }
+        : undefined,
+      log: (...args) => {
+        logs.push(args);
+        trace.push(args[0]);
+      }
+    });
+    return { logs, trace };
+  };
+
+  const copyRun = await runPlan({
+    serverCopyCount: 1,
+    transferAdditionalSources: async () => {}
+  });
+  const copyCompletion = copyRun.logs.filter(
+    ([message]) => message === "Upload completed"
+  );
+  assert(
+    copyCompletion.length === 1
+      && copyCompletion[0][1].files === 0
+      && copyCompletion[0][1].serverCopies === 1,
+    "Copy-only plans must emit one completion log with their server copy count"
+  );
+  assert(
+    copyRun.trace.indexOf("Upload completed") > copyRun.trace.indexOf("copy"),
+    "Copy-only completion must be logged after the server-side transfer"
+  );
+
+  const emptyRun = await runPlan({ serverCopyCount: 0 });
+  assert(
+    !emptyRun.logs.some(([message]) => message === "Upload completed"),
+    "Plans without files or server copies must not emit a completion log"
+  );
 }
 
 function plannedFile(index, size, relativeDir = ""){
@@ -61,9 +322,11 @@ function plannedFile(index, size, relativeDir = ""){
 }
 
 async function run(){
+  await checkSharingPortRequest();
+  await checkCopyOnlyCompletionLog();
   const context = createContext();
   const policy = context.NCFileLinkUploadPolicy;
-  const dav = context.NCFileLinkDav;
+  const dav = context.NCNextcloudDav;
   const bulk = context.NCFileLinkBulkUpload;
 
   assert(policy.DIRECT_UPLOAD_LIMIT_BYTES === 20 * MIB, "Direct limit must be 20 MiB");
@@ -137,6 +400,31 @@ async function run(){
   });
   assert(!noCapabilityPlan.useBulkUpload, "Missing DAV capability must keep Direct PUT");
   assert(noCapabilityPlan.directFiles.length === 20, "Direct PUT must remain the planned path without bulk");
+
+  const deferredPlan = policy.buildPlan({
+    files: [{
+      itemId: "external-large",
+      fileName: "external-large.bin",
+      relativeDir: "external",
+      size: 20 * MIB + 1
+    }],
+    bulkSupported: false
+  });
+  const mixedSummary = context.NCFileLinkUpload.buildUploadSummary(sharedPlan, {
+    additionalPlan: deferredPlan,
+    foldersToCreate: 3,
+    serverCopies: 2
+  });
+  assert(
+    mixedSummary.files === 3
+      && mixedSummary.bytes === sharedPlan.totalBytes + deferredPlan.totalBytes
+      && mixedSummary.direct === 2
+      && mixedSummary.chunked === 1
+      && mixedSummary.bulkFiles === 0
+      && mixedSummary.foldersToCreate === 3
+      && mixedSummary.serverCopies === 2,
+    "Mixed-source upload summaries must include deferred VFS files and server-side copies"
+  );
 
   assert(context.SparkMD5.hash("") === "d41d8cd98f00b204e9800998ecf8427e", "SparkMD5 empty-string vector must match");
   assert(context.SparkMD5.hash("abc") === "900150983cd24fb0d6963f7d28e17f72", "SparkMD5 abc vector must match");
@@ -225,7 +513,7 @@ async function run(){
   const requiredOrder = [
     "vendor/spark-md5.min.js",
     "modules/fileLinkUploadPolicy.js",
-    "modules/fileLinkDav.js",
+    "modules/nextcloudDav.js",
     "modules/fileLinkUploadProgress.js",
     "modules/fileLinkBulkUpload.js",
     "modules/fileLinkUpload.js",
@@ -241,10 +529,18 @@ async function run(){
   }
 
   const wizardSource = readText("ui/nextcloudSharingWizard.js");
+  const wizardHtml = readText("ui/nextcloudSharingWizard.html");
+  const portRequestSource = readText("ui/sharingPortRequest.js");
   const sharingSource = readText("modules/ncSharing.js");
   const routerSource = readText("modules/bgRouter.js");
   const uploadSource = readText("modules/fileLinkUpload.js");
-  assert(wizardSource.includes("browser.runtime.connect({ name: 'nc-filelink-upload' })"), "Wizard must hand FileLink work to the background");
+  assert(
+    wizardHtml.includes('<script src="sharingPortRequest.js"></script>')
+      && portRequestSource.includes("browser.runtime.connect({ name: portName })")
+      && (wizardSource.match(/NCSharingPortRequest\.run\(\{/g) || []).length === 2
+      && !wizardSource.includes("browser.runtime.connect("),
+    "Sharing wizard Ports must use the shared request lifecycle"
+  );
   assert(!wizardSource.includes("NCSharing.createFileLink({"), "Wizard must not own network transfers");
   assert(
     wizardSource.includes('type: "sharing:checkFolderExists"'),
@@ -259,7 +555,7 @@ async function run(){
     "Existing manual targets must keep the localized collision error in step one"
   );
   assert(
-    !wizardSource.includes("NCFileLinkDav.probePath"),
+    !wizardSource.includes("NCNextcloudDav.probePath"),
     "Wizard must not perform DAV network access directly"
   );
   assert(
@@ -268,7 +564,7 @@ async function run(){
   );
   assert(
     sharingSource.includes("async function checkFileLinkFolderExists(request)")
-      && sharingSource.includes("NCFileLinkDav.probePath({"),
+      && sharingSource.includes("NCNextcloudDav.probePath({"),
     "Manual folder collision preflight must reuse the central DAV probe"
   );
   assert(!sharingSource.includes("publicUpload\", \"true"), "Share creation must not add a second permissions mode");
@@ -277,6 +573,19 @@ async function run(){
     uploadSource.includes('phase: "checksums"')
       && wizardSource.includes("sharing_status_calculating_checksums"),
     "Bulk checksum progress must reach the Sharing wizard"
+  );
+  const mixedTransferStart = uploadSource.indexOf("async function prepareAndUpload");
+  const mixedTransferEnd = uploadSource.indexOf("global.NCFileLinkUpload", mixedTransferStart);
+  const mixedTransferSource = uploadSource.slice(mixedTransferStart, mixedTransferEnd);
+  const localUploadEnd = mixedTransferSource.indexOf("await uploadPlan({");
+  const additionalTransferEnd = mixedTransferSource.indexOf("await transferAdditionalSources({");
+  const completionLog = mixedTransferSource.indexOf("logUploadCompleted(uploadSummary");
+  assert(
+    mixedTransferSource.includes("logCompletion: false")
+      && localUploadEnd >= 0
+      && additionalTransferEnd > localUploadEnd
+      && completionLog > additionalTransferEnd,
+    "Mixed-source completion must be logged after every source transfer"
   );
 
   console.log("[OK] filelink-upload-check passed");

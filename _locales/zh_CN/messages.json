@@ -629,6 +629,9 @@
   "sharing_error_insert_failed_close": {
     "message": "无法安全完成共享。请关闭共享窗口，并在重试前检查邮件。"
   },
+  "sharing_attachment_routing_active": {
+    "message": "文件共享仍在处理中。请先完成共享或关闭共享窗口，然后再发送邮件。"
+  },
   "sharing_saved_template_unsupported": {
     "message": "包含 NC Connector 共享的邮件无法保存或作为 Thunderbird 模板发送。请新建邮件并重新共享文件。"
   },
@@ -682,12 +685,6 @@
   },
   "sharing_files_table_status": {
     "message": "状态"
-  },
-  "sharing_button_add_files": {
-    "message": "添加文件..."
-  },
-  "sharing_button_add_folder": {
-    "message": "添加文件夹..."
   },
   "sharing_button_remove": {
     "message": "移除"
@@ -1009,5 +1006,338 @@
   },
   "sharing_status_speed_kbps": {
     "message": "$1 KB/s"
+  },
+  "options_tab_vfs": {
+    "message": "VFS"
+  },
+  "options_vfs_provider_heading": {
+    "message": "我的 Nextcloud"
+  },
+  "options_vfs_provider_intro": {
+    "message": "将现有 Nextcloud 连接提供给已授权的 Thunderbird 扩展。"
+  },
+  "options_vfs_provider_enabled_label": {
+    "message": "启用 NC Connector 作为 VFS 提供商"
+  },
+  "options_vfs_provider_tooltip_title": {
+    "message": "访问您的 Nextcloud 的 VFS"
+  },
+  "options_vfs_provider_tooltip_text": {
+    "message": "只有明确授权的扩展才能获得读写访问权限。不会共享登录凭据。"
+  },
+  "options_vfs_provider_status_label": {
+    "message": "状态"
+  },
+  "options_vfs_provider_status_active": {
+    "message": "提供商已启用"
+  },
+  "options_vfs_provider_status_inactive": {
+    "message": "提供商已停用"
+  },
+  "options_vfs_provider_status_connection_required": {
+    "message": "请先设置 Nextcloud 连接"
+  },
+  "options_vfs_provider_status_error": {
+    "message": "提供商错误"
+  },
+  "options_vfs_runtime_unavailable": {
+    "message": "VFS 组件不可用。"
+  },
+  "options_vfs_grants_heading": {
+    "message": "已授权的扩展"
+  },
+  "options_vfs_grants_hint": {
+    "message": "每项授权仅适用于一个扩展，可随时在此撤销。"
+  },
+  "options_vfs_access_read_write": {
+    "message": "读取和写入"
+  },
+  "options_vfs_revoke_button": {
+    "message": "撤销访问权限"
+  },
+  "options_vfs_no_grants": {
+    "message": "尚无扩展获得访问权限。"
+  },
+  "options_vfs_revoke_confirm": {
+    "message": "撤销 $1 的访问权限？"
+  },
+  "options_vfs_external_heading": {
+    "message": "外部 VFS 提供商"
+  },
+  "options_vfs_external_intro": {
+    "message": "系统会读取其他提供商中的文件，然后将其上传到您的 Nextcloud 共享。"
+  },
+  "options_vfs_external_enabled_label": {
+    "message": "启用外部 VFS 提供商"
+  },
+  "options_vfs_external_tooltip_title": {
+    "message": "连接其他存储"
+  },
+  "options_vfs_external_tooltip_text": {
+    "message": "只有在您明确授权后，NC Connector 才会检测兼容的 VFS 提供商。文件不会在提供商之间直接复制。"
+  },
+  "options_vfs_external_permission_label": {
+    "message": "Thunderbird 权限"
+  },
+  "options_vfs_external_permission_granted": {
+    "message": "已授予"
+  },
+  "options_vfs_external_permission_required": {
+    "message": "未授予"
+  },
+  "options_vfs_external_permission_button": {
+    "message": "授予权限"
+  },
+  "options_vfs_connections_heading": {
+    "message": "检测到的连接"
+  },
+  "options_vfs_connections_hint": {
+    "message": "此处会显示已在 Thunderbird 中设置且可访问的兼容 VFS 提供商。"
+  },
+  "options_vfs_refresh_button": {
+    "message": "刷新"
+  },
+  "options_vfs_connect_button": {
+    "message": "连接"
+  },
+  "options_vfs_disconnect_button": {
+    "message": "断开连接"
+  },
+  "options_vfs_disconnect_confirm": {
+    "message": "断开与 $1 的连接？"
+  },
+  "options_vfs_no_connections": {
+    "message": "未检测到 VFS 连接。"
+  },
+  "options_vfs_connection_status_connected": {
+    "message": "已连接"
+  },
+  "options_vfs_connection_status_available": {
+    "message": "可用"
+  },
+  "options_vfs_connection_status_unavailable": {
+    "message": "不可用"
+  },
+  "options_vfs_connection_status_error": {
+    "message": "错误"
+  },
+  "options_vfs_loading": {
+    "message": "正在加载…"
+  },
+  "options_vfs_action_failed": {
+    "message": "无法完成 VFS 操作。"
+  },
+  "vfs_error_management_permission_missing": {
+    "message": "缺少检测外部 VFS 提供商所需的权限。"
+  },
+  "vfs_error_storage_changed": {
+    "message": "存储连接已更改。请重新选择文件。"
+  },
+  "vfs_error_file_metadata_missing": {
+    "message": "文件信息不完整。请重新选择该文件。"
+  },
+  "vfs_error_file_read_failed": {
+    "message": "无法从存储提供商读取文件。"
+  },
+  "vfs_error_file_changed": {
+    "message": "文件在选择后发生了更改。请重新选择。"
+  },
+  "vfs_error_invalid_path": {
+    "message": "所选存储路径无效。"
+  },
+  "vfs_error_root_not_selectable": {
+    "message": "不能将存储根目录选作文件夹。"
+  },
+  "vfs_error_external_connection_missing": {
+    "message": "所选存储连接已不可用。"
+  },
+  "vfs_error_duplicate_path": {
+    "message": "选择内容多次包含同一路径。"
+  },
+  "sharing_button_add_nextcloud": {
+    "message": "从 Nextcloud 添加…"
+  },
+  "sharing_button_add_nextcloud_files": {
+    "message": "选择文件"
+  },
+  "sharing_button_add_nextcloud_folder": {
+    "message": "选择文件夹"
+  },
+  "sharing_button_add_external": {
+    "message": "从其他存储添加…"
+  },
+  "sharing_button_add_external_files": {
+    "message": "选择文件"
+  },
+  "sharing_button_add_external_folder": {
+    "message": "选择文件夹"
+  },
+  "sharing_files_table_source": {
+    "message": "来源"
+  },
+  "sharing_vfs_connection_heading": {
+    "message": "选择存储"
+  },
+  "sharing_vfs_connection_label": {
+    "message": "存储"
+  },
+  "sharing_vfs_external_unavailable": {
+    "message": "没有可用的外部存储连接。"
+  },
+  "sharing_vfs_nextcloud_unavailable_tooltip": {
+    "message": "不可用。请先在扩展设置中配置 Nextcloud 连接。"
+  },
+  "sharing_vfs_external_unavailable_tooltip": {
+    "message": "不可用。请在“设置 > VFS”中启用外部提供商，并至少连接一个存储。"
+  },
+  "sharing_vfs_scanning_source": {
+    "message": "正在扫描所选内容（$1）…"
+  },
+  "sharing_vfs_opening_picker": {
+    "message": "正在打开文件选择器…"
+  },
+  "sharing_file_type_folder": {
+    "message": "文件夹"
+  },
+  "sharing_source_nextcloud": {
+    "message": "Nextcloud 存储"
+  },
+  "sharing_source_external": {
+    "message": "外部存储"
+  },
+  "sharing_source_local": {
+    "message": "本地存储"
+  },
+  "sharing_queue_entries_summary": {
+    "message": "项目数：$1"
+  },
+  "sharing_queue_sources_summary": {
+    "message": "来源数：$1"
+  },
+  "sharing_queue_total_summary": {
+    "message": "总大小：$1"
+  },
+  "sharing_queue_size_unknown": {
+    "message": "未知"
+  },
+  "sharing_queue_storage_loading": {
+    "message": "目标存储：正在加载..."
+  },
+  "sharing_queue_storage_available": {
+    "message": "目标存储：$2 中有 $1 可用"
+  },
+  "sharing_queue_storage_unlimited": {
+    "message": "目标存储：无限制"
+  },
+  "sharing_queue_storage_unknown": {
+    "message": "目标存储：无法确定"
+  },
+  "sharing_queue_storage_insufficient": {
+    "message": "需要：$1 · 可用：$2"
+  },
+  "sharing_queue_expand_folder": {
+    "message": "展开文件夹“$1”"
+  },
+  "sharing_queue_collapse_folder": {
+    "message": "折叠文件夹“$1”"
+  },
+  "sharing_queue_remove_item": {
+    "message": "移除“$1”"
+  },
+  "sharing_queue_source_group": {
+    "message": "来源：$1"
+  },
+  "sharing_status_fetching_source": {
+    "message": "正在读取文件…"
+  },
+  "sharing_status_copying_source": {
+    "message": "正在复制…"
+  },
+  "sharing_status_preparing_source": {
+    "message": "正在准备…"
+  },
+  "sharing_status_copying_sources": {
+    "message": "正在复制 Nextcloud 项目（$1 / $2）…"
+  },
+  "sharing_status_fetching_sources": {
+    "message": "正在从存储读取文件（$1 / $2）…"
+  },
+  "vfs_setup_title": {
+    "message": "Nextcloud 访问权限"
+  },
+  "vfs_setup_heading": {
+    "message": "允许访问 Nextcloud？"
+  },
+  "vfs_setup_access_heading": {
+    "message": "读写权限"
+  },
+  "vfs_setup_access_read": {
+    "message": "浏览和读取文件及文件夹"
+  },
+  "vfs_setup_access_write": {
+    "message": "创建和修改文件及文件夹"
+  },
+  "vfs_setup_access_delete": {
+    "message": "删除文件和文件夹"
+  },
+  "vfs_setup_allow": {
+    "message": "允许访问"
+  },
+  "vfs_setup_request": {
+    "message": "$1 正在请求访问此 Nextcloud 存储。"
+  },
+  "vfs_setup_account": {
+    "message": "Nextcloud 帐户：$1"
+  },
+  "vfs_setup_invalid_request": {
+    "message": "访问请求无效。"
+  },
+  "vfs_setup_provider_unavailable": {
+    "message": "Nextcloud 存储提供商不可用。"
+  },
+  "vfs_setup_granting": {
+    "message": "正在授予访问权限…"
+  },
+  "vfs_setup_failed": {
+    "message": "无法授予访问权限。"
+  },
+  "sharing_queue_entries_summary": {
+    "message": "项目：$1"
+  },
+  "sharing_queue_sources_summary": {
+    "message": "来源：$1"
+  },
+  "sharing_queue_total_summary": {
+    "message": "总计：$1"
+  },
+  "sharing_queue_size_unknown": {
+    "message": "未知"
+  },
+  "sharing_queue_storage_loading": {
+    "message": "正在加载目标存储空间…"
+  },
+  "sharing_queue_storage_available": {
+    "message": "$2 中有 $1 可用"
+  },
+  "sharing_queue_storage_unlimited": {
+    "message": "目标存储空间：无限制"
+  },
+  "sharing_queue_storage_unknown": {
+    "message": "目标存储空间：无法获取"
+  },
+  "sharing_queue_storage_insufficient": {
+    "message": "需要：$1 · 可用：$2"
+  },
+  "sharing_queue_expand_folder": {
+    "message": "展开文件夹 $1"
+  },
+  "sharing_queue_collapse_folder": {
+    "message": "折叠文件夹 $1"
+  },
+  "sharing_queue_remove_item": {
+    "message": "移除 $1"
+  },
+  "sharing_queue_source_group": {
+    "message": "来源：$1"
   }
 }

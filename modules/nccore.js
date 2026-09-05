@@ -39,6 +39,31 @@ const NCCore = (() => {
     return NCTalkTextUtils.normalizeBaseUrl(input);
   }
 
+  /**
+   * Build DAV roots for a resolved Nextcloud account.
+   * @param {{baseUrl:string,user:string,appPass:string,userId:string}} account
+   * @returns {{baseUrl:string,userId:string,authHeader:string,davRoot:string,uploadRoot:string,bulkUrl:string,accountIdentity:string}}
+   */
+  function buildDavAccountContext({ baseUrl, user, appPass, userId } = {}){
+    const normalizedBaseUrl = normalizeBaseUrl(baseUrl);
+    const loginName = typeof user === "string" ? user.trim() : "";
+    const password = typeof appPass === "string" ? appPass : "";
+    const canonicalUserId = typeof userId === "string" ? userId.trim() : "";
+    if (!normalizedBaseUrl || !loginName || !password || !canonicalUserId){
+      throw new TypeError("DAV account data is incomplete");
+    }
+    const encodedUserId = encodeURIComponent(canonicalUserId);
+    return Object.freeze({
+      baseUrl: normalizedBaseUrl,
+      userId: canonicalUserId,
+      authHeader: NCOcs.buildAuthHeader(loginName, password),
+      davRoot: `${normalizedBaseUrl}/remote.php/dav/files/${encodedUserId}`,
+      uploadRoot: `${normalizedBaseUrl}/remote.php/dav/uploads/${encodedUserId}`,
+      bulkUrl: `${normalizedBaseUrl}/remote.php/dav/bulk`,
+      accountIdentity: JSON.stringify([normalizedBaseUrl, canonicalUserId])
+    });
+  }
+
   function createCurrentUserIdError(code, message){
     const error = new Error(globalThis.NCLogContext.redactSensitiveText(message || bgI18n("options_test_failed")));
     error.ncCurrentUserIdCode = code || "identity";
@@ -650,6 +675,7 @@ const NCCore = (() => {
 
   return {
     normalizeBaseUrl,
+    buildDavAccountContext,
     parseNextcloudVersion,
     getCapabilitiesSnapshot,
     getRequiredCapabilities,

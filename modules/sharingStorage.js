@@ -10,12 +10,29 @@
  */
 const NCSharingStorage = (() => {
   const DEFAULT_BASE_PATH = "NC Connector";
+  const DEFAULT_EXPIRE_DAYS = 7;
   const DEFAULT_ATTACHMENT_THRESHOLD_MB = 5;
   const ATTACHMENT_LINK_TARGETS = Object.freeze({
     ZIP_DOWNLOAD: "zip_download",
     SHARE_PAGE: "share_page"
   });
   const DEFAULT_ATTACHMENT_LINK_TARGET = ATTACHMENT_LINK_TARGETS.ZIP_DOWNLOAD;
+  const SHARE_POLICY_KEYS = Object.freeze({
+    basePath: "share_base_directory",
+    shareName: "share_name_template",
+    permCreate: "share_permission_upload",
+    permWrite: "share_permission_edit",
+    permDelete: "share_permission_delete",
+    passwordEnabled: "share_set_password",
+    passwordSeparate: "share_send_password_separately",
+    passwordDeliveryMode: "share_send_password_mode",
+    secretsExpireDays: "share_secrets_expire_days",
+    expireDays: "share_expire_days",
+    attachmentLinkTarget: "attachment_link_target",
+    attachmentsAlwaysConnector: "attachments_always_via_ncconnector",
+    attachmentsMinSizeMb: "attachments_min_size_mb",
+    blockLanguage: "language_share_html_block"
+  });
   const SHARING_KEYS = {
     basePath: "sharingBasePath",
     defaultShareName: "sharingDefaultShareName",
@@ -136,9 +153,11 @@ const NCSharingStorage = (() => {
 
   return {
     DEFAULT_BASE_PATH,
+    DEFAULT_EXPIRE_DAYS,
     DEFAULT_ATTACHMENT_THRESHOLD_MB,
     ATTACHMENT_LINK_TARGETS,
     DEFAULT_ATTACHMENT_LINK_TARGET,
+    SHARE_POLICY_KEYS,
     SHARING_KEYS,
     normalizeAttachmentThresholdMb,
     isValidAttachmentLinkTarget,

@@ -146,6 +146,35 @@ function verifyAttachmentLinkTargetValues(sharingStorage){
   );
 }
 
+function verifySharePolicyKeyRegistry(sharingStorage){
+  const expected = {
+    basePath: "share_base_directory",
+    shareName: "share_name_template",
+    permCreate: "share_permission_upload",
+    permWrite: "share_permission_edit",
+    permDelete: "share_permission_delete",
+    passwordEnabled: "share_set_password",
+    passwordSeparate: "share_send_password_separately",
+    passwordDeliveryMode: "share_send_password_mode",
+    secretsExpireDays: "share_secrets_expire_days",
+    expireDays: "share_expire_days",
+    attachmentLinkTarget: "attachment_link_target",
+    attachmentsAlwaysConnector: "attachments_always_via_ncconnector",
+    attachmentsMinSizeMb: "attachments_min_size_mb",
+    blockLanguage: "language_share_html_block"
+  };
+  assertEqual(
+    JSON.stringify(sharingStorage.SHARE_POLICY_KEYS),
+    JSON.stringify(expected),
+    "Share policy keys must have one shared registry"
+  );
+  assertEqual(
+    sharingStorage.DEFAULT_EXPIRE_DAYS,
+    7,
+    "Sharing expiry must have one shared fallback"
+  );
+}
+
 function verifyAttachmentLinkTargetLockedFallback(sharingStorage, policyUi){
   const key = "attachment_link_target";
   const fallback = sharingStorage.DEFAULT_ATTACHMENT_LINK_TARGET;
@@ -342,6 +371,7 @@ function verifyConsumerGuards(){
   const talk = readText("ui/talkDialog.js");
   const sharingWizard = readText("ui/nextcloudSharingWizard.js");
   const sharing = readText("modules/ncSharing.js");
+  const shareRequestRules = readText("modules/shareRequestRules.js");
   const composeFinalize = readText("modules/bgComposeFinalize.js");
   const passwordDispatch = readText("modules/bgComposePasswordDispatch.js");
   const composeAttachments = readText("modules/bgComposeAttachments.js");
@@ -385,7 +415,7 @@ function verifyConsumerGuards(){
   const loadBasePath = functionBody(sharingWizard, "loadBasePath");
   assertCode(
     loadBasePath,
-    "NCPolicyState.resolveDefaultValue( state.policy.status, \"share\", \"share_base_directory\", localBasePath, !!rawLocalBasePath, NCPolicyState.coerceString )",
+    "NCPolicyState.resolveDefaultValue( state.policy.status, \"share\", SHARE_POLICY_KEYS.basePath, localBasePath, !!rawLocalBasePath, NCPolicyState.coerceString )",
     "Share base path must honor editable local values and locked backend values"
   );
   assertCode(
@@ -400,7 +430,7 @@ function verifyConsumerGuards(){
   );
   assertCode(
     options,
-    "name: \"sharingAttachmentsLinkTarget\", storageKey: SHARING_KEYS.attachmentsLinkTarget, domain: \"share\", key: \"attachment_link_target\"",
+    "name: \"sharingAttachmentsLinkTarget\", storageKey: SHARING_KEYS.attachmentsLinkTarget, domain: \"share\", key: SHARE_POLICY_KEYS.attachmentLinkTarget",
     "Options must bind the attachment-link target to the shared backend key"
   );
   assertCode(
@@ -415,7 +445,7 @@ function verifyConsumerGuards(){
   );
   assertCode(
     sharingWizard,
-    "name: \"attachmentLinkTarget\", key: \"attachment_link_target\"",
+    "name: \"attachmentLinkTarget\", key: SHARE_POLICY_KEYS.attachmentLinkTarget",
     "Sharing wizard must resolve the attachment-link target from the shared backend key"
   );
   assertCode(
@@ -439,14 +469,25 @@ function verifyConsumerGuards(){
   assertCode(resolveShareLanguage, "const editableShare = request?.policyEditableShare;", "Share rendering must consume language editability metadata");
   assertCode(
     resolveShareLanguage,
-    "editableShare.language_share_html_block !== false && localSetting.hasLocalValue",
+    "editableShare[languageKey] !== false && localSetting.hasLocalValue",
     "Share rendering must allow a stored language to override an editable backend default"
   );
   assertCode(resolveShareLanguage, "? localSetting.value : (policyLang || localSetting.value)", "Share rendering must keep locked/backend language precedence");
 
   assert(
-    count(sharingWizard, "policyEditableShare: state.policy.active ? state.policy.editable : null") >= 4,
-    "Sharing wizard must pass editability metadata to upload, rendering, and password dispatch"
+    count(sharingWizard, "policyEditableShare: state.policy.active ? state.policy.editable : null") >= 3,
+    "Sharing wizard must pass editability metadata to rendering and password dispatch"
+  );
+  const startUpload = functionBody(sharingWizard, "startUpload");
+  assert(
+    !startUpload.includes("policyShare:") && !startUpload.includes("policyEditableShare:"),
+    "FileLink upload must not trust a wizard policy snapshot"
+  );
+  const resolveUploadRequest = functionBody(shareRequestRules, "resolveUploadRequest");
+  assertCode(
+    resolveUploadRequest,
+    "resolveLocked( policyStatus, POLICY_KEYS.permWrite",
+    "Background upload must reapply locked share permissions"
   );
   assertCode(
     finalizeShare,
@@ -480,12 +521,12 @@ function verifyConsumerGuards(){
 
   assertCode(
     composeAttachments,
-    "NCPolicyState.resolveDefaultValue( policyStatus, \"share\", \"attachments_always_via_ncconnector\"",
+    "NCPolicyState.resolveDefaultValue( policyStatus, \"share\", NCSharingStorage.SHARE_POLICY_KEYS.attachmentsAlwaysConnector",
     "Compose attachment automation must resolve the editable backend default"
   );
   assertCode(
     composeAttachments,
-    "(!hasLocalThreshold || NCPolicyState.isLocked(policyStatus, \"share\", \"attachments_min_size_mb\"))",
+    "(!hasLocalThreshold || NCPolicyState.isLocked( policyStatus, \"share\", NCSharingStorage.SHARE_POLICY_KEYS.attachmentsMinSizeMb ))",
     "Compose attachment threshold must preserve editable local values"
   );
   assertCode(
@@ -500,7 +541,7 @@ function verifyConsumerGuards(){
   assertCode(initialPolicyDefaults, "{ localNames }", "Initial options values must pass local-value presence to the resolver");
   const initialSpecialDefaults = functionBody(options, "applyInitialSpecialPolicyDefaults");
   assertCode(initialSpecialDefaults, "\"talk_room_type\"", "Initial options policy resolution must include the Talk room type");
-  assertCode(initialSpecialDefaults, "\"attachments_always_via_ncconnector\"", "Initial options policy resolution must include attachment automation");
+  assertCode(initialSpecialDefaults, "SHARE_POLICY_KEYS.attachmentsAlwaysConnector", "Initial options policy resolution must include attachment automation");
   assertCode(initialSpecialDefaults, "!hasLocalThreshold || NCPolicyState.isLocked", "Initial attachment threshold must use backend only when local is absent or locked");
   assertCode(
     options,
@@ -546,6 +587,7 @@ function run(){
   const { policyState, policyUi } = loadPolicyApis();
   const sharingStorage = loadSharingStorage();
   verifyAttachmentLinkTargetValues(sharingStorage);
+  verifySharePolicyKeyRegistry(sharingStorage);
   verifyAttachmentLinkTargetLockedFallback(sharingStorage, policyUi);
   verifyPolicyTable(policyState, policyUi);
   verifyConsumerGuards();

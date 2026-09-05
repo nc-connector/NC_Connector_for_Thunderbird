@@ -629,6 +629,9 @@
   "sharing_error_insert_failed_close": {
     "message": "Die Freigabe konnte nicht sicher abgeschlossen werden. Schließen Sie das Freigabefenster und prüfen Sie die Nachricht, bevor Sie es erneut versuchen."
   },
+  "sharing_attachment_routing_active": {
+    "message": "Die Dateifreigabe läuft noch. Schließen Sie den Freigabevorgang ab oder das Freigabefenster, bevor Sie die Nachricht senden."
+  },
   "sharing_saved_template_unsupported": {
     "message": "Nachrichten mit einer NC-Connector-Freigabe können nicht als Thunderbird-Vorlage gespeichert oder gesendet werden. Erstellen Sie eine neue Nachricht und geben Sie die Dateien erneut frei."
   },
@@ -682,12 +685,6 @@
   },
   "sharing_files_table_status": {
     "message": "Status"
-  },
-  "sharing_button_add_files": {
-    "message": "Dateien hinzufügen..."
-  },
-  "sharing_button_add_folder": {
-    "message": "Ordner hinzufügen..."
   },
   "sharing_button_remove": {
     "message": "Entfernen"
@@ -1009,5 +1006,338 @@
   },
   "sharing_status_speed_kbps": {
     "message": "$1 KB/s"
+  },
+  "options_tab_vfs": {
+    "message": "VFS"
+  },
+  "options_vfs_provider_heading": {
+    "message": "Eigene Nextcloud"
+  },
+  "options_vfs_provider_intro": {
+    "message": "Stellt die bereits eingerichtete Nextcloud-Verbindung für freigegebene Thunderbird-Add-ons bereit."
+  },
+  "options_vfs_provider_enabled_label": {
+    "message": "NC Connector als VFS-Anbieter aktivieren"
+  },
+  "options_vfs_provider_tooltip_title": {
+    "message": "VFS-Zugriff auf Ihre Nextcloud"
+  },
+  "options_vfs_provider_tooltip_text": {
+    "message": "Nur ausdrücklich freigegebene Add-ons erhalten Lese- und Schreibzugriff. Zugangsdaten werden nicht weitergegeben."
+  },
+  "options_vfs_provider_status_label": {
+    "message": "Anbieterstatus"
+  },
+  "options_vfs_provider_status_active": {
+    "message": "Anbieter aktiv"
+  },
+  "options_vfs_provider_status_inactive": {
+    "message": "Anbieter inaktiv"
+  },
+  "options_vfs_provider_status_connection_required": {
+    "message": "Richten Sie zuerst die Nextcloud-Verbindung ein"
+  },
+  "options_vfs_provider_status_error": {
+    "message": "Anbieterfehler"
+  },
+  "options_vfs_runtime_unavailable": {
+    "message": "Die VFS-Komponenten sind nicht verfügbar."
+  },
+  "options_vfs_grants_heading": {
+    "message": "Freigegebene Add-ons"
+  },
+  "options_vfs_grants_hint": {
+    "message": "Jede Freigabe gilt für genau ein Add-on und kann hier jederzeit entzogen werden."
+  },
+  "options_vfs_access_read_write": {
+    "message": "Lesen + Schreiben"
+  },
+  "options_vfs_revoke_button": {
+    "message": "Zugriff entziehen"
+  },
+  "options_vfs_no_grants": {
+    "message": "Noch kein Add-on hat Zugriff."
+  },
+  "options_vfs_revoke_confirm": {
+    "message": "Zugriff für $1 entziehen?"
+  },
+  "options_vfs_external_heading": {
+    "message": "Externe VFS-Anbieter"
+  },
+  "options_vfs_external_intro": {
+    "message": "Dateien anderer Anbieter werden gelesen und anschließend in die Freigabe auf Ihrer Nextcloud hochgeladen."
+  },
+  "options_vfs_external_enabled_label": {
+    "message": "Externe VFS-Anbieter aktivieren"
+  },
+  "options_vfs_external_tooltip_title": {
+    "message": "Andere Speicher anbinden"
+  },
+  "options_vfs_external_tooltip_text": {
+    "message": "NC Connector erkennt kompatible VFS-Anbieter erst nach Ihrer ausdrücklichen Freigabe. Dateien werden nicht direkt zwischen den Anbietern kopiert."
+  },
+  "options_vfs_external_permission_label": {
+    "message": "Thunderbird-Berechtigung"
+  },
+  "options_vfs_external_permission_granted": {
+    "message": "Erteilt"
+  },
+  "options_vfs_external_permission_required": {
+    "message": "Nicht erteilt"
+  },
+  "options_vfs_external_permission_button": {
+    "message": "Berechtigung erteilen"
+  },
+  "options_vfs_connections_heading": {
+    "message": "Erkannte Verbindungen"
+  },
+  "options_vfs_connections_hint": {
+    "message": "Hier erscheinen kompatible VFS-Anbieter, die in Thunderbird eingerichtet und erreichbar sind."
+  },
+  "options_vfs_refresh_button": {
+    "message": "Aktualisieren"
+  },
+  "options_vfs_connect_button": {
+    "message": "Verbinden"
+  },
+  "options_vfs_disconnect_button": {
+    "message": "Trennen"
+  },
+  "options_vfs_disconnect_confirm": {
+    "message": "Verbindung zu $1 trennen?"
+  },
+  "options_vfs_no_connections": {
+    "message": "Keine VFS-Verbindung erkannt."
+  },
+  "options_vfs_connection_status_connected": {
+    "message": "Verbunden"
+  },
+  "options_vfs_connection_status_available": {
+    "message": "Verfügbar"
+  },
+  "options_vfs_connection_status_unavailable": {
+    "message": "Nicht verfügbar"
+  },
+  "options_vfs_connection_status_error": {
+    "message": "Fehler"
+  },
+  "options_vfs_loading": {
+    "message": "Wird geladen …"
+  },
+  "options_vfs_action_failed": {
+    "message": "Die VFS-Aktion konnte nicht abgeschlossen werden."
+  },
+  "vfs_error_management_permission_missing": {
+    "message": "Die Berechtigung zum Erkennen externer VFS-Anbieter fehlt."
+  },
+  "vfs_error_storage_changed": {
+    "message": "Die Speicherverbindung hat sich geändert. Wählen Sie die Dateien erneut aus."
+  },
+  "vfs_error_file_metadata_missing": {
+    "message": "Die Dateiinformationen sind unvollständig. Wählen Sie die Datei erneut aus."
+  },
+  "vfs_error_file_read_failed": {
+    "message": "Die Datei konnte nicht vom Speicheranbieter gelesen werden."
+  },
+  "vfs_error_file_changed": {
+    "message": "Die Datei wurde nach der Auswahl geändert. Wählen Sie sie erneut aus."
+  },
+  "vfs_error_invalid_path": {
+    "message": "Der ausgewählte Speicherpfad ist ungültig."
+  },
+  "vfs_error_root_not_selectable": {
+    "message": "Das Stammverzeichnis des Speichers kann nicht als Ordner ausgewählt werden."
+  },
+  "vfs_error_external_connection_missing": {
+    "message": "Die ausgewählte Speicherverbindung ist nicht mehr verfügbar."
+  },
+  "vfs_error_duplicate_path": {
+    "message": "Die Auswahl enthält denselben Pfad mehrfach."
+  },
+  "sharing_button_add_nextcloud": {
+    "message": "Aus Nextcloud ..."
+  },
+  "sharing_button_add_nextcloud_files": {
+    "message": "Dateien auswählen"
+  },
+  "sharing_button_add_nextcloud_folder": {
+    "message": "Ordner auswählen"
+  },
+  "sharing_button_add_external": {
+    "message": "Aus einem anderen Speicher ..."
+  },
+  "sharing_button_add_external_files": {
+    "message": "Dateien auswählen"
+  },
+  "sharing_button_add_external_folder": {
+    "message": "Ordner auswählen"
+  },
+  "sharing_files_table_source": {
+    "message": "Quelle"
+  },
+  "sharing_vfs_connection_heading": {
+    "message": "Speicher auswählen"
+  },
+  "sharing_vfs_connection_label": {
+    "message": "Speicher"
+  },
+  "sharing_vfs_external_unavailable": {
+    "message": "Es ist keine externe Speicherverbindung verfügbar."
+  },
+  "sharing_vfs_nextcloud_unavailable_tooltip": {
+    "message": "Nicht verfügbar. Richten Sie zuerst eine Nextcloud-Verbindung in den Add-on-Einstellungen ein."
+  },
+  "sharing_vfs_external_unavailable_tooltip": {
+    "message": "Nicht verfügbar. Aktivieren Sie unter Einstellungen > VFS externe Anbieter und verbinden Sie mindestens einen Speicher."
+  },
+  "sharing_vfs_scanning_source": {
+    "message": "Auswahl wird erfasst ($1) ..."
+  },
+  "sharing_vfs_opening_picker": {
+    "message": "Dateiauswahl wird geöffnet ..."
+  },
+  "sharing_file_type_folder": {
+    "message": "Ordner"
+  },
+  "sharing_source_nextcloud": {
+    "message": "Nextcloud-Speicher"
+  },
+  "sharing_source_external": {
+    "message": "Externer Speicher"
+  },
+  "sharing_source_local": {
+    "message": "Lokal"
+  },
+  "sharing_queue_entries_summary": {
+    "message": "Einträge: $1"
+  },
+  "sharing_queue_sources_summary": {
+    "message": "Quellen: $1"
+  },
+  "sharing_queue_total_summary": {
+    "message": "Gesamt: $1"
+  },
+  "sharing_queue_size_unknown": {
+    "message": "unbekannt"
+  },
+  "sharing_queue_storage_loading": {
+    "message": "Zielspeicher: wird geladen ..."
+  },
+  "sharing_queue_storage_available": {
+    "message": "Zielspeicher: $1 frei von $2"
+  },
+  "sharing_queue_storage_unlimited": {
+    "message": "Zielspeicher: unbegrenzt"
+  },
+  "sharing_queue_storage_unknown": {
+    "message": "Zielspeicher: nicht ermittelbar"
+  },
+  "sharing_queue_storage_insufficient": {
+    "message": "Benötigt: $1 · Verfügbar: $2"
+  },
+  "sharing_queue_expand_folder": {
+    "message": "Ordner „$1“ aufklappen"
+  },
+  "sharing_queue_collapse_folder": {
+    "message": "Ordner „$1“ zuklappen"
+  },
+  "sharing_queue_remove_item": {
+    "message": "„$1“ entfernen"
+  },
+  "sharing_queue_source_group": {
+    "message": "Quelle: $1"
+  },
+  "sharing_status_fetching_source": {
+    "message": "Datei wird gelesen ..."
+  },
+  "sharing_status_copying_source": {
+    "message": "Wird kopiert ..."
+  },
+  "sharing_status_preparing_source": {
+    "message": "Wird vorbereitet ..."
+  },
+  "sharing_status_copying_sources": {
+    "message": "Nextcloud-Elemente werden kopiert ($1 / $2) ..."
+  },
+  "sharing_status_fetching_sources": {
+    "message": "Dateien werden aus dem Speicher gelesen ($1 / $2) ..."
+  },
+  "vfs_setup_title": {
+    "message": "Nextcloud-Zugriff"
+  },
+  "vfs_setup_heading": {
+    "message": "Zugriff auf Nextcloud erlauben?"
+  },
+  "vfs_setup_access_heading": {
+    "message": "Lese- und Schreibzugriff"
+  },
+  "vfs_setup_access_read": {
+    "message": "Dateien und Ordner durchsuchen und lesen"
+  },
+  "vfs_setup_access_write": {
+    "message": "Dateien und Ordner erstellen und ändern"
+  },
+  "vfs_setup_access_delete": {
+    "message": "Dateien und Ordner löschen"
+  },
+  "vfs_setup_allow": {
+    "message": "Zugriff erlauben"
+  },
+  "vfs_setup_request": {
+    "message": "$1 fordert Zugriff auf diesen Nextcloud-Speicher an."
+  },
+  "vfs_setup_account": {
+    "message": "Nextcloud-Konto: $1"
+  },
+  "vfs_setup_invalid_request": {
+    "message": "Die Zugriffsanfrage ist ungültig."
+  },
+  "vfs_setup_provider_unavailable": {
+    "message": "Der Nextcloud-Speicheranbieter ist nicht verfügbar."
+  },
+  "vfs_setup_granting": {
+    "message": "Zugriff wird erteilt ..."
+  },
+  "vfs_setup_failed": {
+    "message": "Der Zugriff konnte nicht erteilt werden."
+  },
+  "sharing_queue_entries_summary": {
+    "message": "Einträge: $1"
+  },
+  "sharing_queue_sources_summary": {
+    "message": "Quellen: $1"
+  },
+  "sharing_queue_total_summary": {
+    "message": "Gesamt: $1"
+  },
+  "sharing_queue_size_unknown": {
+    "message": "unbekannt"
+  },
+  "sharing_queue_storage_loading": {
+    "message": "Zielspeicher wird geladen ..."
+  },
+  "sharing_queue_storage_available": {
+    "message": "$1 frei von $2"
+  },
+  "sharing_queue_storage_unlimited": {
+    "message": "Zielspeicher: unbegrenzt"
+  },
+  "sharing_queue_storage_unknown": {
+    "message": "Zielspeicher: nicht ermittelbar"
+  },
+  "sharing_queue_storage_insufficient": {
+    "message": "Benötigt: $1 · Verfügbar: $2"
+  },
+  "sharing_queue_expand_folder": {
+    "message": "Ordner $1 aufklappen"
+  },
+  "sharing_queue_collapse_folder": {
+    "message": "Ordner $1 zuklappen"
+  },
+  "sharing_queue_remove_item": {
+    "message": "$1 entfernen"
+  },
+  "sharing_queue_source_group": {
+    "message": "Quelle: $1"
   }
 }

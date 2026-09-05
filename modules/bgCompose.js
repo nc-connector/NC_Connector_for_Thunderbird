@@ -363,6 +363,11 @@ browser.compose.onBeforeSend.addListener(async (tab, details) => {
   if (!Number.isInteger(tabId) || tabId <= 0){
     return {};
   }
+  if (isComposeAttachmentRoutingActive(tabId)){
+    L("compose send blocked by attachment routing", { tabId });
+    void showComposeShareBlockedNotification("sharing_attachment_routing_active");
+    return { cancel: true };
+  }
   if (isComposeFinalizeTransactionActive(tabId)){
     void showComposeShareBlockedNotification();
     return { cancel: true };
@@ -731,6 +736,7 @@ async function handleComposeWindowRemoved(windowId){
     });
     resolveAttachmentPrompt(promptId, "dismiss", "prompt_window_closed");
   }
+  await releaseComposeAttachmentWizard(windowId, "wizard_window_closed");
   if (SHARING_WIZARD_CLEANUP_BY_WINDOW.has(windowId)){
     const cleanupId = SHARING_WIZARD_CLEANUP_BY_WINDOW.get(windowId)?.cleanupId || "";
     try{

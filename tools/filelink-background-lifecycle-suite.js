@@ -172,6 +172,13 @@ async function createCleanupHarness(deleteRemotePath, overrides = {}){
     },
     structuredClone,
     COMPOSE_SHARE_DRAFT_ID_PATTERN: /^[A-Za-z0-9_-]{16,80}$/,
+    SHARE_CLEANUP_RETRY_DELAYS_MS: Object.freeze([
+      2000,
+      5000,
+      10000,
+      30000,
+      60000
+    ]),
     createSecureRuntimeId: nextRuntimeId,
     bgShortId: (value, maxLength = 24) => String(value || "").slice(0, maxLength),
     SHARING_WIZARD_CLEANUP_BY_WINDOW: wizardEntries,
@@ -184,15 +191,25 @@ async function createCleanupHarness(deleteRemotePath, overrides = {}){
         user: TEST_LOGIN,
         appPass: TEST_APP_PASSWORD
       }),
-      getCurrentUserId: async () => TEST_USER_ID
+      getCurrentUserId: async () => TEST_USER_ID,
+      buildDavAccountContext({ baseUrl, user, appPass, userId }){
+        const normalizedBaseUrl = normalizeTestBaseUrl(baseUrl);
+        const encodedUserId = encodeURIComponent(userId);
+        return Object.freeze({
+          baseUrl: normalizedBaseUrl,
+          userId,
+          authHeader: `Basic ${user}:${appPass}`,
+          davRoot: `${normalizedBaseUrl}/remote.php/dav/files/${encodedUserId}`,
+          uploadRoot: `${normalizedBaseUrl}/remote.php/dav/uploads/${encodedUserId}`,
+          bulkUrl: `${normalizedBaseUrl}/remote.php/dav/bulk`,
+          accountIdentity: JSON.stringify([normalizedBaseUrl, userId])
+        });
+      }
     },
     NCHostPermissions: {
       requireOriginPermission: async () => true
     },
-    NCOcs: {
-      buildAuthHeader: (user, appPass) => `Basic ${user}:${appPass}`
-    },
-    NCFileLinkDav: {
+    NCNextcloudDav: {
       normalizeRelativePath: normalizeTestRelativePath,
       buildFileUrl: buildTestFileUrl,
       deleteRemotePath,
@@ -208,9 +225,6 @@ async function createCleanupHarness(deleteRemotePath, overrides = {}){
         clearedIndeterminate.push(options);
         return true;
       }
-    },
-    NCSharing: {
-      deleteShareFolder: async () => {}
     },
     browser: {
       ...browserOverrides,
@@ -284,6 +298,64 @@ async function checkCleanupRetry(){
   assert(!cleanup.composeEntries.has(12), "A successful retry must clear compose cleanup state");
   assert(clock.pendingCount() === 0, "Successful cleanup must leave no retry timer");
 
+  const persistentClock = createFakeClock(1500);
+  let persistentAttempts = 0;
+  const persistentCleanup = await createCleanupHarness(async () => {
+    persistentAttempts++;
+    if (persistentAttempts === 1){
+      throw new Error("offline");
+    }
+    return true;
+  }, {
+    setTimeout: persistentClock.setTimeout,
+    clearTimeout: persistentClock.clearTimeout
+  });
+  await persistentCleanup.context.armSharingWizardRemoteCleanup(
+    115,
+    createCleanupPayload("Persistent")
+  );
+  const persistentGroupId = persistentCleanup.wizardEntries.get(115).cleanupId;
+  await persistentCleanup.context.markPersistentShareCleanupPending(
+    persistentGroupId,
+    "test_retry_schedule"
+  );
+  assert(
+    persistentClock.pendingCount() === 1,
+    "Persistent cleanup must schedule its first attempt"
+  );
+  persistentClock.advance(1999);
+  await flushMicrotasks(10);
+  assert(
+    persistentAttempts === 0,
+    "Persistent cleanup must wait for the first two-second delay"
+  );
+  persistentClock.advance(1);
+  await flushMicrotasks(30);
+  assert(
+    persistentAttempts === 1 && persistentClock.pendingCount() === 1,
+    "A failed persistent cleanup attempt must schedule the five-second retry"
+  );
+  persistentClock.advance(4999);
+  await flushMicrotasks(10);
+  assert(
+    persistentAttempts === 1,
+    "Persistent cleanup must wait for the full five-second retry delay"
+  );
+  persistentClock.advance(1);
+  await flushMicrotasks(40);
+  assert(
+    persistentAttempts === 2,
+    "The persistent cleanup retry must run after five seconds"
+  );
+  assert(
+    !persistentCleanup.context.getPersistentShareCleanupGroup(persistentGroupId),
+    "Successful persistent cleanup must remove its stored group"
+  );
+  assert(
+    persistentClock.pendingCount() === 0,
+    "Successful persistent cleanup must leave no retry timer"
+  );
+
   const multiClock = createFakeClock(2000);
   const multiCalls = [];
   let secondShareAttempts = 0;
@@ -344,10 +416,39 @@ async function checkCleanupRetry(){
 
 async function checkCleanupGenerations(){
   const deleteCalls = [];
+  let descriptorlessFallbackCalls = 0;
   const cleanup = await createCleanupHarness(async (options) => {
     deleteCalls.push(options);
     return true;
+  }, {
+    NCSharing: {
+      async deleteShareFolder(){
+        descriptorlessFallbackCalls++;
+      }
+    }
   });
+  const descriptorlessEntry = {
+    cleanupId: "descriptorless-cleanup",
+    folderInfo: { relativeFolder: "NC Connector/Descriptorless" },
+    retryTimerId: null
+  };
+  cleanup.wizardEntries.set(6, descriptorlessEntry);
+  const descriptorlessRemoved = await cleanup.context.deleteSharingWizardRemoteCleanupNow(
+    6,
+    "invalid_descriptor",
+    descriptorlessEntry.cleanupId
+  );
+  assert(
+    descriptorlessRemoved === false
+      && cleanup.wizardEntries.get(6) === descriptorlessEntry,
+    "Descriptorless cleanup state must fail closed and remain available for diagnosis"
+  );
+  assert(
+    descriptorlessFallbackCalls === 0 && deleteCalls.length === 0,
+    "Descriptorless cleanup state must not delete through a current-account fallback"
+  );
+  cleanup.wizardEntries.delete(6);
+
   const payload = createCleanupPayload("Share", {
     tabId: 17,
     authHeader: "Basic original"
@@ -385,7 +486,7 @@ async function checkCleanupGenerations(){
   );
 
   let reservationCleanup = null;
-  cleanup.context.NCFileLinkDav.deleteRootReservation = async (options) => {
+  cleanup.context.NCNextcloudDav.deleteRootReservation = async (options) => {
     reservationCleanup = options;
     return "target";
   };
@@ -410,7 +511,7 @@ async function checkCleanupGenerations(){
   );
 
   let finishDelete;
-  cleanup.context.NCFileLinkDav.deleteRemotePath = () => new Promise((resolve) => {
+  cleanup.context.NCNextcloudDav.deleteRemotePath = () => new Promise((resolve) => {
     finishDelete = resolve;
   });
   await cleanup.context.armSharingWizardRemoteCleanup(
@@ -436,7 +537,7 @@ async function checkCleanupGenerations(){
   assert(cleanup.wizardEntries.get(8) === replacement, "The newer wizard generation must remain armed");
 
   let composeDeleteCount = 0;
-  cleanup.context.NCFileLinkDav.deleteRemotePath = async () => {
+  cleanup.context.NCNextcloudDav.deleteRemotePath = async () => {
     composeDeleteCount++;
     return true;
   };
@@ -513,14 +614,35 @@ function createPort(){
 
 async function createBackgroundHarness({
   deleteRemotePath = async () => true,
-  createFileLink
+  createFileLink,
+  prepareFileLinkRequest = (request) => ({ request, sourcePlan: {} })
 } = {}){
   let connectListener = null;
   let windowRemovedListener = null;
+  const requestContexts = new Map();
   const cleanup = await createCleanupHarness(deleteRemotePath, {
+    SHARING_WIZARD_REQUEST_BY_WINDOW: requestContexts,
+    getSharingWizardRequestContext: (windowId, tabId) => requestContexts.get(windowId) || {
+      windowId,
+      tabId,
+      attachmentMode: false
+    },
+    clearSharingWizardRequestContext: (windowId) => requestContexts.delete(windowId),
+    NCPolicyRuntime: {
+      getPolicyStatus: async () => null
+    },
+    NCPolicyState: {
+      isDomainActive: () => false
+    },
+    NCShareRequestRules: {
+      resolveUploadRequest: (request, context) => ({
+        ...request,
+        attachmentMode: context?.attachmentMode === true
+      })
+    },
     NCSharing: {
-      deleteShareFolder: async () => {},
-      createFileLink
+      prepareFileLinkRequest,
+      createFileLink: (prepared) => createFileLink(prepared.request)
     },
     browser: {
       runtime: {
@@ -544,11 +666,49 @@ async function createBackgroundHarness({
     context: cleanup.context,
     wizardEntries: cleanup.wizardEntries,
     connect: (port) => connectListener(port),
-    removeWindow: (windowId) => windowRemovedListener(windowId)
+    removeWindow: (windowId) => windowRemovedListener(windowId),
+    requestContexts
   };
 }
 
 async function checkBackgroundAbort(){
+  let invalidCleanupCalls = 0;
+  let invalidCreateCalls = 0;
+  const invalid = await createBackgroundHarness({
+    deleteRemotePath: async () => {
+      invalidCleanupCalls++;
+      return true;
+    },
+    prepareFileLinkRequest: () => {
+      throw new Error("file_link_queue_path_conflict");
+    },
+    createFileLink: async () => {
+      invalidCreateCalls++;
+      return {};
+    }
+  });
+  invalid.wizardEntries.set(20, {
+    cleanupId: "invalid-cleanup",
+    folderInfo: { relativeFolder: "NC Connector/Old" },
+    cleanupTarget: {
+      url: "https://cloud.example.test/remote.php/dav/files/user/NC%20Connector/Old",
+      authHeader: "Basic old"
+    }
+  });
+  const invalidPort = createPort();
+  invalid.connect(invalidPort);
+  invalidPort.emitMessage({
+    type: "start",
+    windowId: 20,
+    tabId: 30,
+    request: { files: [] }
+  });
+  await flushMicrotasks();
+  assert(
+    invalidCleanupCalls === 0 && invalidCreateCalls === 0,
+    "An invalid queue must fail before any remote cleanup or upload mutation"
+  );
+
   let uploadSignal = null;
   let createCalls = 0;
   const background = await createBackgroundHarness({

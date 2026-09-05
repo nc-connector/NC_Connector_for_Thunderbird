@@ -153,5 +153,18 @@ It is intended to guide ongoing and future maintenance.
 - Experiments should look **planned**, not experimental.
 - Avoid legacy or obsolete references (e.g. XUL in Thunderbird ≥ 128).
 
-_Last updated for 3.3.0 worktree._
+---
 
+## 13. VFS Integration Constraints
+
+- Vendor the Thunderbird VFS Toolkit from one pinned upstream base plus explicitly documented upstream PR commits. Vendored runtime files must match that combined upstream source after LF normalization; do not carry NC Connector-specific functional or CSS patches.
+- Keep VFS business logic in ordinary WebExtension/background modules; do not add an Experiment API for storage access.
+- Use the existing NC Connector account as the sole Nextcloud credential owner. Never duplicate credentials in Toolkit connection or queue records.
+- A provider grant must be explicit, revocable, bound to the verified runtime sender and exact storage ID, and invalidated when server or canonical user changes.
+- Full provider read/write capabilities must be stated in the grant UI. External-provider discovery must remain disabled by default and behind Thunderbird's optional `management` permission.
+- Collect and validate the complete mixed-source queue before the first upload mutation. Preserve folders and empty directories.
+- Same-Nextcloud sources must use server-side copy and remain untouched. External sources may exist as one in-memory Toolkit `File` during transfer but must not be persisted or staged on disk.
+- Cancellation and failures may clean only NC Connector's generated share root or partial provider mutations reported by the Toolkit contract. They must never delete or move a selected source.
+- Do not add fallback transfer paths that hide protocol or provider failures.
+
+_Last updated for the current development branch._

@@ -19,8 +19,8 @@
   });
   let pendingUploadScroll = null;
   let uploadRenderTimer = null;
+  let queueView = null;
   const fileEntriesById = new Map();
-  const fileRowsById = new Map();
   const pendingUploadRowIds = new Set();
   const TOTAL_STEPS = 4;
   const ATTACHMENT_DEFAULT_SHARE_NAME = "email_attachment";
@@ -68,7 +68,6 @@
   const state = {
     currentStep: 1,
     files: [],
-    selectedFileId: null,
     basePath: '',
     shareContext: createShareContext(),
     defaults: {
@@ -84,6 +83,24 @@
     },
     passwordPolicy: null,
     shareFolderCheckInProgress: false,
+    sourceSelectionInProgress: false,
+    sourceSelectionPort: null,
+    vfsPickerReturnFocusSeen: false,
+    skipNextVfsFocusRefresh: false,
+    vfsAvailability: {
+      nextcloud: false,
+      external: false,
+      destinationRef: ''
+    },
+    destinationStorage: {
+      status: 'idle',
+      state: 'unknown',
+      usage: null,
+      quota: null,
+      available: null,
+      fetchedAt: 0,
+      requestId: 0
+    },
     uploadInProgress: false,
     uploadCompleted: false,
     uploadResult: null,
@@ -91,22 +108,14 @@
     finalizeStarted: false,
     finalizeInProgress: false,
     finalizeRetryAllowed: false,
-    finalizeCloseOnly: false,
     finalized: false,
-    finalizeProgress: {
-      detailsUpdated: false,
-      composeCleanupArmed: false,
-      blockInserted: false,
-      passwordDispatchRegistered: false,
-      wizardCleanupCleared: false
-    },
     tabId: null,
     launchContextId: null,
+    launchContextAdopted: false,
     mode: 'default',
     attachmentReason: null,
     debugEnabled: false,
     wizardWindowId: 0,
-    pathColumnScrollLeft: 0,
     policy: {
       status: null,
       active: false,
@@ -119,30 +128,31 @@
   const dom = {};
   const i18n = NCI18n.translate;
   const wizardTranslate = (key, fallback = "") => i18n(key) || fallback || "";
-  const DEFAULT_EXPIRE_DAYS = 7;
+  const SHARE_POLICY_KEYS = NCSharingStorage.SHARE_POLICY_KEYS;
+  const DEFAULT_EXPIRE_DAYS = NCSharingStorage.DEFAULT_EXPIRE_DAYS;
   const SHARE_DEFAULT_POLICY_BINDINGS = [
-    { name: "shareName", key: "share_name_template", type: "string" },
-    { name: "permCreate", key: "share_permission_upload", type: "boolean" },
-    { name: "permWrite", key: "share_permission_edit", type: "boolean" },
-    { name: "permDelete", key: "share_permission_delete", type: "boolean" },
-    { name: "passwordEnabled", key: "share_set_password", type: "boolean" },
-    { name: "passwordSeparate", key: "share_send_password_separately", type: "boolean" },
+    { name: "shareName", key: SHARE_POLICY_KEYS.shareName, type: "string" },
+    { name: "permCreate", key: SHARE_POLICY_KEYS.permCreate, type: "boolean" },
+    { name: "permWrite", key: SHARE_POLICY_KEYS.permWrite, type: "boolean" },
+    { name: "permDelete", key: SHARE_POLICY_KEYS.permDelete, type: "boolean" },
+    { name: "passwordEnabled", key: SHARE_POLICY_KEYS.passwordEnabled, type: "boolean" },
+    { name: "passwordSeparate", key: SHARE_POLICY_KEYS.passwordSeparate, type: "boolean" },
     {
       name: "passwordDeliveryMode",
-      key: "share_send_password_mode",
+      key: SHARE_POLICY_KEYS.passwordDeliveryMode,
       type: "string",
       fallback: NCSharePasswordDelivery.MODE_PLAIN,
       normalize: (value, fallback) => NCSharePasswordDelivery.coerceMode(value, fallback)
     },
     {
       name: "expireDays",
-      key: "share_expire_days",
+      key: SHARE_POLICY_KEYS.expireDays,
       type: "int",
       normalize: (value, fallback) => NCTalkTextUtils.normalizeExpireDays(value, fallback)
     },
     {
       name: "attachmentLinkTarget",
-      key: "attachment_link_target",
+      key: SHARE_POLICY_KEYS.attachmentLinkTarget,
       type: "string",
       fallback: NCSharingStorage.DEFAULT_ATTACHMENT_LINK_TARGET,
       lockedFallback: NCSharingStorage.DEFAULT_ATTACHMENT_LINK_TARGET,
@@ -186,6 +196,8 @@
     }
     setWizardReady(false);
     NCTalkDomI18n.translatePage(i18n, { titleKey: "sharing_dialog_title" });
+    dom.vfsConnectionList?.setAttribute('aria-label', i18n('sharing_vfs_connection_label'));
+    initializeQueueView();
     try{
       state.tabId = parseTabId();
       state.launchContextId = parseLaunchContextId();
@@ -209,23 +221,42 @@
       }catch(error){
         logUiError('init', error);
       }
-      await loadLaunchContext();
+      const launchContextLoaded = await loadLaunchContext();
+      if (!launchContextLoaded){
+        return;
+      }
+      await refreshVfsSourceAvailability();
       if (state.mode === "attachments"){
         await applyAttachmentModeDefaults();
       }else{
         setDefaultShareName();
       }
-      renderFileTable();
+      renderFileQueue();
       updateStep(state.mode === "attachments" ? 3 : 1);
       updateAttachmentModeInfo();
+      const launchContextAdopted = await adoptAttachmentLaunchContext();
+      if (!launchContextAdopted){
+        return;
+      }
       log('Wizard initialized', {
         tabId: state.tabId,
         mode: state.mode,
         launchContextId: state.launchContextId || ""
       });
+    }catch(error){
+      if (!state.launchContextId || state.launchContextAdopted){
+        throw error;
+      }
+      logUiError('attachment wizard bootstrap', error);
+      await rejectAttachmentLaunchContext(
+        error?.message || 'attachment_wizard_bootstrap_failed'
+      );
+      await closeWizardWindow();
     }finally{
-      setWizardReady(true);
-      setupWindowSizing();
+      if (!isPageUnloading){
+        setWizardReady(true);
+        setupWindowSizing();
+      }
     }
   }
 
@@ -267,12 +298,29 @@
     dom.basePathLabel = document.getElementById('basePathLabel');
     dom.addFilesBtn = document.getElementById('addFilesBtn');
     dom.addFolderBtn = document.getElementById('addFolderBtn');
-    dom.removeFileBtn = document.getElementById('removeFileBtn');
+    dom.localSourceAction = document.getElementById('localSourceAction');
+    dom.nextcloudSourceAction = document.getElementById('nextcloudSourceAction');
+    dom.externalSourceAction = document.getElementById('externalSourceAction');
+    dom.localSourceSummary = dom.localSourceAction?.querySelector('summary') || null;
+    dom.nextcloudSourceSummary = dom.nextcloudSourceAction?.querySelector('summary') || null;
+    dom.externalSourceSummary = dom.externalSourceAction?.querySelector('summary') || null;
+    dom.addNextcloudFilesBtn = document.getElementById('addNextcloudFilesBtn');
+    dom.addNextcloudFolderBtn = document.getElementById('addNextcloudFolderBtn');
+    dom.addExternalFilesBtn = document.getElementById('addExternalFilesBtn');
+    dom.addExternalFolderBtn = document.getElementById('addExternalFolderBtn');
     dom.fileInput = document.getElementById('fileInput');
     dom.folderInput = document.getElementById('folderInput');
-    dom.fileTableBody = document.getElementById('fileTableBody');
-    dom.fileTableWrapper = document.querySelector('.file-table-wrapper');
+    dom.vfsConnectionDialog = document.getElementById('vfsConnectionDialog');
+    dom.vfsConnectionList = document.getElementById('vfsConnectionList');
+    dom.vfsProviderFallbackIcon = document.getElementById('vfsProviderFallbackIcon');
+    dom.queueSummaryBar = document.getElementById('queueSummaryBar');
+    dom.queueSummaryText = document.getElementById('queueSummaryText');
+    dom.queueStorageText = document.getElementById('queueStorageText');
+    dom.fileQueueTree = document.getElementById('fileQueueTree');
+    dom.fileQueueWrapper = document.getElementById('fileQueueWrapper');
     dom.fileEmptyPlaceholder = document.getElementById('fileEmptyPlaceholder');
+    dom.queueToggleIcon = document.getElementById('queueToggleIcon');
+    dom.queueRemoveIcon = document.getElementById('queueRemoveIcon');
     dom.overallUploadProgress = document.getElementById('overallUploadProgress');
     dom.overallUploadProgressBar = document.getElementById('overallUploadProgressBar');
     dom.uploadStatus = document.getElementById('uploadStatus');
@@ -286,6 +334,44 @@
     dom.uploadBtn = document.getElementById('uploadBtn');
     dom.finishBtn = document.getElementById('finishBtn');
     dom.cancelBtn = document.getElementById('cancelBtn');
+  }
+
+  function cloneTemplateContent(template){
+    return template?.content?.firstElementChild?.cloneNode(true) || null;
+  }
+
+  function getQueueSourceIcon(source){
+    const summary = source?.kind === 'nextcloud'
+      ? dom.nextcloudSourceSummary
+      : (source?.kind === 'external-vfs'
+        ? dom.externalSourceSummary
+        : dom.localSourceSummary);
+    const icon = summary?.querySelector('.source-icon')?.cloneNode(true) || null;
+    icon?.classList.remove('source-icon');
+    return icon;
+  }
+
+  function initializeQueueView(){
+    if (!globalThis.NCSharingQueueTree?.createView){
+      throw new Error('sharing_queue_tree_runtime_unavailable');
+    }
+    queueView = NCSharingQueueTree.createView({
+      container: dom.fileQueueTree,
+      scrollContainer: dom.fileQueueWrapper,
+      getSourceLabel: getEntrySourceLabel,
+      getTargetPath: getTargetRelativePath,
+      formatSize: formatTransferSize,
+      buildStatusNode,
+      canRemove: () => true,
+      onRemove: (_node, removalTarget) => removeQueueEntry(removalTarget),
+      getSourceIcon: getQueueSourceIcon,
+      getToggleContent: () => cloneTemplateContent(dom.queueToggleIcon),
+      getRemoveContent: () => cloneTemplateContent(dom.queueRemoveIcon),
+      getSourceAriaLabel: (source) => i18n('sharing_queue_source_group', [source.label]),
+      getExpandAriaLabel: (node) => i18n('sharing_queue_expand_folder', [node.label]),
+      getCollapseAriaLabel: (node) => i18n('sharing_queue_collapse_folder', [node.label]),
+      getRemoveAriaLabel: (node) => i18n('sharing_queue_remove_item', [node.label])
+    });
   }
 
   function parseTabId(){
@@ -368,16 +454,44 @@
       log('note toggle', dom.noteToggle.checked);
     });
     dom.addFilesBtn.addEventListener('click', () => {
+      closeSourceMenus();
       log('File dialog opened');
       dom.fileInput.click();
     });
     dom.addFolderBtn.addEventListener('click', () => {
+      closeSourceMenus();
       log('Folder dialog opened');
       dom.folderInput?.click();
     });
+    dom.addNextcloudFilesBtn?.addEventListener('click', () => {
+      closeSourceMenus();
+      void startVfsSelection({ sourceKind: 'nextcloud', entryKind: 'file' });
+    });
+    dom.addNextcloudFolderBtn?.addEventListener('click', () => {
+      closeSourceMenus();
+      void startVfsSelection({ sourceKind: 'nextcloud', entryKind: 'folder' });
+    });
+    dom.addExternalFilesBtn?.addEventListener('click', () => {
+      closeSourceMenus();
+      void startVfsSelection({ sourceKind: 'external-vfs', entryKind: 'file' });
+    });
+    dom.addExternalFolderBtn?.addEventListener('click', () => {
+      closeSourceMenus();
+      void startVfsSelection({ sourceKind: 'external-vfs', entryKind: 'folder' });
+    });
+    [
+      dom.localSourceSummary,
+      dom.nextcloudSourceSummary,
+      dom.externalSourceSummary
+    ].forEach((summary) => {
+      summary?.addEventListener('click', (event) => {
+        if (summary.getAttribute('aria-disabled') === 'true'){
+          event.preventDefault();
+        }
+      });
+    });
     dom.fileInput.addEventListener('change', (event) => handleFileSelection(event, 'file'));
     dom.folderInput?.addEventListener('change', (event) => handleFileSelection(event, 'folder'));
-    dom.removeFileBtn.addEventListener('click', removeSelectedEntry);
     dom.backBtn.addEventListener('click', () => {
       if (state.currentStep > 1 && !state.uploadInProgress){
         updateStep(state.currentStep - 1);
@@ -399,7 +513,22 @@
       }
     });
     dom.cancelBtn.addEventListener('click', handleCancel);
+    window.addEventListener('focus', handleWindowFocus);
     log('Event handlers registered');
+  }
+
+  function handleWindowFocus(){
+    if (state.sourceSelectionInProgress){
+      state.vfsPickerReturnFocusSeen = true;
+      return;
+    }
+    if (state.skipNextVfsFocusRefresh){
+      state.skipNextVfsFocusRefresh = false;
+      return;
+    }
+    if (!state.uploadInProgress && !state.finalizeStarted){
+      void refreshVfsSourceAvailability();
+    }
   }
 
   async function loadDefaultSettings(){
@@ -495,8 +624,11 @@
       storedMode: stored[SHARING_KEYS.defaultPasswordDeliveryMode] ?? "",
       defaultMode: state.defaults.passwordDeliveryMode,
       localDefault: localDefaultNames.has("passwordDeliveryMode"),
-      policyMode: NCPolicyState.readDomainValue(state.policy.share, "share_send_password_mode"),
-      policyEditable: state.policy.editable?.share_send_password_mode,
+      policyMode: NCPolicyState.readDomainValue(
+        state.policy.share,
+        SHARE_POLICY_KEYS.passwordDeliveryMode
+      ),
+      policyEditable: state.policy.editable?.[SHARE_POLICY_KEYS.passwordDeliveryMode],
       secretsUnavailable: NCSharePasswordDelivery.isSecretsUnavailable(state.policy.status),
       separateDefault: !!state.defaults.passwordSeparate
     });
@@ -504,8 +636,11 @@
       storedTarget: stored[SHARING_KEYS.attachmentsLinkTarget] ?? "",
       effectiveTarget: state.defaults.attachmentLinkTarget,
       localDefault: localDefaultNames.has("attachmentLinkTarget"),
-      policyTarget: NCPolicyState.readDomainValue(state.policy.share, "attachment_link_target"),
-      policyEditable: state.policy.editable?.attachment_link_target
+      policyTarget: NCPolicyState.readDomainValue(
+        state.policy.share,
+        SHARE_POLICY_KEYS.attachmentLinkTarget
+      ),
+      policyEditable: state.policy.editable?.[SHARE_POLICY_KEYS.attachmentLinkTarget]
     });
   }
   /**
@@ -522,7 +657,7 @@
       const basePath = NCPolicyState.resolveDefaultValue(
         state.policy.status,
         "share",
-        "share_base_directory",
+        SHARE_POLICY_KEYS.basePath,
         localBasePath,
         !!rawLocalBasePath,
         NCPolicyState.coerceString
@@ -566,78 +701,141 @@
 
   /**
    * Load launch context passed by the background.
-   * @returns {Promise<void>}
+   * @returns {Promise<boolean>}
    */
   async function loadLaunchContext(){
     if (!state.launchContextId){
       log('Launch context not set (normal start)');
-      return;
+      return true;
     }
     try{
       log('Request launch context', { contextId: state.launchContextId });
       const response = await browser.runtime.sendMessage({
         type: "sharing:getLaunchContext",
-        payload: { contextId: state.launchContextId }
+        payload: {
+          contextId: state.launchContextId,
+          tabId: state.tabId,
+          windowId: state.wizardWindowId
+        }
       });
       if (!response?.ok || !response.context){
-        log('Launch context not found', state.launchContextId);
-        return;
+        throw new Error(response?.error || 'attachment_launch_context_missing');
       }
       const context = response.context;
       log('Launch context received', {
         mode: context.mode || '',
         attachmentCount: Array.isArray(context.attachments) ? context.attachments.length : 0
       });
-      if (context.mode === "attachments"){
-        state.mode = "attachments";
-        state.attachmentReason = context.reason || null;
-        preloadAttachmentEntries(context.attachments);
+      if (context.mode !== "attachments"){
+        throw new Error('attachment_launch_context_mode_invalid');
       }
+      const expectedCount = Number(context.expectedAttachmentCount);
+      preloadAttachmentEntries(context.attachments, expectedCount);
+      state.mode = "attachments";
+      state.attachmentReason = context.reason || null;
+      return true;
     }catch(error){
       logUiError('launch context', error);
       log('Launch context error', error?.message || String(error));
+      await rejectAttachmentLaunchContext(error?.message || 'attachment_launch_context_invalid');
+      await closeWizardWindow();
+      return false;
+    }
+  }
+
+  async function adoptAttachmentLaunchContext(){
+    if (!state.launchContextId || state.mode !== "attachments"){
+      return true;
+    }
+    try{
+      const response = await browser.runtime.sendMessage({
+        type: "sharing:adoptAttachmentLaunchContext",
+        payload: {
+          contextId: state.launchContextId,
+          tabId: state.tabId,
+          windowId: state.wizardWindowId,
+          attachmentCount: state.files.length
+        }
+      });
+      if (!response?.ok){
+        throw new Error(response?.error || 'attachment_launch_context_adoption_failed');
+      }
+      state.launchContextAdopted = true;
+      log('Attachment launch context adopted', { files: state.files.length });
+      return true;
+    }catch(error){
+      logUiError('launch context adoption', error);
+      await rejectAttachmentLaunchContext(error?.message || 'attachment_launch_context_adoption_failed');
+      await closeWizardWindow();
+      return false;
+    }
+  }
+
+  async function rejectAttachmentLaunchContext(reason){
+    if (!state.launchContextId || state.launchContextAdopted){
+      return;
+    }
+    try{
+      await browser.runtime.sendMessage({
+        type: "sharing:rejectAttachmentLaunchContext",
+        payload: {
+          contextId: state.launchContextId,
+          tabId: state.tabId,
+          windowId: state.wizardWindowId,
+          reason: String(reason || 'attachment_launch_context_rejected')
+        }
+      });
+    }catch(error){
+      logUiError('launch context rejection', error);
     }
   }
 
   /**
    * Fill the upload queue from attachment launch context.
    * @param {Array<object>} attachments
+   * @param {number} expectedCount
    */
-  function preloadAttachmentEntries(attachments){
+  function preloadAttachmentEntries(attachments, expectedCount){
     const list = Array.isArray(attachments) ? attachments : [];
     const validCount = list.filter((item) => item && item.file instanceof File).length;
     log('Attachment launch context preload', {
       received: list.length,
       valid: validCount
     });
-    state.files = list
-      .filter((item) => item && item.file instanceof File)
-      .map((item) => {
-        const file = item.file;
-        const fileName = NCSharing.sanitizeFileName(item.name || file.name || 'File');
-        const sourceDisplayPath = resolveEntryDisplayPath({
-          file,
-          source: 'launch',
-          fallbackName: fileName,
-          providedPath: item.displayPath || item.path || item.fullPath || item.name || file.name || ''
-        });
-        const displayDir = extractDisplayDir(sourceDisplayPath);
-        return {
-          id: `entry_${Date.now()}_${Math.random().toString(36).slice(2)}`,
-          file,
-          displayPath: buildDisplayPath(displayDir, fileName),
-          displayDir,
-          relativeDir: '',
-          renamedName: '',
-          status: 'pending',
-          progress: 0,
-          error: '',
-          speedKbps: 0,
-          progressStartedAt: 0
-        };
+    if (!Number.isInteger(expectedCount)
+      || expectedCount <= 0
+      || list.length !== expectedCount
+      || validCount !== expectedCount){
+      throw new Error('attachment_launch_context_incomplete');
+    }
+    state.files = list.map((item) => {
+      const file = item.file;
+      const fileName = NCSharing.sanitizeFileName(item.name || file.name || 'File');
+      const sourceDisplayPath = resolveEntryDisplayPath({
+        file,
+        source: 'launch',
+        fallbackName: fileName,
+        providedPath: item.displayPath || item.path || item.fullPath || item.name || file.name || ''
       });
+      const displayDir = extractDisplayDir(sourceDisplayPath);
+      return {
+        id: `entry_${Date.now()}_${Math.random().toString(36).slice(2)}`,
+        file,
+        displayPath: buildDisplayPath(displayDir, fileName),
+        displayDir,
+        relativeDir: '',
+        renamedName: '',
+        status: 'pending',
+        progress: 0,
+        error: '',
+        speedKbps: 0,
+        progressStartedAt: 0
+      };
+    });
+    if (state.files.length !== expectedCount){
+      throw new Error('attachment_launch_queue_incomplete');
+    }
     rebuildFileEntryIndex();
-    state.selectedFileId = null;
     log('Attachment queue prepared', { files: state.files.length });
   }
 
@@ -745,13 +943,21 @@
     NCWizardPolicyUi.applyEditableLock({
       active: state.policy.active,
       editable: state.policy.editable,
-      key: "share_set_password",
+      key: SHARE_POLICY_KEYS.passwordEnabled,
       element: dom.passwordToggle,
       row: dom.passwordToggleRow,
       translate: wizardTranslate
     });
-    const lockSeparate = NCPolicyState.isEditableLocked(state.policy.active, state.policy.editable, "share_send_password_separately");
-    const lockDeliveryMode = NCPolicyState.isEditableLocked(state.policy.active, state.policy.editable, "share_send_password_mode");
+    const lockSeparate = NCPolicyState.isEditableLocked(
+      state.policy.active,
+      state.policy.editable,
+      SHARE_POLICY_KEYS.passwordSeparate
+    );
+    const lockDeliveryMode = NCPolicyState.isEditableLocked(
+      state.policy.active,
+      state.policy.editable,
+      SHARE_POLICY_KEYS.passwordDeliveryMode
+    );
     const featureUnavailable = !NCWizardPolicyUi.isSeparatePasswordFeatureAvailable(state.policy.status);
     const secretsUnavailable = NCSharePasswordDelivery.isSecretsUnavailable(state.policy.status);
     const adminHint = NCWizardPolicyUi.getAdminControlledHint(wizardTranslate);
@@ -838,7 +1044,7 @@
     NCWizardPolicyUi.applyEditableLock({
       active: state.policy.active,
       editable: state.policy.editable,
-      key: "share_name_template",
+      key: SHARE_POLICY_KEYS.shareName,
       element: dom.shareName,
       row: dom.shareNameRow,
       translate: wizardTranslate
@@ -846,7 +1052,7 @@
     NCWizardPolicyUi.applyEditableLock({
       active: state.policy.active,
       editable: state.policy.editable,
-      key: "share_permission_upload",
+      key: SHARE_POLICY_KEYS.permCreate,
       element: dom.permCreate,
       row: dom.permCreateRow,
       translate: wizardTranslate
@@ -854,7 +1060,7 @@
     NCWizardPolicyUi.applyEditableLock({
       active: state.policy.active,
       editable: state.policy.editable,
-      key: "share_permission_edit",
+      key: SHARE_POLICY_KEYS.permWrite,
       element: dom.permWrite,
       row: dom.permWriteRow,
       translate: wizardTranslate
@@ -862,7 +1068,7 @@
     NCWizardPolicyUi.applyEditableLock({
       active: state.policy.active,
       editable: state.policy.editable,
-      key: "share_permission_delete",
+      key: SHARE_POLICY_KEYS.permDelete,
       element: dom.permDelete,
       row: dom.permDeleteRow,
       translate: wizardTranslate
@@ -870,7 +1076,7 @@
     const lockExpireDays = NCWizardPolicyUi.applyEditableLock({
       active: state.policy.active,
       editable: state.policy.editable,
-      key: "share_expire_days",
+      key: SHARE_POLICY_KEYS.expireDays,
       element: dom.expireToggle,
       row: dom.expireToggleRow,
       translate: wizardTranslate,
@@ -900,6 +1106,7 @@
     });
     if (state.currentStep === 3){
       setUploadStatus(state.uploadCompleted ? i18n('sharing_status_ready') : '');
+      void refreshDestinationStorageUsage();
     }else{
       setUploadStatus('');
     }
@@ -908,9 +1115,51 @@
 
   function updateButtons(){
     const busy = state.shareFolderCheckInProgress
+      || state.sourceSelectionInProgress
       || state.uploadInProgress
       || state.finalizeInProgress;
+    const sourceControlsDisabled = state.finalizeStarted || busy;
+    queueView?.setRemovalDisabled(sourceControlsDisabled);
+    [
+      dom.addFilesBtn,
+      dom.addFolderBtn
+    ].forEach((control) => {
+      if (control){
+        control.disabled = sourceControlsDisabled;
+      }
+    });
+    [dom.addNextcloudFilesBtn, dom.addNextcloudFolderBtn].forEach((control) => {
+      if (control){
+        control.disabled = sourceControlsDisabled || !state.vfsAvailability.nextcloud;
+      }
+    });
+    [dom.addExternalFilesBtn, dom.addExternalFolderBtn].forEach((control) => {
+      if (control){
+        control.disabled = sourceControlsDisabled || !state.vfsAvailability.external;
+      }
+    });
+    setSourceActionState({
+      action: dom.localSourceAction,
+      summary: dom.localSourceSummary,
+      disabled: sourceControlsDisabled
+    });
+    setSourceActionState({
+      action: dom.nextcloudSourceAction,
+      summary: dom.nextcloudSourceSummary,
+      disabled: sourceControlsDisabled || !state.vfsAvailability.nextcloud,
+      unavailableTitle: i18n('sharing_vfs_nextcloud_unavailable_tooltip')
+    });
+    setSourceActionState({
+      action: dom.externalSourceAction,
+      summary: dom.externalSourceSummary,
+      disabled: sourceControlsDisabled || !state.vfsAvailability.external,
+      unavailableTitle: i18n('sharing_vfs_external_unavailable_tooltip')
+    });
+    if (sourceControlsDisabled){
+      closeSourceMenus();
+    }
     dom.cancelBtn.disabled = state.finalizeInProgress;
+    const insufficientStorage = hasInsufficientDestinationStorage();
     if (state.mode === "attachments"){
       dom.backBtn.style.visibility = 'hidden';
       dom.nextBtn.style.visibility = 'hidden';
@@ -919,8 +1168,9 @@
       dom.finishBtn.disabled = busy
         || (state.finalizeStarted && !state.finalizeRetryAllowed)
         || state.finalized
+        || (!state.uploadCompleted && insufficientStorage)
         || (!state.uploadCompleted && state.files.length === 0);
-      dom.removeFileBtn.disabled = state.finalizeStarted || !state.selectedFileId || busy;
+      setPrimaryAction(dom.finishBtn);
       return;
     }
     dom.backBtn.disabled = state.finalizeStarted || state.currentStep === 1 || busy;
@@ -930,13 +1180,73 @@
       || (state.currentStep === 1 && !getRawShareName())
       || (state.currentStep === 3 && !state.uploadCompleted && !canSkipUpload());
     dom.uploadBtn.style.visibility = state.currentStep === 3 ? 'visible' : 'hidden';
-    dom.uploadBtn.disabled = state.finalizeStarted || busy || !state.files.length || state.uploadCompleted;
+    dom.uploadBtn.disabled = state.finalizeStarted
+      || busy
+      || insufficientStorage
+      || !state.files.length
+      || state.uploadCompleted;
     dom.finishBtn.style.visibility = state.currentStep === TOTAL_STEPS ? 'visible' : 'hidden';
     dom.finishBtn.disabled = !state.uploadCompleted
       || busy
       || (state.finalizeStarted && !state.finalizeRetryAllowed)
       || state.finalized;
-    dom.removeFileBtn.disabled = state.finalizeStarted || !state.selectedFileId || busy;
+    const primaryAction = state.currentStep === 3
+      ? (state.uploadCompleted || !state.files.length ? dom.nextBtn : dom.uploadBtn)
+      : (state.currentStep === TOTAL_STEPS ? dom.finishBtn : dom.nextBtn);
+    setPrimaryAction(primaryAction);
+  }
+
+  function setPrimaryAction(primaryButton){
+    [dom.backBtn, dom.nextBtn, dom.uploadBtn, dom.finishBtn].forEach((button) => {
+      button?.classList.toggle('primary', button === primaryButton);
+    });
+  }
+
+  function setSourceActionState({ action, summary, disabled, unavailableTitle = '' } = {}){
+    const isDisabled = disabled === true;
+    action?.classList.toggle('is-disabled', isDisabled);
+    action?.setAttribute('aria-disabled', isDisabled ? 'true' : 'false');
+    summary?.setAttribute('aria-disabled', isDisabled ? 'true' : 'false');
+    if (summary){
+      const availabilityBlocked = unavailableTitle
+        && ((action === dom.nextcloudSourceAction && !state.vfsAvailability.nextcloud)
+          || (action === dom.externalSourceAction && !state.vfsAvailability.external));
+      summary.title = availabilityBlocked
+        ? unavailableTitle
+        : String(summary.querySelector('span')?.textContent || '').trim();
+    }
+    if (isDisabled && action){
+      action.open = false;
+    }
+  }
+
+  async function refreshVfsSourceAvailability(){
+    const [nextcloudResponse, externalResponse] = await Promise.all([
+      browser.runtime.sendMessage({ type: 'vfs:getStatus' }).catch((error) => {
+        logUiError('Nextcloud VFS availability failed', error);
+        return null;
+      }),
+      browser.runtime.sendMessage({ type: 'vfs:listExternalConnections' }).catch((error) => {
+        logUiError('External VFS availability failed', error);
+        return null;
+      })
+    ]);
+    const nextcloudStatus = nextcloudResponse?.ok ? nextcloudResponse.status : null;
+    const externalConnections = externalResponse?.ok && Array.isArray(externalResponse.connections)
+      ? externalResponse.connections
+      : [];
+    state.vfsAvailability.nextcloud = nextcloudStatus?.accountConfigured === true
+      && !!nextcloudStatus?.selfStorageRef?.providerId
+      && !!nextcloudStatus?.selfStorageRef?.storageId;
+    state.vfsAvailability.external = externalConnections.length > 0;
+    const destinationRef = state.vfsAvailability.nextcloud
+      ? `${nextcloudStatus.selfStorageRef.providerId}:${nextcloudStatus.selfStorageRef.storageId}`
+      : '';
+    if (state.vfsAvailability.destinationRef !== destinationRef){
+      state.vfsAvailability.destinationRef = destinationRef;
+      resetDestinationStorageUsage();
+    }
+    updateButtons();
   }
 
   async function handleNext(){
@@ -1024,6 +1334,229 @@
     }
   }
 
+  function closeSourceMenus(){
+    if (dom.localSourceAction){
+      dom.localSourceAction.open = false;
+    }
+    if (dom.nextcloudSourceAction){
+      dom.nextcloudSourceAction.open = false;
+    }
+    if (dom.externalSourceAction){
+      dom.externalSourceAction.open = false;
+    }
+  }
+
+  async function selectExternalStorage(){
+    const response = await browser.runtime.sendMessage({
+      type: 'vfs:listExternalConnections'
+    });
+    if (!response?.ok){
+      throw new Error(response?.error || i18n('sharing_vfs_external_unavailable'));
+    }
+    const connections = Array.isArray(response.connections) ? response.connections : [];
+    if (!connections.length){
+      throw new Error(i18n('sharing_vfs_external_unavailable'));
+    }
+    if (connections.length === 1){
+      return connections[0];
+    }
+    if (!dom.vfsConnectionDialog || !dom.vfsConnectionList){
+      throw new Error(i18n('sharing_status_error'));
+    }
+    dom.vfsConnectionList.replaceChildren();
+    const iconUrls = [];
+    let selectedConnection = null;
+    connections.forEach((connection) => {
+      const button = document.createElement('button');
+      button.type = 'button';
+      button.className = 'vfs-connection-choice';
+      button.setAttribute('role', 'option');
+      button.appendChild(createExternalConnectionIcon(connection, iconUrls));
+
+      const text = document.createElement('span');
+      text.className = 'vfs-connection-choice-text';
+      const title = document.createElement('strong');
+      title.textContent = String(
+        connection?.storageName
+        || connection?.label
+        || connection?.providerName
+        || ''
+      );
+      text.appendChild(title);
+      const providerName = String(connection?.providerName || '').trim();
+      if (providerName && providerName !== title.textContent){
+        const provider = document.createElement('small');
+        provider.textContent = providerName;
+        text.appendChild(provider);
+      }
+      button.appendChild(text);
+      button.addEventListener('click', () => {
+        selectedConnection = connection;
+        dom.vfsConnectionDialog.close('accept');
+      });
+      dom.vfsConnectionList.appendChild(button);
+    });
+    return new Promise((resolve) => {
+      const onClose = () => {
+        dom.vfsConnectionDialog.removeEventListener('close', onClose);
+        for (const iconUrl of iconUrls){
+          URL.revokeObjectURL(iconUrl);
+        }
+        resolve(dom.vfsConnectionDialog.returnValue === 'accept' ? selectedConnection : null);
+      };
+      dom.vfsConnectionDialog.addEventListener('close', onClose);
+      dom.vfsConnectionDialog.showModal();
+    });
+  }
+
+  function createExternalConnectionIcon(connection, iconUrls){
+    const holder = document.createElement('span');
+    holder.className = 'vfs-provider-icon';
+    if (typeof Blob !== 'undefined' && connection?.icon instanceof Blob){
+      try{
+        const iconUrl = URL.createObjectURL(connection.icon);
+        iconUrls.push(iconUrl);
+        const image = document.createElement('img');
+        image.src = iconUrl;
+        image.alt = '';
+        holder.appendChild(image);
+        return holder;
+      }catch(error){
+        logUiError('VFS provider icon unavailable', error);
+      }
+    }
+    const fallback = dom.vfsProviderFallbackIcon?.content?.firstElementChild?.cloneNode(true);
+    if (fallback){
+      holder.appendChild(fallback);
+    }
+    return holder;
+  }
+
+  function runVfsSourceSelection(request){
+    return NCSharingPortRequest.run({
+      portName: 'nc-vfs-source-selection',
+      startMessage: { type: 'start', request },
+      fallbackErrorMessage: i18n('sharing_status_error'),
+      onProgress: (message) => {
+        const current = Math.max(0, Number(message.current) || 0);
+        setMessage(i18n('sharing_vfs_scanning_source', [String(current)]), 'info');
+      },
+      mapResult: (message) => message,
+      mapError: (message) => new Error(message.error || i18n('sharing_status_error')),
+      onPortOpened: (port) => {
+        state.sourceSelectionPort = port;
+      },
+      onPortClosed: (port) => {
+        if (state.sourceSelectionPort === port){
+          state.sourceSelectionPort = null;
+        }
+      },
+      onDisconnectError: (error) => {
+        logUiError('VFS selection port disconnect failed', error);
+      }
+    });
+  }
+
+  function createRemoteQueueEntry(source, index){
+    const sourceKind = source?.sourceKind === 'nextcloud' ? 'nextcloud' : 'external-vfs';
+    const kind = source?.kind === 'folder' ? 'folder' : 'file';
+    const name = String(source?.name || '').trim();
+    if (!name){
+      throw new Error(i18n('sharing_status_error'));
+    }
+    const relativeDir = String(source?.relativeDir || '').replace(/\\/g, '/').replace(/^\/+|\/+$/g, '');
+    const displayPath = normalizeDisplayPath(source?.displayPath)
+      || buildDisplayPath(relativeDir, name);
+    return {
+      id: `entry_${Date.now()}_${index}_${Math.random().toString(36).slice(2)}`,
+      sourceKind,
+      sourceLabel: String(source?.sourceLabel || '').trim(),
+      kind,
+      name,
+      file: null,
+      storageRef: source?.storageRef && typeof source.storageRef === 'object'
+        ? {
+            providerId: String(source.storageRef.providerId || ''),
+            storageId: String(source.storageRef.storageId || '')
+          }
+        : null,
+      sourcePath: String(source?.sourcePath || ''),
+      size: kind === 'file' && source?.size != null && Number.isFinite(Number(source.size))
+        ? Math.max(0, Number(source.size))
+        : null,
+      lastModified: Math.max(0, Number(source?.lastModified) || 0),
+      contentType: String(source?.contentType || 'application/octet-stream'),
+      transferGroupId: String(source?.transferGroupId || ''),
+      transferRole: String(source?.transferRole || 'item'),
+      transferRoot: source?.transferRoot === true,
+      displayPath,
+      displayDir: extractDisplayDir(displayPath),
+      relativeDir,
+      renamedName: '',
+      status: 'pending',
+      progress: 0,
+      error: '',
+      speedKbps: 0,
+      progressStartedAt: 0
+    };
+  }
+
+  async function startVfsSelection({ sourceKind, entryKind } = {}){
+    if (state.sourceSelectionInProgress || state.uploadInProgress || state.finalizeStarted){
+      return;
+    }
+    state.sourceSelectionInProgress = true;
+    updateButtons();
+    setMessage(i18n('sharing_vfs_opening_picker'), 'info');
+    try{
+      let storageRef = null;
+      if (sourceKind === 'external-vfs'){
+        const connection = await selectExternalStorage();
+        if (!connection){
+          setMessage('');
+          return;
+        }
+        storageRef = connection.storageRef || null;
+      }
+      state.vfsPickerReturnFocusSeen = false;
+      state.skipNextVfsFocusRefresh = false;
+      const result = await runVfsSourceSelection({
+        sourceKind,
+        entryKind,
+        storageRef
+      });
+      // The Toolkit resolves before Thunderbird finishes removing the picker
+      // actor. Its return-focus must not broadcast status requests to that actor.
+      state.skipNextVfsFocusRefresh = !state.vfsPickerReturnFocusSeen;
+      if (result?.cancelled){
+        setMessage('');
+        return;
+      }
+      const sources = Array.isArray(result?.entries) ? result.entries : [];
+      if (!sources.length){
+        setMessage('');
+        return;
+      }
+      const entries = sources.map((source, index) => createRemoteQueueEntry(source, index));
+      state.files.push(...entries);
+      rebuildFileEntryIndex();
+      pendingUploadScroll = '__bottom__';
+      invalidateUpload();
+      setMessage('');
+      log('VFS source selection completed', {
+        sourceKind,
+        entryKind,
+        entries: entries.length
+      });
+    }catch(error){
+      logUiError('VFS source selection failed', error);
+      setMessage(error?.message || i18n('sharing_status_error'), 'error');
+    }finally{
+      state.sourceSelectionInProgress = false;
+      updateButtons();
+    }
+  }
+
   /**
    * Handle file or folder input selections.
    * @param {Event} event
@@ -1046,6 +1579,11 @@
       firstHasMozFullPath: !!first?.mozFullPath,
       firstHasPath: !!first?.path
     });
+    // Local folder grouping is presentation-only. VFS transfer groups carry
+    // copy semantics in the background and must not be reused for local files.
+    const queueGroupId = source === 'folder'
+      ? `local-folder-${Date.now()}-${Math.random().toString(36).slice(2)}`
+      : '';
     const entries = files.map((file) => {
       const relativePath = (file.webkitRelativePath || file.relativePath || '').replace(/\\/g, '/');
       let relativeDir = '';
@@ -1062,10 +1600,15 @@
       const displayDir = extractDisplayDir(displayPath);
       return {
         id: `entry_${Date.now()}_${Math.random().toString(36).slice(2)}`,
+        sourceKind: 'local',
+        sourceLabel: '',
+        kind: 'file',
+        name: file.name || 'File',
         file,
         displayPath,
         displayDir,
         relativeDir,
+        queueGroupId,
         renamedName: '',
         status: 'pending',
         progress: 0,
@@ -1077,21 +1620,34 @@
     state.files.push(...entries);
     rebuildFileEntryIndex();
     pendingUploadScroll = '__bottom__';
-    state.selectedFileId = null;
     event.target.value = '';
     invalidateUpload();
   }
 
-  function removeSelectedEntry(){
-    if (!state.selectedFileId || state.uploadInProgress){
+  function removeQueueEntry(removalTarget){
+    if (state.sourceSelectionInProgress || state.uploadInProgress || state.finalizeStarted){
       return;
     }
-    const removed = state.files.find((entry) => entry.id === state.selectedFileId);
-    state.files = state.files.filter((entry) => entry.id !== state.selectedFileId);
+    const kind = String(removalTarget?.kind || '');
+    const entryId = String(removalTarget?.entryId || '');
+    const groupId = String(removalTarget?.groupId || '');
+    const belongsToGroup = (entry) =>
+      String(entry?.queueGroupId || entry?.transferGroupId || '') === groupId;
+    const removed = kind === 'group'
+      ? state.files.filter(belongsToGroup)
+      : state.files.filter((entry) => entry.id === entryId);
+    if (!removed.length){
+      return;
+    }
+    state.files = kind === 'group'
+      ? state.files.filter((entry) => !belongsToGroup(entry))
+      : state.files.filter((entry) => entry.id !== entryId);
     rebuildFileEntryIndex();
-    state.selectedFileId = null;
     invalidateUpload();
-    log('Entry removed', removed?.displayPath || '');
+    log('Queue selection removed', {
+      entries: removed.length,
+      path: removed[0]?.displayPath || removed[0]?.name || ''
+    });
   }
 
   function rebuildFileEntryIndex(){
@@ -1101,54 +1657,172 @@
     }
   }
 
-  function renderFileTable(){
-    fileRowsById.clear();
+  function renderFileQueue(){
     pendingUploadRowIds.clear();
-    dom.fileTableBody.replaceChildren();
+    const model = queueView.render(state.files);
     if (!state.files.length){
       dom.fileEmptyPlaceholder.style.display = 'block';
+      dom.fileQueueTree.hidden = true;
+      renderQueueSummary(model);
       ensureUploadListVisible({ targetId: '__top__', force: true });
       return;
     }
     dom.fileEmptyPlaceholder.style.display = 'none';
-    const rows = document.createDocumentFragment();
-    state.files.forEach((entry) => {
-      const row = document.createElement('tr');
-      row.dataset.id = entry.id;
-      if (state.selectedFileId === entry.id){
-        row.classList.add('selected');
-      }
-      if (entry.status === 'uploading'){
-        row.classList.add('uploading');
-      }
-      const pathCell = document.createElement('td');
-      pathCell.className = 'path-cell';
-      const pathScroll = document.createElement('div');
-      pathScroll.className = 'path-scroll';
-      pathScroll.textContent = entry.displayPath || entry.file?.name || '';
-      attachPathWheelScroll(pathScroll);
-      pathScroll.scrollLeft = state.pathColumnScrollLeft;
-      pathCell.appendChild(pathScroll);
-      const typeCell = document.createElement('td');
-      typeCell.className = 'type-cell';
-      typeCell.textContent = i18n('sharing_file_type_file');
-      const statusCell = document.createElement('td');
-      statusCell.className = 'status-cell';
-      statusCell.appendChild(buildStatusNode(entry));
-      row.append(pathCell, typeCell, statusCell);
-      row.addEventListener('click', () => {
-        const previousId = state.selectedFileId;
-        state.selectedFileId = entry.id;
-        fileRowsById.get(previousId)?.classList.remove('selected');
-        row.classList.add('selected');
-        updateButtons();
-      });
-      rows.appendChild(row);
-      fileRowsById.set(entry.id, row);
-    });
-    dom.fileTableBody.appendChild(rows);
-    applySharedPathColumnScroll(state.pathColumnScrollLeft);
+    dom.fileQueueTree.hidden = false;
+    renderQueueSummary(model);
     ensureUploadListVisible();
+  }
+
+  function getEntrySourceLabel(entry){
+    if (entry?.sourceKind === 'nextcloud'){
+      return i18n('sharing_source_nextcloud');
+    }
+    if (entry?.sourceKind === 'external-vfs'){
+      return String(entry.sourceLabel || i18n('sharing_source_external'));
+    }
+    return i18n('sharing_source_local');
+  }
+
+  function getQueueSummary(model = queueView?.getModel()){
+    return NCSharingQueueTree.summarize(model || NCSharingQueueTree.buildModel([], {}));
+  }
+
+  function setQueueStorageSummary(text, displayState){
+    dom.queueStorageText.textContent = text;
+    dom.queueStorageText.title = text;
+    dom.queueStorageText.dataset.state = displayState;
+  }
+
+  function renderQueueSummary(model = queueView?.getModel()){
+    if (!dom.queueSummaryText || !dom.queueStorageText){
+      return;
+    }
+    const summary = getQueueSummary(model);
+    const sizeValue = summary.hasUnknownSize
+      ? (summary.knownFileBytes > 0
+        ? `≥ ${formatTransferSize(summary.knownFileBytes)}`
+        : i18n('sharing_queue_size_unknown'))
+      : formatTransferSize(summary.knownFileBytes);
+    dom.queueSummaryText.textContent = [
+      i18n('sharing_queue_entries_summary', [String(summary.entryCount)]),
+      i18n('sharing_queue_sources_summary', [String(summary.sourceCount)]),
+      i18n('sharing_queue_total_summary', [sizeValue])
+    ].join(' · ');
+
+    const destination = state.destinationStorage;
+    if (!state.vfsAvailability.destinationRef){
+      setQueueStorageSummary(i18n('sharing_queue_storage_unknown'), 'unknown');
+      return;
+    }
+    if (destination.status === 'idle' || destination.status === 'loading'){
+      setQueueStorageSummary(i18n('sharing_queue_storage_loading'), 'loading');
+      return;
+    }
+    if (destination.state === 'unlimited'){
+      setQueueStorageSummary(i18n('sharing_queue_storage_unlimited'), 'unlimited');
+      return;
+    }
+    if (destination.state !== 'finite'){
+      setQueueStorageSummary(i18n('sharing_queue_storage_unknown'), 'unknown');
+      return;
+    }
+    if (NCSharingQueueTree.evaluateCapacity(summary, destination).blocked){
+      setQueueStorageSummary(i18n('sharing_queue_storage_insufficient', [
+        formatTransferSize(summary.knownFileBytes),
+        formatTransferSize(destination.available)
+      ]), 'insufficient');
+      return;
+    }
+    setQueueStorageSummary(i18n('sharing_queue_storage_available', [
+      formatTransferSize(destination.available),
+      formatTransferSize(destination.quota)
+    ]), 'finite');
+  }
+
+  function hasInsufficientDestinationStorage(){
+    return NCSharingQueueTree.evaluateCapacity(
+      getQueueSummary(),
+      state.destinationStorage
+    ).blocked;
+  }
+
+  function resetDestinationStorageUsage(){
+    state.destinationStorage.requestId++;
+    state.destinationStorage.status = 'idle';
+    state.destinationStorage.state = 'unknown';
+    state.destinationStorage.usage = null;
+    state.destinationStorage.quota = null;
+    state.destinationStorage.available = null;
+    state.destinationStorage.fetchedAt = 0;
+    renderQueueSummary();
+  }
+
+  async function refreshDestinationStorageUsage({ force = false } = {}){
+    const destination = state.destinationStorage;
+    if (!state.vfsAvailability.destinationRef){
+      resetDestinationStorageUsage();
+      return;
+    }
+    const fresh = destination.fetchedAt > 0
+      && Date.now() - destination.fetchedAt < 5 * 60 * 1000;
+    if (destination.status === 'loading' || (!force && fresh)){
+      return;
+    }
+    const requestId = ++destination.requestId;
+    destination.status = 'loading';
+    renderQueueSummary();
+    try{
+      const response = await browser.runtime.sendMessage({
+        type: 'sharing:getDestinationStorageUsage'
+      });
+      if (requestId !== destination.requestId){
+        return;
+      }
+      const usage = response?.ok ? response.usage : null;
+      const usageState = String(usage?.state || 'unknown');
+      if (usageState === 'finite'
+        && Number.isFinite(usage?.usage)
+        && Number.isFinite(usage?.quota)
+        && Number.isFinite(usage?.available)
+        && usage.usage >= 0
+        && usage.quota >= 0
+        && usage.available >= 0){
+        destination.state = 'finite';
+        destination.usage = usage.usage;
+        destination.quota = usage.quota;
+        destination.available = usage.available;
+      }else if (usageState === 'unlimited' && Number.isFinite(usage?.usage)){
+        destination.state = 'unlimited';
+        destination.usage = Math.max(0, usage.usage);
+        destination.quota = null;
+        destination.available = null;
+      }else{
+        destination.state = 'unknown';
+        destination.usage = Number.isFinite(usage?.usage) ? Math.max(0, usage.usage) : null;
+        destination.quota = null;
+        destination.available = null;
+      }
+      destination.status = 'ready';
+      destination.fetchedAt = Date.now();
+    }catch(error){
+      if (requestId !== destination.requestId){
+        return;
+      }
+      destination.status = 'ready';
+      destination.state = 'unknown';
+      destination.usage = null;
+      destination.quota = null;
+      destination.available = null;
+      destination.fetchedAt = Date.now();
+      log('Destination storage usage unavailable', {
+        reason: error?.message || String(error)
+      });
+    }finally{
+      if (requestId === destination.requestId){
+        renderQueueSummary();
+        updateButtons();
+      }
+    }
   }
 
   /**
@@ -1156,7 +1830,7 @@
    * @param {{targetId?:string,force?:boolean}} options
    */
   function ensureUploadListVisible({ targetId = null, force = false } = {}){
-    if (!dom.fileTableWrapper){
+    if (!queueView){
       return;
     }
     let desiredTarget = targetId || pendingUploadScroll;
@@ -1166,31 +1840,8 @@
     if (!force && !desiredTarget){
       return;
     }
-    const wrapper = dom.fileTableWrapper;
-    const tableBody = dom.fileTableBody;
     pendingUploadScroll = null;
-    /**
-     * Perform the actual scroll adjustment.
-     */
-    const scrollTask = () => {
-      if (desiredTarget === '__top__'){
-        wrapper.scrollTop = 0;
-        return;
-      }
-      if (desiredTarget && desiredTarget !== '__bottom__'){
-        const row = tableBody?.querySelector(`tr[data-id="${desiredTarget}"]`);
-        if (row){
-          row.scrollIntoView({ block: 'nearest' });
-          return;
-        }
-      }
-      wrapper.scrollTop = wrapper.scrollHeight;
-    };
-    if (typeof window.requestAnimationFrame === 'function'){
-      window.requestAnimationFrame(scrollTask);
-    }else{
-      window.setTimeout(scrollTask, 0);
-    }
+    queueView.scrollTo(desiredTarget);
   }
 
   function formatUploadSpeedKbps(kbps){
@@ -1232,17 +1883,7 @@
   }
 
   function patchUploadRow(entry){
-    const row = fileRowsById.get(entry?.id);
-    if (!row){
-      return false;
-    }
-    row.classList.toggle('uploading', entry.status === 'uploading');
-    const statusCell = row.querySelector('.status-cell');
-    if (!statusCell){
-      return false;
-    }
-    statusCell.replaceChildren(buildStatusNode(entry));
-    return true;
+    return queueView?.patchEntry(entry) === true;
   }
 
   function scheduleUploadRender(itemIds = [], force = false){
@@ -1256,7 +1897,7 @@
         clearTimeout(uploadRenderTimer);
         uploadRenderTimer = null;
       }
-      renderFileTable();
+      renderFileQueue();
       return;
     }
     if (uploadRenderTimer){
@@ -1270,7 +1911,7 @@
         !patchUploadRow(fileEntriesById.get(itemId))
       );
       if (missingRow){
-        renderFileTable();
+        renderFileQueue();
       }
     }, 100);
   }
@@ -1281,6 +1922,22 @@
    * @returns {Node}
    */
   function buildStatusNode(entry){
+    if (entry.status === 'fetching'){
+      const text = document.createElement('span');
+      const percent = Math.min(100, Math.max(0, Number(entry.progress) || 0));
+      text.textContent = `${i18n('sharing_status_fetching_source')} ${percent}%`;
+      return text;
+    }
+    if (entry.status === 'copying'){
+      const text = document.createElement('span');
+      text.textContent = i18n('sharing_status_copying_source');
+      return text;
+    }
+    if (entry.status === 'preparing'){
+      const text = document.createElement('span');
+      text.textContent = i18n('sharing_status_preparing_source');
+      return text;
+    }
     if (entry.status === 'uploading'){
       const percent = entry.progress || 0;
       const wrapper = document.createElement('div');
@@ -1327,7 +1984,7 @@
     });
     setUploadStatus('');
     setOverallProgress({ visible: false });
-    renderFileTable();
+    renderFileQueue();
     updateButtons();
   }
 
@@ -1337,65 +1994,34 @@
    * @returns {Promise<object>}
    */
   async function runBackgroundFileLinkUpload(request){
-    return new Promise((resolve, reject) => {
-      const port = browser.runtime.connect({ name: 'nc-filelink-upload' });
-      state.uploadPort = port;
-      let settled = false;
-      const dispose = () => {
-        port.onMessage.removeListener(onMessage);
-        port.onDisconnect.removeListener(onDisconnect);
+    return NCSharingPortRequest.run({
+      portName: 'nc-filelink-upload',
+      startMessage: {
+        type: 'start',
+        windowId: state.wizardWindowId,
+        tabId: Number(state.tabId) || 0,
+        request
+      },
+      fallbackErrorMessage: i18n('sharing_status_error'),
+      onProgress: (message) => handleUploadStatus(message.event),
+      mapResult: (message) => message.result,
+      mapError: (message) => {
+        const error = new Error(message.error?.message || i18n('sharing_status_error'));
+        error.name = message.error?.name || 'Error';
+        error.status = Number(message.error?.status) || 0;
+        error.code = message.error?.code || '';
+        return error;
+      },
+      onPortOpened: (port) => {
+        state.uploadPort = port;
+      },
+      onPortClosed: (port) => {
         if (state.uploadPort === port){
           state.uploadPort = null;
         }
-      };
-      const complete = (callback, value) => {
-        if (settled){
-          return;
-        }
-        settled = true;
-        dispose();
-        try{
-          port.disconnect();
-        }catch(error){
-          logUiError("upload port disconnect failed", error);
-        }
-        callback(value);
-      };
-      const onMessage = (message) => {
-        if (message?.type === 'progress'){
-          handleUploadStatus(message.event);
-          return;
-        }
-        if (message?.type === 'result'){
-          complete(resolve, message.result);
-          return;
-        }
-        if (message?.type === 'error'){
-          const error = new Error(message.error?.message || i18n('sharing_status_error'));
-          error.name = message.error?.name || 'Error';
-          error.status = Number(message.error?.status) || 0;
-          error.code = message.error?.code || '';
-          complete(reject, error);
-        }
-      };
-      const onDisconnect = () => {
-        const runtimeError = browser.runtime.lastError;
-        complete(
-          reject,
-          new Error(runtimeError?.message || i18n('sharing_status_error'))
-        );
-      };
-      port.onMessage.addListener(onMessage);
-      port.onDisconnect.addListener(onDisconnect);
-      try{
-        port.postMessage({
-          type: 'start',
-          windowId: state.wizardWindowId,
-          tabId: Number(state.tabId) || 0,
-          request
-        });
-      }catch(error){
-        complete(reject, error);
+      },
+      onDisconnectError: (error) => {
+        logUiError("upload port disconnect failed", error);
       }
     });
   }
@@ -1411,6 +2037,10 @@
     }
     if (!state.files.length && !allowEmpty){
       setMessage(i18n('sharing_message_no_files'), 'error');
+      return;
+    }
+    if (hasInsufficientDestinationStorage()){
+      setMessage(i18n('sharing_insufficient_storage'), 'error');
       return;
     }
     log('Upload started', { files: state.files.length });
@@ -1437,7 +2067,7 @@
       setUploadStatus(i18n('sharing_status_creating'));
       setOverallProgress({ visible: true, indeterminate: true });
     }
-    renderFileTable();
+    renderFileQueue();
     updateButtons();
     const noteEnabled = state.mode === "attachments" ? false : !!dom.noteToggle.checked;
     const noteValue = noteEnabled ? dom.noteInput.value.trim() : '';
@@ -1458,9 +2088,6 @@
         shareName: shareContext.sanitizedName,
         basePath: state.basePath,
         shareDate: shareContext.shareDate.toISOString(),
-        attachmentMode: state.mode === 'attachments',
-        policyShare: state.policy.active ? state.policy.share : null,
-        policyEditableShare: state.policy.active ? state.policy.editable : null,
         permissions,
         passwordEnabled: !!dom.passwordToggle.checked,
         password: dom.passwordInput.value,
@@ -1470,7 +2097,21 @@
         note: noteValue,
         files: state.files.map((entry) => ({
           id: entry.id,
+          sourceKind: entry.sourceKind || 'local',
+          sourceLabel: entry.sourceLabel || '',
+          kind: entry.kind || 'file',
+          name: entry.name || entry.file?.name || 'File',
           file: entry.file,
+          storageRef: entry.storageRef || null,
+          sourcePath: entry.sourcePath || '',
+          size: entry.sourceKind === 'local'
+            ? (Number(entry.file?.size) || 0)
+            : entry.size,
+          lastModified: Number(entry.lastModified ?? entry.file?.lastModified) || 0,
+          contentType: entry.contentType || entry.file?.type || 'application/octet-stream',
+          transferGroupId: entry.transferGroupId || '',
+          transferRole: entry.transferRole || 'item',
+          transferRoot: entry.transferRoot === true,
           displayPath: entry.displayPath,
           renamedName: entry.renamedName,
           relativeDir: entry.relativeDir
@@ -1490,7 +2131,7 @@
       log('Upload failed', error?.message);
     }finally{
       state.uploadInProgress = false;
-      renderFileTable();
+      renderFileQueue();
       updateButtons();
     }
   }
@@ -1529,6 +2170,17 @@
         visible: true,
         percent: total > 0 ? Math.round((current / total) * 100) : 100
       });
+      return;
+    }
+    if (event.phase === 'source_transfer'){
+      const current = Math.max(0, Number(event.current) || 0);
+      const total = Math.max(0, Number(event.total) || 0);
+      const displayCurrent = total > 0 && current < total ? current + 1 : current;
+      const key = event.mode === 'copy'
+        ? 'sharing_status_copying_sources'
+        : 'sharing_status_fetching_sources';
+      setUploadStatus(i18n(key, [String(displayCurrent), String(total)]));
+      setOverallProgress({ visible: true, indeterminate: true });
       return;
     }
     if (event.phase === 'summary'){
@@ -1573,7 +2225,19 @@
     if (!entry){
       return false;
     }
-    if (event.phase === 'start'){
+    if (event.phase === 'source_fetch'){
+      if (entry.status !== 'fetching'){
+        resetFileEntry(entry);
+      }
+      entry.status = 'fetching';
+      entry.progress = Math.min(100, Math.max(0, Number(event.percent) || 0));
+    }else if (event.phase === 'source_copy'){
+      resetFileEntry(entry);
+      entry.status = 'copying';
+    }else if (event.phase === 'source_prepare'){
+      resetFileEntry(entry);
+      entry.status = 'preparing';
+    }else if (event.phase === 'start'){
       resetFileEntry(entry);
       entry.status = 'uploading';
       entry.progressStartedAt = Date.now();
@@ -1596,7 +2260,7 @@
       entry.status = 'error';
       entry.error = event.error || '';
       entry.speedKbps = 0;
-      log('Upload file error', { name: entry.displayPath || entry.file?.name || entry.id, error: entry.error });
+      log('Upload file error', { name: entry.displayPath || entry.name || entry.file?.name || entry.id, error: entry.error });
     }else{
       return false;
     }
@@ -1623,7 +2287,6 @@
     state.finalizeStarted = true;
     state.finalizeInProgress = true;
     state.finalizeRetryAllowed = false;
-    state.finalizeCloseOnly = false;
     lockFinalizeInputs();
     updateButtons();
     const attachmentMode = state.mode === "attachments";
@@ -1644,18 +2307,6 @@
       separatePasswordMail
     });
     try{
-      if (!state.finalizeProgress.detailsUpdated
-        && !attachmentMode
-        && typeof NCSharing.updateShareDetails === 'function'){
-        await NCSharing.updateShareDetails({
-          shareInfo: state.uploadResult.shareInfo,
-          noteEnabled,
-          note
-        });
-        state.uploadResult.shareInfo.note = note;
-        state.uploadResult.shareInfo.noteEnabled = noteEnabled;
-      }
-      state.finalizeProgress.detailsUpdated = true;
       setMessage(i18n('sharing_status_inserting'), 'info');
       const renderOptions = {
         policyShare: state.policy.active ? state.policy.share : null,
@@ -1667,15 +2318,11 @@
         hidePassword: separatePasswordMail,
         showPasswordSeparateHint: separatePasswordMail
       };
-      let html = "";
-      let plainText = "";
+      const html = await NCSharing.buildHtmlBlock(state.uploadResult.shareInfo, renderOptions);
+      const plainText = await NCSharing.buildPlainTextBlock(state.uploadResult.shareInfo, renderOptions);
       let passwordMailHtml = "";
       let passwordMailPlainText = "";
-      if (!state.finalizeProgress.blockInserted){
-        html = await NCSharing.buildHtmlBlock(state.uploadResult.shareInfo, renderOptions);
-        plainText = await NCSharing.buildPlainTextBlock(state.uploadResult.shareInfo, renderOptions);
-      }
-      if (separatePasswordMail && !state.finalizeProgress.passwordDispatchRegistered){
+      if (separatePasswordMail){
         const passwordRenderOptions = {
           policyShare: state.policy.active ? state.policy.share : null,
           policyEditableShare: state.policy.active ? state.policy.editable : null,
@@ -1690,39 +2337,37 @@
           passwordRenderOptions
         );
       }
-      if (!state.finalizeProgress.blockInserted){
-        await finalizeRenderedShare({
-          tabId: Number(state.tabId),
-          html,
-          plainText,
-          cleanup: {
-            shareId: state.uploadResult.shareInfo?.shareId || "",
+      await finalizeRenderedShare({
+        tabId: Number(state.tabId),
+        html,
+        plainText,
+        cleanup: {
+          shareId: state.uploadResult.shareInfo?.shareId || "",
+          shareLabel: state.uploadResult.shareInfo?.label || getSanitizedShareName(),
+          shareUrl: state.uploadResult.shareInfo?.shareUrl || "",
+          folderInfo: state.uploadResult.shareInfo?.folderInfo || null
+        },
+        shareNote: {
+          noteEnabled,
+          note
+        },
+        passwordDispatch: separatePasswordMail
+          ? {
             shareLabel: state.uploadResult.shareInfo?.label || getSanitizedShareName(),
             shareUrl: state.uploadResult.shareInfo?.shareUrl || "",
-            folderInfo: state.uploadResult.shareInfo?.folderInfo || null
-          },
-          passwordDispatch: separatePasswordMail
-            ? {
-              shareLabel: state.uploadResult.shareInfo?.label || getSanitizedShareName(),
-              shareUrl: state.uploadResult.shareInfo?.shareUrl || "",
-              shareId: state.uploadResult.shareInfo?.shareId || "",
-              folderInfo: state.uploadResult.shareInfo?.folderInfo || null,
-              password: state.uploadResult.shareInfo?.password || "",
-              deliveryMode: getSelectedPasswordDeliveryMode(),
-              secretsExpireDays: NCSharePasswordDelivery.resolveSecretsExpireDays(state.policy.status),
-              renderShareInfo: state.uploadResult.shareInfo,
-              policyShare: state.policy.active ? state.policy.share : null,
-              policyEditableShare: state.policy.active ? state.policy.editable : null,
-              html: passwordMailHtml,
-              plainText: passwordMailPlainText
-            }
-            : null
-        });
-        state.finalizeProgress.composeCleanupArmed = true;
-        state.finalizeProgress.passwordDispatchRegistered = true;
-        state.finalizeProgress.blockInserted = true;
-        state.finalizeProgress.wizardCleanupCleared = true;
-      }
+            shareId: state.uploadResult.shareInfo?.shareId || "",
+            folderInfo: state.uploadResult.shareInfo?.folderInfo || null,
+            password: state.uploadResult.shareInfo?.password || "",
+            deliveryMode: getSelectedPasswordDeliveryMode(),
+            secretsExpireDays: NCSharePasswordDelivery.resolveSecretsExpireDays(state.policy.status),
+            renderShareInfo: state.uploadResult.shareInfo,
+            policyShare: state.policy.active ? state.policy.share : null,
+            policyEditableShare: state.policy.active ? state.policy.editable : null,
+            html: passwordMailHtml,
+            plainText: passwordMailPlainText
+          }
+          : null
+      });
       state.finalized = true;
       await closeWizardWindow();
     }catch(error){
@@ -1732,7 +2377,6 @@
         setMessage(i18n('sharing_error_insert_failed'), 'error');
       }else{
         state.finalizeRetryAllowed = false;
-        state.finalizeCloseOnly = true;
         setMessage(
           i18n('sharing_error_insert_failed_close')
             || i18n('sharing_error_insert_failed'),
@@ -1769,7 +2413,10 @@
       dom.noteInput,
       dom.addFilesBtn,
       dom.addFolderBtn,
-      dom.removeFileBtn,
+      dom.addNextcloudFilesBtn,
+      dom.addNextcloudFolderBtn,
+      dom.addExternalFilesBtn,
+      dom.addExternalFolderBtn,
       dom.fileInput,
       dom.folderInput
     ];
@@ -1851,6 +2498,10 @@
             folderName: String(folderInfo.folderName || "")
           }
         },
+        shareNote: {
+          noteEnabled: payload.shareNote?.noteEnabled === true,
+          note: String(payload.shareNote?.note || "")
+        },
         passwordDispatch: payload.passwordDispatch || null
       }
     });
@@ -1890,41 +2541,40 @@
    */
   async function ensureUniqueQueueEntries(){
     while (true){
-      const seen = new Set();
-      for (const entry of state.files){
-        let key = getTargetRelativePath(entry);
-        while (seen.has(key)){
-          if (!promptForRename(entry, 'sharing_prompt_rename_duplicate')){
-            return false;
-          }
-          key = getTargetRelativePath(entry);
-          log('Local duplicate rename', entry.displayPath);
-        }
-        seen.add(key);
-      }
-      const prefixConflict = findQueuePathPrefixConflict();
-      if (!prefixConflict){
+      const conflict = findQueuePathConflict();
+      if (!conflict){
         break;
       }
+      if (conflict.type === 'exact'){
+        if (!promptForRename(
+          getCollisionRenameTarget(conflict.duplicateEntry),
+          'sharing_prompt_rename_duplicate'
+        )){
+          return false;
+        }
+        log('Local duplicate rename', conflict.path);
+        continue;
+      }
       if (!promptForRename(
-        prefixConflict.fileEntry,
+        getCollisionRenameTarget(conflict.fileEntry),
         'sharing_prompt_rename_file_directory_conflict'
       )){
         return false;
       }
       log('Local file-directory conflict rename', {
-        filePath: prefixConflict.filePath,
-        nestedPath: prefixConflict.nestedPath
+        filePath: conflict.filePath,
+        nestedPath: conflict.nestedPath
       });
     }
-    renderFileTable();
+    renderFileQueue();
     return true;
   }
 
-  function findQueuePathPrefixConflict(){
+  function findQueuePathConflict(){
     const entries = state.files.map((entry) => ({
       entry,
-      path: getTargetRelativePath(entry)
+      path: getTargetRelativePath(entry),
+      kind: entry.kind || 'file'
     }));
     if (!globalThis.NCFileQueuePathConflicts?.find){
       throw new Error("file_queue_path_conflict_runtime_unavailable");
@@ -1938,9 +2588,22 @@
    * @returns {string}
    */
   function getTargetRelativePath(entry){
-    const sanitizedName = NCSharing.sanitizeFileName(entry.renamedName || entry.file?.name || 'File');
+    const sanitizedName = NCSharing.sanitizeFileName(
+      entry.renamedName || entry.name || entry.file?.name || 'File'
+    );
     const sanitizedDir = NCSharing.sanitizeRelativeDir(entry.relativeDir || '');
     return sanitizedDir ? `${sanitizedDir}/${sanitizedName}` : sanitizedName;
+  }
+
+  function getCollisionRenameTarget(entry){
+    if (entry?.sourceKind !== 'nextcloud'
+      || !entry.transferGroupId
+      || entry.transferRoot){
+      return entry;
+    }
+    return state.files.find((candidate) =>
+      candidate.transferGroupId === entry.transferGroupId && candidate.transferRoot
+    ) || entry;
   }
 
   /**
@@ -2003,7 +2666,7 @@
    */
   async function handleCancel(event){
     event?.preventDefault?.();
-    if (state.finalizeStarted){
+    if (state.finalizeInProgress){
       log('Wizard cancel ignored during finalize');
       return;
     }
@@ -2079,6 +2742,30 @@
   function applyEntryRename(entry, newName){
     const clean = (newName || '').trim();
     if (!clean){
+      return;
+    }
+    if (entry.kind === 'folder' && entry.transferGroupId){
+      const oldRoot = normalizeDisplayPath(entry.displayPath);
+      const newRoot = buildDisplayPath(entry.displayDir || entry.relativeDir || '', clean);
+      for (const member of state.files){
+        if (member.transferGroupId !== entry.transferGroupId){
+          continue;
+        }
+        const currentPath = normalizeDisplayPath(member.displayPath);
+        if (member === entry){
+          member.renamedName = clean;
+          member.displayPath = newRoot;
+          member.displayDir = extractDisplayDir(newRoot);
+          continue;
+        }
+        if (!oldRoot || !currentPath.startsWith(`${oldRoot}/`)){
+          continue;
+        }
+        const updatedPath = `${newRoot}${currentPath.slice(oldRoot.length)}`;
+        member.displayPath = updatedPath;
+        member.displayDir = extractDisplayDir(updatedPath);
+        member.relativeDir = member.displayDir;
+      }
       return;
     }
     entry.renamedName = clean;
@@ -2177,58 +2864,6 @@
     return normalized.slice(0, idx);
   }
 
-  function getMaxPathColumnScrollLeft(){
-    const nodes = dom.fileTableBody?.querySelectorAll('.path-scroll');
-    if (!nodes?.length){
-      return 0;
-    }
-    let max = 0;
-    for (const node of nodes){
-      const localMax = Math.max(0, (node.scrollWidth || 0) - (node.clientWidth || 0));
-      if (localMax > max){
-        max = localMax;
-      }
-    }
-    return max;
-  }
-
-  function applySharedPathColumnScroll(nextScrollLeft){
-    const maxScrollLeft = getMaxPathColumnScrollLeft();
-    const clamped = Math.min(maxScrollLeft, Math.max(0, Number(nextScrollLeft) || 0));
-    state.pathColumnScrollLeft = clamped;
-    const nodes = dom.fileTableBody?.querySelectorAll('.path-scroll');
-    if (!nodes?.length){
-      return;
-    }
-    for (const node of nodes){
-      if (node.scrollLeft !== clamped){
-        node.scrollLeft = clamped;
-      }
-    }
-  }
-
-  /**
-   * Translate mouse-wheel movement into shared horizontal scrolling for path cells.
-   * Wheel input inside the path column updates all path cells in sync.
-   * @param {HTMLElement} element
-   */
-  function attachPathWheelScroll(element){
-    if (!element){
-      return;
-    }
-    element.addEventListener('wheel', (event) => {
-      const scrollable = element.scrollWidth > element.clientWidth;
-      if (!scrollable){
-        return;
-      }
-      const delta = Math.abs(event.deltaX) > 0 ? event.deltaX : event.deltaY;
-      if (!delta){
-        return;
-      }
-      applySharedPathColumnScroll(state.pathColumnScrollLeft + delta);
-      event.preventDefault();
-    }, { passive: false });
-  }
   /**
    * Prompt the user to rename an entry to avoid collisions.
    * @param {object} entry
@@ -2236,7 +2871,7 @@
    * @returns {boolean}
    */
   function promptForRename(entry, messageKey){
-    const suggestion = entry.renamedName || entry.file?.name || '';
+    const suggestion = entry.renamedName || entry.name || entry.file?.name || '';
     const renamed = prompt(i18n(messageKey, [entry.displayPath]), suggestion);
     if (!renamed){
       setMessage(i18n('sharing_message_rename_cancelled'), 'error');
@@ -2266,21 +2901,25 @@
     NCDebugForwarder.markRuntimeContextUnloading?.();
     isPageUnloading = true;
     if (state.uploadPort){
-      try{
-        state.uploadPort.postMessage({
-          type: 'cancel',
-          reason: 'wizard_unload'
-        });
-        state.uploadPort.disconnect();
-      }catch(error){
-        logUiError("upload port cancellation failed", error);
-      }
+      NCSharingPortRequest.cancel(state.uploadPort, {
+        reason: 'wizard_unload',
+        onError: (error) => logUiError("upload port cancellation failed", error)
+      });
       state.uploadPort = null;
+    }
+    if (state.sourceSelectionPort){
+      NCSharingPortRequest.cancel(state.sourceSelectionPort, {
+        reason: 'wizard_unload',
+        onError: (error) => logUiError('VFS selection cancellation failed', error)
+      });
+      state.sourceSelectionPort = null;
     }
     if (uploadRenderTimer){
       clearTimeout(uploadRenderTimer);
       uploadRenderTimer = null;
     }
+    queueView?.dispose();
+    queueView = null;
     disposeDebugFlagMirror?.();
     disposeDebugFlagMirror = null;
     state.debugEnabled = false;
@@ -2294,6 +2933,7 @@
     window.removeEventListener('pagehide', cleanupPageResources, true);
     window.removeEventListener('beforeunload', cleanupPageResources, true);
     window.removeEventListener('unload', cleanupPageResources, true);
+    window.removeEventListener('focus', handleWindowFocus);
   }
 
   /**

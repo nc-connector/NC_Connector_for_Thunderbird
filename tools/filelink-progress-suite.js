@@ -81,7 +81,7 @@ function runProgressChecks(){
 
   const folderEvents = [];
   loadScript("modules/fileLinkUploadPolicy.js", context);
-  loadScript("modules/fileLinkDav.js", context);
+  loadScript("modules/nextcloudDav.js", context);
   loadScript("modules/fileLinkUpload.js", context);
   const folders = context.NCFileLinkUpload.createFolderStatusReporter(
     (event) => folderEvents.push(event),

@@ -74,6 +74,113 @@
     });
   }
 
+  async function moveFileIntoPlace({
+    sourceUrl,
+    sourceProbeUrl = sourceUrl,
+    targetUrl,
+    totalSize,
+    authHeader,
+    signal,
+    log,
+    overwrite,
+    headers = {},
+    scope = "File"
+  } = {}){
+    const resolveUnclearMove = async () => {
+      const [source, target] = await Promise.all([
+        NCNextcloudDav.probePath({
+          url: sourceProbeUrl,
+          authHeader,
+          signal,
+          log
+        }),
+        NCNextcloudDav.probePath({
+          url: targetUrl,
+          authHeader,
+          signal,
+          log
+        })
+      ]);
+      if (!source.exists
+        && target.exists
+        && !target.collection
+        && target.contentLength === totalSize){
+        if (typeof log === "function"){
+          log(`${scope} MOVE result recovered`, { totalSize });
+        }
+        return "moved";
+      }
+      if (overwrite === false && source.exists && target.exists){
+        return "collision";
+      }
+      return "unknown";
+    };
+    const recoverUnclearMove = async () => {
+      const resolution = await resolveUnclearMove();
+      if (resolution === "moved"){
+        return Object.freeze({ status: 0, recovered: true });
+      }
+      if (resolution === "collision"){
+        throw NCNextcloudDav.createUploadError(412);
+      }
+      return null;
+    };
+    let response;
+    try{
+      response = await NCNextcloudDav.fetchWithTimeout({
+        signal,
+        timeoutMs: NCNextcloudDav.CONTROL_REQUEST_TIMEOUT_MS,
+        request: (requestSignal) => fetch(sourceUrl, {
+          method: "MOVE",
+          headers: {
+            "Authorization": authHeader,
+            "Destination": targetUrl,
+            ...(typeof overwrite === "boolean" ? { "Overwrite": overwrite ? "T" : "F" } : {}),
+            ...headers
+          },
+          signal: requestSignal
+        })
+      });
+    }catch(error){
+      if (signal?.aborted || error?.name === "AbortError"){
+        throw NCNextcloudDav.createAbortError();
+      }
+      const recovered = await recoverUnclearMove();
+      if (recovered){
+        return recovered;
+      }
+      const uploadError = NCNextcloudDav.createTechnicalError(
+        error?.message || String(error)
+      );
+      uploadError.cause = error;
+      throw uploadError;
+    }
+    if (!response.ok){
+      const status = Number(response.status) || 0;
+      let detail = "";
+      try{
+        detail = await NCNextcloudDav.readResponseText(response, signal);
+      }catch(error){
+        if ([408, 502, 503, 504].includes(status)){
+          const recovered = await recoverUnclearMove();
+          if (recovered){
+            return recovered;
+          }
+        }
+        throw error;
+      }
+      if ([408, 502, 503, 504].includes(status)){
+        const recovered = await recoverUnclearMove();
+        if (recovered){
+          return recovered;
+        }
+      }
+      throw NCNextcloudDav.createUploadError(status, detail);
+    }
+    await NCNextcloudDav.closeResponse(response);
+    return Object.freeze({ status: Number(response.status) || 0, recovered: false });
+  }
+
   async function uploadDirect({
     file,
     davRoot,
@@ -81,29 +188,43 @@
     authHeader,
     signal,
     log,
-    progress
+    progress,
+    overwrite,
+    autoMkcol = true
   } = {}){
-    const targetPath = NCFileLinkDav.joinPath(
+    const targetPath = NCNextcloudDav.joinPath(
       shareRoot,
-      NCFileLinkDav.joinPath(file.relativeDir, file.fileName)
+      NCNextcloudDav.joinPath(file.relativeDir, file.fileName)
     );
-    const targetUrl = NCFileLinkDav.buildFileUrl(davRoot, targetPath);
+    const targetUrl = NCNextcloudDav.buildFileUrl(davRoot, targetPath);
+    const createOnly = overwrite === false;
+    const stagePath = createOnly
+      ? NCNextcloudDav.joinPath(
+          shareRoot,
+          NCNextcloudDav.joinPath(
+            file.relativeDir,
+            `.ncc-upload-${NCNextcloudDav.createFileLinkId()}`
+          )
+        )
+      : targetPath;
+    const uploadUrl = NCNextcloudDav.buildFileUrl(davRoot, stagePath);
     progress.reportItem({
       phase: "start",
       itemId: file.itemId,
       fileName: file.fileName,
       displayPath: file.displayPath
     });
+    let cleanupRequired = createOnly;
     try{
-      await NCFileLinkDav.xhrWithRetry({
+      const putResult = await NCNextcloudDav.xhrWithRetry({
         method: "PUT",
-        url: targetUrl,
+        url: uploadUrl,
         headers: {
           "Authorization": authHeader,
           "Content-Type": file.contentType || "application/octet-stream",
-          [NCFileLinkDav.AUTO_MKCOL_HEADER]: "1"
+          ...(autoMkcol !== false ? { [NCNextcloudDav.AUTO_MKCOL_HEADER]: "1" } : {})
         },
-        createBody: async () => NCFileLinkDav.getSourceBlob(file),
+        createBody: async () => NCNextcloudDav.getSourceBlob(file),
         signal,
         operation: "direct_put",
         log,
@@ -116,6 +237,19 @@
           emitItemProgress(progress, file, loaded);
         }
       });
+      const result = createOnly
+        ? await moveFileIntoPlace({
+            sourceUrl: uploadUrl,
+            targetUrl,
+            totalSize: file.size,
+            authHeader,
+            signal,
+            log,
+            overwrite: false,
+            scope: "Direct upload"
+          })
+        : putResult;
+      cleanupRequired = false;
       progress.complete(file);
       progress.reportItem({
         phase: "done",
@@ -123,6 +257,7 @@
         fileName: file.fileName,
         displayPath: file.displayPath
       });
+      return result;
     }catch(error){
       progress.reportItem({
         phase: "error",
@@ -132,6 +267,15 @@
         error: error?.ncUserMessage || bgI18n("sharing_status_error")
       });
       throw error;
+    }finally{
+      if (cleanupRequired){
+        await NCNextcloudDav.deleteBestEffort({
+          url: uploadUrl,
+          authHeader,
+          log,
+          scope: "Direct upload staging cleanup failed"
+        });
+      }
     }
   }
 
@@ -142,70 +286,24 @@
     lastModified,
     authHeader,
     signal,
-    log
+    log,
+    overwrite
   } = {}){
-    const probeCompletedTarget = async () => {
-      const probe = await NCFileLinkDav.probePath({
-        url: targetUrl,
-        authHeader,
-        signal,
-        log
-      });
-      if (probe.exists && !probe.collection && probe.contentLength === totalSize){
-        if (typeof log === "function"){
-          log("Chunk MOVE result recovered", { totalSize });
-        }
-        return true;
-      }
-      return false;
-    };
-    let response;
-    try{
-      response = await NCFileLinkDav.fetchWithTimeout({
-        signal,
-        timeoutMs: NCFileLinkDav.CONTROL_REQUEST_TIMEOUT_MS,
-        request: (requestSignal) => fetch(`${uploadFolderUrl}/.file`, {
-          method: "MOVE",
-          headers: {
-            "Authorization": authHeader,
-            "Destination": targetUrl,
-            "OC-Total-Length": String(totalSize),
-            "X-OC-Mtime": String(Math.max(0, Math.floor((Number(lastModified) || Date.now()) / 1000)))
-          },
-          signal: requestSignal
-        })
-      });
-    }catch(error){
-      if (signal?.aborted || error?.name === "AbortError"){
-        throw NCFileLinkDav.createAbortError();
-      }
-      if (await probeCompletedTarget()){
-        return;
-      }
-      const uploadError = NCFileLinkDav.createTechnicalError(
-        error?.message || String(error)
-      );
-      uploadError.cause = error;
-      throw uploadError;
-    }
-    if (!response.ok){
-      const status = Number(response.status) || 0;
-      let detail = "";
-      try{
-        detail = await NCFileLinkDav.readResponseText(response, signal);
-      }catch(error){
-        if ([408, 502, 503, 504].includes(status)
-          && await probeCompletedTarget()){
-          return;
-        }
-        throw error;
-      }
-      if ([408, 502, 503, 504].includes(status) && await probeCompletedTarget()){
-        return;
-      }
-      throw NCFileLinkDav.createUploadError(status, detail);
-    }
-    await NCFileLinkDav.closeResponse(response);
+    return moveFileIntoPlace({
+      sourceUrl: `${uploadFolderUrl}/.file`,
+      sourceProbeUrl: uploadFolderUrl,
+      targetUrl,
+      totalSize,
+      authHeader,
+      signal,
+      log,
+      overwrite,
+      headers: {
+        "OC-Total-Length": String(totalSize),
+        "X-OC-Mtime": String(Math.max(0, Math.floor((Number(lastModified) || Date.now()) / 1000)))
+      },
+      scope: "Chunk"
+    });
   }
 
   async function uploadChunked({
@@ -216,18 +314,19 @@
     authHeader,
     signal,
     log,
-    progress
+    progress,
+    overwrite
   } = {}){
-    const targetPath = NCFileLinkDav.joinPath(
+    const targetPath = NCNextcloudDav.joinPath(
       shareRoot,
-      NCFileLinkDav.joinPath(file.relativeDir, file.fileName)
+      NCNextcloudDav.joinPath(file.relativeDir, file.fileName)
     );
-    const targetUrl = NCFileLinkDav.buildFileUrl(davRoot, targetPath);
-    const uploadFolderUrl = `${String(uploadRoot || "").replace(/\/+$/, "")}/${encodeURIComponent(NCFileLinkDav.createFileLinkId())}`;
+    const targetUrl = NCNextcloudDav.buildFileUrl(davRoot, targetPath);
+    const uploadFolderUrl = `${String(uploadRoot || "").replace(/\/+$/, "")}/${encodeURIComponent(NCNextcloudDav.createFileLinkId())}`;
     const chunkSize = NCFileLinkUploadPolicy.getChunkSize(file.size);
     const chunkCount = Math.ceil(file.size / chunkSize);
     if (chunkCount > NCFileLinkUploadPolicy.MAX_CHUNK_COUNT){
-      throw NCFileLinkDav.createTechnicalError(
+      throw NCNextcloudDav.createTechnicalError(
         "Upload failed (too many chunks)"
       );
     }
@@ -240,7 +339,7 @@
     });
     let cleanupRequired = true;
     try{
-      await NCFileLinkDav.createCollection({
+      await NCNextcloudDav.createCollection({
         url: uploadFolderUrl,
         authHeader,
         destination: targetUrl,
@@ -250,16 +349,16 @@
         allowExisting: true
       });
       for (let index = 0; index < chunkCount; index++){
-        NCFileLinkDav.throwIfAborted(signal);
+        NCNextcloudDav.throwIfAborted(signal);
         const start = index * chunkSize;
         const end = Math.min(file.size, start + chunkSize);
         const chunkName = String(index + 1).padStart(5, "0");
-        const chunk = NCFileLinkDav.getSourceBlob(file).slice(
+        const chunk = NCNextcloudDav.getSourceBlob(file).slice(
           start,
           end,
           file.contentType || "application/octet-stream"
         );
-        await NCFileLinkDav.xhrWithRetry({
+        await NCNextcloudDav.xhrWithRetry({
           method: "PUT",
           url: `${uploadFolderUrl}/${chunkName}`,
           headers: {
@@ -284,14 +383,15 @@
         });
         progress.setLoaded(file, end);
       }
-      await moveChunkIntoPlace({
+      const result = await moveChunkIntoPlace({
         uploadFolderUrl,
         targetUrl,
         totalSize: file.size,
         lastModified: file.lastModified,
         authHeader,
         signal,
-        log
+        log,
+        overwrite
       });
       cleanupRequired = false;
       progress.complete(file);
@@ -301,6 +401,7 @@
         fileName: file.fileName,
         displayPath: file.displayPath
       });
+      return result;
     }catch(error){
       progress.reportItem({
         phase: "error",
@@ -312,7 +413,7 @@
       throw error;
     }finally{
       if (cleanupRequired){
-        await NCFileLinkDav.deleteBestEffort({
+        await NCNextcloudDav.deleteBestEffort({
           url: uploadFolderUrl,
           authHeader,
           log,
@@ -320,6 +421,44 @@
         });
       }
     }
+  }
+
+  async function uploadFile({
+    file,
+    davRoot,
+    uploadRoot,
+    shareRoot,
+    authHeader,
+    signal,
+    log,
+    progress,
+    overwrite,
+    autoMkcol
+  } = {}){
+    if (file.size > NCFileLinkUploadPolicy.DIRECT_UPLOAD_LIMIT_BYTES){
+      return uploadChunked({
+        file,
+        davRoot,
+        uploadRoot,
+        shareRoot,
+        authHeader,
+        signal,
+        log,
+        progress,
+        overwrite
+      });
+    }
+    return uploadDirect({
+      file,
+      davRoot,
+      shareRoot,
+      authHeader,
+      signal,
+      log,
+      progress,
+      overwrite,
+      autoMkcol
+    });
   }
 
   async function reserveRoot({
@@ -341,11 +480,11 @@
       throw createCollisionError();
     }
     const relativeBase = list[0]?.folderInfo?.relativeBase || "";
-    const reservationPath = NCFileLinkDav.joinPath(
+    const reservationPath = NCNextcloudDav.joinPath(
       relativeBase,
-      `_${NCFileLinkDav.createFileLinkId()}`
+      `_${NCNextcloudDav.createFileLinkId()}`
     );
-    const reservationUrl = NCFileLinkDav.buildFileUrl(davRoot, reservationPath);
+    const reservationUrl = NCNextcloudDav.buildFileUrl(davRoot, reservationPath);
     let reservationPresent = true;
     let attemptedTargetUrl = "";
     let attemptedCandidate = null;
@@ -353,7 +492,7 @@
     let recoveredRootCleanupError = null;
     try{
       try{
-        await NCFileLinkDav.createCollection({
+        await NCNextcloudDav.createCollection({
           url: reservationUrl,
           authHeader,
           signal,
@@ -365,7 +504,7 @@
         if (signal?.aborted || error?.name === "AbortError"){
           throw error;
         }
-        const probe = await NCFileLinkDav.probePath({
+        const probe = await NCNextcloudDav.probePath({
           url: reservationUrl,
           authHeader,
           signal,
@@ -377,9 +516,9 @@
       }
 
       for (const candidate of list){
-        NCFileLinkDav.throwIfAborted(signal);
+        NCNextcloudDav.throwIfAborted(signal);
         attemptedCandidate = candidate;
-        const targetUrl = NCFileLinkDav.buildFileUrl(
+        const targetUrl = NCNextcloudDav.buildFileUrl(
           davRoot,
           candidate.folderInfo.relativeFolder
         );
@@ -406,17 +545,17 @@
           const cleanupController = new AbortController();
           const cleanupTimer = setTimeout(
             () => cleanupController.abort(),
-            NCFileLinkDav.CLEANUP_TIMEOUT_MS
+            NCNextcloudDav.CLEANUP_TIMEOUT_MS
           );
           try{
             const [sourceResult, targetResult] = await Promise.allSettled([
-              NCFileLinkDav.probePath({
+              NCNextcloudDav.probePath({
                 url: reservationUrl,
                 authHeader,
                 signal: cleanupController.signal,
                 log
               }),
-              NCFileLinkDav.probePath({
+              NCNextcloudDav.probePath({
                 url: attemptedTargetUrl,
                 authHeader,
                 signal: cleanupController.signal,
@@ -431,14 +570,14 @@
             const target = targetResult.value;
             if (!source.exists && target.exists){
               reservationPresent = false;
-              const cleaned = await NCFileLinkDav.deleteBestEffort({
+              const cleaned = await NCNextcloudDav.deleteBestEffort({
                 url: attemptedTargetUrl,
                 authHeader,
                 log,
                 scope: "Moved share root cleanup failed"
               });
               if (!cleaned && attemptedCandidate){
-                const cleanupError = NCFileLinkDav.createTechnicalError(
+                const cleanupError = NCNextcloudDav.createTechnicalError(
                   "Moved share root could not be cleaned"
                 );
                 cleanupError.cause = reservationFailure;
@@ -454,7 +593,7 @@
             );
             if (attemptedCandidate && attemptedTargetUrl){
               reservationPresent = false;
-              const cleanupError = NCFileLinkDav.createTechnicalError(
+              const cleanupError = NCNextcloudDav.createTechnicalError(
                 "Share root move state requires cleanup"
               );
               cleanupError.cause = reservationFailure || error;
@@ -476,14 +615,14 @@
         }
       }
       if (reservationPresent){
-        const cleaned = await NCFileLinkDav.deleteBestEffort({
+        const cleaned = await NCNextcloudDav.deleteBestEffort({
           url: reservationUrl,
           authHeader,
           log,
           scope: "Share root reservation cleanup failed"
         });
         if (!cleaned){
-          const cleanupError = NCFileLinkDav.createTechnicalError(
+          const cleanupError = NCNextcloudDav.createTechnicalError(
             "Share root reservation could not be cleaned"
           );
           cleanupError.cause = reservationFailure;
@@ -510,13 +649,13 @@
   } = {}){
     const resolveUnclearResult = async () => {
       const [source, target] = await Promise.all([
-        NCFileLinkDav.probePath({
+        NCNextcloudDav.probePath({
           url: reservationUrl,
           authHeader,
           signal,
           log
         }),
-        NCFileLinkDav.probePath({
+        NCNextcloudDav.probePath({
           url: targetUrl,
           authHeader,
           signal,
@@ -534,9 +673,9 @@
 
     let response;
     try{
-      response = await NCFileLinkDav.fetchWithTimeout({
+      response = await NCNextcloudDav.fetchWithTimeout({
         signal,
-        timeoutMs: NCFileLinkDav.CONTROL_REQUEST_TIMEOUT_MS,
+        timeoutMs: NCNextcloudDav.CONTROL_REQUEST_TIMEOUT_MS,
         request: (requestSignal) => fetch(reservationUrl, {
           method: "MOVE",
           headers: {
@@ -549,30 +688,30 @@
       });
     }catch(error){
       if (signal?.aborted || error?.name === "AbortError"){
-        throw NCFileLinkDav.createAbortError();
+        throw NCNextcloudDav.createAbortError();
       }
       const resolved = await resolveUnclearResult();
       if (resolved != null){
         return resolved;
       }
-      const uploadError = NCFileLinkDav.createTechnicalError(
+      const uploadError = NCNextcloudDav.createTechnicalError(
         error?.message || String(error)
       );
       uploadError.cause = error;
       throw uploadError;
     }
     if (response.ok){
-      await NCFileLinkDav.closeResponse(response);
+      await NCNextcloudDav.closeResponse(response);
       return true;
     }
     const status = Number(response.status) || 0;
     if (status === 412){
-      await NCFileLinkDav.closeResponse(response);
+      await NCNextcloudDav.closeResponse(response);
       return false;
     }
     let detail = "";
     try{
-      detail = await NCFileLinkDav.readResponseText(response, signal);
+      detail = await NCNextcloudDav.readResponseText(response, signal);
     }catch(error){
       if ([405, 408, 409, 502, 503, 504].includes(status)){
         const resolved = await resolveUnclearResult();
@@ -588,7 +727,7 @@
         return resolved;
       }
     }
-    throw NCFileLinkDav.createUploadError(status, detail);
+    throw NCNextcloudDav.createUploadError(status, detail);
   }
 
   async function uploadPlan({
@@ -601,20 +740,24 @@
     checksums,
     signal,
     log,
-    onStatus
+    onStatus,
+    progress: sharedProgress,
+    fileUploadOptions,
+    logCompletion = true
   } = {}){
     if (!plan.files.length){
       return;
     }
-    const progress = NCFileLinkUploadProgress.create({
+    const progress = sharedProgress || NCFileLinkUploadProgress.create({
       files: plan.files,
       onStatus,
       log
     });
+    const results = new Map();
     const startedAt = Date.now();
     try{
       for (const batch of plan.bulkBatches){
-        NCFileLinkDav.throwIfAborted(signal);
+        NCNextcloudDav.throwIfAborted(signal);
         await NCFileLinkBulkUpload.uploadBatch({
           url: bulkUrl,
           batch,
@@ -628,42 +771,122 @@
         });
       }
       const nonBulkFiles = [...plan.directFiles, ...plan.chunkedFiles];
-      await NCFileLinkDav.runPool(nonBulkFiles, async (file, _index, workerSignal) => {
-        if (file.size > NCFileLinkUploadPolicy.DIRECT_UPLOAD_LIMIT_BYTES){
-          await uploadChunked({
-            file,
-            davRoot,
-            uploadRoot,
-            shareRoot,
-            authHeader,
-            signal: workerSignal,
-            log,
-            progress
-          });
-        }else{
-          await uploadDirect({
-            file,
-            davRoot,
-            shareRoot,
-            authHeader,
-            signal: workerSignal,
-            log,
-            progress
-          });
-        }
-      }, signal, NCFileLinkUploadPolicy.MAX_PARALLEL_REQUESTS);
-      const elapsedMs = Math.max(1, Date.now() - startedAt);
-      if (typeof log === "function"){
-        log("Upload completed", {
-          files: plan.files.length,
-          bytes: plan.totalBytes,
-          elapsedMs,
-          bytesPerSecond: Math.round(plan.totalBytes / (elapsedMs / 1000))
+      await NCNextcloudDav.runPool(nonBulkFiles, async (file, _index, workerSignal) => {
+        const result = await uploadFile({
+          file,
+          davRoot,
+          uploadRoot,
+          shareRoot,
+          authHeader,
+          signal: workerSignal,
+          log,
+          progress,
+          ...(fileUploadOptions || {})
         });
+        results.set(file.internalId, result);
+      }, signal, NCFileLinkUploadPolicy.MAX_PARALLEL_REQUESTS);
+      if (logCompletion){
+        logUploadCompleted(buildUploadSummary(plan), startedAt, log);
       }
     }finally{
-      progress.stop();
+      if (!sharedProgress){
+        progress.stop();
+      }
     }
+    return results;
+  }
+
+  function buildUploadSummary(plan, {
+    additionalPlan = null,
+    foldersToCreate = null,
+    serverCopies = null
+  } = {}){
+    const extra = additionalPlan || {
+      files: [],
+      directFiles: [],
+      chunkedFiles: [],
+      bulkFiles: [],
+      bulkBatches: [],
+      totalBytes: 0
+    };
+    const summary = {
+      files: plan.files.length + extra.files.length,
+      foldersToCreate: foldersToCreate == null
+        ? plan.directories.length
+        : Math.max(0, Number(foldersToCreate) || 0),
+      bytes: plan.totalBytes + extra.totalBytes,
+      direct: plan.directFiles.length + extra.directFiles.length,
+      chunked: plan.chunkedFiles.length + extra.chunkedFiles.length,
+      bulkFiles: plan.bulkFiles.length + extra.bulkFiles.length,
+      bulkBatches: plan.bulkBatches.length + extra.bulkBatches.length
+    };
+    if (serverCopies != null){
+      summary.serverCopies = Math.max(0, Number(serverCopies) || 0);
+    }
+    return Object.freeze(summary);
+  }
+
+  function logUploadPlan(plan, log, options){
+    const summary = buildUploadSummary(plan, options);
+    if (typeof log === "function"){
+      log("Upload plan ready", summary);
+    }
+    return summary;
+  }
+
+  function logUploadCompleted(summary, startedAt, log){
+    const serverCopies = Math.max(0, Number(summary.serverCopies) || 0);
+    if (typeof log !== "function" || (summary.files < 1 && serverCopies < 1)){
+      return;
+    }
+    const elapsedMs = Math.max(1, Date.now() - startedAt);
+    log("Upload completed", {
+      files: summary.files,
+      bytes: summary.bytes,
+      ...(serverCopies > 0 ? { serverCopies } : {}),
+      elapsedMs,
+      bytesPerSecond: Math.round(summary.bytes / (elapsedMs / 1000))
+    });
+  }
+
+  async function uploadSingleFile({
+    file,
+    davRoot,
+    uploadRoot,
+    shareRoot,
+    authHeader,
+    signal,
+    log,
+    onStatus,
+    overwrite,
+    autoMkcol = false
+  } = {}){
+    // A provider write is one VFS operation. Reusing a one-file plan preserves
+    // the transfer contract without inventing Bulk batches across callers.
+    const plan = NCFileLinkUploadPolicy.buildPlan({
+      files: [file],
+      bulkSupported: false
+    });
+    logUploadPlan(plan, log);
+    const results = await uploadPlan({
+      plan,
+      davRoot,
+      uploadRoot,
+      shareRoot,
+      authHeader,
+      checksums: new Map(),
+      signal,
+      log,
+      onStatus,
+      fileUploadOptions: {
+        overwrite,
+        autoMkcol
+      }
+    });
+    return Object.freeze({
+      plan,
+      result: results.get(plan.files[0].internalId) || null
+    });
   }
 
   async function prepareAndUpload({
@@ -680,7 +903,11 @@
     log,
     onStatus,
     onRootCreated,
-    collisionMessage
+    collisionMessage,
+    additionalDirectories = [],
+    additionalUploadFiles = [],
+    serverCopyCount = 0,
+    transferAdditionalSources
   } = {}){
     onStatus?.({ phase: "scanning" });
     const plan = NCFileLinkUploadPolicy.buildPlan({
@@ -699,26 +926,40 @@
           })
         )
       : new Map();
-    if (typeof log === "function"){
-      log("Upload plan ready", {
-        files: plan.files.length,
-        foldersToCreate: plan.directories.length,
-        bytes: plan.totalBytes,
-        direct: plan.directFiles.length,
-        chunked: plan.chunkedFiles.length,
-        bulkFiles: plan.bulkFiles.length,
-        bulkBatches: plan.bulkBatches.length
-      });
-    }
+    const additionalPlan = NCFileLinkUploadPolicy.buildPlan({
+      files: additionalUploadFiles,
+      bulkSupported: false
+    });
 
-    const baseSegments = NCFileLinkDav.normalizeRelativePath(basePath).split("/").filter(Boolean);
-    const folderTotal = baseSegments.length + 1 + plan.directories.length;
+    const directories = Array.from(new Set([
+      ...plan.directories,
+      ...(Array.isArray(additionalDirectories) ? additionalDirectories : [])
+    ])).sort((left, right) => {
+      const depth = left.split("/").length - right.split("/").length;
+      return depth || left.localeCompare(right);
+    });
+    const progressFiles = [
+      ...plan.files,
+      ...additionalPlan.files
+    ];
+    const uploadSummary = logUploadPlan(plan, log, {
+      additionalPlan,
+      foldersToCreate: directories.length,
+      serverCopies: serverCopyCount
+    });
+    const progress = NCFileLinkUploadProgress.create({
+      files: progressFiles,
+      onStatus,
+      log
+    });
+    const baseSegments = NCNextcloudDav.normalizeRelativePath(basePath).split("/").filter(Boolean);
+    const folderTotal = baseSegments.length + 1 + directories.length;
     let folderCurrent = 0;
     const folderStatus = createFolderStatusReporter(onStatus, folderTotal);
     let root = null;
     try{
       folderStatus.set(folderCurrent, true);
-      await NCFileLinkDav.prepareFolderPath({
+      await NCNextcloudDav.prepareFolderPath({
         davRoot,
         relativePath: basePath,
         authHeader,
@@ -747,10 +988,10 @@
       folderCurrent++;
       folderStatus.set(folderCurrent);
       await onRootCreated?.(root);
-      await NCFileLinkDav.createPlannedDirectories({
+      await NCNextcloudDav.createPlannedDirectories({
         davRoot,
         shareRoot: root.folderInfo.relativeFolder,
-        directories: plan.directories,
+        directories,
         authHeader,
         signal,
         log,
@@ -760,6 +1001,7 @@
         }
       });
       folderStatus.flush();
+      const uploadStartedAt = Date.now();
       await uploadPlan({
         plan,
         davRoot,
@@ -770,20 +1012,40 @@
         checksums,
         signal,
         log,
-        onStatus
+        onStatus,
+        progress,
+        logCompletion: false
       });
+      if (typeof transferAdditionalSources === "function"){
+        await transferAdditionalSources({
+          davRoot,
+          uploadRoot,
+          bulkUrl,
+          shareRoot: root.folderInfo.relativeFolder,
+          authHeader,
+          signal,
+          log,
+          onStatus,
+          progress
+        });
+      }
+      logUploadCompleted(uploadSummary, uploadStartedAt, log);
       return Object.freeze({ plan, root });
     }finally{
       folderStatus.stop();
+      progress.stop();
     }
   }
 
   global.NCFileLinkUpload = Object.freeze({
     createFolderStatusReporter,
+    buildUploadSummary,
     moveRootReservation,
     moveChunkIntoPlace,
     uploadDirect,
     uploadChunked,
+    uploadFile,
+    uploadSingleFile,
     reserveRoot,
     prepareAndUpload
   });

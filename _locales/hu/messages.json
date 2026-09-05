@@ -629,6 +629,9 @@
   "sharing_error_insert_failed_close": {
     "message": "A megosztást nem sikerült biztonságosan befejezni. Zárja be a megosztási ablakot, és az újabb próbálkozás előtt ellenőrizze az üzenetet."
   },
+  "sharing_attachment_routing_active": {
+    "message": "A fájlmegosztás még folyamatban van. Az üzenet elküldése előtt fejezze be, vagy zárja be a megosztási ablakot."
+  },
   "sharing_saved_template_unsupported": {
     "message": "NC Connector-megosztást tartalmazó üzenet nem menthető és nem küldhető Thunderbird-sablonként. Hozzon létre új üzenetet, és ossza meg újra a fájlokat."
   },
@@ -682,12 +685,6 @@
   },
   "sharing_files_table_status": {
     "message": "Állapot"
-  },
-  "sharing_button_add_files": {
-    "message": "Fájlok hozzáadása..."
-  },
-  "sharing_button_add_folder": {
-    "message": "Mappa hozzáadása..."
   },
   "sharing_button_remove": {
     "message": "Eltávolítás"
@@ -1009,5 +1006,338 @@
   },
   "sharing_status_speed_kbps": {
     "message": "$1 KB/s"
+  },
+  "options_tab_vfs": {
+    "message": "VFS"
+  },
+  "options_vfs_provider_heading": {
+    "message": "Saját Nextcloud"
+  },
+  "options_vfs_provider_intro": {
+    "message": "Elérhetővé teszi a meglévő Nextcloud-kapcsolatot az engedélyezett Thunderbird-kiegészítők számára."
+  },
+  "options_vfs_provider_enabled_label": {
+    "message": "Az NC Connector engedélyezése VFS-szolgáltatóként"
+  },
+  "options_vfs_provider_tooltip_title": {
+    "message": "VFS-hozzáférés a Nextcloudhoz"
+  },
+  "options_vfs_provider_tooltip_text": {
+    "message": "Csak a kifejezetten engedélyezett kiegészítők kapnak olvasási és írási hozzáférést. A hitelesítő adatok nem kerülnek továbbításra."
+  },
+  "options_vfs_provider_status_label": {
+    "message": "Állapot"
+  },
+  "options_vfs_provider_status_active": {
+    "message": "A szolgáltató aktív"
+  },
+  "options_vfs_provider_status_inactive": {
+    "message": "A szolgáltató inaktív"
+  },
+  "options_vfs_provider_status_connection_required": {
+    "message": "Előbb állítsa be a Nextcloud-kapcsolatot"
+  },
+  "options_vfs_provider_status_error": {
+    "message": "Szolgáltatói hiba"
+  },
+  "options_vfs_runtime_unavailable": {
+    "message": "A VFS-összetevők nem érhetők el."
+  },
+  "options_vfs_grants_heading": {
+    "message": "Engedélyezett kiegészítők"
+  },
+  "options_vfs_grants_hint": {
+    "message": "Minden engedély egy kiegészítőre vonatkozik, és itt bármikor visszavonható."
+  },
+  "options_vfs_access_read_write": {
+    "message": "Olvasás és írás"
+  },
+  "options_vfs_revoke_button": {
+    "message": "Hozzáférés visszavonása"
+  },
+  "options_vfs_no_grants": {
+    "message": "Még egyetlen kiegészítő sem rendelkezik hozzáféréssel."
+  },
+  "options_vfs_revoke_confirm": {
+    "message": "Visszavonja $1 hozzáférését?"
+  },
+  "options_vfs_external_heading": {
+    "message": "Külső VFS-szolgáltatók"
+  },
+  "options_vfs_external_intro": {
+    "message": "A más szolgáltatóktól származó fájlokat beolvassuk, majd feltöltjük a Nextcloudon lévő megosztásba."
+  },
+  "options_vfs_external_enabled_label": {
+    "message": "Külső VFS-szolgáltatók engedélyezése"
+  },
+  "options_vfs_external_tooltip_title": {
+    "message": "Más tárhelyek csatlakoztatása"
+  },
+  "options_vfs_external_tooltip_text": {
+    "message": "Az NC Connector csak az Ön kifejezett engedélye után észleli a kompatibilis VFS-szolgáltatókat. A fájlok nem kerülnek közvetlenül átmásolásra a szolgáltatók között."
+  },
+  "options_vfs_external_permission_label": {
+    "message": "Thunderbird-engedély"
+  },
+  "options_vfs_external_permission_granted": {
+    "message": "Megadva"
+  },
+  "options_vfs_external_permission_required": {
+    "message": "Nincs megadva"
+  },
+  "options_vfs_external_permission_button": {
+    "message": "Engedély megadása"
+  },
+  "options_vfs_connections_heading": {
+    "message": "Észlelt kapcsolatok"
+  },
+  "options_vfs_connections_hint": {
+    "message": "Itt jelennek meg a Thunderbirdben beállított és elérhető kompatibilis VFS-szolgáltatók."
+  },
+  "options_vfs_refresh_button": {
+    "message": "Frissítés"
+  },
+  "options_vfs_connect_button": {
+    "message": "Csatlakoztatás"
+  },
+  "options_vfs_disconnect_button": {
+    "message": "Leválasztás"
+  },
+  "options_vfs_disconnect_confirm": {
+    "message": "Leválasztja ezt: $1?"
+  },
+  "options_vfs_no_connections": {
+    "message": "Nem észlelhető VFS-kapcsolat."
+  },
+  "options_vfs_connection_status_connected": {
+    "message": "Kapcsolódva"
+  },
+  "options_vfs_connection_status_available": {
+    "message": "Elérhető"
+  },
+  "options_vfs_connection_status_unavailable": {
+    "message": "Nem érhető el"
+  },
+  "options_vfs_connection_status_error": {
+    "message": "Hiba"
+  },
+  "options_vfs_loading": {
+    "message": "Betöltés…"
+  },
+  "options_vfs_action_failed": {
+    "message": "A VFS-műveletet nem sikerült befejezni."
+  },
+  "vfs_error_management_permission_missing": {
+    "message": "Hiányzik a külső VFS-szolgáltatók észleléséhez szükséges engedély."
+  },
+  "vfs_error_storage_changed": {
+    "message": "A tárhelykapcsolat megváltozott. Válassza ki újra a fájlokat."
+  },
+  "vfs_error_file_metadata_missing": {
+    "message": "A fájl adatai hiányosak. Válassza ki újra a fájlt."
+  },
+  "vfs_error_file_read_failed": {
+    "message": "A fájl nem olvasható be a tárhelyszolgáltatótól."
+  },
+  "vfs_error_file_changed": {
+    "message": "A fájl a kiválasztás után megváltozott. Válassza ki újra."
+  },
+  "vfs_error_invalid_path": {
+    "message": "A kiválasztott tárhelyútvonal érvénytelen."
+  },
+  "vfs_error_root_not_selectable": {
+    "message": "A tárhely gyökere nem választható ki mappaként."
+  },
+  "vfs_error_external_connection_missing": {
+    "message": "A kiválasztott tárhelykapcsolat már nem érhető el."
+  },
+  "vfs_error_duplicate_path": {
+    "message": "A kiválasztás ugyanazt az útvonalat többször tartalmazza."
+  },
+  "sharing_button_add_nextcloud": {
+    "message": "A Nextcloudból…"
+  },
+  "sharing_button_add_nextcloud_files": {
+    "message": "Fájlok kiválasztása"
+  },
+  "sharing_button_add_nextcloud_folder": {
+    "message": "Mappa kiválasztása"
+  },
+  "sharing_button_add_external": {
+    "message": "Másik tárhelyről…"
+  },
+  "sharing_button_add_external_files": {
+    "message": "Fájlok kiválasztása"
+  },
+  "sharing_button_add_external_folder": {
+    "message": "Mappa kiválasztása"
+  },
+  "sharing_files_table_source": {
+    "message": "Forrás"
+  },
+  "sharing_vfs_connection_heading": {
+    "message": "Tárhely kiválasztása"
+  },
+  "sharing_vfs_connection_label": {
+    "message": "Tárhely"
+  },
+  "sharing_vfs_external_unavailable": {
+    "message": "Nem érhető el külső tárhelykapcsolat."
+  },
+  "sharing_vfs_nextcloud_unavailable_tooltip": {
+    "message": "Nem érhető el. Először állítson be Nextcloud-kapcsolatot a kiegészítő beállításaiban."
+  },
+  "sharing_vfs_external_unavailable_tooltip": {
+    "message": "Nem érhető el. Engedélyezze a külső szolgáltatókat a Beállítások > VFS alatt, és csatlakoztasson legalább egy tárhelyet."
+  },
+  "sharing_vfs_scanning_source": {
+    "message": "A kiválasztás beolvasása ($1)…"
+  },
+  "sharing_vfs_opening_picker": {
+    "message": "A fájlválasztó megnyitása…"
+  },
+  "sharing_file_type_folder": {
+    "message": "Mappa"
+  },
+  "sharing_source_nextcloud": {
+    "message": "Nextcloud-tárhely"
+  },
+  "sharing_source_external": {
+    "message": "Külső tárhely"
+  },
+  "sharing_source_local": {
+    "message": "Helyi"
+  },
+  "sharing_queue_entries_summary": {
+    "message": "Elemek: $1"
+  },
+  "sharing_queue_sources_summary": {
+    "message": "Források: $1"
+  },
+  "sharing_queue_total_summary": {
+    "message": "Összesen: $1"
+  },
+  "sharing_queue_size_unknown": {
+    "message": "ismeretlen"
+  },
+  "sharing_queue_storage_loading": {
+    "message": "Céltárhely: betöltés..."
+  },
+  "sharing_queue_storage_available": {
+    "message": "Céltárhely: $1 szabad / $2"
+  },
+  "sharing_queue_storage_unlimited": {
+    "message": "Céltárhely: korlátlan"
+  },
+  "sharing_queue_storage_unknown": {
+    "message": "Céltárhely: nem határozható meg"
+  },
+  "sharing_queue_storage_insufficient": {
+    "message": "Szükséges: $1 · Elérhető: $2"
+  },
+  "sharing_queue_expand_folder": {
+    "message": "Mappa kibontása: „$1“"
+  },
+  "sharing_queue_collapse_folder": {
+    "message": "Mappa összecsukása: „$1“"
+  },
+  "sharing_queue_remove_item": {
+    "message": "„$1“ eltávolítása"
+  },
+  "sharing_queue_source_group": {
+    "message": "Forrás: $1"
+  },
+  "sharing_status_fetching_source": {
+    "message": "Fájl beolvasása…"
+  },
+  "sharing_status_copying_source": {
+    "message": "Másolás…"
+  },
+  "sharing_status_preparing_source": {
+    "message": "Előkészítés…"
+  },
+  "sharing_status_copying_sources": {
+    "message": "Nextcloud-elemek másolása ($1 / $2)…"
+  },
+  "sharing_status_fetching_sources": {
+    "message": "Fájlok beolvasása a tárhelyről ($1 / $2)…"
+  },
+  "vfs_setup_title": {
+    "message": "Nextcloud-hozzáférés"
+  },
+  "vfs_setup_heading": {
+    "message": "Engedélyezi a Nextcloud-hozzáférést?"
+  },
+  "vfs_setup_access_heading": {
+    "message": "Olvasási és írási hozzáférés"
+  },
+  "vfs_setup_access_read": {
+    "message": "Fájlok és mappák böngészése és olvasása"
+  },
+  "vfs_setup_access_write": {
+    "message": "Fájlok és mappák létrehozása és módosítása"
+  },
+  "vfs_setup_access_delete": {
+    "message": "Fájlok és mappák törlése"
+  },
+  "vfs_setup_allow": {
+    "message": "Hozzáférés engedélyezése"
+  },
+  "vfs_setup_request": {
+    "message": "$1 hozzáférést kér ehhez a Nextcloud-tárhelyhez."
+  },
+  "vfs_setup_account": {
+    "message": "Nextcloud-fiók: $1"
+  },
+  "vfs_setup_invalid_request": {
+    "message": "A hozzáférési kérelem érvénytelen."
+  },
+  "vfs_setup_provider_unavailable": {
+    "message": "A Nextcloud tárhelyszolgáltatója nem érhető el."
+  },
+  "vfs_setup_granting": {
+    "message": "Hozzáférés megadása…"
+  },
+  "vfs_setup_failed": {
+    "message": "A hozzáférést nem sikerült megadni."
+  },
+  "sharing_queue_entries_summary": {
+    "message": "Elemek: $1"
+  },
+  "sharing_queue_sources_summary": {
+    "message": "Források: $1"
+  },
+  "sharing_queue_total_summary": {
+    "message": "Összesen: $1"
+  },
+  "sharing_queue_size_unknown": {
+    "message": "ismeretlen"
+  },
+  "sharing_queue_storage_loading": {
+    "message": "Céltárhely betöltése…"
+  },
+  "sharing_queue_storage_available": {
+    "message": "$1 szabad / $2"
+  },
+  "sharing_queue_storage_unlimited": {
+    "message": "Céltárhely: korlátlan"
+  },
+  "sharing_queue_storage_unknown": {
+    "message": "Céltárhely: nem állapítható meg"
+  },
+  "sharing_queue_storage_insufficient": {
+    "message": "Szükséges: $1 · Elérhető: $2"
+  },
+  "sharing_queue_expand_folder": {
+    "message": "$1 mappa kibontása"
+  },
+  "sharing_queue_collapse_folder": {
+    "message": "$1 mappa összecsukása"
+  },
+  "sharing_queue_remove_item": {
+    "message": "$1 eltávolítása"
+  },
+  "sharing_queue_source_group": {
+    "message": "Forrás: $1"
   }
 }

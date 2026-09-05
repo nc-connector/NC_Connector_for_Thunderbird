@@ -5,13 +5,15 @@ For a detailed developer guide (onboarding, storage schema, message contracts, r
 ## Overview
 This add-on integrates Nextcloud Talk and Nextcloud Sharing into Thunderbird.
 - Sharing from the compose window with upload and share metadata
+- A mixed-source share queue for local files, the configured Nextcloud, and compatible Thunderbird VFS providers
+- A read/write VFS provider that exposes the configured Nextcloud account to explicitly granted add-ons
 - Talk room creation with lobby, moderator delegation, and optional invitee sync (separately for internal users and external guests)
 - Calendar event integration via metadata and a stable event-editor toolbar button
 - Central options for credentials and defaults
 - Debug logging across UI/background/experiment layers
 
 ## Architecture
-- modules/*: core logic for OCS requests, auth, Talk, Sharing, i18n, atomic compose finalization, persistent cleanup, and split background orchestration
+- modules/*: core logic for OCS requests, auth, Talk, Sharing, DAV upload/copy, VFS provider/client integration, i18n, atomic compose finalization, persistent cleanup, and split background orchestration
 - `modules/hostPermissions.js`: centralized optional-host-permission gate reused by core/talk/sharing runtime modules
 - ui/*: HTML/JS dialogs and helpers (options, sharing wizard, talk dialog, popup sizing, DOM i18n)
 - experiments/calendar/*: Thunderbird calendar experiment API (items CRUD + item lifecycle events) used “as-is”
@@ -30,8 +32,8 @@ Calendar integration (high level):
 Data flow:
 1. Options saved in storage (base URL, auth mode, defaults)
 2. Auth resolved via NCCore and Basic auth header
-3. OCS and DAV requests executed via NCOcs
-4. UI dialogs call background via runtime messaging
+3. OCS requests are executed via NCOcs; DAV requests use the shared NCNextcloudDav module
+4. UI dialogs call background via runtime messaging; VFS operations use request-scoped Toolkit ports
 5. Results are written back into:
    - compose HTML via `browser.compose.*` APIs
    - the currently edited calendar item via `browser.ncCalToolbar.updateCurrent` (editor-targeted by `editorId`)
@@ -39,7 +41,9 @@ Data flow:
 
 ## Features
 ### Sharing
-- Creates a dated share folder via DAV and uploads selected files
+- Creates a dated share folder via DAV and uploads or copies selected files and folders from local and remote sources
+- Collects all selections in a source-grouped recursive tree with file sizes, queue totals, transfer status, and destination-storage feedback
+- Copies selected content from the configured Nextcloud server-side and reads external VFS files sequentially before passing them to the normal upload engine; no disk staging folder is used
 - Creates a share via /ocs/v2.php/apps/files_sharing/api/v1/shares
 - Applies defaults for share name, permissions, password, and expiry date
 - Honors Nextcloud password policies (min length + same-origin generator API with secure local fallback)
@@ -68,6 +72,13 @@ Data flow:
   - the link target changes only the URL and link wording; attachment-mode read-only permissions, hidden permission row, and cleanup stay active in both modes
   - an invalid ZIP source URL or a mismatch with the OCS share token stops finalize with a visible error instead of inserting the original URL with ZIP wording
   - automation controls are locked with a guidance note while Thunderbird's own "Upload for files larger than" setting is active
+
+### VFS integration
+- Exposes the already configured Nextcloud account as a full read/write VFS provider after an explicit, revocable per-add-on grant
+- Uses the existing Nextcloud login and shared DAV implementation; changing server or canonical user invalidates previous provider grants
+- Uses the same Direct and chunked-v2 upload selector, retry, cancellation, progress, cleanup, and log path for provider writes; independent VFS writes are not grouped into DAV Bulk batches
+- Discovers external VFS providers only after the user enables that function and grants the optional Thunderbird add-on-management permission
+- Supports file and folder selection from the configured Nextcloud and external providers in the Sharing wizard
 
 ### Talk
 - Checks Talk capabilities and core capabilities to decide event-conversation support
@@ -117,13 +128,15 @@ Data flow:
 - Nextcloud 32 or newer with OCS endpoints enabled; Talk is required for Talk and calendar features
 - File sharing via DAV and OCS (remote.php and files_sharing API)
 - App password or Login Flow v2 for authentication
-- Permissions: storage (options, metadata), compose (UI integration), optional host access per configured Nextcloud origin for API and login flow
+- Manifest permissions: `storage`, `accountsRead`, `compose`, `compose.send`, and `notifications`
+- Optional permissions: `management` for external VFS-provider discovery and HTTPS host access requested for the configured Nextcloud origin
 
 ## Configuration
 - Base URL, user, and app password (manual) or Login Flow v2 (auto)
 - Debug mode for verbose logging
 - Sharing base path and default share name/permissions/password/expiry
 - Sharing attachment defaults (`sharingAttachmentsLinkTarget`, `sharingAttachmentsAlwaysConnector`, `sharingAttachmentsOfferAboveEnabled`, `sharingAttachmentsOfferAboveMb`)
+- VFS provider enablement and per-add-on grants, plus external-provider discovery and connections
 - Talk defaults: title, lobby, listable, password protection with an initial generated password, room type (event vs normal), add users + add guests toggles
 Security notes:
 - Credentials are stored in browser.storage.local and used to build Basic auth headers
@@ -134,7 +147,8 @@ Security notes:
 - Build/Packaging: no build scripts in this repo; package as a Thunderbird add-on bundle when needed
 - Smoke-test checklist:
   - Options: "Test connection" with valid credentials
-  - Sharing wizard: create share, upload, insert HTML
+  - Sharing wizard: combine local, configured-Nextcloud, and external-provider files/folders; verify queue tree, destination capacity, upload, and HTML insertion
+  - VFS provider: grant a compatible client, list/read/write through the configured Nextcloud account, then revoke the grant
   - Talk dialog: create room, apply fields/metadata, then save the event
   - Talk dialog: create room, then close the editor without saving → room cleanup triggers
   - Calendar event dialog: set metadata, save, reopen, verify X-NCTALK-* values

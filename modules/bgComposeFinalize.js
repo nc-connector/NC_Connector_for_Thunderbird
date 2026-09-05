@@ -69,6 +69,7 @@ function beginComposeFinalizeTransaction(tabId, wizardWindowId){
     tabId,
     wizardWindowId,
     cleanupMutation: null,
+    shareNoteUpdate: null,
     passwordRegistration: null,
     insertMutation: null,
     draftGroupId: "",
@@ -272,6 +273,38 @@ function rollbackComposeFinalizeForWizardWindow(windowId, reason = ""){
   return rollbackComposeFinalizeTransaction(transaction, reason || "wizard_closed");
 }
 
+async function updateFinalizeShareNote(transaction, requestedShareNote){
+  const wizardEntry = transaction?.cleanupMutation?.wizardEntry;
+  const shareDetails = wizardEntry?.shareDetails;
+  if (!wizardEntry?.shareId || !shareDetails){
+    throw new Error("sharing_finalize_share_details_missing");
+  }
+  const noteEnabled = !shareDetails.attachmentMode
+    && requestedShareNote?.noteEnabled === true;
+  const note = noteEnabled
+    ? String(requestedShareNote?.note || "").trim()
+    : "";
+  if (shareDetails.noteEnabled === noteEnabled && shareDetails.note === note){
+    return Object.freeze({ updated: false, noteEnabled, note });
+  }
+  await NCSharing.updateShareNote({
+    baseUrl: wizardEntry.cleanupTarget?.baseUrl,
+    authHeader: wizardEntry.cleanupTarget?.authHeader,
+    shareId: wizardEntry.shareId,
+    permissions: shareDetails.permissions,
+    expireDate: shareDetails.expireDate,
+    password: shareDetails.password,
+    noteEnabled,
+    note
+  });
+  wizardEntry.shareDetails = Object.freeze({
+    ...shareDetails,
+    noteEnabled,
+    note
+  });
+  return Object.freeze({ updated: true, noteEnabled, note });
+}
+
 async function handleSharingFinalizeTransaction(payload = {}){
   const tabId = Number(payload.tabId);
   const wizardWindowId = Number(payload.wizardWindowId);
@@ -282,11 +315,15 @@ async function handleSharingFinalizeTransaction(payload = {}){
     && typeof payload.passwordDispatch === "object"
     ? payload.passwordDispatch
     : null;
+  const shareNote = payload.shareNote && typeof payload.shareNote === "object"
+    ? payload.shareNote
+    : null;
   if (!Number.isInteger(tabId)
     || tabId <= 0
     || !Number.isInteger(wizardWindowId)
     || wizardWindowId <= 0
-    || !cleanup){
+    || !cleanup
+    || !shareNote){
     return {
       ok: false,
       error: bgI18n("sharing_error_insert_failed"),
@@ -333,6 +370,15 @@ async function handleSharingFinalizeTransaction(payload = {}){
       (mutation) => {
         transaction.cleanupMutation = mutation;
       },
+    );
+
+    await runComposeFinalizeStage(
+      transaction,
+      "update_share_note",
+      () => updateFinalizeShareNote(transaction, shareNote),
+      (update) => {
+        transaction.shareNoteUpdate = update;
+      }
     );
 
     if (passwordDispatch){

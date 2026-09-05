@@ -24,12 +24,73 @@ function readMessageContextId(msg){
   return typeof msg?.contextId === "string" ? msg.contextId.trim() : "";
 }
 
+// The vendored Toolkit owns these messages through its own listeners. Claiming
+// them here would replace Toolkit responses with our unknown-message envelope.
+const VFS_TOOLKIT_INTERNAL_MESSAGE_TYPES = new Set([
+  "vfs-notify-background-storage-changed",
+  "vfs-picker-result",
+  "vfs-provider-removed",
+  "vfs-provider-updated",
+  "vfs-remove-connection",
+  "vfs-storage-changed",
+  "vfs-toolkit-add-connection",
+  "vfs-toolkit-button",
+  "vfs-toolkit-discover",
+  "vfs-toolkit-get-action-button",
+  "vfs-toolkit-get-connections",
+  "vfs-toolkit-remove-connection"
+]);
+
+async function getVfsOptionsState(){
+  const [providerStatus, externalStatus] = await Promise.all([
+    NCVfsProviderRuntime.getStatus(),
+    NCVfsClientRuntime.getStatus()
+  ]);
+  return Object.freeze({
+    provider: Object.freeze({
+      enabled: providerStatus.enabled === true,
+      connectionReady: providerStatus.accountConfigured === true,
+      status: providerStatus.accountConfigured
+        ? (providerStatus.enabled ? "active" : "inactive")
+        : "connection_required",
+      grants: Object.freeze((providerStatus.grants || []).map((grant) => Object.freeze({
+        grantId: String(grant.storageId || ""),
+        addonId: String(grant.addonId || ""),
+        addonName: String(grant.addonName || grant.addonId || "")
+      })))
+    }),
+    external: Object.freeze({
+      enabled: externalStatus.enabled === true,
+      permissionGranted: externalStatus.permissionGranted === true,
+      connections: Object.freeze((externalStatus.connections || []).map((connection) => Object.freeze({
+        connectionId: JSON.stringify([
+          connection.storageRef?.providerId || "",
+          connection.storageRef?.storageId || ""
+        ]),
+        providerId: String(connection.storageRef?.providerId || ""),
+        storageId: String(connection.storageRef?.storageId || ""),
+        providerName: String(connection.providerName || ""),
+        storageName: String(connection.storageName || ""),
+        status: "connected"
+      }))),
+      providers: Object.freeze((externalStatus.providers || []).map((providerInfo) => Object.freeze({
+        providerId: String(providerInfo.providerId || ""),
+        providerName: String(providerInfo.providerName || providerInfo.providerId || ""),
+        connectionCount: Math.max(0, Number(providerInfo.connectionCount) || 0)
+      })))
+    })
+  });
+}
+
 /**
- * Central runtime.onMessage dispatcher.
- * Keep this as the single message entrypoint for UI/background calls.
+ * Central runtime.onMessage dispatcher for NC Connector UI/background calls.
+ * Vendored Toolkit traffic remains owned by its dedicated runtime listeners.
  */
 browser.runtime.onMessage.addListener((msg, sender) => {
   if (!msg || !msg.type) return;
+  if (VFS_TOOLKIT_INTERNAL_MESSAGE_TYPES.has(String(msg.type))){
+    return;
+  }
   return (async () => {
     if (msg.type !== "debug:log"){
       L("msg", msg.type, { hasPayload: !!msg.payload });
@@ -66,6 +127,107 @@ browser.runtime.onMessage.addListener((msg, sender) => {
         return { ok:true, status };
       }catch(error){
         return messageError("policy:getStatus", error);
+      }
+    }
+    if (msg.type === "vfs:getStatus"){
+      try{
+        return { ok:true, status: await NCVfsProviderRuntime.getStatus() };
+      }catch(error){
+        return messageError("vfs:getStatus", error);
+      }
+    }
+    if (msg.type === "sharing:getDestinationStorageUsage"){
+      try{
+        const usage = await NCVfsProviderRuntime.getDestinationStorageUsage();
+        return { ok:true, usage };
+      }catch(error){
+        return messageError("sharing:getDestinationStorageUsage", error);
+      }
+    }
+    if (msg.type === "vfs:grantConsumer"){
+      try{
+        const result = await NCVfsProviderRuntime.grantConsumer({
+          setupToken: msg.payload?.setupToken
+        });
+        return { ok:true, ...result };
+      }catch(error){
+        return messageError("vfs:grantConsumer", error);
+      }
+    }
+    if (msg.type === "vfs:listExternalConnections"){
+      try{
+        const connections = await NCVfsClientRuntime.listExternalConnections();
+        return { ok:true, connections };
+      }catch(error){
+        return messageError("vfs:listExternalConnections", error);
+      }
+    }
+    if (msg.type === "vfs:options:getState"
+      || msg.type === "vfs:options:refreshConnections"){
+      try{
+        return { ok:true, state: await getVfsOptionsState() };
+      }catch(error){
+        return messageError(msg.type, error);
+      }
+    }
+    if (msg.type === "vfs:options:updateSettings"){
+      try{
+        const external = await NCVfsClientRuntime.setExternalEnabled(
+          msg.payload?.externalProvidersEnabled === true
+        );
+        await NCVfsProviderRuntime.setEnabled(msg.payload?.providerEnabled === true);
+        const state = await getVfsOptionsState();
+        return {
+          ok:true,
+          state,
+          reloadRequired: external.reloadRequired === true
+        };
+      }catch(error){
+        return messageError("vfs:options:updateSettings", error);
+      }
+    }
+    if (msg.type === "vfs:options:requestExternalProviderPermission"){
+      try{
+        const permissionGranted = await browser.permissions.contains({
+          permissions: ["management"]
+        });
+        if (!permissionGranted){
+          throw new Error(bgI18n("vfs_error_management_permission_missing"));
+        }
+        return { ok:true, state: await getVfsOptionsState() };
+      }catch(error){
+        return messageError("vfs:options:requestExternalProviderPermission", error);
+      }
+    }
+    if (msg.type === "vfs:options:revokeGrant"){
+      try{
+        const grantId = String(msg.payload?.grantId || "").trim();
+        if (!grantId){
+          throw new Error("invalid_vfs_grant");
+        }
+        await NCVfsProviderRuntime.revokeGrant(grantId);
+        return { ok:true, state: await getVfsOptionsState() };
+      }catch(error){
+        return messageError("vfs:options:revokeGrant", error);
+      }
+    }
+    if (msg.type === "vfs:options:connectProvider"){
+      try{
+        await NCVfsClientRuntime.connectExternalProvider(msg.payload?.providerId);
+        return { ok:true, state: await getVfsOptionsState() };
+      }catch(error){
+        return messageError("vfs:options:connectProvider", error);
+      }
+    }
+    if (msg.type === "vfs:options:disconnectConnection"){
+      try{
+        await NCVfsClientRuntime.disconnectExternalConnection({
+          providerId: msg.payload?.providerId,
+          storageId: msg.payload?.storageId
+        });
+        return { ok:true, state: await getVfsOptionsState() };
+      }catch(error){
+        return messageError("vfs:options:disconnectConnection", error);
       }
     }
   if (msg.type === "talk:searchUsers"){
@@ -531,11 +693,16 @@ browser.runtime.onMessage.addListener((msg, sender) => {
         L("sharing:getLaunchContext invalid request (missing contextId)");
         return { ok:false, error: "context_id_missing" };
       }
-      const context = takeSharingLaunchContext(contextId);
-      if (!context){
+      const response = await getComposeAttachmentLaunchContext(
+        contextId,
+        Number(msg.payload?.tabId),
+        Number(msg.payload?.windowId)
+      );
+      if (!response.ok){
         L("sharing:getLaunchContext miss", { contextId: bgShortId(contextId, 24) });
-        return { ok:false, error: "context_not_found" };
+        return response;
       }
+      const context = response.context;
       L("sharing:getLaunchContext hit", {
         contextId: bgShortId(contextId, 24),
         mode: context?.mode || "",
@@ -545,6 +712,38 @@ browser.runtime.onMessage.addListener((msg, sender) => {
     }catch(error){
       console.error("[NCBG] sharing:getLaunchContext", error);
       return { ok:false, error: error?.message || String(error) };
+    }
+  }
+  if (msg.type === "sharing:adoptAttachmentLaunchContext"){
+    try{
+      const contextId = typeof msg.payload?.contextId === "string" ? msg.payload.contextId.trim() : "";
+      if (!contextId){
+        return { ok:false, error:"context_id_missing" };
+      }
+      return adoptComposeAttachmentLaunchContext(
+        contextId,
+        Number(msg.payload?.tabId),
+        Number(msg.payload?.windowId),
+        Number(msg.payload?.attachmentCount)
+      );
+    }catch(error){
+      return messageError("sharing:adoptAttachmentLaunchContext", error);
+    }
+  }
+  if (msg.type === "sharing:rejectAttachmentLaunchContext"){
+    try{
+      const contextId = typeof msg.payload?.contextId === "string" ? msg.payload.contextId.trim() : "";
+      if (!contextId){
+        return { ok:false, error:"context_id_missing" };
+      }
+      return await rejectComposeAttachmentLaunchContext(
+        contextId,
+        Number(msg.payload?.tabId),
+        Number(msg.payload?.windowId),
+        String(msg.payload?.reason || "")
+      );
+    }catch(error){
+      return messageError("sharing:rejectAttachmentLaunchContext", error);
     }
   }
   if (msg.type === "sharing:resolveAttachmentPrompt"){
