@@ -74,6 +74,113 @@
     });
   }
 
+  async function moveFileIntoPlace({
+    sourceUrl,
+    sourceProbeUrl = sourceUrl,
+    targetUrl,
+    totalSize,
+    authHeader,
+    signal,
+    log,
+    overwrite,
+    headers = {},
+    scope = "File"
+  } = {}){
+    const resolveUnclearMove = async () => {
+      const [source, target] = await Promise.all([
+        NCNextcloudDav.probePath({
+          url: sourceProbeUrl,
+          authHeader,
+          signal,
+          log
+        }),
+        NCNextcloudDav.probePath({
+          url: targetUrl,
+          authHeader,
+          signal,
+          log
+        })
+      ]);
+      if (!source.exists
+        && target.exists
+        && !target.collection
+        && target.contentLength === totalSize){
+        if (typeof log === "function"){
+          log(`${scope} MOVE result recovered`, { totalSize });
+        }
+        return "moved";
+      }
+      if (overwrite === false && source.exists && target.exists){
+        return "collision";
+      }
+      return "unknown";
+    };
+    const recoverUnclearMove = async () => {
+      const resolution = await resolveUnclearMove();
+      if (resolution === "moved"){
+        return Object.freeze({ status: 0, recovered: true });
+      }
+      if (resolution === "collision"){
+        throw NCNextcloudDav.createUploadError(412);
+      }
+      return null;
+    };
+    let response;
+    try{
+      response = await NCNextcloudDav.fetchWithTimeout({
+        signal,
+        timeoutMs: NCNextcloudDav.CONTROL_REQUEST_TIMEOUT_MS,
+        request: (requestSignal) => fetch(sourceUrl, {
+          method: "MOVE",
+          headers: {
+            "Authorization": authHeader,
+            "Destination": targetUrl,
+            ...(typeof overwrite === "boolean" ? { "Overwrite": overwrite ? "T" : "F" } : {}),
+            ...headers
+          },
+          signal: requestSignal
+        })
+      });
+    }catch(error){
+      if (signal?.aborted || error?.name === "AbortError"){
+        throw NCNextcloudDav.createAbortError();
+      }
+      const recovered = await recoverUnclearMove();
+      if (recovered){
+        return recovered;
+      }
+      const uploadError = NCNextcloudDav.createTechnicalError(
+        error?.message || String(error)
+      );
+      uploadError.cause = error;
+      throw uploadError;
+    }
+    if (!response.ok){
+      const status = Number(response.status) || 0;
+      let detail = "";
+      try{
+        detail = await NCNextcloudDav.readResponseText(response, signal);
+      }catch(error){
+        if ([408, 502, 503, 504].includes(status)){
+          const recovered = await recoverUnclearMove();
+          if (recovered){
+            return recovered;
+          }
+        }
+        throw error;
+      }
+      if ([408, 502, 503, 504].includes(status)){
+        const recovered = await recoverUnclearMove();
+        if (recovered){
+          return recovered;
+        }
+      }
+      throw NCNextcloudDav.createUploadError(status, detail);
+    }
+    await NCNextcloudDav.closeResponse(response);
+    return Object.freeze({ status: Number(response.status) || 0, recovered: false });
+  }
+
   async function uploadDirect({
     file,
     davRoot,
@@ -90,21 +197,32 @@
       NCNextcloudDav.joinPath(file.relativeDir, file.fileName)
     );
     const targetUrl = NCNextcloudDav.buildFileUrl(davRoot, targetPath);
+    const createOnly = overwrite === false;
+    const stagePath = createOnly
+      ? NCNextcloudDav.joinPath(
+          shareRoot,
+          NCNextcloudDav.joinPath(
+            file.relativeDir,
+            `.ncc-upload-${NCNextcloudDav.createFileLinkId()}`
+          )
+        )
+      : targetPath;
+    const uploadUrl = NCNextcloudDav.buildFileUrl(davRoot, stagePath);
     progress.reportItem({
       phase: "start",
       itemId: file.itemId,
       fileName: file.fileName,
       displayPath: file.displayPath
     });
+    let cleanupRequired = createOnly;
     try{
-      const result = await NCNextcloudDav.xhrWithRetry({
+      const putResult = await NCNextcloudDav.xhrWithRetry({
         method: "PUT",
-        url: targetUrl,
+        url: uploadUrl,
         headers: {
           "Authorization": authHeader,
           "Content-Type": file.contentType || "application/octet-stream",
-          ...(autoMkcol !== false ? { [NCNextcloudDav.AUTO_MKCOL_HEADER]: "1" } : {}),
-          ...(overwrite === false ? { "If-None-Match": "*" } : {})
+          ...(autoMkcol !== false ? { [NCNextcloudDav.AUTO_MKCOL_HEADER]: "1" } : {})
         },
         createBody: async () => NCNextcloudDav.getSourceBlob(file),
         signal,
@@ -119,6 +237,19 @@
           emitItemProgress(progress, file, loaded);
         }
       });
+      const result = createOnly
+        ? await moveFileIntoPlace({
+            sourceUrl: uploadUrl,
+            targetUrl,
+            totalSize: file.size,
+            authHeader,
+            signal,
+            log,
+            overwrite: false,
+            scope: "Direct upload"
+          })
+        : putResult;
+      cleanupRequired = false;
       progress.complete(file);
       progress.reportItem({
         phase: "done",
@@ -136,6 +267,15 @@
         error: error?.ncUserMessage || bgI18n("sharing_status_error")
       });
       throw error;
+    }finally{
+      if (cleanupRequired){
+        await NCNextcloudDav.deleteBestEffort({
+          url: uploadUrl,
+          authHeader,
+          log,
+          scope: "Direct upload staging cleanup failed"
+        });
+      }
     }
   }
 
@@ -149,70 +289,21 @@
     log,
     overwrite
   } = {}){
-    const probeCompletedTarget = async () => {
-      const probe = await NCNextcloudDav.probePath({
-        url: targetUrl,
-        authHeader,
-        signal,
-        log
-      });
-      if (probe.exists && !probe.collection && probe.contentLength === totalSize){
-        if (typeof log === "function"){
-          log("Chunk MOVE result recovered", { totalSize });
-        }
-        return true;
-      }
-      return false;
-    };
-    let response;
-    try{
-      response = await NCNextcloudDav.fetchWithTimeout({
-        signal,
-        timeoutMs: NCNextcloudDav.CONTROL_REQUEST_TIMEOUT_MS,
-        request: (requestSignal) => fetch(`${uploadFolderUrl}/.file`, {
-          method: "MOVE",
-          headers: {
-            "Authorization": authHeader,
-            "Destination": targetUrl,
-            "OC-Total-Length": String(totalSize),
-            "X-OC-Mtime": String(Math.max(0, Math.floor((Number(lastModified) || Date.now()) / 1000))),
-            ...(typeof overwrite === "boolean" ? { "Overwrite": overwrite ? "T" : "F" } : {})
-          },
-          signal: requestSignal
-        })
-      });
-    }catch(error){
-      if (signal?.aborted || error?.name === "AbortError"){
-        throw NCNextcloudDav.createAbortError();
-      }
-      if (await probeCompletedTarget()){
-        return Object.freeze({ status: 0, recovered: true });
-      }
-      const uploadError = NCNextcloudDav.createTechnicalError(
-        error?.message || String(error)
-      );
-      uploadError.cause = error;
-      throw uploadError;
-    }
-    if (!response.ok){
-      const status = Number(response.status) || 0;
-      let detail = "";
-      try{
-        detail = await NCNextcloudDav.readResponseText(response, signal);
-      }catch(error){
-        if ([408, 502, 503, 504].includes(status)
-          && await probeCompletedTarget()){
-          return Object.freeze({ status: 0, recovered: true });
-        }
-        throw error;
-      }
-      if ([408, 502, 503, 504].includes(status) && await probeCompletedTarget()){
-        return Object.freeze({ status: 0, recovered: true });
-      }
-      throw NCNextcloudDav.createUploadError(status, detail);
-    }
-    await NCNextcloudDav.closeResponse(response);
-    return Object.freeze({ status: Number(response.status) || 0, recovered: false });
+    return moveFileIntoPlace({
+      sourceUrl: `${uploadFolderUrl}/.file`,
+      sourceProbeUrl: uploadFolderUrl,
+      targetUrl,
+      totalSize,
+      authHeader,
+      signal,
+      log,
+      overwrite,
+      headers: {
+        "OC-Total-Length": String(totalSize),
+        "X-OC-Mtime": String(Math.max(0, Math.floor((Number(lastModified) || Date.now()) / 1000)))
+      },
+      scope: "Chunk"
+    });
   }
 
   async function uploadChunked({

@@ -60,11 +60,11 @@ upstream PR commits.
   attempt has settled.
   Cancel remains blocked while the request is running and closes the wizard
   after retryable and non-retryable insertion/finalize failures.
-- [ ] **P-01 - medium:** Reconcile ambiguous non-overwrite VFS-provider writes.
-  A successful Direct PUT whose response is lost is retried and then reported
-  as HTTP 412, while an unclear chunk MOVE accepts any existing same-size
-  target as the just-written file. Recovery must distinguish the requested
-  content from an older target.
+- [x] **P-01 - medium:** Reconcile ambiguous non-overwrite VFS-provider writes.
+  Create-only Direct uploads now use an operation-owned sibling stage followed
+  by `MOVE` with `Overwrite: F`. Direct and chunk MOVE recovery requires the
+  operation-owned source to be gone and the target to be a file of the expected
+  size; a retained source plus an existing target remains a collision.
 - [ ] **P-02 - VFS contract:** Make provider `writeFile()` and `addFolder()`
   create missing parent directories as required by the VFS Toolkit API.
 - [x] Emit the transfer-completion log for shares containing only
@@ -121,9 +121,9 @@ VFS feature PR has been merged. They are not current product defects.
 - [x] Add a wizard UI lifecycle check for retryable and non-retryable finalize
   failures, including Retry, Cancel, and window-close behavior.
 - [x] Add exact-snapshot coverage for same-Nextcloud folder COPY.
-- [ ] Replace the current same-size chunk-MOVE recovery expectation and add
-  ambiguity tests for an older equal-size destination plus a successful Direct
-  PUT whose response is lost before the retry returns HTTP 412.
+- [x] Replace the same-size-only chunk-MOVE recovery expectation and cover an
+  older equal-size destination, replay of a create-only Direct stage, ambiguous
+  MOVE completion, collision handling, and operation-owned cleanup.
 - [ ] Add VFS contract tests proving that provider `writeFile()` and
   `addFolder()` create all missing intermediate directories; update the current
   tests and documentation that still require an existing parent.

@@ -343,18 +343,17 @@ async function checkMoveRecovery(){
   };
   context.NCNextcloudDav = {
     ...baseDav,
-    probePath: async () => ({
-      exists: true,
-      collection: false,
-      contentLength: 41
-    })
+    probePath: async ({ url }) => url.endsWith("/uploads/id")
+      ? { exists: false, collection: false, contentLength: null }
+      : { exists: true, collection: false, contentLength: 41 }
   };
   await upload.moveChunkIntoPlace({
     uploadFolderUrl: "https://cloud.example.test/uploads/id",
     targetUrl: "https://cloud.example.test/files/share/file.bin",
     totalSize: 41,
     lastModified: 1700000000000,
-    authHeader: "Basic test"
+    authHeader: "Basic test",
+    overwrite: false
   });
   assert(moveRequests.length === 1, "Chunk MOVE must not be sent twice after a transport failure");
   assert(moveRequests[0].options.method === "MOVE", "Chunk completion must use MOVE");
@@ -364,24 +363,45 @@ async function checkMoveRecovery(){
     uploadFolderUrl: "https://cloud.example.test/uploads/id",
     targetUrl: "https://cloud.example.test/files/share/file.bin",
     totalSize: 41,
-    authHeader: "Basic test"
+    authHeader: "Basic test",
+    overwrite: false
   });
 
   context.NCNextcloudDav = {
     ...baseDav,
-    probePath: async () => ({
-      exists: true,
-      collection: false,
-      contentLength: 40
-    })
+    probePath: async ({ url }) => url.endsWith("/uploads/id")
+      ? { exists: false, collection: false, contentLength: null }
+      : { exists: true, collection: false, contentLength: 40 }
   };
   const mismatch = await expectFailure(() => upload.moveChunkIntoPlace({
     uploadFolderUrl: "https://cloud.example.test/uploads/id",
     targetUrl: "https://cloud.example.test/files/share/file.bin",
     totalSize: 41,
-    authHeader: "Basic test"
+    authHeader: "Basic test",
+    overwrite: false
   }), "A mismatched target size must not recover an unclear MOVE");
   assert(mismatch.status === 503, "Unrecovered MOVE must retain its HTTP status");
+
+  context.fetch = async () => {
+    throw new Error("connection closed after collision");
+  };
+  context.NCNextcloudDav = {
+    ...baseDav,
+    probePath: async ({ url }) => url.endsWith("/uploads/id")
+      ? { exists: true, collection: true, contentLength: null }
+      : { exists: true, collection: false, contentLength: 41 }
+  };
+  const olderTarget = await expectFailure(() => upload.moveChunkIntoPlace({
+    uploadFolderUrl: "https://cloud.example.test/uploads/id",
+    targetUrl: "https://cloud.example.test/files/share/file.bin",
+    totalSize: 41,
+    authHeader: "Basic test",
+    overwrite: false
+  }), "An older same-size target must not recover an unclear chunk MOVE");
+  assert(
+    olderTarget.status === 412,
+    "A retained chunk source plus an existing non-overwrite target must report a collision"
+  );
 
   let rootProbeCalls = 0;
   context.fetch = async (_url, options) => {
@@ -436,6 +456,114 @@ async function checkMoveRecovery(){
     authHeader: "Basic test"
   });
   assert(resolvedCollision === false, "Present source and target must resolve as collision");
+}
+
+async function checkProviderDirectRecovery(){
+  const context = createUploadContext();
+  loadUploadModules(context, [
+    "modules/fileLinkUploadPolicy.js",
+    "modules/nextcloudDav.js",
+    "modules/fileLinkUploadProgress.js",
+    "modules/fileLinkUpload.js"
+  ]);
+  const upload = context.NCFileLinkUpload;
+  const baseDav = context.NCNextcloudDav;
+  const xhrCalls = [];
+  const moveCalls = [];
+  const cleanupUrls = [];
+  const progress = {
+    reportItem: () => {},
+    setLoaded: () => {},
+    reset: () => {},
+    complete: () => {}
+  };
+  const file = {
+    itemId: "provider-direct",
+    sourceFile: new Blob(["provider direct body"], { type: "text/plain" }),
+    fileName: "direct.txt",
+    displayPath: "/Provider/direct.txt",
+    relativeDir: "",
+    size: 20,
+    lastModified: 1700000000000,
+    contentType: "text/plain"
+  };
+
+  context.fetch = async (url, options) => {
+    moveCalls.push({ url, options });
+    throw new Error("MOVE response lost after commit");
+  };
+  context.NCNextcloudDav = {
+    ...baseDav,
+    xhrWithRetry: async (options) => {
+      const firstBody = await options.createBody(1);
+      options.onRetry?.();
+      const retryBody = await options.createBody(2);
+      xhrCalls.push({ options, firstBody, retryBody });
+      return { status: 204 };
+    },
+    probePath: async ({ url }) => url.includes("/.ncc-upload-")
+      ? { exists: false, collection: false, contentLength: null }
+      : { exists: true, collection: false, contentLength: file.size },
+    deleteBestEffort: async ({ url }) => {
+      cleanupUrls.push(url);
+      return true;
+    }
+  };
+  const recovered = await upload.uploadDirect({
+    file,
+    davRoot: "https://cloud.example.test/remote.php/dav/files/user",
+    shareRoot: "Provider",
+    authHeader: "Basic provider",
+    progress,
+    overwrite: false,
+    autoMkcol: false
+  });
+  assert(
+    recovered.recovered === true && recovered.status === 0,
+    "A committed provider create must recover after its MOVE response is lost"
+  );
+  assert(
+    xhrCalls.length === 1
+      && xhrCalls[0].firstBody === file.sourceFile
+      && xhrCalls[0].retryBody === file.sourceFile
+      && /\/Provider\/\.ncc-upload-[^/]+$/.test(xhrCalls[0].options.url)
+      && !Object.prototype.hasOwnProperty.call(
+        xhrCalls[0].options.headers,
+        "If-None-Match"
+      ),
+    "A lost stage PUT response must replay only the same operation-owned stage"
+  );
+  assert(
+    moveCalls.length === 1
+      && moveCalls[0].url === xhrCalls[0].options.url
+      && moveCalls[0].options.headers.Destination.endsWith("/Provider/direct.txt")
+      && moveCalls[0].options.headers.Overwrite === "F",
+    "Direct create recovery must keep the final destination non-overwriting"
+  );
+  assert(cleanupUrls.length === 0, "A recovered MOVE must leave no direct stage to clean");
+
+  xhrCalls.length = 0;
+  moveCalls.length = 0;
+  context.NCNextcloudDav = {
+    ...context.NCNextcloudDav,
+    probePath: async ({ url }) => url.includes("/.ncc-upload-")
+      ? { exists: true, collection: false, contentLength: file.size }
+      : { exists: true, collection: false, contentLength: file.size }
+  };
+  const collision = await expectFailure(() => upload.uploadDirect({
+    file,
+    davRoot: "https://cloud.example.test/remote.php/dav/files/user",
+    shareRoot: "Provider",
+    authHeader: "Basic provider",
+    progress,
+    overwrite: false,
+    autoMkcol: false
+  }), "An older same-size direct target must not be accepted after an unclear MOVE");
+  assert(collision.status === 412, "A retained direct stage must identify the target as a collision");
+  assert(
+    cleanupUrls.length === 1 && cleanupUrls[0] === moveCalls[0].url,
+    "A collided direct create must clean only its own stage"
+  );
 }
 
 async function checkConcurrentRootReservations(){
@@ -636,9 +764,19 @@ async function checkDirectAndChunkRequests(){
   });
   assert(xhrCalls.length === 1, "A single provider file must use one shared upload-plan transfer");
   assert(
-    xhrCalls[0].options.headers["If-None-Match"] === "*"
+    /\/Provider%20Folder\/Sub%20Folder\/\.ncc-upload-[^/]+$/.test(xhrCalls[0].options.url)
+      && !Object.prototype.hasOwnProperty.call(xhrCalls[0].options.headers, "If-None-Match")
       && !Object.prototype.hasOwnProperty.call(xhrCalls[0].options.headers, "X-NC-WebDAV-Auto-Mkcol"),
-    "A provider create must remain atomic and must not create missing parents"
+    "A provider create must upload replay-safely to its own sibling stage"
+  );
+  assert(
+    moveCalls.length === 1
+      && moveCalls[0].url === xhrCalls[0].options.url
+      && moveCalls[0].options.method === "MOVE"
+      && moveCalls[0].options.headers.Destination
+        .endsWith("/Provider%20Folder/Sub%20Folder/direct%20file.txt")
+      && moveCalls[0].options.headers.Overwrite === "F",
+    "A provider create must atomically move its unique stage without overwriting"
   );
   assert(
     singleLogs.some(([message]) => message === "Upload plan ready")
@@ -651,6 +789,7 @@ async function checkDirectAndChunkRequests(){
   );
 
   xhrCalls.length = 0;
+  moveCalls.length = 0;
   const chunkRanges = [];
   const chunkSize = context.NCFileLinkUploadPolicy.DEFAULT_CHUNK_SIZE_BYTES;
   const chunkedFile = {
@@ -952,6 +1091,7 @@ async function runDavProtocolChecks(){
   await checkRetryRules();
   await checkRequestTimeoutsAndAbort();
   await checkMoveRecovery();
+  await checkProviderDirectRecovery();
   await checkConcurrentRootReservations();
   await checkDirectAndChunkRequests();
   await checkRootReservationCleanup();

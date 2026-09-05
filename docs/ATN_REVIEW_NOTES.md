@@ -244,9 +244,9 @@ password-dispatch, header, or body mutation cannot be exposed as committed.
   - Direct PUT for files up to and including 20 MiB
   - Nextcloud chunked upload v2 for larger files
   - DAV Bulk only for a sufficiently large small-file set with at least 20 percent fewer calculated requests
-- Direct PUT uses the server-recognized `X-NC-WebDAV-Auto-Mkcol` header. The protocol check covers a single-file nested directory, where this header creates the missing parent path.
+- Normal Direct PUT uses the server-recognized `X-NC-WebDAV-Auto-Mkcol` header. The protocol check covers a single-file nested directory, where this header creates the missing parent path. A create-only VFS-provider write first uploads to a unique sibling stage and then uses `MOVE` with `Overwrite: F`, so retrying a lost PUT response cannot turn a completed upload into a false target collision.
 - The final share root is reserved through a unique staging collection and `MOVE` with `Overwrite: F`. A target collision is decided by Nextcloud without an earlier check/create race.
-- Final MOVE requests are not repeated blindly. Unclear root and chunk-finalization results are resolved with exact DAV probes.
+- Final MOVE requests are not repeated blindly. An unclear staged-file MOVE is accepted only when its operation-owned source has disappeared and the target is a file of the expected size. A retained source plus an existing create-only target remains a collision, including when an older target has the same size. Root reservations use the equivalent source/target DAV probes for collections.
 - Replay-safe requests use at most three attempts for transport failures or HTTP `408`, `423`, `429`, `502`, `503`, and `504`; `Retry-After` is capped at 30 seconds.
 - HTTP `507`, including a failed item reported by DAV Bulk, maps to the localized insufficient-storage message.
 - Public-share create and metadata update send the exact `permissions` mask without the overriding legacy `publicUpload` field. Unclear create responses use an exact-path lookup and permit one more create only after the lookup reports a known empty result.
