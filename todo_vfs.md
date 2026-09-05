@@ -36,10 +36,9 @@ upstream PR commits.
 ## Verified bugs / required fixes
 
 - [x] **A-03 - release blocker:** Block sending the compose message while an
-  attachment-routing handoff or attachment-mode wizard is active. The current
-  send guard starts only with background finalization/compose cleanup, so a
-  user can send while the originals are already detached but no share block
-  has been inserted.
+  attachment-routing handoff or attachment-mode wizard is active. The
+  background send guard now starts before the originals are detached and stays
+  active until the attachment wizard releases ownership.
 - [x] **A-01 - release blocker:** Make compose-attachment handoff transactional.
   Collect every attachment first, then ensure the wizard/context handoff can be
   completed; if attachment
@@ -54,24 +53,27 @@ upstream PR commits.
   calculation.
 - [x] **A-02 - high:** Serialize attachment automation per compose tab and
   reserve the threshold prompt before asynchronous popup creation. Resolve or
-  discard attachment
-  batches deterministically when a prompt closes so overlapping evaluations
-  cannot open duplicate prompts or start competing detach flows.
+  discard attachment batches deterministically when a prompt closes so
+  overlapping evaluations cannot open duplicate prompts or start competing
+  detach flows.
 - [x] **F-01 - medium:** Allow the Sharing wizard to close after a finalize
   attempt has settled.
   Cancel remains blocked while the request is running and closes the wizard
   after retryable and non-retryable insertion/finalize failures.
 - [ ] **P-01 - medium:** Reconcile ambiguous non-overwrite VFS-provider writes.
   A successful Direct PUT whose response is lost is retried and then reported
-  as HTTP 412, while an
-  unclear chunk MOVE accepts any existing same-size target as the just-written
-  file. Recovery must distinguish the requested content from an older target.
+  as HTTP 412, while an unclear chunk MOVE accepts any existing same-size
+  target as the just-written file. Recovery must distinguish the requested
+  content from an older target.
 - [ ] **P-02 - VFS contract:** Make provider `writeFile()` and `addFolder()`
   create missing parent directories as required by the VFS Toolkit API.
 - [x] Emit the transfer-completion log for shares containing only
   same-Nextcloud server-side copies.
 
-## Later cleanup
+## Post-merge refactoring
+
+These behavior-preserving refactors are intentionally deferred until after the
+VFS feature PR has been merged. They are not current product defects.
 
 - [ ] Replace direct compose lifecycle map mutations with focused query and
   transition functions owned by the corresponding lifecycle modules.
@@ -102,9 +104,12 @@ upstream PR commits.
 - External VFS files remain one in-memory `File` during transfer and are not
   staged on disk.
 
-## Validation
+## Validation during feature work
 
 - `npm run test:review`
+
+## Final PR gate
+
 - `npm run test:webext-linter`
 
 ## Missing regression coverage
@@ -116,4 +121,15 @@ upstream PR commits.
 - [x] Add a wizard UI lifecycle check for retryable and non-retryable finalize
   failures, including Retry, Cancel, and window-close behavior.
 - [x] Add exact-snapshot coverage for same-Nextcloud folder COPY.
-- [ ] Add ambiguity tests for Direct and chunked non-overwrite provider writes.
+- [ ] Replace the current same-size chunk-MOVE recovery expectation and add
+  ambiguity tests for an older equal-size destination plus a successful Direct
+  PUT whose response is lost before the retry returns HTTP 412.
+- [ ] Add VFS contract tests proving that provider `writeFile()` and
+  `addFolder()` create all missing intermediate directories; update the current
+  tests and documentation that still require an existing parent.
+- [x] Add one end-to-end attachment lifecycle harness covering detach, context
+  adoption, background upload, finalize, and confirmed send or cancel instead
+  of testing these state machines only in isolation.
+- [ ] Smoke-test both interoperability directions with an unmodified API 1.3
+  counterpart: NC Connector client against an older external provider, and an
+  older external client against the NC Connector provider.
