@@ -20,6 +20,7 @@ const CHECKS = [
   "tools/password-delivery-contract-check.js",
   "tools/password-dispatch-regression-check.js",
   "tools/compose-attachment-lifecycle-check.js",
+  "tools/compose-attachment-e2e-check.js",
   "tools/compose-send-lifecycle-check.js",
   "tools/sharing-finalize-lifecycle-check.js",
   "tools/password-policy-runtime-check.js",
