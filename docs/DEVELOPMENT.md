@@ -728,9 +728,12 @@ Attachment mode specifics:
 - ZIP derivation accepts only an absolute HTTP(S) URL whose path ends in `/s/<token>`; a trailing slash, query, or fragment is accepted and removed. When the OCS create-share response contains a token, the decoded path token must match it. Any invalid shape or mismatch makes finalize show an error and insert neither the original URL nor a share block.
 - Recipient permissions are enforced as read-only in this mode (`read=true`, `create/write/delete=false`), independent of sharing defaults.
 - Queue UI behavior:
-  - path column shows the best available source path (including file name)
-  - path text is horizontally scrollable per row (mouse wheel), while type/status columns remain fixed
-  - currently uploading row is highlighted in accent blue; upload progress and done state use green success styling
+  - entries are grouped by source and rendered as a recursive file/folder tree; top-level folders start expanded and every populated folder can be expanded or collapsed
+  - rows show the best available path or name, source context, item type, known file size, transfer status, and an item action
+  - the remove action applies to a standalone entry or a selected root/transfer group; removing individual children of a selected folder is not implemented yet
+  - the summary bar shows queue entries, distinct sources, and the known total size; a separate destination summary shows finite free/total space, unlimited storage, or an unavailable quota result
+  - upload is blocked when the known queued bytes exceed a finite reported destination capacity
+  - currently uploading rows are highlighted in accent blue; per-item progress and completed state use the queue status controls
   - aggregate progress shows completed files, total files, transferred bytes, total bytes, percentage, and current transfer rate
   - UI progress delivery is limited to 10 updates per second and batches changed queue rows
 - Upload uniqueness behavior:
@@ -904,7 +907,7 @@ Directory planning creates:
 - every directory needed by chunked or Bulk destinations
 - only shared parent paths for Direct files
 
-Direct PUT sends `X-NC-WebDAV-Auto-Mkcol: 1`, matching the header checked by Nextcloud's `UploadAutoMkcolPlugin`. This lets Nextcloud create a missing path for an individual Direct destination without one `MKCOL` per unique single-file directory. The Nextcloud 32 developer manual currently omits the hyphen before `Mkcol`; client code follows the server implementation.
+Normal FileLink Direct PUT sends `X-NC-WebDAV-Auto-Mkcol: 1`, matching the header checked by Nextcloud's `UploadAutoMkcolPlugin`. This lets Nextcloud create a missing path for an individual Direct destination without one `MKCOL` per unique single-file directory. The Nextcloud 32 developer manual currently omits the hyphen before `Mkcol`; client code follows the server implementation. VFS-provider writes disable this header because their selected parent must already exist.
 
 #### Root reservation and collision handling
 
@@ -929,7 +932,7 @@ An unused staging collection is removed in `finally`. Once the target exists, ba
 
 #### Direct, Chunked, and Bulk protocols
 
-Direct upload uses an authenticated DAV `PUT` to the final file URL.
+Normal FileLink Direct upload uses an authenticated DAV `PUT` to the final file URL. A create-only VFS-provider Direct write instead uploads to a unique `.ncc-upload-*` sibling in the selected parent and moves that stage to the requested target with `Overwrite: F`. The stage gives retries one operation-owned URL and prevents an unclear successful PUT response from becoming a false collision on the final target. Failed or canceled staged writes remove that stage on a best-effort path.
 
 Chunked upload v2 uses:
 
@@ -937,7 +940,7 @@ Chunked upload v2 uses:
 2. numbered chunk PUTs with `Destination` and `OC-Total-Length`
 3. one MOVE from `<upload-folder>/.file` to the final file URL
 
-The final chunk MOVE is not repeated after an unclear transport or gateway result. A target `PROPFIND` must report a non-collection with the expected content length before the operation is accepted as completed. Failed or canceled chunk sessions delete their upload collection on a best-effort path. Nextcloud expires an upload collection after 24 hours without activity if the client-side delete cannot reach the server.
+The final Direct-stage or chunk MOVE is not repeated after an unclear transport or gateway result. Completion is accepted only when the operation-owned stage or upload collection is absent and the target `PROPFIND` reports a non-collection with the expected content length. For a create-only write, a retained source plus an existing target remains a collision even when both files have the same size. Failed or canceled stages and chunk sessions are deleted on a best-effort path. Nextcloud expires an upload collection after 24 hours without activity if the client-side delete cannot reach the server.
 
 Bulk upload posts `multipart/related` to `/remote.php/dav/bulk`. Every part contains:
 
@@ -1024,7 +1027,7 @@ NC Connector uses the vendored Thunderbird VFS Toolkit in two roles:
 
 There is no second Nextcloud login. `modules/nccore.js` resolves the canonical Nextcloud UID and constructs the authenticated File, Upload, and Bulk DAV targets shared by FileLink, VFS, and persistent cleanup. Basic Auth continues to use the configured login alias and app password. A provider storage ID is bound to the normalized server plus canonical UID. Changing either rotates that ID and removes every previous grant; an app-password or login-alias change for the same canonical account does not.
 
-The provider implements live list, quota, read, add, move, copy, and delete operations through the common DAV module. `writeFile()` validates the same Nextcloud 32 capability contract as FileLink and delegates to the existing one-file upload plan instead of issuing a separate PUT. Files up to 20 MiB therefore use the shared Direct path; larger files use the shared chunked-v2 path. The VFS `overwrite` flag maps to `If-None-Match: *` for Direct creates and `Overwrite: F` for the final chunk MOVE, while provider writes never create a missing parent implicitly. Existing upload log messages are retained and receive `origin: vfs_provider` metadata. Toolkit ports are authorized by the runtime-supplied sender ID and the exact consumer/storage pair. Setup uses a one-time token tied to the requesting port. Each active request has its own abort controller, and every operation rechecks the captured account binding before DAV access.
+The provider implements live list, quota, read, add, move, copy, and delete operations through the common DAV module. `writeFile()` validates the same Nextcloud 32 capability rules as FileLink and delegates to the existing one-file upload plan instead of issuing a separate PUT. Files up to 20 MiB therefore use the shared Direct path; larger files use the shared chunked-v2 path. With `overwrite: false`, Direct writes use a unique sibling stage followed by `MOVE` with `Overwrite: F`; chunked writes apply `Overwrite: F` to their final MOVE. With `overwrite: true`, Direct writes PUT the target and chunked writes move with `Overwrite: T`. Provider writes never create a missing parent implicitly. Existing upload log messages are retained and receive `origin: vfs_provider` metadata. Toolkit ports are authorized by the runtime-supplied sender ID and the exact consumer/storage pair. Setup uses a one-time token tied to the requesting port. Each active request has its own abort controller, and every operation rechecks the captured account binding before DAV access.
 
 The Sharing wizard first builds one immutable queue of descriptors. Each row carries a source kind (`local`, `nextcloud`, or `external-vfs`), provider label, source path, target path, item kind, size, and transfer-group metadata. Folder enumeration includes empty directories. Exact and prefix conflicts are resolved before any remote share mutation; removing a selected folder removes its complete transfer group.
 
@@ -1224,7 +1227,7 @@ the same run is not overwritten by a later failure.
 
 Before you ship:
 1. Bump `manifest.json` version.
-2. Update `docs/ATN_REVIEW_NOTES.md` and README “What’s new”.
+2. Update `docs/ATN_REVIEW_NOTES.md` and every affected README, admin, and developer section.
 3. Run the manual tests (Talk dialog + tab editor, sharing wizard, event move/delete, delegation, invitee sync).
 4. Run local review checks:
    - `npm ci`
@@ -1246,7 +1249,7 @@ Before you ship:
    - the Thunderbird webext-linter after installing the current upstream `main`
      package
    Do not duplicate the aggregate's individual scripts in the workflow. Keeping
-   one authoritative check list prevents newly added review checks from being
+   one central check list prevents newly added review checks from being
    omitted in CI.
 8. Sanity check:
    - add-on installs on Thunderbird ESR 140 through ESR 153

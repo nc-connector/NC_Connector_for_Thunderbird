@@ -10,7 +10,7 @@ NC Connector is the Thunderbird-native Nextcloud integration for organizations t
 ## What the add-on does
 
 - create Nextcloud shares directly from new mails, replies, and forwards
-- combine local files, existing files from the configured Nextcloud, and files or folders from compatible Thunderbird VFS providers in one share queue
+- combine local files, files and folders from the configured Nextcloud, and files or folders from compatible Thunderbird VFS providers in one share queue
 - upload files through Nextcloud 32 WebDAV using parallel direct uploads, chunked upload v2, and DAV bulk upload when supported
 - control password, expiration date, permissions, and separate password delivery
 - send passwords either as plain mail or as a Nextcloud Secret link
@@ -38,7 +38,8 @@ Key points:
 
 - available in compose windows, replies, and forwards
 - high-speed upload selection is automatic, with progress for folder preparation, completed files, transferred bytes, and current transfer rate
-- files already stored on the configured Nextcloud are copied server-side; external VFS content is read in Thunderbird and uploaded to that Nextcloud without a disk staging folder
+- files and folders already stored on the configured Nextcloud are copied server-side; external VFS content is read in Thunderbird and uploaded to that Nextcloud without a disk staging folder
+- review mixed selections in a source-grouped folder tree with file sizes, queue totals, and available Nextcloud storage before upload
 - optional expiration date and custom permissions per share
 - attachment automation for large attachments or always through NC Connector, with a selectable `ZIP download` or `Nextcloud share page` link target; ZIP is the built-in fallback when no valid effective value exists, including a missing or invalid locked backend value
 - separate password mails are sent only after the primary mail was sent successfully
@@ -76,7 +77,7 @@ With the backend, Thunderbird can insert managed email signatures or remove loca
 
 ## Language
 
-The UI is localized. Supported languages are documented in [`Translations.md`](https://github.com/nc-connector/NC_Connector_for_Thunderbird/blob/main/Translations.md). Fallback is German, then English.
+The UI is localized. Supported languages are documented in [`Translations.md`](https://github.com/nc-connector/NC_Connector_for_Thunderbird/blob/main/Translations.md). The manifest default locale is German; generated text blocks use English when the selected or Thunderbird UI language is unsupported.
 
 Text blocks for shares and Talk can be configured independently from the UI language. Backend templates are used only when the backend is available and the policy allows them.
 

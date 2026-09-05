@@ -255,6 +255,8 @@ NC Connector does not silently change to another upload mode after a protocol fa
 
 The Sharing wizard can fill one queue from local files, the configured Nextcloud, and established external VFS connections. Files and folders already on that Nextcloud are copied into the generated share folder with server-side WebDAV `COPY`; their originals are never moved or deleted. External files are read one at a time through the selected provider and then sent through the normal NC Connector upload engine. No temporary disk folder is created.
 
+Before upload, the wizard groups entries by source in an expandable folder tree and shows known file sizes, the queue total, and destination storage. Upload is blocked when the known queued bytes exceed the finite available space reported by Nextcloud. An unavailable quota result remains visible but does not by itself block the upload.
+
 The VFS Toolkit currently supplies each external file as a complete `File`, not as a streaming cloud-to-cloud transfer. Large external files can therefore require corresponding Thunderbird memory while that one file is being transferred. Queue collection finishes before the upload starts, and a failure or cancellation removes only the generated share root, never a selected source.
 
 ## 6. Enterprise rollout
@@ -424,7 +426,7 @@ Checks:
 
 1. Identify the HTTP status in the client and server logs.
 2. Confirm that the proxy permits DAV `MOVE` and `DELETE`.
-3. Confirm that the proxy forwards `Destination`, `Overwrite`, and `X-NC-WebDAV-Auto-Mkcol`. Keep the hyphen before `Mkcol`; Nextcloud uses this header to create a selected single-file directory during Direct upload.
+3. Confirm that the proxy forwards `Destination`, `Overwrite`, and `X-NC-WebDAV-Auto-Mkcol`. Keep the hyphen before `Mkcol`; Nextcloud uses this header to create a selected single-file directory during normal FileLink Direct upload.
 4. Compare the proxy timeout with the duration of the failing request.
 5. Check Nextcloud background load, PHP workers, database locks, and storage latency.
 

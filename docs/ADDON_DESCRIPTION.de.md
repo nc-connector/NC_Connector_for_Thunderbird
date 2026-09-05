@@ -5,13 +5,15 @@ Für eine detaillierte Entwickler-Dokumentation (Onboarding, Storage-Schema, Mes
 ## Übersicht
 Dieses Add-on integriert Nextcloud Talk und Nextcloud-Freigaben in Thunderbird.
 - Freigaben aus dem Compose-Fenster mit Upload und Metadaten
+- Eine gemischte Freigabe-Warteschlange für lokale Dateien, die eingerichtete Nextcloud und kompatible Thunderbird-VFS-Anbieter
+- Einen schreib- und lesefähigen VFS-Anbieter, der die eingerichtete Nextcloud für ausdrücklich freigegebene Add-ons bereitstellt
 - Talk-Raum-Erstellung mit Lobby, Moderator-Delegation und optionaler Teilnehmer-Übernahme (getrennt nach Benutzern und Gästen)
 - Kalender-Integration über Metadaten und einen stabilen Toolbar-Button im Termin-Editor
 - Zentrale Optionen für Zugangsdaten und Defaults
 - Debug-Logging über UI, Background und Experiment
 
 ## Architektur
-- modules/*: Kernlogik für OCS-Requests, Auth, Talk, Freigabe, i18n, atomaren Compose-Abschluss, persistentes Cleanup und gesplittete Background-Orchestrierung
+- modules/*: Kernlogik für OCS-Requests, Auth, Talk, Freigabe, DAV-Upload/-Kopie, VFS-Anbieter-/Client-Integration, i18n, atomaren Compose-Abschluss, persistentes Cleanup und gesplittete Background-Orchestrierung
 - `modules/hostPermissions.js`: zentralisierte Optional-Host-Permission-Logik, wiederverwendet von Core/Talk/Freigabe-Laufzeitmodulen
 - ui/*: HTML/JS-Dialoge und Helfer (Optionen, Freigabe-Wizard, Talk Dialog, Popup Sizing, DOM i18n)
 - experiments/calendar/*: Thunderbird Kalender-Experiment-API (Items CRUD + Lifecycle-Events) wird “as-is” genutzt
@@ -30,8 +32,8 @@ Kalender-Integration (high level):
 Datenfluss:
 1. Optionen werden in storage gespeichert (Base URL, Auth-Modus, Defaults)
 2. Auth via NCCore und Basic-Auth-Header
-3. OCS- und DAV-Requests via NCOcs
-4. UI-Dialoge sprechen mit dem Background per runtime messaging
+3. OCS-Requests laufen über NCOcs; DAV-Requests nutzen das gemeinsame Modul NCNextcloudDav
+4. UI-Dialoge sprechen per Runtime-Messaging mit dem Background; VFS-Operationen nutzen anfragebezogene Toolkit-Ports
 5. Ergebnisse gehen zurück in:
    - Compose-HTML via `browser.compose.*` APIs
    - den aktuell bearbeiteten Termin via `browser.ncCalToolbar.updateCurrent` (editor-targeted über `editorId`)
@@ -39,7 +41,9 @@ Datenfluss:
 
 ## Features (technisch)
 ### Freigabe
-- Erstellt einen datierten Share-Ordner über DAV und lädt Dateien hoch
+- Erstellt einen datierten Share-Ordner über DAV und lädt oder kopiert ausgewählte Dateien und Ordner aus lokalen und entfernten Quellen
+- Sammelt alle Auswahlen in einer nach Quellen gruppierten rekursiven Baumansicht mit Dateigrößen, Warteschlangensumme, Übertragungsstatus und Rückmeldung zum Zielspeicher
+- Kopiert ausgewählte Inhalte aus der eingerichteten Nextcloud serverseitig und liest externe VFS-Dateien nacheinander, bevor sie an die normale Upload-Engine übergeben werden; es gibt keinen Zwischenordner auf der Festplatte
 - Erstellt Shares über /ocs/v2.php/apps/files_sharing/api/v1/shares
 - Setzt Defaults für Share-Name, Rechte, Passwort und Ablaufdatum
 - Berücksichtigt Nextcloud Passwort-Policy (Mindestlänge + Generator-API nur auf derselben Origin mit sicherer lokaler Erzeugung als Fallback)
@@ -51,6 +55,8 @@ Datenfluss:
 - Optionaler separater Passwortversand für Freigaben:
   - Default + Wizard-Toggle: "Passwort separat senden"
   - nur aktiv, wenn Passwortschutz aktiv ist
+  - Zustellung wahlweise als Klartext oder als Nextcloud-Secret-Link, wenn die Backend-Policy diese Funktion freigibt
+  - im Secrets-Modus wird pro Empfänger ein einmal verwendbarer Link erstellt; ist Secrets nicht verfügbar, wird mit Warnung auf Klartext zurückgefallen
   - Hauptmail blendet das Inline-Passwort aus und zeigt einen Hinweis auf die separate Passwortmail
   - nach bestätigtem Sofortversand kann die separate Passwortmail automatisch gesendet werden; liegt die Hauptmail im Postausgang, wird ein deutlich gekennzeichneter Passwortentwurf geöffnet, der erst nach dem tatsächlichen Versand der Hauptmail manuell gesendet wird
   - beim Speichern der Hauptmail werden explizite manuelle Passwortentwürfe erstellt; ein unvollständiger Übergabevorgang sperrt die Hauptmail, statt Passwortinhalte zu persistieren
@@ -66,6 +72,13 @@ Datenfluss:
   - das Linkziel ändert nur URL und Linktext; Read-only-Rechte, ausgeblendete Rechtezeile und Cleanup des Attachment-Mode bleiben in beiden Varianten aktiv
   - eine ungültige ZIP-Quell-URL oder eine Abweichung vom OCS-Freigabetoken stoppt Finalize mit sichtbarem Fehler, statt die Original-URL mit ZIP-Text einzufügen
   - solange Thunderbirds eigene Option "Hochladen für Dateien größer als" aktiv ist, sind die Automatisierungsoptionen mit Hinweistext gesperrt
+
+### VFS-Integration
+- Stellt die bereits eingerichtete Nextcloud nach einer ausdrücklichen, widerrufbaren Freigabe pro Add-on als vollständig schreib- und lesefähigen VFS-Anbieter bereit
+- Nutzt die bestehende Nextcloud-Anmeldung und die gemeinsame DAV-Implementierung; ein Wechsel von Server oder kanonischem Benutzer verwirft vorherige Anbieterfreigaben
+- Nutzt für Anbieter-Schreibvorgänge dieselbe Auswahl zwischen Direct und Chunked v2 sowie dieselben Wiederholungs-, Abbruch-, Fortschritts-, Cleanup- und Log-Pfade; unabhängige VFS-Schreibvorgänge werden nicht zu DAV-Bulk-Batches zusammengefasst
+- Erkennt externe VFS-Anbieter erst, nachdem der Benutzer die Funktion aktiviert und die optionale Thunderbird-Berechtigung zur Add-on-Verwaltung erteilt hat
+- Unterstützt im Freigabe-Assistenten die Datei- und Ordnerauswahl aus der eingerichteten Nextcloud und externen Anbietern
 
 ### Talk
 - Capabilities-Check für Talk und Core bestimmt Event-Conversation-Support
@@ -118,13 +131,15 @@ Datenfluss:
 - Nextcloud 32 oder neuer mit aktivierten OCS-Endpunkten; Talk wird für Talk- und Kalenderfunktionen benötigt
 - Dateifreigabe via DAV und OCS (remote.php und files_sharing API)
 - App-Passwort oder Login Flow v2 für Auth
-- Permissions: storage (Optionen, Metadaten), compose (UI-Integration), optionale Host-Permissions pro konfigurierte Nextcloud-Instanz
+- Manifest-Berechtigungen: `storage`, `accountsRead`, `compose`, `compose.send` und `notifications`
+- Optionale Berechtigungen: `management` zur Erkennung externer VFS-Anbieter sowie HTTPS-Hostzugriff, der für die eingerichtete Nextcloud-Origin angefordert wird
 
 ## Konfiguration
 - Base URL, User und App-Passwort (manuell) oder Login Flow v2 (automatisch)
 - Debug-Modus für detaillierte Logs
 - Freigabe-Basisverzeichnis und Default-Share-Name/Rechte/Passwort/Ablauf
 - Freigabe-Anhangsregeln (`sharingAttachmentsLinkTarget`, `sharingAttachmentsAlwaysConnector`, `sharingAttachmentsOfferAboveEnabled`, `sharingAttachmentsOfferAboveMb`)
+- Aktivierung des VFS-Anbieters und Freigaben pro Add-on sowie Erkennung und Verbindungen externer Anbieter
 - Talk Defaults: Titel, Lobby, Listable, Passwortschutz mit initial erzeugtem Passwort, Room Type (event vs normal), Benutzer hinzufügen + Gäste hinzufügen
 Security-Hinweise:
 - Zugangsdaten liegen in browser.storage.local und werden für Basic-Auth-Header genutzt
@@ -135,7 +150,8 @@ Security-Hinweise:
 - Build/Packaging: keine Build-Skripte im Repo; Paketierung als Thunderbird Add-on Bundle falls nötig
 - Smoke-Test-Checkliste:
   - Optionen: "Test connection" mit gültigen Zugangsdaten
-  - Freigabe-Wizard: Share erstellen, Upload, HTML einfügen
+  - Freigabe-Wizard: lokale Dateien/Ordner sowie Inhalte aus der eingerichteten Nextcloud und einem externen Anbieter kombinieren; Baumansicht, Zielspeicher, Upload und HTML-Einfügen prüfen
+  - VFS-Anbieter: kompatiblem Client Zugriff erteilen, Listen/Lesen/Schreiben über die eingerichtete Nextcloud prüfen und Zugriff anschließend widerrufen
   - Talk Dialog: Raum erstellen, Felder/Metadaten anwenden, dann Termin speichern
   - Talk Dialog: Raum erstellen, Editor ohne Speichern schließen → Room-Cleanup wird ausgelöst
   - Kalender Event-Dialog: Metadaten setzen, speichern, neu öffnen, X-NCTALK-* prüfen

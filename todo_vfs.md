@@ -90,6 +90,9 @@ VFS feature PR has been merged. They are not current product defects.
 
 - [x] Redesign the mixed-source queue for clearer hierarchy, source, size, and
   status scanning without changing transfer behavior.
+- [ ] Replace `screenshots/filelink_wizzard3.png` with a current Thunderbird
+  runtime capture of the source menus, recursive queue, size summary, and
+  destination-storage display before the feature release.
 - [ ] Clarify whether individual files and nested folders inside a selected
   folder can be deselected safely. If implemented, rebuild the transfer
   descriptor deliberately so empty parents, same-Nextcloud COPY roots, and
