@@ -1606,7 +1606,10 @@ function initTabs(){
   const panels = Array.from(document.querySelectorAll(".tab-panel"));
   const tabContainer = document.querySelector(".tabs");
   const order = buttons.map((btn) => btn.dataset.tab).filter(Boolean);
-  let activeId = buttons.find((btn) => btn.classList.contains("active"))?.dataset.tab || order[0] || "";
+  const requestedId = new URLSearchParams(window.location.search).get("tab");
+  let activeId = order.includes(requestedId)
+    ? requestedId
+    : (buttons.find((btn) => btn.classList.contains("active"))?.dataset.tab || order[0] || "");
   /**
    * Measure the tallest tab panel and set a shared min-height.
    */

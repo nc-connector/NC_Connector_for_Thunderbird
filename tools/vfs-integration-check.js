@@ -79,8 +79,12 @@ function createPort(senderId){
 async function checkRouterLeavesToolkitMessagesUnclaimed(){
   let listener = null;
   let usageCalls = 0;
+  let externalStatusCalls = 0;
+  const openedTabs = [];
+  const focusedWindows = [];
   const context = {
     console,
+    URL,
     L: () => {},
     NCVfsProviderRuntime: {
       async getDestinationStorageUsage(){
@@ -88,12 +92,40 @@ async function checkRouterLeavesToolkitMessagesUnclaimed(){
         return { usage: 25, quota: 100, available: 75, state: "finite" };
       }
     },
+    NCVfsClientRuntime: {
+      async getStatus(){
+        externalStatusCalls++;
+        return {
+          enabled: true,
+          permissionGranted: true,
+          initialized: true,
+          connections: [{ storageRef: { providerId: "provider@test", storageId: "storage" } }],
+          providers: [{ providerId: "provider@test", providerName: "Provider", connectionCount: 1 }]
+        };
+      }
+    },
     browser: {
       runtime: {
+        getURL: (pathValue) => `moz-extension://connector/${pathValue}`,
         onMessage: {
           addListener(candidate){
             listener = candidate;
           }
+        }
+      },
+      tabs: {
+        async create(options){
+          openedTabs.push(options);
+          return { id: openedTabs.length, windowId: options.windowId };
+        }
+      },
+      windows: {
+        async getAll(){
+          return [{ id: 73, focused: false, type: "normal" }];
+        },
+        async update(windowId, options){
+          focusedWindows.push({ windowId, options });
+          return { id: windowId, focused: options.focused === true };
         }
       }
     }
@@ -123,6 +155,24 @@ async function checkRouterLeavesToolkitMessagesUnclaimed(){
       && usageResponse.usage?.available === 75
       && usageResponse.usage?.state === "finite",
     "Sharing capacity requests must return the provider runtime's account-bound storage usage"
+  );
+  const externalResponse = await listener({ type: "vfs:getExternalStatus" }, {});
+  assert(
+    externalStatusCalls === 1
+      && externalResponse?.ok === true
+      && externalResponse.status?.connections?.length === 1,
+    "Sharing source guidance must receive the complete external VFS status"
+  );
+  assert((await listener({ type: "vfs:openOptions" }, {}))?.ok === true, "VFS options must open");
+  assert((await listener({ type: "vfs:findProviderAddons" }, {}))?.ok === true, "VFS provider search must open");
+  assert(
+    openedTabs.length === 2
+      && openedTabs[0].windowId === 73
+      && openedTabs[0].url === "moz-extension://connector/options.html?tab=vfs"
+      && openedTabs[1].url === "https://addons.thunderbird.net/search/?q=VFS"
+      && focusedWindows.length === 2
+      && focusedWindows.every((entry) => entry.windowId === 73 && entry.options.focused === true),
+    "VFS setup pages must open and focus in a normal Thunderbird window"
   );
 }
 
@@ -948,7 +998,12 @@ function checkManifestAndReviewSurface(){
     "addNextcloudFilesBtn",
     "addNextcloudFolderBtn",
     "addExternalFilesBtn",
-    "addExternalFolderBtn"
+    "addExternalFolderBtn",
+    "externalPickerActions",
+    "externalSourceNotice",
+    "openVfsSettingsBtn",
+    "findVfsProvidersBtn",
+    "refreshExternalSourcesBtn"
   ]){
     assert(wizardHtml.includes(`id="${elementId}"`), `${elementId} must be available in the queue UI`);
   }
@@ -970,12 +1025,25 @@ function checkManifestAndReviewSurface(){
       && /if \(state\.skipNextVfsFocusRefresh\)\{\s*state\.skipNextVfsFocusRefresh = false;\s*return;\s*\}/s.test(wizardRuntime),
     "Returning from a VFS picker must not refresh while its runtime actor is closing"
   );
+  assert(
+    /action: dom\.externalSourceAction,[\s\S]{0,160}?disabled: sourceControlsDisabled\s*\}/.test(wizardRuntime)
+      && wizardRuntime.includes("state.vfsAvailability.external.connections.length > 0")
+      && wizardRuntime.includes("type: 'vfs:getExternalStatus'")
+      && wizardRuntime.includes("external.permissionGranted !== true")
+      && wizardRuntime.includes("sharing_vfs_activation_reload_warning"),
+    "Other sources must stay reachable for setup and warn before a queue-clearing activation flow"
+  );
   const backgroundRouter = readText("modules/bgRouter.js");
   const updateSettingsStart = backgroundRouter.indexOf('msg.type === "vfs:options:updateSettings"');
   const updateSettingsEnd = backgroundRouter.indexOf('msg.type === "vfs:options:requestExternalProviderPermission"');
   const updateSettingsBlock = backgroundRouter.slice(updateSettingsStart, updateSettingsEnd);
   const optionsVfsRuntime = readText("ui/optionsVfs.js");
   const optionsRuntime = readText("options.js");
+  assert(
+    optionsRuntime.includes('new URLSearchParams(window.location.search).get("tab")')
+      && optionsRuntime.includes("order.includes(requestedId)"),
+    "Direct options links must validate and activate their requested tab"
+  );
   assert(
     updateSettingsStart >= 0
       && updateSettingsEnd > updateSettingsStart

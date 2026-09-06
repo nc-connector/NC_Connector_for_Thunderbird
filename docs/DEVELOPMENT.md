@@ -1031,7 +1031,7 @@ The provider implements live list, quota, read, add, move, copy, and delete oper
 
 The Sharing wizard first builds one immutable queue of descriptors. Each row carries a source kind (`local`, `nextcloud`, or `external-vfs`), provider label, source path, target path, item kind, size, and transfer-group metadata. Folder enumeration includes empty directories. Exact and prefix conflicts are resolved before any remote share mutation; removing a selected folder removes its complete transfer group.
 
-The wizard exposes exactly three source menus: **+ Local**, **+ My Nextcloud**, and **+ Other source**. A remote menu stays disabled with a setup tooltip until its corresponding connection exists. If several external connections are available, NC Connector shows an intermediate connection list with the provider-reported add-on icon before opening a picker locked to that exact storage reference. External connections are removed through the Toolkit's `deleteProviderConnection()` flow, not by editing Toolkit session records directly.
+The wizard exposes exactly three source menus: **+ Local**, **+ My Nextcloud**, and **+ Other source**. **+ My Nextcloud** stays unavailable until the configured account can be exposed through the local provider. **+ Other source** remains open even when no external connection exists: the menu explains whether discovery is disabled, permission is missing, no compatible provider is installed, or a provider still needs a connection. It offers direct actions for the VFS settings tab, the Thunderbird Add-ons search for VFS providers, and a source refresh. These actions remain available after a connection exists so another provider can be installed or connected. Enabling external providers or restoring their discovery permission can reload the extension; opening the settings from a populated queue therefore requires confirmation while either step is pending. If several external connections are available, NC Connector shows an intermediate connection list with the provider-reported add-on icon before opening a picker locked to that exact storage reference. External connections are removed through the Toolkit's `deleteProviderConnection()` flow, not by editing Toolkit session records directly.
 
 The queue step shows the planned relative target folder from `NCSharing.buildShareFolderInfo()`. After upload it uses the folder returned by root reservation, including an attachment suffix such as `_1`. Finite quota displays free and total space. Nextcloud's unlimited-quota marker displays current usage instead of claiming unlimited physical capacity; missing quota data remains visible as unavailable and does not invent a limit.
 
@@ -1143,8 +1143,11 @@ Sharing wizard:
 
 VFS options/provider:
 - `vfs:getStatus`
+- `vfs:getExternalStatus`
 - `vfs:grantConsumer`
 - `vfs:listExternalConnections`
+- `vfs:openOptions`
+- `vfs:findProviderAddons`
 - `vfs:options:getState`
 - `vfs:options:updateSettings`
 - `vfs:options:requestExternalProviderPermission`

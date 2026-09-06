@@ -108,6 +108,12 @@ VFS feature PR has been merged. They are not current product defects.
   space: show **Free space: X of Y** for a finite quota,
   **No storage limit · X used** for Nextcloud's unlimited-quota marker, and
   **Storage information unavailable** when DAV returns no usable quota.
+- [x] Keep **+ Other source** useful before and after initial setup. Show the
+  current discovery, permission, provider, or connection state and offer
+  icon-labelled actions to open the VFS settings, find VFS providers in
+  Thunderbird, and refresh sources. Warn before leaving a populated queue for
+  activation or permission restoration because either flow can reload the
+  extension.
 - [ ] Replace `screenshots/filelink_wizzard3.png` with a current Thunderbird
   runtime capture of the source menus, recursive queue, size summary, and
   destination-storage display before the feature release.

@@ -40,6 +40,23 @@ const VFS_TOOLKIT_INTERNAL_MESSAGE_TYPES = new Set([
   "vfs-toolkit-get-connections",
   "vfs-toolkit-remove-connection"
 ]);
+const VFS_PROVIDER_SEARCH_URL = "https://addons.thunderbird.net/search/?q=VFS";
+
+async function openInNormalThunderbirdTab(url){
+  const normalWindows = await browser.windows.getAll({ windowTypes: ["normal"] });
+  const targetWindow = normalWindows.find((candidate) => candidate.focused)
+    || normalWindows[normalWindows.length - 1];
+  if (!Number.isInteger(targetWindow?.id)){
+    throw new Error(bgI18n("sharing_vfs_navigation_failed"));
+  }
+  const tab = await browser.tabs.create({
+    windowId: targetWindow.id,
+    url,
+    active: true
+  });
+  await browser.windows.update(targetWindow.id, { focused: true });
+  return tab;
+}
 
 async function getVfsOptionsState(){
   const [providerStatus, externalStatus] = await Promise.all([
@@ -160,6 +177,31 @@ browser.runtime.onMessage.addListener((msg, sender) => {
         return { ok:true, connections };
       }catch(error){
         return messageError("vfs:listExternalConnections", error);
+      }
+    }
+    if (msg.type === "vfs:getExternalStatus"){
+      try{
+        return { ok:true, status: await NCVfsClientRuntime.getStatus() };
+      }catch(error){
+        return messageError("vfs:getExternalStatus", error);
+      }
+    }
+    if (msg.type === "vfs:openOptions"){
+      try{
+        const optionsUrl = new URL(browser.runtime.getURL("options.html"));
+        optionsUrl.searchParams.set("tab", "vfs");
+        await openInNormalThunderbirdTab(optionsUrl.href);
+        return { ok:true };
+      }catch(error){
+        return messageError("vfs:openOptions", error);
+      }
+    }
+    if (msg.type === "vfs:findProviderAddons"){
+      try{
+        await openInNormalThunderbirdTab(VFS_PROVIDER_SEARCH_URL);
+        return { ok:true };
+      }catch(error){
+        return messageError("vfs:findProviderAddons", error);
       }
     }
     if (msg.type === "vfs:options:getState"

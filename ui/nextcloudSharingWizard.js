@@ -89,7 +89,14 @@
     skipNextVfsFocusRefresh: false,
     vfsAvailability: {
       nextcloud: false,
-      external: false,
+      external: {
+        loadState: 'idle',
+        enabled: false,
+        permissionGranted: false,
+        initialized: false,
+        connections: [],
+        providers: []
+      },
       destinationRef: ''
     },
     destinationStorage: {
@@ -308,6 +315,12 @@
     dom.addNextcloudFolderBtn = document.getElementById('addNextcloudFolderBtn');
     dom.addExternalFilesBtn = document.getElementById('addExternalFilesBtn');
     dom.addExternalFolderBtn = document.getElementById('addExternalFolderBtn');
+    dom.externalPickerActions = document.getElementById('externalPickerActions');
+    dom.externalSourceNotice = document.getElementById('externalSourceNotice');
+    dom.openVfsSettingsBtn = document.getElementById('openVfsSettingsBtn');
+    dom.openVfsSettingsLabel = document.getElementById('openVfsSettingsLabel');
+    dom.findVfsProvidersBtn = document.getElementById('findVfsProvidersBtn');
+    dom.refreshExternalSourcesBtn = document.getElementById('refreshExternalSourcesBtn');
     dom.fileInput = document.getElementById('fileInput');
     dom.folderInput = document.getElementById('folderInput');
     dom.vfsConnectionDialog = document.getElementById('vfsConnectionDialog');
@@ -478,6 +491,15 @@
     dom.addExternalFolderBtn?.addEventListener('click', () => {
       closeSourceMenus();
       void startVfsSelection({ sourceKind: 'external-vfs', entryKind: 'folder' });
+    });
+    dom.openVfsSettingsBtn?.addEventListener('click', () => {
+      void openExternalSourcePage('vfs:openOptions', { warnBeforeActivation: true });
+    });
+    dom.findVfsProvidersBtn?.addEventListener('click', () => {
+      void openExternalSourcePage('vfs:findProviderAddons');
+    });
+    dom.refreshExternalSourcesBtn?.addEventListener('click', () => {
+      void refreshVfsSourceAvailability();
     });
     [
       dom.localSourceSummary,
@@ -1114,6 +1136,7 @@
       || state.uploadInProgress
       || state.finalizeInProgress;
     const sourceControlsDisabled = state.finalizeStarted || busy;
+    const externalConnectionReady = state.vfsAvailability.external.connections.length > 0;
     queueView?.setRemovalDisabled(sourceControlsDisabled);
     [
       dom.addFilesBtn,
@@ -1130,9 +1153,19 @@
     });
     [dom.addExternalFilesBtn, dom.addExternalFolderBtn].forEach((control) => {
       if (control){
-        control.disabled = sourceControlsDisabled || !state.vfsAvailability.external;
+        control.disabled = sourceControlsDisabled || !externalConnectionReady;
       }
     });
+    [dom.openVfsSettingsBtn, dom.findVfsProvidersBtn].forEach((control) => {
+      if (control){
+        control.disabled = sourceControlsDisabled;
+      }
+    });
+    if (dom.refreshExternalSourcesBtn){
+      dom.refreshExternalSourcesBtn.disabled = sourceControlsDisabled
+        || state.vfsAvailability.external.loadState === 'loading';
+    }
+    renderExternalSourceMenu();
     setSourceActionState({
       action: dom.localSourceAction,
       summary: dom.localSourceSummary,
@@ -1147,8 +1180,7 @@
     setSourceActionState({
       action: dom.externalSourceAction,
       summary: dom.externalSourceSummary,
-      disabled: sourceControlsDisabled || !state.vfsAvailability.external,
-      unavailableTitle: i18n('sharing_vfs_external_unavailable_tooltip')
+      disabled: sourceControlsDisabled
     });
     if (sourceControlsDisabled){
       closeSourceMenus();
@@ -1204,8 +1236,8 @@
     summary?.setAttribute('aria-disabled', isDisabled ? 'true' : 'false');
     if (summary){
       const availabilityBlocked = unavailableTitle
-        && ((action === dom.nextcloudSourceAction && !state.vfsAvailability.nextcloud)
-          || (action === dom.externalSourceAction && !state.vfsAvailability.external));
+        && action === dom.nextcloudSourceAction
+        && !state.vfsAvailability.nextcloud;
       summary.title = availabilityBlocked
         ? unavailableTitle
         : String(summary.querySelector('span')?.textContent || '').trim();
@@ -1216,24 +1248,37 @@
   }
 
   async function refreshVfsSourceAvailability(){
+    state.vfsAvailability.external.loadState = 'loading';
+    updateButtons();
     const [nextcloudResponse, externalResponse] = await Promise.all([
       browser.runtime.sendMessage({ type: 'vfs:getStatus' }).catch((error) => {
         logUiError('Nextcloud VFS availability failed', error);
         return null;
       }),
-      browser.runtime.sendMessage({ type: 'vfs:listExternalConnections' }).catch((error) => {
+      browser.runtime.sendMessage({ type: 'vfs:getExternalStatus' }).catch((error) => {
         logUiError('External VFS availability failed', error);
         return null;
       })
     ]);
     const nextcloudStatus = nextcloudResponse?.ok ? nextcloudResponse.status : null;
-    const externalConnections = externalResponse?.ok && Array.isArray(externalResponse.connections)
-      ? externalResponse.connections
-      : [];
+    const externalStatus = externalResponse?.ok && externalResponse.status
+      ? externalResponse.status
+      : null;
     state.vfsAvailability.nextcloud = nextcloudStatus?.accountConfigured === true
       && !!nextcloudStatus?.selfStorageRef?.providerId
       && !!nextcloudStatus?.selfStorageRef?.storageId;
-    state.vfsAvailability.external = externalConnections.length > 0;
+    state.vfsAvailability.external = {
+      loadState: externalStatus ? 'ready' : 'error',
+      enabled: externalStatus?.enabled === true,
+      permissionGranted: externalStatus?.permissionGranted === true,
+      initialized: externalStatus?.initialized === true,
+      connections: Array.isArray(externalStatus?.connections)
+        ? externalStatus.connections
+        : [],
+      providers: Array.isArray(externalStatus?.providers)
+        ? externalStatus.providers
+        : []
+    };
     const destinationRef = state.vfsAvailability.nextcloud
       ? `${nextcloudStatus.selfStorageRef.providerId}:${nextcloudStatus.selfStorageRef.storageId}`
       : '';
@@ -1242,6 +1287,65 @@
       resetDestinationStorageUsage();
     }
     updateButtons();
+  }
+
+  function renderExternalSourceMenu(){
+    const external = state.vfsAvailability.external;
+    const hasConnections = external.connections.length > 0;
+    if (dom.externalPickerActions){
+      dom.externalPickerActions.hidden = !hasConnections;
+    }
+    if (dom.externalSourceNotice){
+      let noticeKey = '';
+      if (!hasConnections){
+        if (external.loadState === 'loading'){
+          noticeKey = 'options_vfs_loading';
+        }else if (external.loadState === 'error'){
+          noticeKey = 'sharing_vfs_external_load_failed_notice';
+        }else if (!external.enabled){
+          noticeKey = 'sharing_vfs_external_disabled_notice';
+        }else if (!external.permissionGranted){
+          noticeKey = 'sharing_vfs_external_permission_notice';
+        }else if (!external.providers.length){
+          noticeKey = 'sharing_vfs_external_no_providers_notice';
+        }else{
+          noticeKey = 'sharing_vfs_external_no_connections_notice';
+        }
+      }
+      dom.externalSourceNotice.hidden = !noticeKey;
+      dom.externalSourceNotice.textContent = noticeKey ? i18n(noticeKey) : '';
+    }
+    if (dom.openVfsSettingsLabel){
+      const settingsKey = hasConnections
+        ? 'sharing_vfs_add_connection'
+        : (external.enabled && external.permissionGranted && external.providers.length
+          ? 'sharing_vfs_set_up_connection'
+          : 'sharing_vfs_open_settings');
+      dom.openVfsSettingsLabel.textContent = i18n(settingsKey);
+    }
+  }
+
+  async function openExternalSourcePage(messageType, { warnBeforeActivation = false } = {}){
+    const external = state.vfsAvailability.external;
+    const activationReloadPending = external.initialized !== true
+      || external.permissionGranted !== true;
+    if (warnBeforeActivation
+      && activationReloadPending
+      && state.files.length > 0
+      && !confirm(i18n('sharing_vfs_activation_reload_warning'))){
+      return;
+    }
+    closeSourceMenus();
+    try{
+      const response = await browser.runtime.sendMessage({ type: messageType });
+      if (!response?.ok){
+        throw new Error(response?.error || i18n('sharing_vfs_navigation_failed'));
+      }
+      log('External VFS navigation opened', { destination: messageType });
+    }catch(error){
+      logUiError('External VFS navigation failed', error);
+      setMessage(i18n('sharing_vfs_navigation_failed'), 'error');
+    }
   }
 
   async function handleNext(){
@@ -2418,6 +2522,9 @@
       dom.addNextcloudFolderBtn,
       dom.addExternalFilesBtn,
       dom.addExternalFolderBtn,
+      dom.openVfsSettingsBtn,
+      dom.findVfsProvidersBtn,
+      dom.refreshExternalSourcesBtn,
       dom.fileInput,
       dom.folderInput
     ];

@@ -1190,8 +1190,41 @@
   "sharing_vfs_nextcloud_unavailable_tooltip": {
     "message": "Indisponível. Configure primeiro uma ligação ao Nextcloud nas definições da extensão."
   },
-  "sharing_vfs_external_unavailable_tooltip": {
-    "message": "Indisponível. Ative fornecedores externos em Definições > VFS e ligue pelo menos um armazenamento."
+  "sharing_vfs_external_disabled_notice": {
+    "message": "Configure primeiro outras origens nas definições de VFS."
+  },
+  "sharing_vfs_external_permission_notice": {
+    "message": "Falta a permissão para localizar outros fornecedores de armazenamento. Conceda-a nas definições de VFS."
+  },
+  "sharing_vfs_external_no_providers_notice": {
+    "message": "Não está instalado nenhum fornecedor de VFS compatível."
+  },
+  "sharing_vfs_external_no_connections_notice": {
+    "message": "Foi encontrado um fornecedor de VFS compatível, mas não está ligado nenhum armazenamento."
+  },
+  "sharing_vfs_external_load_failed_notice": {
+    "message": "Não foi possível carregar outras origens de armazenamento."
+  },
+  "sharing_vfs_open_settings": {
+    "message": "Abrir definições de VFS"
+  },
+  "sharing_vfs_set_up_connection": {
+    "message": "Configurar ligação"
+  },
+  "sharing_vfs_add_connection": {
+    "message": "Configurar outra ligação"
+  },
+  "sharing_vfs_find_providers": {
+    "message": "Localizar fornecedores de VFS"
+  },
+  "sharing_vfs_refresh_sources": {
+    "message": "Atualizar origens"
+  },
+  "sharing_vfs_activation_reload_warning": {
+    "message": "As definições de VFS podem exigir a ativação de fornecedores externos ou a concessão da permissão de descoberta. Qualquer uma destas alterações pode fazer com que o NC Connector seja recarregado e a seleção de ficheiros atual seja limpa. Abrir as definições de VFS mesmo assim?"
+  },
+  "sharing_vfs_navigation_failed": {
+    "message": "Não foi possível abrir a página solicitada."
   },
   "sharing_vfs_scanning_source": {
     "message": "A analisar a seleção ($1)…"

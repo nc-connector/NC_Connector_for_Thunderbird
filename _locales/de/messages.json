@@ -1190,8 +1190,41 @@
   "sharing_vfs_nextcloud_unavailable_tooltip": {
     "message": "Nicht verfügbar. Richten Sie zuerst eine Nextcloud-Verbindung in den Add-on-Einstellungen ein."
   },
-  "sharing_vfs_external_unavailable_tooltip": {
-    "message": "Nicht verfügbar. Aktivieren Sie unter Einstellungen > VFS externe Anbieter und verbinden Sie mindestens einen Speicher."
+  "sharing_vfs_external_disabled_notice": {
+    "message": "Richten Sie weitere Quellen zuerst in den VFS-Einstellungen ein."
+  },
+  "sharing_vfs_external_permission_notice": {
+    "message": "Die Berechtigung zum Ermitteln weiterer Speicheranbieter fehlt. Erteilen Sie sie in den VFS-Einstellungen."
+  },
+  "sharing_vfs_external_no_providers_notice": {
+    "message": "Es ist kein kompatibler VFS-Anbieter installiert."
+  },
+  "sharing_vfs_external_no_connections_notice": {
+    "message": "Ein kompatibler VFS-Anbieter wurde gefunden, aber es ist kein Speicher verbunden."
+  },
+  "sharing_vfs_external_load_failed_notice": {
+    "message": "Weitere Speicherquellen konnten nicht geladen werden."
+  },
+  "sharing_vfs_open_settings": {
+    "message": "VFS-Einstellungen öffnen"
+  },
+  "sharing_vfs_set_up_connection": {
+    "message": "Verbindung einrichten"
+  },
+  "sharing_vfs_add_connection": {
+    "message": "Weitere Verbindung einrichten"
+  },
+  "sharing_vfs_find_providers": {
+    "message": "VFS-Anbieter finden"
+  },
+  "sharing_vfs_refresh_sources": {
+    "message": "Quellen aktualisieren"
+  },
+  "sharing_vfs_activation_reload_warning": {
+    "message": "In den VFS-Einstellungen müssen möglicherweise externe Anbieter aktiviert oder die Berechtigung zur Anbietersuche erteilt werden. Jede dieser Änderungen kann dazu führen, dass NC Connector neu geladen und die aktuelle Dateiauswahl gelöscht wird. Trotzdem die VFS-Einstellungen öffnen?"
+  },
+  "sharing_vfs_navigation_failed": {
+    "message": "Die angeforderte Seite konnte nicht geöffnet werden."
   },
   "sharing_vfs_scanning_source": {
     "message": "Auswahl wird erfasst ($1) ..."

@@ -1190,8 +1190,41 @@
   "sharing_vfs_nextcloud_unavailable_tooltip": {
     "message": "Unavailable. Set up a Nextcloud connection in the add-on settings first."
   },
-  "sharing_vfs_external_unavailable_tooltip": {
-    "message": "Unavailable. Enable external providers under Settings > VFS and connect at least one storage."
+  "sharing_vfs_external_disabled_notice": {
+    "message": "Set up other sources in the VFS settings first."
+  },
+  "sharing_vfs_external_permission_notice": {
+    "message": "Permission to discover other storage providers has not been granted. Grant it in the VFS settings."
+  },
+  "sharing_vfs_external_no_providers_notice": {
+    "message": "No compatible VFS provider is installed."
+  },
+  "sharing_vfs_external_no_connections_notice": {
+    "message": "A compatible VFS provider was found, but no storage is connected."
+  },
+  "sharing_vfs_external_load_failed_notice": {
+    "message": "Other storage sources could not be loaded."
+  },
+  "sharing_vfs_open_settings": {
+    "message": "Open VFS settings"
+  },
+  "sharing_vfs_set_up_connection": {
+    "message": "Set up connection"
+  },
+  "sharing_vfs_add_connection": {
+    "message": "Set up another connection"
+  },
+  "sharing_vfs_find_providers": {
+    "message": "Find VFS providers"
+  },
+  "sharing_vfs_refresh_sources": {
+    "message": "Refresh sources"
+  },
+  "sharing_vfs_activation_reload_warning": {
+    "message": "The VFS settings may require enabling external providers or granting discovery permission. Either change can reload NC Connector and clear the current file selection. Open the VFS settings anyway?"
+  },
+  "sharing_vfs_navigation_failed": {
+    "message": "The requested page could not be opened."
   },
   "sharing_vfs_scanning_source": {
     "message": "Scanning selection ($1)..."

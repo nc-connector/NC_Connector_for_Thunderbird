@@ -390,8 +390,44 @@ textarea:focus{
 }
 .source-menu button{
   width:100%;
+  min-height:var(--control-height);
+  height:auto;
+  padding:7px 10px;
   justify-content:flex-start;
   border-color:transparent;
+  line-height:1.2;
+  text-align:left;
+}
+#externalSourceAction .source-menu{
+  width:min(320px,calc(100vw - 44px));
+  left:auto;
+  right:0;
+}
+.source-menu-icon{
+  width:17px;
+  height:17px;
+  flex:0 0 17px;
+  color:var(--dialog-accent);
+}
+.source-menu-picker-actions,
+.source-menu-management-actions{
+  display:grid;
+  gap:4px;
+}
+.source-menu-picker-actions[hidden],
+.source-menu-notice[hidden]{
+  display:none;
+}
+.source-menu-management-actions{
+  padding-top:5px;
+  border-top:1px solid var(--tb-border);
+}
+.source-menu-notice{
+  margin:0;
+  padding:7px 9px;
+  color:var(--tb-muted);
+  font-size:11px;
+  line-height:1.35;
 }
 .queue-summary{
   min-height:28px;
@@ -860,9 +896,47 @@ textarea:focus{
               </svg>
               <span data-i18n="sharing_button_add_external">+ Other source</span>
             </summary>
-            <div class="source-menu">
-              <button type="button" id="addExternalFilesBtn" data-i18n="sharing_button_add_external_files">Select files</button>
-              <button type="button" id="addExternalFolderBtn" data-i18n="sharing_button_add_external_folder">Select folder</button>
+            <div class="source-menu" id="externalSourceMenu">
+              <div class="source-menu-picker-actions" id="externalPickerActions">
+                <button type="button" id="addExternalFilesBtn">
+                  <svg class="source-menu-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                    <path d="M6 3h8l4 4v14H6z"></path>
+                    <path d="M14 3v5h5"></path>
+                  </svg>
+                  <span data-i18n="sharing_button_add_external_files">Select files</span>
+                </button>
+                <button type="button" id="addExternalFolderBtn">
+                  <svg class="source-menu-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                    <path d="M3 6h7l2 2h9v11H3z"></path>
+                  </svg>
+                  <span data-i18n="sharing_button_add_external_folder">Select folder</span>
+                </button>
+              </div>
+              <p class="source-menu-notice" id="externalSourceNotice" role="status" aria-live="polite"></p>
+              <div class="source-menu-management-actions">
+                <button type="button" id="openVfsSettingsBtn">
+                  <svg class="source-menu-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                    <circle cx="8" cy="12" r="3"></circle>
+                    <circle cx="16" cy="12" r="3"></circle>
+                    <path d="M11 12h2M19 5v6M16 8h6"></path>
+                  </svg>
+                  <span id="openVfsSettingsLabel" data-i18n="sharing_vfs_open_settings">Open VFS settings</span>
+                </button>
+                <button type="button" id="findVfsProvidersBtn">
+                  <svg class="source-menu-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                    <circle cx="10.5" cy="10.5" r="5.5"></circle>
+                    <path d="m15 15 5 5"></path>
+                  </svg>
+                  <span data-i18n="sharing_vfs_find_providers">Find VFS providers</span>
+                </button>
+                <button type="button" id="refreshExternalSourcesBtn">
+                  <svg class="source-menu-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                    <path d="M20 7v5h-5M4 17v-5h5"></path>
+                    <path d="M18.2 10A7 7 0 0 0 6.1 6.4L4 9M5.8 14A7 7 0 0 0 17.9 17.6L20 15"></path>
+                  </svg>
+                  <span data-i18n="sharing_vfs_refresh_sources">Refresh sources</span>
+                </button>
+              </div>
             </div>
           </details>
         </div>

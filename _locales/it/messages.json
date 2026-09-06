@@ -1190,8 +1190,41 @@
   "sharing_vfs_nextcloud_unavailable_tooltip": {
     "message": "Non disponibile. Configurare prima una connessione Nextcloud nelle impostazioni del componente aggiuntivo."
   },
-  "sharing_vfs_external_unavailable_tooltip": {
-    "message": "Non disponibile. Abilitare i provider esterni in Impostazioni > VFS e connettere almeno uno spazio di archiviazione."
+  "sharing_vfs_external_disabled_notice": {
+    "message": "Configurare prima le altre origini nelle impostazioni VFS."
+  },
+  "sharing_vfs_external_permission_notice": {
+    "message": "Manca l’autorizzazione per individuare altri provider di archiviazione. Concederla nelle impostazioni VFS."
+  },
+  "sharing_vfs_external_no_providers_notice": {
+    "message": "Non è installato alcun provider VFS compatibile."
+  },
+  "sharing_vfs_external_no_connections_notice": {
+    "message": "È stato trovato un provider VFS compatibile, ma non è collegato alcuno spazio di archiviazione."
+  },
+  "sharing_vfs_external_load_failed_notice": {
+    "message": "Non è stato possibile caricare le altre origini di archiviazione."
+  },
+  "sharing_vfs_open_settings": {
+    "message": "Apri le impostazioni VFS"
+  },
+  "sharing_vfs_set_up_connection": {
+    "message": "Configura connessione"
+  },
+  "sharing_vfs_add_connection": {
+    "message": "Configura un’altra connessione"
+  },
+  "sharing_vfs_find_providers": {
+    "message": "Trova provider VFS"
+  },
+  "sharing_vfs_refresh_sources": {
+    "message": "Aggiorna origini"
+  },
+  "sharing_vfs_activation_reload_warning": {
+    "message": "Le impostazioni VFS potrebbero richiedere di abilitare i provider esterni o di concedere l’autorizzazione a rilevarli. Ciascuna di queste modifiche può causare il ricaricamento di NC Connector e la cancellazione della selezione di file corrente. Aprire comunque le impostazioni VFS?"
+  },
+  "sharing_vfs_navigation_failed": {
+    "message": "Non è stato possibile aprire la pagina richiesta."
   },
   "sharing_vfs_scanning_source": {
     "message": "Analisi della selezione ($1)…"

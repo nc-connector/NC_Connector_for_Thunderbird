@@ -1190,8 +1190,41 @@
   "sharing_vfs_nextcloud_unavailable_tooltip": {
     "message": "Není k dispozici. Nejprve nastavte připojení k Nextcloudu v nastavení doplňku."
   },
-  "sharing_vfs_external_unavailable_tooltip": {
-    "message": "Není k dispozici. V Nastavení > VFS povolte externí poskytovatele a připojte alespoň jedno úložiště."
+  "sharing_vfs_external_disabled_notice": {
+    "message": "Nejprve nastavte další zdroje v nastavení VFS."
+  },
+  "sharing_vfs_external_permission_notice": {
+    "message": "Chybí oprávnění k vyhledání dalších poskytovatelů úložiště. Udělte ho v nastavení VFS."
+  },
+  "sharing_vfs_external_no_providers_notice": {
+    "message": "Není nainstalován žádný kompatibilní poskytovatel VFS."
+  },
+  "sharing_vfs_external_no_connections_notice": {
+    "message": "Byl nalezen kompatibilní poskytovatel VFS, ale není připojeno žádné úložiště."
+  },
+  "sharing_vfs_external_load_failed_notice": {
+    "message": "Další zdroje úložiště se nepodařilo načíst."
+  },
+  "sharing_vfs_open_settings": {
+    "message": "Otevřít nastavení VFS"
+  },
+  "sharing_vfs_set_up_connection": {
+    "message": "Nastavit připojení"
+  },
+  "sharing_vfs_add_connection": {
+    "message": "Nastavit další připojení"
+  },
+  "sharing_vfs_find_providers": {
+    "message": "Vyhledat poskytovatele VFS"
+  },
+  "sharing_vfs_refresh_sources": {
+    "message": "Obnovit zdroje"
+  },
+  "sharing_vfs_activation_reload_warning": {
+    "message": "Nastavení VFS může vyžadovat povolení externích poskytovatelů nebo udělení oprávnění k jejich vyhledávání. Kterákoli z těchto změn může způsobit opětovné načtení aplikace NC Connector a vymazání aktuálního výběru souborů. Přesto otevřít nastavení VFS?"
+  },
+  "sharing_vfs_navigation_failed": {
+    "message": "Požadovanou stránku se nepodařilo otevřít."
   },
   "sharing_vfs_scanning_source": {
     "message": "Procházení výběru ($1)…"

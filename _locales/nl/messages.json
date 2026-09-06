@@ -1190,8 +1190,41 @@
   "sharing_vfs_nextcloud_unavailable_tooltip": {
     "message": "Niet beschikbaar. Stel eerst een Nextcloud-verbinding in via de add-oninstellingen."
   },
-  "sharing_vfs_external_unavailable_tooltip": {
-    "message": "Niet beschikbaar. Schakel externe providers in via Instellingen > VFS en verbind ten minste één opslag."
+  "sharing_vfs_external_disabled_notice": {
+    "message": "Stel eerst andere bronnen in via de VFS-instellingen."
+  },
+  "sharing_vfs_external_permission_notice": {
+    "message": "De toestemming om andere opslagproviders te zoeken ontbreekt. Verleen deze via de VFS-instellingen."
+  },
+  "sharing_vfs_external_no_providers_notice": {
+    "message": "Er is geen compatibele VFS-provider geïnstalleerd."
+  },
+  "sharing_vfs_external_no_connections_notice": {
+    "message": "Er is een compatibele VFS-provider gevonden, maar er is geen opslag verbonden."
+  },
+  "sharing_vfs_external_load_failed_notice": {
+    "message": "Andere opslagbronnen konden niet worden geladen."
+  },
+  "sharing_vfs_open_settings": {
+    "message": "VFS-instellingen openen"
+  },
+  "sharing_vfs_set_up_connection": {
+    "message": "Verbinding instellen"
+  },
+  "sharing_vfs_add_connection": {
+    "message": "Nog een verbinding instellen"
+  },
+  "sharing_vfs_find_providers": {
+    "message": "VFS-providers zoeken"
+  },
+  "sharing_vfs_refresh_sources": {
+    "message": "Bronnen vernieuwen"
+  },
+  "sharing_vfs_activation_reload_warning": {
+    "message": "In de VFS-instellingen moet u mogelijk externe providers inschakelen of toestemming geven om ze te zoeken. Elk van deze wijzigingen kan ertoe leiden dat NC Connector opnieuw wordt geladen en de huidige bestandsselectie wordt gewist. Wilt u de VFS-instellingen toch openen?"
+  },
+  "sharing_vfs_navigation_failed": {
+    "message": "De gevraagde pagina kon niet worden geopend."
   },
   "sharing_vfs_scanning_source": {
     "message": "Selectie wordt doorzocht ($1)…"

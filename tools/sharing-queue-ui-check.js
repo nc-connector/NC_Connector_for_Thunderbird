@@ -216,6 +216,14 @@ function run(){
     "Source action labels must wrap instead of being clipped"
   );
   assert(
+    wizardMarkup.includes('id="externalSourceNotice"')
+      && wizardMarkup.includes('id="openVfsSettingsBtn"')
+      && wizardMarkup.includes('id="findVfsProvidersBtn"')
+      && wizardMarkup.includes('id="refreshExternalSourcesBtn"')
+      && (wizardMarkup.match(/class="source-menu-icon"/g) || []).length === 5,
+    "Other-source guidance must expose labeled setup, search, and refresh actions with icons"
+  );
+  assert(
     wizardMarkup.includes(".base-path strong{")
       && wizardMarkup.includes("overflow-wrap:anywhere"),
     "The complete target folder path must be allowed to wrap"
@@ -257,7 +265,19 @@ function run(){
     "sharing_queue_expand_folder",
     "sharing_queue_collapse_folder",
     "sharing_queue_remove_item",
-    "sharing_queue_source_group"
+    "sharing_queue_source_group",
+    "sharing_vfs_external_disabled_notice",
+    "sharing_vfs_external_permission_notice",
+    "sharing_vfs_external_no_providers_notice",
+    "sharing_vfs_external_no_connections_notice",
+    "sharing_vfs_external_load_failed_notice",
+    "sharing_vfs_open_settings",
+    "sharing_vfs_set_up_connection",
+    "sharing_vfs_add_connection",
+    "sharing_vfs_find_providers",
+    "sharing_vfs_refresh_sources",
+    "sharing_vfs_activation_reload_warning",
+    "sharing_vfs_navigation_failed"
   ];
   for (const localePath of listFiles("_locales", { extensions: [".json"] })){
     const localeSource = readText(localePath);

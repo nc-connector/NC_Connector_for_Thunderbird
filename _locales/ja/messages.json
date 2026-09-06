@@ -1190,8 +1190,41 @@
   "sharing_vfs_nextcloud_unavailable_tooltip": {
     "message": "利用できません。まずアドオン設定で Nextcloud 接続を設定してください。"
   },
-  "sharing_vfs_external_unavailable_tooltip": {
-    "message": "利用できません。設定 > VFS で外部プロバイダーを有効にし、少なくとも 1 つのストレージを接続してください。"
+  "sharing_vfs_external_disabled_notice": {
+    "message": "まず VFS 設定で他の取得元を設定してください。"
+  },
+  "sharing_vfs_external_permission_notice": {
+    "message": "他のストレージプロバイダーを検出する権限がありません。VFS 設定で権限を付与してください。"
+  },
+  "sharing_vfs_external_no_providers_notice": {
+    "message": "互換性のある VFS プロバイダーがインストールされていません。"
+  },
+  "sharing_vfs_external_no_connections_notice": {
+    "message": "互換性のある VFS プロバイダーが見つかりましたが、ストレージが接続されていません。"
+  },
+  "sharing_vfs_external_load_failed_notice": {
+    "message": "他のストレージソースを読み込めませんでした。"
+  },
+  "sharing_vfs_open_settings": {
+    "message": "VFS 設定を開く"
+  },
+  "sharing_vfs_set_up_connection": {
+    "message": "接続を設定"
+  },
+  "sharing_vfs_add_connection": {
+    "message": "別の接続を設定"
+  },
+  "sharing_vfs_find_providers": {
+    "message": "VFS プロバイダーを探す"
+  },
+  "sharing_vfs_refresh_sources": {
+    "message": "取得元を更新"
+  },
+  "sharing_vfs_activation_reload_warning": {
+    "message": "VFS 設定では、外部プロバイダーの有効化または検出権限の付与が必要になる場合があります。どちらの変更でも NC Connector が再読み込みされ、現在のファイル選択が解除される可能性があります。それでも VFS 設定を開きますか？"
+  },
+  "sharing_vfs_navigation_failed": {
+    "message": "要求されたページを開けませんでした。"
   },
   "sharing_vfs_scanning_source": {
     "message": "選択内容を確認中 ($1)…"

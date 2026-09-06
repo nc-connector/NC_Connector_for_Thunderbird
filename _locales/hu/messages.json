@@ -1190,8 +1190,41 @@
   "sharing_vfs_nextcloud_unavailable_tooltip": {
     "message": "Nem érhető el. Először állítson be Nextcloud-kapcsolatot a kiegészítő beállításaiban."
   },
-  "sharing_vfs_external_unavailable_tooltip": {
-    "message": "Nem érhető el. Engedélyezze a külső szolgáltatókat a Beállítások > VFS alatt, és csatlakoztasson legalább egy tárhelyet."
+  "sharing_vfs_external_disabled_notice": {
+    "message": "Először állítson be további forrásokat a VFS beállításaiban."
+  },
+  "sharing_vfs_external_permission_notice": {
+    "message": "Hiányzik a további tárhelyszolgáltatók felderítéséhez szükséges engedély. Adja meg a VFS beállításaiban."
+  },
+  "sharing_vfs_external_no_providers_notice": {
+    "message": "Nincs telepítve kompatibilis VFS-szolgáltató."
+  },
+  "sharing_vfs_external_no_connections_notice": {
+    "message": "A rendszer kompatibilis VFS-szolgáltatót talált, de nincs tárhely csatlakoztatva."
+  },
+  "sharing_vfs_external_load_failed_notice": {
+    "message": "A további tárhelyforrásokat nem sikerült betölteni."
+  },
+  "sharing_vfs_open_settings": {
+    "message": "VFS-beállítások megnyitása"
+  },
+  "sharing_vfs_set_up_connection": {
+    "message": "Kapcsolat beállítása"
+  },
+  "sharing_vfs_add_connection": {
+    "message": "Újabb kapcsolat beállítása"
+  },
+  "sharing_vfs_find_providers": {
+    "message": "VFS-szolgáltatók keresése"
+  },
+  "sharing_vfs_refresh_sources": {
+    "message": "Források frissítése"
+  },
+  "sharing_vfs_activation_reload_warning": {
+    "message": "A VFS-beállításokban szükség lehet a külső szolgáltatók engedélyezésére vagy a felderítési engedély megadására. Bármelyik módosítás hatására újratöltődhet az NC Connector, és törlődhet az aktuális fájlkijelölés. Mégis megnyitja a VFS-beállításokat?"
+  },
+  "sharing_vfs_navigation_failed": {
+    "message": "A kért oldalt nem sikerült megnyitni."
   },
   "sharing_vfs_scanning_source": {
     "message": "A kiválasztás beolvasása ($1)…"
