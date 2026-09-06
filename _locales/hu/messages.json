@@ -672,10 +672,10 @@
     "message": "E dátum után a hivatkozás már nem érhető el."
   },
   "sharing_step_files_title": {
-    "message": "Fájlok vagy mappák kiválasztása"
+    "message": "Megosztás összeállítása"
   },
   "sharing_base_path_info": {
-    "message": "Alapkönyvtár: $1"
+    "message": "Célmappa:"
   },
   "sharing_files_table_path": {
     "message": "Elérési út"
@@ -1154,8 +1154,11 @@
   "vfs_error_duplicate_path": {
     "message": "A kiválasztás ugyanazt az útvonalat többször tartalmazza."
   },
+  "sharing_button_add_local": {
+    "message": "+ Helyi"
+  },
   "sharing_button_add_nextcloud": {
-    "message": "A Nextcloudból…"
+    "message": "+ Saját Nextcloud"
   },
   "sharing_button_add_nextcloud_files": {
     "message": "Fájlok kiválasztása"
@@ -1164,7 +1167,7 @@
     "message": "Mappa kiválasztása"
   },
   "sharing_button_add_external": {
-    "message": "Másik tárhelyről…"
+    "message": "+ Másik forrás"
   },
   "sharing_button_add_external_files": {
     "message": "Fájlok kiválasztása"
@@ -1200,7 +1203,7 @@
     "message": "Mappa"
   },
   "sharing_source_nextcloud": {
-    "message": "Nextcloud-tárhely"
+    "message": "Saját Nextcloud"
   },
   "sharing_source_external": {
     "message": "Külső tárhely"
@@ -1221,16 +1224,16 @@
     "message": "ismeretlen"
   },
   "sharing_queue_storage_loading": {
-    "message": "Céltárhely: betöltés..."
+    "message": "Tárhelyadatok betöltése…"
   },
   "sharing_queue_storage_available": {
-    "message": "Céltárhely: $1 szabad / $2"
+    "message": "Szabad hely: $1 / $2"
   },
   "sharing_queue_storage_unlimited": {
-    "message": "Céltárhely: korlátlan"
+    "message": "Nincs tárhelykorlát · $1 használatban"
   },
   "sharing_queue_storage_unknown": {
-    "message": "Céltárhely: nem határozható meg"
+    "message": "A tárhelyadatok nem érhetők el"
   },
   "sharing_queue_storage_insufficient": {
     "message": "Szükséges: $1 · Elérhető: $2"
@@ -1300,44 +1303,5 @@
   },
   "vfs_setup_failed": {
     "message": "A hozzáférést nem sikerült megadni."
-  },
-  "sharing_queue_entries_summary": {
-    "message": "Elemek: $1"
-  },
-  "sharing_queue_sources_summary": {
-    "message": "Források: $1"
-  },
-  "sharing_queue_total_summary": {
-    "message": "Összesen: $1"
-  },
-  "sharing_queue_size_unknown": {
-    "message": "ismeretlen"
-  },
-  "sharing_queue_storage_loading": {
-    "message": "Céltárhely betöltése…"
-  },
-  "sharing_queue_storage_available": {
-    "message": "$1 szabad / $2"
-  },
-  "sharing_queue_storage_unlimited": {
-    "message": "Céltárhely: korlátlan"
-  },
-  "sharing_queue_storage_unknown": {
-    "message": "Céltárhely: nem állapítható meg"
-  },
-  "sharing_queue_storage_insufficient": {
-    "message": "Szükséges: $1 · Elérhető: $2"
-  },
-  "sharing_queue_expand_folder": {
-    "message": "$1 mappa kibontása"
-  },
-  "sharing_queue_collapse_folder": {
-    "message": "$1 mappa összecsukása"
-  },
-  "sharing_queue_remove_item": {
-    "message": "$1 eltávolítása"
-  },
-  "sharing_queue_source_group": {
-    "message": "Forrás: $1"
   }
 }

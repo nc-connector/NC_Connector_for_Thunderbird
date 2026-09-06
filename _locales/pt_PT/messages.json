@@ -672,10 +672,10 @@
     "message": "Após esta data, o link já não estará disponível."
   },
   "sharing_step_files_title": {
-    "message": "Selecionar ficheiros ou pastas"
+    "message": "Preparar partilha"
   },
   "sharing_base_path_info": {
-    "message": "Diretório base: $1"
+    "message": "Pasta de destino:"
   },
   "sharing_files_table_path": {
     "message": "Caminho"
@@ -1154,8 +1154,11 @@
   "vfs_error_duplicate_path": {
     "message": "A seleção contém o mesmo caminho mais de uma vez."
   },
+  "sharing_button_add_local": {
+    "message": "+ Este dispositivo"
+  },
   "sharing_button_add_nextcloud": {
-    "message": "Do Nextcloud…"
+    "message": "+ O meu Nextcloud"
   },
   "sharing_button_add_nextcloud_files": {
     "message": "Selecionar ficheiros"
@@ -1164,7 +1167,7 @@
     "message": "Selecionar pasta"
   },
   "sharing_button_add_external": {
-    "message": "De outro armazenamento…"
+    "message": "+ Outra origem"
   },
   "sharing_button_add_external_files": {
     "message": "Selecionar ficheiros"
@@ -1200,7 +1203,7 @@
     "message": "Pasta"
   },
   "sharing_source_nextcloud": {
-    "message": "Armazenamento Nextcloud"
+    "message": "O meu Nextcloud"
   },
   "sharing_source_external": {
     "message": "Armazenamento externo"
@@ -1221,16 +1224,16 @@
     "message": "desconhecido"
   },
   "sharing_queue_storage_loading": {
-    "message": "Armazenamento de destino: a carregar..."
+    "message": "A carregar informação de armazenamento…"
   },
   "sharing_queue_storage_available": {
-    "message": "Armazenamento de destino: $1 livres de $2"
+    "message": "Espaço livre: $1 de $2"
   },
   "sharing_queue_storage_unlimited": {
-    "message": "Armazenamento de destino: ilimitado"
+    "message": "Sem limite de armazenamento · $1 utilizados"
   },
   "sharing_queue_storage_unknown": {
-    "message": "Armazenamento de destino: não foi possível determinar"
+    "message": "Informação de armazenamento indisponível"
   },
   "sharing_queue_storage_insufficient": {
     "message": "Necessário: $1 · Disponível: $2"
@@ -1300,44 +1303,5 @@
   },
   "vfs_setup_failed": {
     "message": "Não foi possível conceder o acesso."
-  },
-  "sharing_queue_entries_summary": {
-    "message": "Itens: $1"
-  },
-  "sharing_queue_sources_summary": {
-    "message": "Fontes: $1"
-  },
-  "sharing_queue_total_summary": {
-    "message": "Tamanho total: $1"
-  },
-  "sharing_queue_size_unknown": {
-    "message": "desconhecido"
-  },
-  "sharing_queue_storage_loading": {
-    "message": "A carregar o armazenamento de destino…"
-  },
-  "sharing_queue_storage_available": {
-    "message": "$1 livres de $2"
-  },
-  "sharing_queue_storage_unlimited": {
-    "message": "Armazenamento de destino: ilimitado"
-  },
-  "sharing_queue_storage_unknown": {
-    "message": "Armazenamento de destino: indisponível"
-  },
-  "sharing_queue_storage_insufficient": {
-    "message": "Necessário: $1 · Disponível: $2"
-  },
-  "sharing_queue_expand_folder": {
-    "message": "Expandir pasta $1"
-  },
-  "sharing_queue_collapse_folder": {
-    "message": "Recolher pasta $1"
-  },
-  "sharing_queue_remove_item": {
-    "message": "Remover $1"
-  },
-  "sharing_queue_source_group": {
-    "message": "Fonte: $1"
   }
 }

@@ -672,10 +672,10 @@
     "message": "Po tej dacie link nie będzie już dostępny."
   },
   "sharing_step_files_title": {
-    "message": "Wybierz pliki lub foldery"
+    "message": "Przygotuj udostępnienie"
   },
   "sharing_base_path_info": {
-    "message": "Katalog bazowy: $1"
+    "message": "Folder docelowy:"
   },
   "sharing_files_table_path": {
     "message": "Ścieżka"
@@ -1154,8 +1154,11 @@
   "vfs_error_duplicate_path": {
     "message": "Wybór zawiera tę samą ścieżkę więcej niż raz."
   },
+  "sharing_button_add_local": {
+    "message": "+ Lokalne"
+  },
   "sharing_button_add_nextcloud": {
-    "message": "Z Nextcloud…"
+    "message": "+ Mój Nextcloud"
   },
   "sharing_button_add_nextcloud_files": {
     "message": "Wybierz pliki"
@@ -1164,7 +1167,7 @@
     "message": "Wybierz folder"
   },
   "sharing_button_add_external": {
-    "message": "Z innego magazynu…"
+    "message": "+ Inne źródło"
   },
   "sharing_button_add_external_files": {
     "message": "Wybierz pliki"
@@ -1200,7 +1203,7 @@
     "message": "Katalog"
   },
   "sharing_source_nextcloud": {
-    "message": "Magazyn Nextcloud"
+    "message": "Mój Nextcloud"
   },
   "sharing_source_external": {
     "message": "Magazyn zewnętrzny"
@@ -1221,16 +1224,16 @@
     "message": "nieznany"
   },
   "sharing_queue_storage_loading": {
-    "message": "Pamięć docelowa: wczytywanie..."
+    "message": "Wczytywanie informacji o miejscu…"
   },
   "sharing_queue_storage_available": {
-    "message": "Pamięć docelowa: $1 wolnego z $2"
+    "message": "Wolne miejsce: $1 z $2"
   },
   "sharing_queue_storage_unlimited": {
-    "message": "Pamięć docelowa: nieograniczona"
+    "message": "Brak limitu miejsca · użyto $1"
   },
   "sharing_queue_storage_unknown": {
-    "message": "Pamięć docelowa: nie można określić"
+    "message": "Informacje o miejscu są niedostępne"
   },
   "sharing_queue_storage_insufficient": {
     "message": "Wymagane: $1 · Dostępne: $2"
@@ -1300,44 +1303,5 @@
   },
   "vfs_setup_failed": {
     "message": "Nie udało się udzielić dostępu."
-  },
-  "sharing_queue_entries_summary": {
-    "message": "Elementy: $1"
-  },
-  "sharing_queue_sources_summary": {
-    "message": "Źródła: $1"
-  },
-  "sharing_queue_total_summary": {
-    "message": "Łącznie: $1"
-  },
-  "sharing_queue_size_unknown": {
-    "message": "nieznany"
-  },
-  "sharing_queue_storage_loading": {
-    "message": "Wczytywanie pamięci docelowej…"
-  },
-  "sharing_queue_storage_available": {
-    "message": "$1 wolne z $2"
-  },
-  "sharing_queue_storage_unlimited": {
-    "message": "Pamięć docelowa: bez limitu"
-  },
-  "sharing_queue_storage_unknown": {
-    "message": "Pamięć docelowa: niedostępna"
-  },
-  "sharing_queue_storage_insufficient": {
-    "message": "Wymagane: $1 · Dostępne: $2"
-  },
-  "sharing_queue_expand_folder": {
-    "message": "Rozwiń folder $1"
-  },
-  "sharing_queue_collapse_folder": {
-    "message": "Zwiń folder $1"
-  },
-  "sharing_queue_remove_item": {
-    "message": "Usuń $1"
-  },
-  "sharing_queue_source_group": {
-    "message": "Źródło: $1"
   }
 }

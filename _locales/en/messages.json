@@ -672,10 +672,10 @@
     "message": "After this date the link is no longer available."
   },
   "sharing_step_files_title": {
-    "message": "Select files or folders"
+    "message": "Build share"
   },
   "sharing_base_path_info": {
-    "message": "Base directory: $1"
+    "message": "Target folder:"
   },
   "sharing_files_table_path": {
     "message": "Path"
@@ -1154,8 +1154,11 @@
   "vfs_error_duplicate_path": {
     "message": "The selection contains the same path more than once."
   },
+  "sharing_button_add_local": {
+    "message": "+ Local"
+  },
   "sharing_button_add_nextcloud": {
-    "message": "From Nextcloud..."
+    "message": "+ My Nextcloud"
   },
   "sharing_button_add_nextcloud_files": {
     "message": "Select files"
@@ -1164,7 +1167,7 @@
     "message": "Select folder"
   },
   "sharing_button_add_external": {
-    "message": "From another storage..."
+    "message": "+ Other source"
   },
   "sharing_button_add_external_files": {
     "message": "Select files"
@@ -1200,7 +1203,7 @@
     "message": "Folder"
   },
   "sharing_source_nextcloud": {
-    "message": "Nextcloud"
+    "message": "My Nextcloud"
   },
   "sharing_source_external": {
     "message": "External storage"
@@ -1221,16 +1224,16 @@
     "message": "unknown"
   },
   "sharing_queue_storage_loading": {
-    "message": "Target storage: loading..."
+    "message": "Loading storage information..."
   },
   "sharing_queue_storage_available": {
-    "message": "Target storage: $1 free of $2"
+    "message": "Free space: $1 of $2"
   },
   "sharing_queue_storage_unlimited": {
-    "message": "Target storage: unlimited"
+    "message": "No storage limit · $1 used"
   },
   "sharing_queue_storage_unknown": {
-    "message": "Target storage: unavailable"
+    "message": "Storage information unavailable"
   },
   "sharing_queue_storage_insufficient": {
     "message": "Required: $1 · Available: $2"
@@ -1300,44 +1303,5 @@
   },
   "vfs_setup_failed": {
     "message": "Access could not be granted."
-  },
-  "sharing_queue_entries_summary": {
-    "message": "Entries: $1"
-  },
-  "sharing_queue_sources_summary": {
-    "message": "Sources: $1"
-  },
-  "sharing_queue_total_summary": {
-    "message": "Total: $1"
-  },
-  "sharing_queue_size_unknown": {
-    "message": "unknown"
-  },
-  "sharing_queue_storage_loading": {
-    "message": "Loading target storage..."
-  },
-  "sharing_queue_storage_available": {
-    "message": "$1 free of $2"
-  },
-  "sharing_queue_storage_unlimited": {
-    "message": "Target storage: unlimited"
-  },
-  "sharing_queue_storage_unknown": {
-    "message": "Target storage: unavailable"
-  },
-  "sharing_queue_storage_insufficient": {
-    "message": "Required: $1 · Available: $2"
-  },
-  "sharing_queue_expand_folder": {
-    "message": "Expand folder $1"
-  },
-  "sharing_queue_collapse_folder": {
-    "message": "Collapse folder $1"
-  },
-  "sharing_queue_remove_item": {
-    "message": "Remove $1"
-  },
-  "sharing_queue_source_group": {
-    "message": "Source: $1"
   }
 }

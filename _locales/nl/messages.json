@@ -672,10 +672,10 @@
     "message": "Na deze datum is de link niet meer beschikbaar."
   },
   "sharing_step_files_title": {
-    "message": "Bestanden of mappen selecteren"
+    "message": "Share samenstellen"
   },
   "sharing_base_path_info": {
-    "message": "Basismap: $1"
+    "message": "Doelmap:"
   },
   "sharing_files_table_path": {
     "message": "Pad"
@@ -1154,8 +1154,11 @@
   "vfs_error_duplicate_path": {
     "message": "De selectie bevat hetzelfde pad meerdere keren."
   },
+  "sharing_button_add_local": {
+    "message": "+ Lokaal"
+  },
   "sharing_button_add_nextcloud": {
-    "message": "Uit Nextcloud…"
+    "message": "+ Mijn Nextcloud"
   },
   "sharing_button_add_nextcloud_files": {
     "message": "Bestanden selecteren"
@@ -1164,7 +1167,7 @@
     "message": "Map selecteren"
   },
   "sharing_button_add_external": {
-    "message": "Uit een andere opslag…"
+    "message": "+ Andere bron"
   },
   "sharing_button_add_external_files": {
     "message": "Bestanden selecteren"
@@ -1200,7 +1203,7 @@
     "message": "Map"
   },
   "sharing_source_nextcloud": {
-    "message": "Nextcloud-opslag"
+    "message": "Mijn Nextcloud"
   },
   "sharing_source_external": {
     "message": "Externe opslag"
@@ -1221,16 +1224,16 @@
     "message": "onbekend"
   },
   "sharing_queue_storage_loading": {
-    "message": "Doelopslag: laden..."
+    "message": "Opslaginformatie laden…"
   },
   "sharing_queue_storage_available": {
-    "message": "Doelopslag: $1 vrij van $2"
+    "message": "Vrije ruimte: $1 van $2"
   },
   "sharing_queue_storage_unlimited": {
-    "message": "Doelopslag: onbeperkt"
+    "message": "Geen opslaglimiet · $1 gebruikt"
   },
   "sharing_queue_storage_unknown": {
-    "message": "Doelopslag: niet te bepalen"
+    "message": "Opslaginformatie niet beschikbaar"
   },
   "sharing_queue_storage_insufficient": {
     "message": "Vereist: $1 · Beschikbaar: $2"
@@ -1300,44 +1303,5 @@
   },
   "vfs_setup_failed": {
     "message": "Toegang kon niet worden verleend."
-  },
-  "sharing_queue_entries_summary": {
-    "message": "Items: $1"
-  },
-  "sharing_queue_sources_summary": {
-    "message": "Bronnen: $1"
-  },
-  "sharing_queue_total_summary": {
-    "message": "Totaal: $1"
-  },
-  "sharing_queue_size_unknown": {
-    "message": "onbekend"
-  },
-  "sharing_queue_storage_loading": {
-    "message": "Doelopslag laden…"
-  },
-  "sharing_queue_storage_available": {
-    "message": "$1 vrij van $2"
-  },
-  "sharing_queue_storage_unlimited": {
-    "message": "Doelopslag: onbeperkt"
-  },
-  "sharing_queue_storage_unknown": {
-    "message": "Doelopslag: niet beschikbaar"
-  },
-  "sharing_queue_storage_insufficient": {
-    "message": "Vereist: $1 · Beschikbaar: $2"
-  },
-  "sharing_queue_expand_folder": {
-    "message": "Map $1 uitvouwen"
-  },
-  "sharing_queue_collapse_folder": {
-    "message": "Map $1 samenvouwen"
-  },
-  "sharing_queue_remove_item": {
-    "message": "$1 verwijderen"
-  },
-  "sharing_queue_source_group": {
-    "message": "Bron: $1"
   }
 }

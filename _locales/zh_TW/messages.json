@@ -672,10 +672,10 @@
     "message": "此日期之後，連結將不可用。"
   },
   "sharing_step_files_title": {
-    "message": "選擇檔案或資料夾"
+    "message": "建立分享"
   },
   "sharing_base_path_info": {
-    "message": "基礎目錄：$1"
+    "message": "目標資料夾："
   },
   "sharing_files_table_path": {
     "message": "路徑"
@@ -1154,8 +1154,11 @@
   "vfs_error_duplicate_path": {
     "message": "選取內容多次包含相同路徑。"
   },
+  "sharing_button_add_local": {
+    "message": "+ 本機"
+  },
   "sharing_button_add_nextcloud": {
-    "message": "從 Nextcloud 加入…"
+    "message": "+ 我的 Nextcloud"
   },
   "sharing_button_add_nextcloud_files": {
     "message": "選擇檔案"
@@ -1164,7 +1167,7 @@
     "message": "選擇資料夾"
   },
   "sharing_button_add_external": {
-    "message": "從其他儲存空間加入…"
+    "message": "+ 其他來源"
   },
   "sharing_button_add_external_files": {
     "message": "選擇檔案"
@@ -1200,7 +1203,7 @@
     "message": "資料夾"
   },
   "sharing_source_nextcloud": {
-    "message": "Nextcloud 儲存空間"
+    "message": "我的 Nextcloud"
   },
   "sharing_source_external": {
     "message": "外部儲存空間"
@@ -1221,16 +1224,16 @@
     "message": "未知"
   },
   "sharing_queue_storage_loading": {
-    "message": "目標儲存空間：載入中..."
+    "message": "正在載入儲存空間資訊…"
   },
   "sharing_queue_storage_available": {
-    "message": "目標儲存空間：$2 中有 $1 可用"
+    "message": "可用空間：$1 / $2"
   },
   "sharing_queue_storage_unlimited": {
-    "message": "目標儲存空間：無限制"
+    "message": "無儲存配額限制 · 已使用 $1"
   },
   "sharing_queue_storage_unknown": {
-    "message": "目標儲存空間：無法判定"
+    "message": "無法取得儲存空間資訊"
   },
   "sharing_queue_storage_insufficient": {
     "message": "需要：$1 · 可用：$2"
@@ -1300,44 +1303,5 @@
   },
   "vfs_setup_failed": {
     "message": "無法授予存取權限。"
-  },
-  "sharing_queue_entries_summary": {
-    "message": "項目：$1"
-  },
-  "sharing_queue_sources_summary": {
-    "message": "來源：$1"
-  },
-  "sharing_queue_total_summary": {
-    "message": "總計：$1"
-  },
-  "sharing_queue_size_unknown": {
-    "message": "未知"
-  },
-  "sharing_queue_storage_loading": {
-    "message": "正在載入目標儲存空間…"
-  },
-  "sharing_queue_storage_available": {
-    "message": "$2 中有 $1 可用"
-  },
-  "sharing_queue_storage_unlimited": {
-    "message": "目標儲存空間：無限制"
-  },
-  "sharing_queue_storage_unknown": {
-    "message": "目標儲存空間：無法取得"
-  },
-  "sharing_queue_storage_insufficient": {
-    "message": "需要：$1 · 可用：$2"
-  },
-  "sharing_queue_expand_folder": {
-    "message": "展開資料夾 $1"
-  },
-  "sharing_queue_collapse_folder": {
-    "message": "收合資料夾 $1"
-  },
-  "sharing_queue_remove_item": {
-    "message": "移除 $1"
-  },
-  "sharing_queue_source_group": {
-    "message": "來源：$1"
   }
 }

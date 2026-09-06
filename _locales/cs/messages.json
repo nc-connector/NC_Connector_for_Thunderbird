@@ -672,10 +672,10 @@
     "message": "Po tomto datu už odkaz nebude dostupný."
   },
   "sharing_step_files_title": {
-    "message": "Vybrat soubory nebo složky"
+    "message": "Sestavit sdílení"
   },
   "sharing_base_path_info": {
-    "message": "Základní adresář: $1"
+    "message": "Cílová složka:"
   },
   "sharing_files_table_path": {
     "message": "Cesta"
@@ -1154,8 +1154,11 @@
   "vfs_error_duplicate_path": {
     "message": "Výběr obsahuje stejnou cestu vícekrát."
   },
+  "sharing_button_add_local": {
+    "message": "+ Místní"
+  },
   "sharing_button_add_nextcloud": {
-    "message": "Z Nextcloudu…"
+    "message": "+ Můj Nextcloud"
   },
   "sharing_button_add_nextcloud_files": {
     "message": "Vybrat soubory"
@@ -1164,7 +1167,7 @@
     "message": "Vybrat složku"
   },
   "sharing_button_add_external": {
-    "message": "Z jiného úložiště…"
+    "message": "+ Jiný zdroj"
   },
   "sharing_button_add_external_files": {
     "message": "Vybrat soubory"
@@ -1200,7 +1203,7 @@
     "message": "Složka"
   },
   "sharing_source_nextcloud": {
-    "message": "Úložiště Nextcloud"
+    "message": "Můj Nextcloud"
   },
   "sharing_source_external": {
     "message": "Externí úložiště"
@@ -1221,16 +1224,16 @@
     "message": "neznámá"
   },
   "sharing_queue_storage_loading": {
-    "message": "Cílové úložiště: načítání..."
+    "message": "Načítání informací o úložišti…"
   },
   "sharing_queue_storage_available": {
-    "message": "Cílové úložiště: $1 volných z $2"
+    "message": "Volné místo: $1 z $2"
   },
   "sharing_queue_storage_unlimited": {
-    "message": "Cílové úložiště: bez omezení"
+    "message": "Bez limitu úložiště · využito $1"
   },
   "sharing_queue_storage_unknown": {
-    "message": "Cílové úložiště: nelze zjistit"
+    "message": "Informace o úložišti nejsou k dispozici"
   },
   "sharing_queue_storage_insufficient": {
     "message": "Požadováno: $1 · Dostupné: $2"
@@ -1300,44 +1303,5 @@
   },
   "vfs_setup_failed": {
     "message": "Přístup se nepodařilo udělit."
-  },
-  "sharing_queue_entries_summary": {
-    "message": "Položky: $1"
-  },
-  "sharing_queue_sources_summary": {
-    "message": "Zdroje: $1"
-  },
-  "sharing_queue_total_summary": {
-    "message": "Celkem: $1"
-  },
-  "sharing_queue_size_unknown": {
-    "message": "neznámá"
-  },
-  "sharing_queue_storage_loading": {
-    "message": "Cílové úložiště: načítání…"
-  },
-  "sharing_queue_storage_available": {
-    "message": "$1 volných z $2"
-  },
-  "sharing_queue_storage_unlimited": {
-    "message": "Cílové úložiště: bez omezení"
-  },
-  "sharing_queue_storage_unknown": {
-    "message": "Cílové úložiště: nelze zjistit"
-  },
-  "sharing_queue_storage_insufficient": {
-    "message": "Vyžadováno: $1 · K dispozici: $2"
-  },
-  "sharing_queue_expand_folder": {
-    "message": "Rozbalit složku $1"
-  },
-  "sharing_queue_collapse_folder": {
-    "message": "Sbalit složku $1"
-  },
-  "sharing_queue_remove_item": {
-    "message": "Odebrat $1"
-  },
-  "sharing_queue_source_group": {
-    "message": "Zdroj: $1"
   }
 }

@@ -672,10 +672,10 @@
     "message": "После этой даты ссылка будет недоступна."
   },
   "sharing_step_files_title": {
-    "message": "Выберите файлы или папки"
+    "message": "Сформировать общий ресурс"
   },
   "sharing_base_path_info": {
-    "message": "Базовый каталог: $1"
+    "message": "Целевая папка:"
   },
   "sharing_files_table_path": {
     "message": "Путь"
@@ -1154,8 +1154,11 @@
   "vfs_error_duplicate_path": {
     "message": "В выбранных данных один и тот же путь указан несколько раз."
   },
+  "sharing_button_add_local": {
+    "message": "+ Локально"
+  },
   "sharing_button_add_nextcloud": {
-    "message": "Из Nextcloud…"
+    "message": "+ Мой Nextcloud"
   },
   "sharing_button_add_nextcloud_files": {
     "message": "Выбрать файлы"
@@ -1164,7 +1167,7 @@
     "message": "Выбрать папку"
   },
   "sharing_button_add_external": {
-    "message": "Из другого хранилища…"
+    "message": "+ Другой источник"
   },
   "sharing_button_add_external_files": {
     "message": "Выбрать файлы"
@@ -1200,7 +1203,7 @@
     "message": "Папка"
   },
   "sharing_source_nextcloud": {
-    "message": "Хранилище Nextcloud"
+    "message": "Мой Nextcloud"
   },
   "sharing_source_external": {
     "message": "Внешнее хранилище"
@@ -1221,16 +1224,16 @@
     "message": "неизвестен"
   },
   "sharing_queue_storage_loading": {
-    "message": "Целевое хранилище: загрузка..."
+    "message": "Загрузка информации о хранилище…"
   },
   "sharing_queue_storage_available": {
-    "message": "Целевое хранилище: свободно $1 из $2"
+    "message": "Свободно: $1 из $2"
   },
   "sharing_queue_storage_unlimited": {
-    "message": "Целевое хранилище: без ограничений"
+    "message": "Без лимита хранилища · использовано $1"
   },
   "sharing_queue_storage_unknown": {
-    "message": "Целевое хранилище: не удалось определить"
+    "message": "Информация о хранилище недоступна"
   },
   "sharing_queue_storage_insufficient": {
     "message": "Требуется: $1 · Доступно: $2"
@@ -1300,44 +1303,5 @@
   },
   "vfs_setup_failed": {
     "message": "Не удалось предоставить доступ."
-  },
-  "sharing_queue_entries_summary": {
-    "message": "Элементы: $1"
-  },
-  "sharing_queue_sources_summary": {
-    "message": "Источники: $1"
-  },
-  "sharing_queue_total_summary": {
-    "message": "Всего: $1"
-  },
-  "sharing_queue_size_unknown": {
-    "message": "неизвестно"
-  },
-  "sharing_queue_storage_loading": {
-    "message": "Загрузка целевого хранилища…"
-  },
-  "sharing_queue_storage_available": {
-    "message": "Свободно $1 из $2"
-  },
-  "sharing_queue_storage_unlimited": {
-    "message": "Целевое хранилище: без ограничений"
-  },
-  "sharing_queue_storage_unknown": {
-    "message": "Целевое хранилище: недоступно"
-  },
-  "sharing_queue_storage_insufficient": {
-    "message": "Требуется: $1 · Доступно: $2"
-  },
-  "sharing_queue_expand_folder": {
-    "message": "Развернуть папку $1"
-  },
-  "sharing_queue_collapse_folder": {
-    "message": "Свернуть папку $1"
-  },
-  "sharing_queue_remove_item": {
-    "message": "Удалить $1"
-  },
-  "sharing_queue_source_group": {
-    "message": "Источник: $1"
   }
 }

@@ -1023,7 +1023,7 @@ Thunderbird platform references:
 NC Connector uses the vendored Thunderbird VFS Toolkit in two roles:
 
 - As a provider, it exposes the already configured Nextcloud account with full read/write file and folder capabilities after an explicit grant.
-- As a client, it uses its own provider for **From Nextcloud** and can discover separately installed providers only after the user enables external providers and grants Thunderbird's optional `management` permission.
+- As a client, it uses its own provider for **+ My Nextcloud** and can discover separately installed providers only after the user enables external providers and grants Thunderbird's optional `management` permission.
 
 There is no second Nextcloud login. `modules/nccore.js` resolves the canonical Nextcloud UID and constructs the authenticated File, Upload, and Bulk DAV targets shared by FileLink, VFS, and persistent cleanup. Basic Auth continues to use the configured login alias and app password. A provider storage ID is bound to the normalized server plus canonical UID. Changing either rotates that ID and removes every previous grant; an app-password or login-alias change for the same canonical account does not.
 
@@ -1031,7 +1031,9 @@ The provider implements live list, quota, read, add, move, copy, and delete oper
 
 The Sharing wizard first builds one immutable queue of descriptors. Each row carries a source kind (`local`, `nextcloud`, or `external-vfs`), provider label, source path, target path, item kind, size, and transfer-group metadata. Folder enumeration includes empty directories. Exact and prefix conflicts are resolved before any remote share mutation; removing a selected folder removes its complete transfer group.
 
-The wizard exposes exactly three source menus: local storage, the configured Nextcloud, and another VFS storage. A remote menu stays disabled with a setup tooltip until its corresponding connection exists. If several external connections are available, NC Connector shows an intermediate connection list with the provider-reported add-on icon before opening a picker locked to that exact storage reference. External connections are removed through the Toolkit's `deleteProviderConnection()` contract, not by editing Toolkit session records directly.
+The wizard exposes exactly three source menus: **+ Local**, **+ My Nextcloud**, and **+ Other source**. A remote menu stays disabled with a setup tooltip until its corresponding connection exists. If several external connections are available, NC Connector shows an intermediate connection list with the provider-reported add-on icon before opening a picker locked to that exact storage reference. External connections are removed through the Toolkit's `deleteProviderConnection()` flow, not by editing Toolkit session records directly.
+
+The queue step shows the planned relative target folder from `NCSharing.buildShareFolderInfo()`. After upload it uses the folder returned by root reservation, including an attachment suffix such as `_1`. Finite quota displays free and total space. Nextcloud's unlimited-quota marker displays current usage instead of claiming unlimited physical capacity; missing quota data remains visible as unavailable and does not invent a limit.
 
 Materialization begins only after queue collection is complete and the share root is reserved:
 

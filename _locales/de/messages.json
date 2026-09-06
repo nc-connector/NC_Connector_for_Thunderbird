@@ -672,10 +672,10 @@
     "message": "Nach Ablauf ist der Link nicht mehr abrufbar."
   },
   "sharing_step_files_title": {
-    "message": "Dateien oder Ordner auswählen"
+    "message": "Freigabe zusammenstellen"
   },
   "sharing_base_path_info": {
-    "message": "Basisverzeichnis: $1"
+    "message": "Zielordner:"
   },
   "sharing_files_table_path": {
     "message": "Pfad"
@@ -1154,8 +1154,11 @@
   "vfs_error_duplicate_path": {
     "message": "Die Auswahl enthält denselben Pfad mehrfach."
   },
+  "sharing_button_add_local": {
+    "message": "+ Lokal"
+  },
   "sharing_button_add_nextcloud": {
-    "message": "Aus Nextcloud ..."
+    "message": "+ Meine Nextcloud"
   },
   "sharing_button_add_nextcloud_files": {
     "message": "Dateien auswählen"
@@ -1164,7 +1167,7 @@
     "message": "Ordner auswählen"
   },
   "sharing_button_add_external": {
-    "message": "Aus einem anderen Speicher ..."
+    "message": "+ Andere Quelle"
   },
   "sharing_button_add_external_files": {
     "message": "Dateien auswählen"
@@ -1200,7 +1203,7 @@
     "message": "Ordner"
   },
   "sharing_source_nextcloud": {
-    "message": "Nextcloud-Speicher"
+    "message": "Meine Nextcloud"
   },
   "sharing_source_external": {
     "message": "Externer Speicher"
@@ -1221,16 +1224,16 @@
     "message": "unbekannt"
   },
   "sharing_queue_storage_loading": {
-    "message": "Zielspeicher: wird geladen ..."
+    "message": "Speicherinformation wird geladen ..."
   },
   "sharing_queue_storage_available": {
-    "message": "Zielspeicher: $1 frei von $2"
+    "message": "Freier Speicher: $1 von $2"
   },
   "sharing_queue_storage_unlimited": {
-    "message": "Zielspeicher: unbegrenzt"
+    "message": "Kein Speicherlimit · $1 belegt"
   },
   "sharing_queue_storage_unknown": {
-    "message": "Zielspeicher: nicht ermittelbar"
+    "message": "Speicherinformation nicht verfügbar"
   },
   "sharing_queue_storage_insufficient": {
     "message": "Benötigt: $1 · Verfügbar: $2"
@@ -1300,44 +1303,5 @@
   },
   "vfs_setup_failed": {
     "message": "Der Zugriff konnte nicht erteilt werden."
-  },
-  "sharing_queue_entries_summary": {
-    "message": "Einträge: $1"
-  },
-  "sharing_queue_sources_summary": {
-    "message": "Quellen: $1"
-  },
-  "sharing_queue_total_summary": {
-    "message": "Gesamt: $1"
-  },
-  "sharing_queue_size_unknown": {
-    "message": "unbekannt"
-  },
-  "sharing_queue_storage_loading": {
-    "message": "Zielspeicher wird geladen ..."
-  },
-  "sharing_queue_storage_available": {
-    "message": "$1 frei von $2"
-  },
-  "sharing_queue_storage_unlimited": {
-    "message": "Zielspeicher: unbegrenzt"
-  },
-  "sharing_queue_storage_unknown": {
-    "message": "Zielspeicher: nicht ermittelbar"
-  },
-  "sharing_queue_storage_insufficient": {
-    "message": "Benötigt: $1 · Verfügbar: $2"
-  },
-  "sharing_queue_expand_folder": {
-    "message": "Ordner $1 aufklappen"
-  },
-  "sharing_queue_collapse_folder": {
-    "message": "Ordner $1 zuklappen"
-  },
-  "sharing_queue_remove_item": {
-    "message": "$1 entfernen"
-  },
-  "sharing_queue_source_group": {
-    "message": "Quelle: $1"
   }
 }

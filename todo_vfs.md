@@ -90,6 +90,24 @@ VFS feature PR has been merged. They are not current product defects.
 
 - [x] Redesign the mixed-source queue for clearer hierarchy, source, size, and
   status scanning without changing transfer behavior.
+- [x] Rename the queue-step heading from **Select files or folders** to
+  **Build share** (`Freigabe zusammenstellen` in German).
+- [x] Shorten the three source actions to **+ Local**, **+ My Nextcloud**, and
+  **+ Other source**. Use **My Nextcloud** for the own-storage label throughout
+  the visible picker/queue UI, while provider IDs, protocol values, and log
+  fields stay unchanged. Keep every action label visible at the supported
+  dialog width instead of clipping it with an ellipsis.
+- [x] Replace the base-directory line with **Target folder** and show the full
+  normalized relative path, for example
+  `/90 Shares - external/20260906_Project`. Build it with
+  `NCSharing.buildShareFolderInfo()` so the preview uses the same sanitized
+  name, date, and base path as upload. Let long paths wrap. Attachment mode
+  initially shows its fixed `email_attachment` target and adopts the actual
+  suffixed path if root reservation selects `_1`, `_2`, and so on.
+- [x] Reword destination storage without implying unlimited physical disk
+  space: show **Free space: X of Y** for a finite quota,
+  **No storage limit · X used** for Nextcloud's unlimited-quota marker, and
+  **Storage information unavailable** when DAV returns no usable quota.
 - [ ] Replace `screenshots/filelink_wizzard3.png` with a current Thunderbird
   runtime capture of the source menus, recursive queue, size summary, and
   destination-storage display before the feature release.

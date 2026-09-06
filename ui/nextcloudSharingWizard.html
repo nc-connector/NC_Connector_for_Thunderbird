@@ -283,6 +283,18 @@ textarea:focus{
   font-size:13px;
   color:var(--tb-muted);
   margin-bottom:12px;
+  line-height:1.35;
+}
+.base-path span,
+.base-path strong{
+  display:block;
+}
+.base-path strong{
+  margin-top:2px;
+  color:var(--dialog-text);
+  font-weight:600;
+  overflow-wrap:anywhere;
+  word-break:break-word;
 }
 .file-actions{
   display:grid;
@@ -329,15 +341,14 @@ textarea:focus{
   list-style:none;
   width:100%;
   min-height:36px;
-  height:36px;
-  padding:0 10px;
+  height:auto;
+  padding:7px 10px;
   line-height:1.2;
 }
 .source-action summary > span{
   min-width:0;
-  overflow:hidden;
-  text-overflow:ellipsis;
-  white-space:nowrap;
+  overflow-wrap:anywhere;
+  white-space:normal;
 }
 .source-action summary::-webkit-details-marker{
   display:none;
@@ -384,9 +395,9 @@ textarea:focus{
 }
 .queue-summary{
   min-height:28px;
-  display:flex;
-  align-items:center;
-  justify-content:space-between;
+  display:grid;
+  grid-template-columns:minmax(0,1fr) minmax(0,1fr);
+  align-items:start;
   gap:12px;
   margin-bottom:8px;
   padding:5px 9px;
@@ -399,9 +410,8 @@ textarea:focus{
 }
 .queue-summary > span{
   min-width:0;
-  overflow:hidden;
-  text-overflow:ellipsis;
-  white-space:nowrap;
+  overflow-wrap:anywhere;
+  white-space:normal;
 }
 .queue-summary-storage{
   text-align:right;
@@ -804,10 +814,10 @@ textarea:focus{
       </section>
 
       <section class="wizard-step" data-step="3">
-        <h2 data-i18n="sharing_step_files_title">Select files or folders</h2>
+        <h2 data-i18n="sharing_step_files_title">Build share</h2>
         <div class="status-text" id="attachmentModeInfo" hidden></div>
         <div class="base-path">
-          <span data-i18n="sharing_base_path_info">Base directory: $1</span>
+          <span data-i18n="sharing_base_path_info">Target folder:</span>
           <strong id="basePathLabel"></strong>
         </div>
         <div class="file-actions">
@@ -818,7 +828,7 @@ textarea:focus{
                 <path d="M3 15h18"></path>
                 <circle cx="17.5" cy="11" r="1"></circle>
               </svg>
-              <span data-i18n="sharing_source_local">Local</span>
+              <span data-i18n="sharing_button_add_local">+ Local</span>
             </summary>
             <div class="source-menu">
               <button type="button" id="addFilesBtn" data-i18n="sharing_button_add_nextcloud_files">Select files</button>
@@ -833,7 +843,7 @@ textarea:focus{
                 <circle cx="19.5" cy="12" r="2.5"></circle>
                 <path d="M7 12h1.5M15.5 12H17"></path>
               </svg>
-              <span data-i18n="sharing_button_add_nextcloud">From Nextcloud...</span>
+              <span data-i18n="sharing_button_add_nextcloud">+ My Nextcloud</span>
             </summary>
             <div class="source-menu">
               <button type="button" id="addNextcloudFilesBtn" data-i18n="sharing_button_add_nextcloud_files">Select files</button>
@@ -848,7 +858,7 @@ textarea:focus{
                 <circle cx="19" cy="18" r="2.4"></circle>
                 <path d="M10.8 7.1 6.2 15.9M13.2 7.1l4.6 8.8M7.4 18h9.2"></path>
               </svg>
-              <span data-i18n="sharing_button_add_external">From another storage...</span>
+              <span data-i18n="sharing_button_add_external">+ Other source</span>
             </summary>
             <div class="source-menu">
               <button type="button" id="addExternalFilesBtn" data-i18n="sharing_button_add_external_files">Select files</button>

@@ -663,15 +663,9 @@
         NCPolicyState.coerceString
       );
       state.basePath = basePath || '';
-      if (dom.basePathLabel){
-        dom.basePathLabel.textContent = state.basePath || '';
-      }
     }catch(error){
       logUiError('basePath', error);
       state.basePath = NCSharing?.DEFAULT_BASE_PATH || '';
-      if (dom.basePathLabel){
-        dom.basePathLabel.textContent = state.basePath || '';
-      }
     }
     return state.basePath;
   }
@@ -1105,6 +1099,7 @@
       section.classList.toggle('active', value === state.currentStep);
     });
     if (state.currentStep === 3){
+      renderTargetFolderPath();
       setUploadStatus(state.uploadCompleted ? i18n('sharing_status_ready') : '');
       void refreshDestinationStorageUsage();
     }else{
@@ -1719,7 +1714,9 @@
       return;
     }
     if (destination.state === 'unlimited'){
-      setQueueStorageSummary(i18n('sharing_queue_storage_unlimited'), 'unlimited');
+      setQueueStorageSummary(i18n('sharing_queue_storage_unlimited', [
+        formatTransferSize(destination.usage)
+      ]), 'unlimited');
       return;
     }
     if (destination.state !== 'finite'){
@@ -1984,6 +1981,9 @@
     });
     setUploadStatus('');
     setOverallProgress({ visible: false });
+    if (state.currentStep === 3){
+      renderTargetFolderPath();
+    }
     renderFileQueue();
     updateButtons();
   }
@@ -2118,6 +2118,7 @@
         }))
       });
       state.uploadResult = result;
+      renderTargetFolderPath(result?.shareInfo?.folderInfo?.relativeFolder);
       state.uploadCompleted = true;
       setMessage(i18n('sharing_status_ready'), 'success');
       setUploadStatus(i18n('sharing_status_ready'));
@@ -2702,6 +2703,28 @@
       return null;
     }
     return state.shareContext;
+  }
+
+  /**
+   * Render the planned share folder or a path returned by root reservation.
+   * @param {string} reservedRelativeFolder
+   */
+  function renderTargetFolderPath(reservedRelativeFolder = ''){
+    if (!dom.basePathLabel){
+      return;
+    }
+    let relativeFolder = String(reservedRelativeFolder || '').replace(/^\/+/, '');
+    if (!relativeFolder){
+      const shareContext = getShareContext();
+      if (shareContext){
+        relativeFolder = NCSharing.buildShareFolderInfo(
+          state.basePath,
+          shareContext.sanitizedName,
+          shareContext.shareDate
+        ).relativeFolder;
+      }
+    }
+    dom.basePathLabel.textContent = relativeFolder ? `/${relativeFolder}` : '';
   }
 
   function getDefaultExpireDate(){

@@ -672,10 +672,10 @@
     "message": "Passé cette date, le lien ne sera plus accessible."
   },
   "sharing_step_files_title": {
-    "message": "Sélectionner des fichiers ou des dossiers"
+    "message": "Composer le partage"
   },
   "sharing_base_path_info": {
-    "message": "Répertoire de base : $1"
+    "message": "Dossier cible :"
   },
   "sharing_files_table_path": {
     "message": "Chemin"
@@ -1154,8 +1154,11 @@
   "vfs_error_duplicate_path": {
     "message": "La sélection contient plusieurs fois le même chemin."
   },
+  "sharing_button_add_local": {
+    "message": "+ Cet appareil"
+  },
   "sharing_button_add_nextcloud": {
-    "message": "Depuis Nextcloud…"
+    "message": "+ Mon Nextcloud"
   },
   "sharing_button_add_nextcloud_files": {
     "message": "Sélectionner des fichiers"
@@ -1164,7 +1167,7 @@
     "message": "Sélectionner un dossier"
   },
   "sharing_button_add_external": {
-    "message": "Depuis un autre stockage…"
+    "message": "+ Autre source"
   },
   "sharing_button_add_external_files": {
     "message": "Sélectionner des fichiers"
@@ -1200,7 +1203,7 @@
     "message": "Dossier"
   },
   "sharing_source_nextcloud": {
-    "message": "Stockage Nextcloud"
+    "message": "Mon Nextcloud"
   },
   "sharing_source_external": {
     "message": "Stockage externe"
@@ -1221,16 +1224,16 @@
     "message": "inconnue"
   },
   "sharing_queue_storage_loading": {
-    "message": "Stockage cible : chargement..."
+    "message": "Chargement des informations de stockage…"
   },
   "sharing_queue_storage_available": {
-    "message": "Stockage cible : $1 libres sur $2"
+    "message": "Espace libre : $1 sur $2"
   },
   "sharing_queue_storage_unlimited": {
-    "message": "Stockage cible : illimité"
+    "message": "Aucun quota de stockage · $1 utilisés"
   },
   "sharing_queue_storage_unknown": {
-    "message": "Stockage cible : indéterminable"
+    "message": "Informations de stockage indisponibles"
   },
   "sharing_queue_storage_insufficient": {
     "message": "Requis : $1 · Disponible : $2"
@@ -1300,44 +1303,5 @@
   },
   "vfs_setup_failed": {
     "message": "L’accès n’a pas pu être autorisé."
-  },
-  "sharing_queue_entries_summary": {
-    "message": "Éléments : $1"
-  },
-  "sharing_queue_sources_summary": {
-    "message": "Sources : $1"
-  },
-  "sharing_queue_total_summary": {
-    "message": "Total : $1"
-  },
-  "sharing_queue_size_unknown": {
-    "message": "inconnue"
-  },
-  "sharing_queue_storage_loading": {
-    "message": "Chargement du stockage cible…"
-  },
-  "sharing_queue_storage_available": {
-    "message": "$1 libres sur $2"
-  },
-  "sharing_queue_storage_unlimited": {
-    "message": "Stockage cible : illimité"
-  },
-  "sharing_queue_storage_unknown": {
-    "message": "Stockage cible : indisponible"
-  },
-  "sharing_queue_storage_insufficient": {
-    "message": "Requis : $1 · Disponible : $2"
-  },
-  "sharing_queue_expand_folder": {
-    "message": "Développer le dossier $1"
-  },
-  "sharing_queue_collapse_folder": {
-    "message": "Réduire le dossier $1"
-  },
-  "sharing_queue_remove_item": {
-    "message": "Supprimer $1"
-  },
-  "sharing_queue_source_group": {
-    "message": "Source : $1"
   }
 }

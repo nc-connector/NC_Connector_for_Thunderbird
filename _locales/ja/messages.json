@@ -672,10 +672,10 @@
     "message": "この日付以降、リンクは利用できません。"
   },
   "sharing_step_files_title": {
-    "message": "ファイルまたはフォルダーを選択"
+    "message": "共有を作成"
   },
   "sharing_base_path_info": {
-    "message": "ベースディレクトリ: $1"
+    "message": "保存先フォルダー:"
   },
   "sharing_files_table_path": {
     "message": "パス"
@@ -1154,8 +1154,11 @@
   "vfs_error_duplicate_path": {
     "message": "選択内容に同じパスが複数含まれています。"
   },
+  "sharing_button_add_local": {
+    "message": "+ ローカル"
+  },
   "sharing_button_add_nextcloud": {
-    "message": "Nextcloud から…"
+    "message": "+ マイ Nextcloud"
   },
   "sharing_button_add_nextcloud_files": {
     "message": "ファイルを選択"
@@ -1164,7 +1167,7 @@
     "message": "フォルダーを選択"
   },
   "sharing_button_add_external": {
-    "message": "別のストレージから…"
+    "message": "+ その他のソース"
   },
   "sharing_button_add_external_files": {
     "message": "ファイルを選択"
@@ -1200,7 +1203,7 @@
     "message": "フォルダー"
   },
   "sharing_source_nextcloud": {
-    "message": "Nextcloud ストレージ"
+    "message": "マイ Nextcloud"
   },
   "sharing_source_external": {
     "message": "外部ストレージ"
@@ -1221,16 +1224,16 @@
     "message": "不明"
   },
   "sharing_queue_storage_loading": {
-    "message": "保存先ストレージ: 読み込み中..."
+    "message": "ストレージ情報を読み込み中…"
   },
   "sharing_queue_storage_available": {
-    "message": "保存先ストレージ: $2 中 $1 空き"
+    "message": "空き容量: $2 中 $1"
   },
   "sharing_queue_storage_unlimited": {
-    "message": "保存先ストレージ: 容量無制限"
+    "message": "ストレージ上限なし · $1 使用中"
   },
   "sharing_queue_storage_unknown": {
-    "message": "保存先ストレージ: 取得できません"
+    "message": "ストレージ情報を取得できません"
   },
   "sharing_queue_storage_insufficient": {
     "message": "必要: $1 · 利用可能: $2"
@@ -1300,44 +1303,5 @@
   },
   "vfs_setup_failed": {
     "message": "アクセスを許可できませんでした。"
-  },
-  "sharing_queue_entries_summary": {
-    "message": "項目: $1"
-  },
-  "sharing_queue_sources_summary": {
-    "message": "ソース: $1"
-  },
-  "sharing_queue_total_summary": {
-    "message": "合計: $1"
-  },
-  "sharing_queue_size_unknown": {
-    "message": "不明"
-  },
-  "sharing_queue_storage_loading": {
-    "message": "保存先ストレージを読み込み中…"
-  },
-  "sharing_queue_storage_available": {
-    "message": "$2 中 $1 空き"
-  },
-  "sharing_queue_storage_unlimited": {
-    "message": "保存先ストレージ: 無制限"
-  },
-  "sharing_queue_storage_unknown": {
-    "message": "保存先ストレージ: 取得不可"
-  },
-  "sharing_queue_storage_insufficient": {
-    "message": "必要: $1 · 利用可能: $2"
-  },
-  "sharing_queue_expand_folder": {
-    "message": "フォルダー $1 を展開"
-  },
-  "sharing_queue_collapse_folder": {
-    "message": "フォルダー $1 を折りたたむ"
-  },
-  "sharing_queue_remove_item": {
-    "message": "$1 を削除"
-  },
-  "sharing_queue_source_group": {
-    "message": "ソース: $1"
   }
 }

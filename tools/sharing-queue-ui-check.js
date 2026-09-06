@@ -3,7 +3,9 @@
 const vm = require("node:vm");
 const {
   assert,
+  listFiles,
   loadScript,
+  readJson,
   readText
 } = require("./review-check-utils");
 
@@ -197,6 +199,73 @@ function run(){
       && source.includes("knownFolderKeys"),
     "Top-level folders must open initially while recursive expansion survives rerenders"
   );
+
+  const wizardMarkup = readText("ui/nextcloudSharingWizard.html");
+  const wizardSource = readText("ui/nextcloudSharingWizard.js");
+  const sourceLabelStyle = wizardMarkup.match(/\.source-action summary > span\{([\s\S]*?)\}/)?.[1] || "";
+  assert(
+    wizardMarkup.includes('data-i18n="sharing_button_add_local">+ Local</span>')
+      && wizardMarkup.includes('data-i18n="sharing_button_add_nextcloud">+ My Nextcloud</span>')
+      && wizardMarkup.includes('data-i18n="sharing_button_add_external">+ Other source</span>'),
+    "The three source actions must use complete add labels"
+  );
+  assert(
+    !sourceLabelStyle.includes("text-overflow:ellipsis")
+      && !sourceLabelStyle.includes("white-space:nowrap")
+      && sourceLabelStyle.includes("overflow-wrap:anywhere"),
+    "Source action labels must wrap instead of being clipped"
+  );
+  assert(
+    wizardMarkup.includes(".base-path strong{")
+      && wizardMarkup.includes("overflow-wrap:anywhere"),
+    "The complete target folder path must be allowed to wrap"
+  );
+  assert(
+    wizardSource.includes("NCSharing.buildShareFolderInfo(")
+      && wizardSource.includes("result?.shareInfo?.folderInfo?.relativeFolder")
+      && wizardSource.includes("formatTransferSize(destination.usage)"),
+    "The queue must use the upload path builder, reserved result path, and reported unlimited usage"
+  );
+
+  const en = readJson("_locales/en/messages.json");
+  const de = readJson("_locales/de/messages.json");
+  assert(
+    en.sharing_step_files_title.message === "Build share"
+      && en.sharing_base_path_info.message === "Target folder:"
+      && en.sharing_queue_storage_available.message === "Free space: $1 of $2"
+      && en.sharing_queue_storage_unlimited.message === "No storage limit · $1 used",
+    "English queue wording must match the revised UX"
+  );
+  assert(
+    de.sharing_step_files_title.message === "Freigabe zusammenstellen"
+      && de.sharing_base_path_info.message === "Zielordner:"
+      && de.sharing_queue_storage_available.message === "Freier Speicher: $1 von $2"
+      && de.sharing_queue_storage_unlimited.message === "Kein Speicherlimit · $1 belegt",
+    "German queue wording must match the revised UX"
+  );
+
+  const queueLocaleKeys = [
+    "sharing_queue_entries_summary",
+    "sharing_queue_sources_summary",
+    "sharing_queue_total_summary",
+    "sharing_queue_size_unknown",
+    "sharing_queue_storage_loading",
+    "sharing_queue_storage_available",
+    "sharing_queue_storage_unlimited",
+    "sharing_queue_storage_unknown",
+    "sharing_queue_storage_insufficient",
+    "sharing_queue_expand_folder",
+    "sharing_queue_collapse_folder",
+    "sharing_queue_remove_item",
+    "sharing_queue_source_group"
+  ];
+  for (const localePath of listFiles("_locales", { extensions: [".json"] })){
+    const localeSource = readText(localePath);
+    for (const key of queueLocaleKeys){
+      const occurrences = localeSource.match(new RegExp(`"${key}"`, "g")) || [];
+      assert(occurrences.length === 1, `${localePath} must define ${key} exactly once`);
+    }
+  }
   console.log("[OK] sharing-queue-ui-check passed");
 }
 
