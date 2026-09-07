@@ -1217,9 +1217,6 @@
   "sharing_vfs_find_providers": {
     "message": "VFS-providers zoeken"
   },
-  "sharing_vfs_refresh_sources": {
-    "message": "Bronnen vernieuwen"
-  },
   "sharing_vfs_activation_reload_warning": {
     "message": "In de VFS-instellingen moet u mogelijk externe providers inschakelen of toestemming geven om ze te zoeken. Elk van deze wijzigingen kan ertoe leiden dat NC Connector opnieuw wordt geladen en de huidige bestandsselectie wordt gewist. Wilt u de VFS-instellingen toch openen?"
   },

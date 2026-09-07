@@ -1217,9 +1217,6 @@
   "sharing_vfs_find_providers": {
     "message": "Find VFS providers"
   },
-  "sharing_vfs_refresh_sources": {
-    "message": "Refresh sources"
-  },
   "sharing_vfs_activation_reload_warning": {
     "message": "The VFS settings may require enabling external providers or granting discovery permission. Either change can reload NC Connector and clear the current file selection. Open the VFS settings anyway?"
   },

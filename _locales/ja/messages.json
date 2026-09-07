@@ -1217,9 +1217,6 @@
   "sharing_vfs_find_providers": {
     "message": "VFS プロバイダーを探す"
   },
-  "sharing_vfs_refresh_sources": {
-    "message": "取得元を更新"
-  },
   "sharing_vfs_activation_reload_warning": {
     "message": "VFS 設定では、外部プロバイダーの有効化または検出権限の付与が必要になる場合があります。どちらの変更でも NC Connector が再読み込みされ、現在のファイル選択が解除される可能性があります。それでも VFS 設定を開きますか？"
   },

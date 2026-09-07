@@ -12,6 +12,7 @@
   const SELF_ADDON_ID = browser.runtime.id;
   let client = null;
   let externalDiscoveryInitialized = false;
+  let ownProviderIconPromise = null;
 
   function createAbortError(){
     return new DOMException('Cancelled', 'AbortError');
@@ -64,12 +65,30 @@
       && left?.storageId === right?.storageId;
   }
 
+  function loadOwnProviderIcon(){
+    if (!ownProviderIconPromise){
+      ownProviderIconPromise = fetch(browser.runtime.getURL('icons/app-32.png'))
+        .then((response) => {
+          if (!response.ok){
+            throw new Error(`HTTP ${response.status}`);
+          }
+          return response.blob();
+        })
+        .catch((error) => {
+          console.error('[NCBG] Nextcloud VFS provider icon unavailable', error);
+          return null;
+        });
+    }
+    return ownProviderIconPromise;
+  }
+
   async function syncOwnProvider(status){
     const storageRef = normalizeStorageRef(status?.selfStorageRef);
     const storageName = String(status?.accountLabel || 'Nextcloud');
+    const icon = await loadOwnProviderIcon();
     await client.registerLocalProvider({
       providerId: SELF_ADDON_ID,
-      name: browser.runtime.getManifest().name,
+      name: global.NCVfsProviderRuntime.PROVIDER_NAME,
       connections: status?.accountConfigured === true && storageRef
         ? [{
             storageId: storageRef.storageId,
@@ -77,7 +96,7 @@
             capabilities: global.NCVfsProviderRuntime.PROVIDER_CAPABILITIES
           }]
         : [],
-      icon: null,
+      icon,
       hasConfig: false
     }, () => global.NCVfsProviderRuntime.connectLocal());
   }
@@ -296,7 +315,7 @@
     }
     return Object.freeze({
       storageRef,
-      providerName: browser.runtime.getManifest().name,
+      providerName: global.NCVfsProviderRuntime.PROVIDER_NAME,
       storageName: status.accountLabel,
       label: status.accountLabel
     });

@@ -320,7 +320,6 @@
     dom.openVfsSettingsBtn = document.getElementById('openVfsSettingsBtn');
     dom.openVfsSettingsLabel = document.getElementById('openVfsSettingsLabel');
     dom.findVfsProvidersBtn = document.getElementById('findVfsProvidersBtn');
-    dom.refreshExternalSourcesBtn = document.getElementById('refreshExternalSourcesBtn');
     dom.fileInput = document.getElementById('fileInput');
     dom.folderInput = document.getElementById('folderInput');
     dom.vfsConnectionDialog = document.getElementById('vfsConnectionDialog');
@@ -497,9 +496,6 @@
     });
     dom.findVfsProvidersBtn?.addEventListener('click', () => {
       void openExternalSourcePage('vfs:findProviderAddons');
-    });
-    dom.refreshExternalSourcesBtn?.addEventListener('click', () => {
-      void refreshVfsSourceAvailability();
     });
     [
       dom.localSourceSummary,
@@ -1161,10 +1157,6 @@
         control.disabled = sourceControlsDisabled;
       }
     });
-    if (dom.refreshExternalSourcesBtn){
-      dom.refreshExternalSourcesBtn.disabled = sourceControlsDisabled
-        || state.vfsAvailability.external.loadState === 'loading';
-    }
     renderExternalSourceMenu();
     setSourceActionState({
       action: dom.localSourceAction,
@@ -2524,7 +2516,6 @@
       dom.addExternalFolderBtn,
       dom.openVfsSettingsBtn,
       dom.findVfsProvidersBtn,
-      dom.refreshExternalSourcesBtn,
       dom.fileInput,
       dom.folderInput
     ];

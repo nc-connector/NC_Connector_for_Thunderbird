@@ -1217,9 +1217,6 @@
   "sharing_vfs_find_providers": {
     "message": "Vyhledat poskytovatele VFS"
   },
-  "sharing_vfs_refresh_sources": {
-    "message": "Obnovit zdroje"
-  },
   "sharing_vfs_activation_reload_warning": {
     "message": "Nastavení VFS může vyžadovat povolení externích poskytovatelů nebo udělení oprávnění k jejich vyhledávání. Kterákoli z těchto změn může způsobit opětovné načtení aplikace NC Connector a vymazání aktuálního výběru souborů. Přesto otevřít nastavení VFS?"
   },

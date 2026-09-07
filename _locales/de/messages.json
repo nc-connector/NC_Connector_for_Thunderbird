@@ -1217,9 +1217,6 @@
   "sharing_vfs_find_providers": {
     "message": "VFS-Anbieter finden"
   },
-  "sharing_vfs_refresh_sources": {
-    "message": "Quellen aktualisieren"
-  },
   "sharing_vfs_activation_reload_warning": {
     "message": "In den VFS-Einstellungen müssen möglicherweise externe Anbieter aktiviert oder die Berechtigung zur Anbietersuche erteilt werden. Jede dieser Änderungen kann dazu führen, dass NC Connector neu geladen und die aktuelle Dateiauswahl gelöscht wird. Trotzdem die VFS-Einstellungen öffnen?"
   },

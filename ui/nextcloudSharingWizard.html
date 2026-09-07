@@ -867,8 +867,19 @@ textarea:focus{
               <span data-i18n="sharing_button_add_local">+ Local</span>
             </summary>
             <div class="source-menu">
-              <button type="button" id="addFilesBtn" data-i18n="sharing_button_add_nextcloud_files">Select files</button>
-              <button type="button" id="addFolderBtn" data-i18n="sharing_button_add_nextcloud_folder">Select folder</button>
+              <button type="button" id="addFilesBtn">
+                <svg class="source-menu-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                  <path d="M6 3h8l4 4v14H6z"></path>
+                  <path d="M14 3v5h5"></path>
+                </svg>
+                <span data-i18n="sharing_button_add_nextcloud_files">Select files</span>
+              </button>
+              <button type="button" id="addFolderBtn">
+                <svg class="source-menu-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                  <path d="M3 6h7l2 2h9v11H3z"></path>
+                </svg>
+                <span data-i18n="sharing_button_add_nextcloud_folder">Select folder</span>
+              </button>
             </div>
           </details>
           <details class="source-action" id="nextcloudSourceAction">
@@ -882,8 +893,19 @@ textarea:focus{
               <span data-i18n="sharing_button_add_nextcloud">+ My Nextcloud</span>
             </summary>
             <div class="source-menu">
-              <button type="button" id="addNextcloudFilesBtn" data-i18n="sharing_button_add_nextcloud_files">Select files</button>
-              <button type="button" id="addNextcloudFolderBtn" data-i18n="sharing_button_add_nextcloud_folder">Select folder</button>
+              <button type="button" id="addNextcloudFilesBtn">
+                <svg class="source-menu-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                  <path d="M6 3h8l4 4v14H6z"></path>
+                  <path d="M14 3v5h5"></path>
+                </svg>
+                <span data-i18n="sharing_button_add_nextcloud_files">Select files</span>
+              </button>
+              <button type="button" id="addNextcloudFolderBtn">
+                <svg class="source-menu-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                  <path d="M3 6h7l2 2h9v11H3z"></path>
+                </svg>
+                <span data-i18n="sharing_button_add_nextcloud_folder">Select folder</span>
+              </button>
             </div>
           </details>
           <details class="source-action" id="externalSourceAction">
@@ -928,13 +950,6 @@ textarea:focus{
                     <path d="m15 15 5 5"></path>
                   </svg>
                   <span data-i18n="sharing_vfs_find_providers">Find VFS providers</span>
-                </button>
-                <button type="button" id="refreshExternalSourcesBtn">
-                  <svg class="source-menu-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-                    <path d="M20 7v5h-5M4 17v-5h5"></path>
-                    <path d="M18.2 10A7 7 0 0 0 6.1 6.4L4 9M5.8 14A7 7 0 0 0 17.9 17.6L20 15"></path>
-                  </svg>
-                  <span data-i18n="sharing_vfs_refresh_sources">Refresh sources</span>
                 </button>
               </div>
             </div>

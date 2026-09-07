@@ -1217,9 +1217,6 @@
   "sharing_vfs_find_providers": {
     "message": "尋找 VFS 提供者"
   },
-  "sharing_vfs_refresh_sources": {
-    "message": "重新整理來源"
-  },
   "sharing_vfs_activation_reload_warning": {
     "message": "VFS 設定可能需要啟用外部提供者，或授予搜尋其他提供者的權限。任一變更都可能導致 NC Connector 重新載入，並清除目前的檔案選取項目。仍要開啟 VFS 設定嗎？"
   },

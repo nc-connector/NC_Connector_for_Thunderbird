@@ -1217,9 +1217,6 @@
   "sharing_vfs_find_providers": {
     "message": "Localizar provedores de VFS"
   },
-  "sharing_vfs_refresh_sources": {
-    "message": "Atualizar fontes"
-  },
   "sharing_vfs_activation_reload_warning": {
     "message": "As configurações de VFS podem exigir a ativação de provedores externos ou a concessão da permissão de descoberta. Qualquer uma dessas alterações pode fazer com que o NC Connector seja recarregado e a seleção de arquivos atual seja limpa. Abrir as configurações de VFS mesmo assim?"
   },

@@ -1002,11 +1002,14 @@ function checkManifestAndReviewSurface(){
     "externalPickerActions",
     "externalSourceNotice",
     "openVfsSettingsBtn",
-    "findVfsProvidersBtn",
-    "refreshExternalSourcesBtn"
+    "findVfsProvidersBtn"
   ]){
     assert(wizardHtml.includes(`id="${elementId}"`), `${elementId} must be available in the queue UI`);
   }
+  assert(
+    !wizardHtml.includes('id="refreshExternalSourcesBtn"'),
+    "Automatic VFS discovery refresh must not be duplicated as a source-menu action"
+  );
   assert(
     wizardHtml.includes("grid-template-columns:repeat(3,minmax(0,1fr))")
       && wizardHtml.includes('id="fileQueueTree"')
@@ -1085,8 +1088,15 @@ function checkManifestAndReviewSurface(){
   assert(
     clientRuntime.includes("client.registerLocalProvider({")
       && clientRuntime.includes("global.NCVfsProviderRuntime.connectLocal()")
+      && clientRuntime.includes("name: global.NCVfsProviderRuntime.PROVIDER_NAME")
+      && clientRuntime.includes("browser.runtime.getURL('icons/app-32.png')")
+      && clientRuntime.includes("const icon = await loadOwnProviderIcon();")
+      && /connections:[\s\S]{0,300}?icon,\s*hasConfig: false/.test(clientRuntime)
+      && providerRuntime.includes("const PROVIDER_NAME = 'Nextcloud';")
+      && providerRuntime.includes("name: PROVIDER_NAME")
+      && /global\.NCVfsProviderRuntime = Object\.freeze\(\{\s*PROVIDER_NAME,/.test(providerRuntime)
       && providerRuntime.includes("return provider.connectLocal()"),
-    "The co-located Nextcloud provider must refresh the picker cache and use the provider command path"
+    "The Nextcloud provider must use its storage name, expose its icon locally, refresh the picker cache, and use the provider command path"
   );
   assert(
     wizardHtml.includes('id="vfsProviderFallbackIcon"')

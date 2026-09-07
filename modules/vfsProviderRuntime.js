@@ -9,6 +9,7 @@
   const PROVIDER_STATE_KEY = 'ncVfsProviderStateV1';
   const TOOLKIT_CONNECTIONS_KEY = 'vfs-toolkit-connections';
   const SELF_ADDON_ID = browser.runtime.id;
+  const PROVIDER_NAME = 'Nextcloud';
   const PROVIDER_CAPABILITIES = Object.freeze({
     file: Object.freeze({ read: true, add: true, modify: true, delete: true }),
     folder: Object.freeze({ read: true, add: true, modify: true, delete: true })
@@ -327,7 +328,7 @@
     }
 
     provider = new NextcloudVfsProvider({
-      name: browser.runtime.getManifest().name,
+      name: PROVIDER_NAME,
       setupPath: '/ui/vfsProviderSetup.html',
       setupWidth: 520,
       setupHeight: 560
@@ -464,6 +465,7 @@
   }
 
   global.NCVfsProviderRuntime = Object.freeze({
+    PROVIDER_NAME,
     PROVIDER_CAPABILITIES,
     ready: () => readyPromise,
     getStatus,

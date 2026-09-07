@@ -1217,9 +1217,6 @@
   "sharing_vfs_find_providers": {
     "message": "Trova provider VFS"
   },
-  "sharing_vfs_refresh_sources": {
-    "message": "Aggiorna origini"
-  },
   "sharing_vfs_activation_reload_warning": {
     "message": "Le impostazioni VFS potrebbero richiedere di abilitare i provider esterni o di concedere l’autorizzazione a rilevarli. Ciascuna di queste modifiche può causare il ricaricamento di NC Connector e la cancellazione della selezione di file corrente. Aprire comunque le impostazioni VFS?"
   },

@@ -219,10 +219,24 @@ function run(){
     wizardMarkup.includes('id="externalSourceNotice"')
       && wizardMarkup.includes('id="openVfsSettingsBtn"')
       && wizardMarkup.includes('id="findVfsProvidersBtn"')
-      && wizardMarkup.includes('id="refreshExternalSourcesBtn"')
-      && (wizardMarkup.match(/class="source-menu-icon"/g) || []).length === 5,
-    "Other-source guidance must expose labeled setup, search, and refresh actions with icons"
+      && !wizardMarkup.includes('id="refreshExternalSourcesBtn"'),
+    "Other-source guidance must expose setup and search actions without a redundant refresh action"
   );
+  for (const buttonId of [
+    "addFilesBtn",
+    "addFolderBtn",
+    "addNextcloudFilesBtn",
+    "addNextcloudFolderBtn",
+    "addExternalFilesBtn",
+    "addExternalFolderBtn",
+    "openVfsSettingsBtn",
+    "findVfsProvidersBtn"
+  ]){
+    assert(
+      new RegExp(`<button[^>]+id="${buttonId}"[^>]*>\\s*<svg class="source-menu-icon"`).test(wizardMarkup),
+      `${buttonId} must use the shared source-menu icon style`
+    );
+  }
   assert(
     wizardMarkup.includes(".base-path strong{")
       && wizardMarkup.includes("overflow-wrap:anywhere"),
@@ -275,7 +289,6 @@ function run(){
     "sharing_vfs_set_up_connection",
     "sharing_vfs_add_connection",
     "sharing_vfs_find_providers",
-    "sharing_vfs_refresh_sources",
     "sharing_vfs_activation_reload_warning",
     "sharing_vfs_navigation_failed"
   ];

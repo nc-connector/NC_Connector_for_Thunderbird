@@ -1217,9 +1217,6 @@
   "sharing_vfs_find_providers": {
     "message": "VFS-szolgáltatók keresése"
   },
-  "sharing_vfs_refresh_sources": {
-    "message": "Források frissítése"
-  },
   "sharing_vfs_activation_reload_warning": {
     "message": "A VFS-beállításokban szükség lehet a külső szolgáltatók engedélyezésére vagy a felderítési engedély megadására. Bármelyik módosítás hatására újratöltődhet az NC Connector, és törlődhet az aktuális fájlkijelölés. Mégis megnyitja a VFS-beállításokat?"
   },
