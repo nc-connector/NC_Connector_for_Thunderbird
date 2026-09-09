@@ -438,6 +438,78 @@ async function checkSuppressedAttachmentAdds(){
   );
 }
 
+async function checkMandatoryRoutingBeforeSend(){
+  const harness = createHarness();
+  let evaluationRequests = 0;
+  harness.context.assertAttachmentAutomationAllowed = async () => ({ ok:true });
+  harness.context.getComposeAttachmentAutomationSettings = async () => ({
+    alwaysConnector: true
+  });
+  harness.context.__testRequestEvaluation = () => {
+    evaluationRequests += 1;
+    return Promise.resolve();
+  };
+  vm.runInContext(
+    "requestComposeAttachmentEvaluation = globalThis.__testRequestEvaluation;",
+    harness.context
+  );
+
+  await harness.context.handleComposeAttachmentAdded(
+    { id:24 },
+    { id:5, name:"quick-send.txt", size:12 }
+  );
+  assert(
+    harness.context.ATTACHMENT_EVAL_TIMER_BY_TAB.has(24),
+    "A newly added attachment must start in the debounce window"
+  );
+  assert(
+    await harness.context.prepareComposeAttachmentRoutingBeforeSend(24) === true,
+    "Mandatory attachment routing must cancel a send during the debounce window"
+  );
+  assert(
+    !harness.context.ATTACHMENT_EVAL_TIMER_BY_TAB.has(24),
+    "The send guard must replace the debounce timer with an immediate evaluation"
+  );
+  assert(
+    evaluationRequests === 1,
+    "The send guard must start one immediate attachment evaluation"
+  );
+}
+
+async function checkOptionalRoutingDoesNotBlockSend(){
+  const harness = createHarness();
+  let evaluationRequests = 0;
+  harness.context.assertAttachmentAutomationAllowed = async () => ({ ok:true });
+  harness.context.getComposeAttachmentAutomationSettings = async () => ({
+    alwaysConnector: false
+  });
+  harness.context.__testRequestEvaluation = () => {
+    evaluationRequests += 1;
+    return Promise.resolve();
+  };
+  vm.runInContext(
+    "requestComposeAttachmentEvaluation = globalThis.__testRequestEvaluation;",
+    harness.context
+  );
+
+  await harness.context.handleComposeAttachmentAdded(
+    { id:25 },
+    { id:6, name:"optional.txt", size:12 }
+  );
+  assert(
+    await harness.context.prepareComposeAttachmentRoutingBeforeSend(25) === false,
+    "Optional attachment routing must not cancel a send during the debounce window"
+  );
+  assert(
+    harness.context.ATTACHMENT_EVAL_TIMER_BY_TAB.has(25),
+    "An optional attachment evaluation must keep its normal debounce timer"
+  );
+  assert(
+    evaluationRequests === 0,
+    "The send guard must not start an optional attachment evaluation"
+  );
+}
+
 async function run(){
   await checkSerializedEvaluation();
   await checkPromptReservation();
@@ -451,6 +523,8 @@ async function run(){
   checkClosedComposeCannotRestartHandoff();
   checkWizardAdoptionCode();
   await checkSuppressedAttachmentAdds();
+  await checkMandatoryRoutingBeforeSend();
+  await checkOptionalRoutingDoesNotBlockSend();
   console.log("[OK] compose-attachment-lifecycle-check passed");
 }
 

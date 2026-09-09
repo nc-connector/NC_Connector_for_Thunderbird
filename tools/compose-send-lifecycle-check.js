@@ -75,7 +75,7 @@ function createComposeHarness(){
     storeAvailable: true,
     saveDeferred: null,
     captureRecipientsError: null,
-    attachmentRoutingActive: false
+    attachmentRoutingBlocked: false
   };
   const calls = {
     composeWrites: [],
@@ -94,6 +94,7 @@ function createComposeHarness(){
     manualNotifications: [],
     failureNotifications: [],
     attachmentCleanup: [],
+    attachmentSendGuard: [],
     passwordClear: [],
     remoteDeletes: []
   };
@@ -399,8 +400,9 @@ function createComposeHarness(){
       }
     },
     async openSharingWizardWindow(){},
-    isComposeAttachmentRoutingActive(){
-      return control.attachmentRoutingActive;
+    async prepareComposeAttachmentRoutingBeforeSend(tabId){
+      calls.attachmentSendGuard.push(tabId);
+      return control.attachmentRoutingBlocked;
     },
     async handleComposeAttachmentAdded(){},
     async captureSeparatePasswordDispatchIdentityChange(){},
@@ -915,7 +917,7 @@ async function verifyAttachmentRoutingSendGuard(){
     isPlainText: false,
     customHeaders: []
   });
-  harness.control.attachmentRoutingActive = true;
+  harness.control.attachmentRoutingBlocked = true;
   const blocked = await harness.beforeSend(
     { id:52 },
     harness.composeDetails.get(52)
@@ -929,8 +931,12 @@ async function verifyAttachmentRoutingSendGuard(){
     harness.calls.notifications[0].options.message === "sharing_attachment_routing_active",
     "Attachment routing must use its dedicated send-blocked message"
   );
+  assert(
+    harness.calls.attachmentSendGuard.join(",") === "52",
+    "onBeforeSend must query the attachment routing guard"
+  );
 
-  harness.control.attachmentRoutingActive = false;
+  harness.control.attachmentRoutingBlocked = false;
   const allowed = await harness.beforeSend(
     { id:52 },
     harness.composeDetails.get(52)

@@ -119,6 +119,55 @@ function isComposeAttachmentRoutingActive(tabId){
   return !!state?.handoff || state?.phase === "handoff";
 }
 
+function hasPendingComposeAttachmentEvaluation(tabId){
+  const state = ATTACHMENT_AUTOMATION_BY_TAB.get(tabId);
+  return ATTACHMENT_EVAL_TIMER_BY_TAB.has(tabId)
+    || ATTACHMENT_PENDING_ADDED_BY_TAB.has(tabId)
+    || !!state?.evaluationTask
+    || state?.phase === "evaluating";
+}
+
+/**
+ * Apply the mandatory attachment route before a compose send can continue.
+ * The current send is cancelled while the queued evaluation starts immediately.
+ * @param {number} tabId
+ * @returns {Promise<boolean>} true when the current send must be cancelled
+ */
+async function prepareComposeAttachmentRoutingBeforeSend(tabId){
+  if (isComposeAttachmentRoutingActive(tabId)){
+    return true;
+  }
+  if (!hasPendingComposeAttachmentEvaluation(tabId)){
+    return false;
+  }
+  try{
+    const guard = await assertAttachmentAutomationAllowed("before_send", tabId);
+    if (isComposeAttachmentRoutingActive(tabId)){
+      return true;
+    }
+    if (!guard.ok){
+      return false;
+    }
+    const settings = await getComposeAttachmentAutomationSettings();
+    if (isComposeAttachmentRoutingActive(tabId)){
+      return true;
+    }
+    if (!settings.alwaysConnector){
+      return false;
+    }
+  }catch(error){
+    console.error("[NCBG] compose attachment send guard failed", error);
+    return true;
+  }
+
+  clearComposeAttachmentEvalTimer(tabId);
+  L("compose send deferred for mandatory attachment routing", { tabId });
+  void requestComposeAttachmentEvaluation(tabId).catch((error) => {
+    console.error("[NCBG] compose attachment evaluation before send failed", error);
+  });
+  return true;
+}
+
 function settleComposeAttachmentHandoffReady(handoff, result){
   if (!handoff || handoff.readySettled){
     return;
