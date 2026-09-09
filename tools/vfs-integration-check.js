@@ -976,6 +976,8 @@ function checkManifestAndReviewSurface(){
   const scripts = manifest.background.scripts;
   const expectedOrder = [
     "modules/nextcloudDav.js",
+    "modules/fileLinkTransfer.js",
+    "modules/fileLinkRootReservation.js",
     "modules/fileLinkUpload.js",
     "modules/nextcloudVfsStorage.js",
     "modules/vfsProviderRuntime.js",

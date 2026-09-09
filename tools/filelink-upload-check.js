@@ -42,6 +42,8 @@ function createContext(){
   loadScript("modules/nextcloudDav.js", context);
   loadScript("modules/fileLinkUploadProgress.js", context);
   loadScript("modules/fileLinkBulkUpload.js", context);
+  loadScript("modules/fileLinkTransfer.js", context);
+  loadScript("modules/fileLinkRootReservation.js", context);
   loadScript("modules/fileLinkUpload.js", context);
   loadScript("modules/fileLinkShare.js", context);
   return context;
@@ -516,6 +518,8 @@ async function run(){
     "modules/nextcloudDav.js",
     "modules/fileLinkUploadProgress.js",
     "modules/fileLinkBulkUpload.js",
+    "modules/fileLinkTransfer.js",
+    "modules/fileLinkRootReservation.js",
     "modules/fileLinkUpload.js",
     "modules/fileLinkShare.js",
     "modules/ncSharing.js",

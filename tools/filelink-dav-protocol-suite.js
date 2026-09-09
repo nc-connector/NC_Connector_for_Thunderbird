@@ -331,6 +331,8 @@ async function checkMoveRecovery(){
   loadUploadModules(context, [
     "modules/fileLinkUploadPolicy.js",
     "modules/nextcloudDav.js",
+    "modules/fileLinkTransfer.js",
+    "modules/fileLinkRootReservation.js",
     "modules/fileLinkUpload.js"
   ]);
   const upload = context.NCFileLinkUpload;
@@ -464,6 +466,8 @@ async function checkProviderDirectRecovery(){
     "modules/fileLinkUploadPolicy.js",
     "modules/nextcloudDav.js",
     "modules/fileLinkUploadProgress.js",
+    "modules/fileLinkTransfer.js",
+    "modules/fileLinkRootReservation.js",
     "modules/fileLinkUpload.js"
   ]);
   const upload = context.NCFileLinkUpload;
@@ -579,6 +583,8 @@ async function checkConcurrentRootReservations(){
   loadUploadModules(context, [
     "modules/fileLinkUploadPolicy.js",
     "modules/nextcloudDav.js",
+    "modules/fileLinkTransfer.js",
+    "modules/fileLinkRootReservation.js",
     "modules/fileLinkUpload.js"
   ]);
   const collections = new Set();
@@ -683,6 +689,8 @@ async function checkDirectAndChunkRequests(){
     "modules/fileLinkUploadPolicy.js",
     "modules/nextcloudDav.js",
     "modules/fileLinkUploadProgress.js",
+    "modules/fileLinkTransfer.js",
+    "modules/fileLinkRootReservation.js",
     "modules/fileLinkUpload.js"
   ]);
   const upload = context.NCFileLinkUpload;
@@ -973,6 +981,8 @@ async function checkReservationCleanupHandoff(){
   loadUploadModules(context, [
     "modules/fileLinkUploadPolicy.js",
     "modules/nextcloudDav.js",
+    "modules/fileLinkTransfer.js",
+    "modules/fileLinkRootReservation.js",
     "modules/fileLinkUpload.js"
   ]);
   const upload = context.NCFileLinkUpload;
@@ -1022,6 +1032,8 @@ async function checkReservationCleanupHandoff(){
   loadUploadModules(stagingContext, [
     "modules/fileLinkUploadPolicy.js",
     "modules/nextcloudDav.js",
+    "modules/fileLinkTransfer.js",
+    "modules/fileLinkRootReservation.js",
     "modules/fileLinkUpload.js"
   ]);
   const stagingUpload = stagingContext.NCFileLinkUpload;
@@ -1056,6 +1068,8 @@ async function checkReservationCleanupHandoff(){
   loadUploadModules(ambiguousContext, [
     "modules/fileLinkUploadPolicy.js",
     "modules/nextcloudDav.js",
+    "modules/fileLinkTransfer.js",
+    "modules/fileLinkRootReservation.js",
     "modules/fileLinkUpload.js"
   ]);
   const ambiguousUpload = ambiguousContext.NCFileLinkUpload;

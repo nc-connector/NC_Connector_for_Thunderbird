@@ -49,6 +49,8 @@
       "modules/nextcloudDav.js",
       "modules/fileLinkUploadProgress.js",
       "modules/fileLinkBulkUpload.js",
+      "modules/fileLinkTransfer.js",
+      "modules/fileLinkRootReservation.js",
       "modules/fileLinkUpload.js",
       "modules/fileLinkShare.js",
       "modules/secretsCrypto.js",

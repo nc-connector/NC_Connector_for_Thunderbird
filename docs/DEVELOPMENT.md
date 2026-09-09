@@ -123,7 +123,9 @@ Key files you’ll touch most:
 - `modules/nextcloudDav.js` — shared DAV request, retry, path, XML, quota, and server-side copy helpers
 - `modules/fileLinkUploadProgress.js` — aggregate and per-item progress throttling
 - `modules/fileLinkBulkUpload.js` — Nextcloud DAV bulk multipart construction, MD5 calculation, and response handling
-- `modules/fileLinkUpload.js` — root reservation plus the shared Direct/Chunked selector and Bulk queue orchestration
+- `modules/fileLinkTransfer.js` — shared Direct/Chunked transfer and staged-file MOVE recovery
+- `modules/fileLinkRootReservation.js` — create-only share-root reservation and collision recovery
+- `modules/fileLinkUpload.js` — upload-plan, progress, directory, and mixed-source orchestration
 - `modules/fileLinkShare.js` — public-share creation and ambiguous-response recovery
 - `modules/fileLinkSources.js` — mixed-source normalization and materialization into the reserved share root
 - `modules/nextcloudVfsStorage.js` — full read/write VFS storage adapter over the configured Nextcloud account
@@ -719,6 +721,8 @@ Key files:
 - `modules/nextcloudDav.js`
 - `modules/fileLinkUploadProgress.js`
 - `modules/fileLinkBulkUpload.js`
+- `modules/fileLinkTransfer.js`
+- `modules/fileLinkRootReservation.js`
 - `modules/fileLinkUpload.js`
 - `modules/fileLinkShare.js`
 - `modules/fileLinkSources.js`
@@ -925,10 +929,15 @@ Normal FileLink Direct PUT sends `X-NC-WebDAV-Auto-Mkcol: 1`, matching the heade
 
 Manual wizard mode sends `sharing:checkFolderExists` before leaving step 1. Background resolves the configured login to the canonical Nextcloud UID, builds the target through the same `modules/ncSharing.js` path/date/name rules used by upload, and probes that target with a depth-zero DAV `PROPFIND`. A present target keeps the wizard on step 1 with the localized collision message. Attachment automation skips this preflight because numbered target selection belongs to its upload flow.
 
-`modules/fileLinkUpload.js` reserves the share root in two steps:
+`modules/fileLinkRootReservation.js` reserves the share root in two steps:
 
 1. create a unique staging collection below the configured FileLink base path
 2. `MOVE` it to a candidate target with `Overwrite: F`
+
+The transfer, root-reservation, and orchestration modules currently exchange
+their public objects through ordered MV2 background scripts. A later MV3 move
+must replace that loading mechanism with explicit imports while keeping the
+same responsibilities.
 
 The MOVE is the server-side collision decision. A `412` means that candidate is already present. Manual mode has one candidate and stops with the localized collision message. Attachment automation can try its numbered candidates.
 

@@ -267,8 +267,15 @@ password-dispatch, header, or body mutation cannot be exposed as committed.
   - `modules/nextcloudDav.js`
   - `modules/fileLinkUploadProgress.js`
   - `modules/fileLinkBulkUpload.js`
+  - `modules/fileLinkTransfer.js`
+  - `modules/fileLinkRootReservation.js`
   - `modules/fileLinkUpload.js`
   - `modules/fileLinkShare.js`
+
+Direct/Chunked transfer, root reservation, and plan orchestration now live in
+separate focused modules. Their current integration still uses ordered MV2
+background scripts and shared global objects; a later MV3 move must replace the
+loading mechanism with explicit imports.
 
 ### VFS provider and mixed-source queues
 
