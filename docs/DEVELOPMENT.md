@@ -117,7 +117,10 @@ Key files you’ll touch most:
 - `modules/bgComposeShareCleanup.js` — compose-tab and wizard-window remote cleanup lifecycle
 - `modules/bgComposeShareInsert.js` — mode-aware share-block insertion (HTML vs plain-text compose)
 - `modules/bgComposeFinalize.js` — background-owned atomic finalize transaction and rollback
-- `modules/bgComposePasswordDispatch.js` — separate-password-mail dispatch and follow-up compose handling
+- `modules/bgComposePasswordRecipients.js` — recipient parsing, envelope comparison, and sender identity resolution for password follow-up mail
+- `modules/bgComposePasswordMail.js` — follow-up compose construction, readiness checks, manual fallback, and notifications
+- `modules/bgComposePasswordDelivery.js` — Secrets expansion, recipient splitting, delivery flow, and recovery
+- `modules/bgComposePasswordDispatch.js` — pending password-dispatch queue and its state transitions
 - `modules/bgFileLinkUpload.js` — background-owned FileLink upload sessions, cancellation, and cleanup handoff
 - `modules/fileLinkUploadPolicy.js` — upload-mode thresholds, batching, concurrency, and retry limits
 - `modules/nextcloudDav.js` — shared DAV request, retry, path, XML, quota, and server-side copy helpers
@@ -395,7 +398,7 @@ Current implementation:
   - editor-targeted snapshot/write-back (`getCurrent` / `updateCurrent`)
   - tracked close lifecycle (`onTrackedEditorClosed`)
 - `experiments/calendar/**` remains untouched and is used only for persisted item monitoring.
-- Business logic remains in background runtime modules (`modules/bgState.js`, `modules/bgComposeAttachments.js`, `modules/bgComposeShareCleanup.js`, `modules/bgComposeShareInsert.js`, `modules/bgComposePasswordDispatch.js`, `modules/passwordPolicyRuntime.js`, `modules/bgCompose.js`, `modules/bgCalendarLifecycle.js`, `modules/bgCalendar.js`, `modules/bgRouter.js`, `modules/talkAddressbook.js`, `modules/talkcore.js`).
+- Business logic remains in background runtime modules (`modules/bgState.js`, `modules/bgComposeAttachments.js`, `modules/bgComposeShareCleanup.js`, `modules/bgComposeShareInsert.js`, `modules/bgComposePasswordRecipients.js`, `modules/bgComposePasswordMail.js`, `modules/bgComposePasswordDelivery.js`, `modules/bgComposePasswordDispatch.js`, `modules/passwordPolicyRuntime.js`, `modules/bgCompose.js`, `modules/bgCalendarLifecycle.js`, `modules/bgCalendar.js`, `modules/bgRouter.js`, `modules/talkAddressbook.js`, `modules/talkcore.js`).
 
 ### 7.1.1 Why the Talk popup is assigned with `setPopup()`
 
@@ -797,6 +800,7 @@ Attachment mode specifics:
   - Thunderbird templates containing an NC Connector share are unsupported. Saving as template records that state and blocks both the template and messages instantiated from it
   - password-dispatch payloads are deliberately not persisted. Before a password-protected share draft can close, background captures the current envelope and opens explicit manual password drafts. Failed or incomplete handoff remains queued and blocks sending the main draft
 - Password separation:
+  - The background implementation is split by responsibility: recipient and identity resolution, compose-mail handling, delivery and recovery, and pending queue transitions. In MV2 these files share the ordered background-script scope; a later MV3 conversion must replace that link with explicit imports.
   - Option + wizard toggle can send the password in a dedicated follow-up mail.
   - This toggle is only active when password protection is enabled.
   - Password delivery defaults to plain text. With backend policy, `share_send_password_mode=secrets` switches follow-up mails to Nextcloud Secrets links.

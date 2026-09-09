@@ -373,6 +373,7 @@ function verifyConsumerGuards(){
   const shareBlockRenderer = readText("modules/shareBlockRenderer.js");
   const shareRequestRules = readText("modules/shareRequestRules.js");
   const composeFinalize = readText("modules/bgComposeFinalize.js");
+  const passwordDelivery = readText("modules/bgComposePasswordDelivery.js");
   const passwordDispatch = readText("modules/bgComposePasswordDispatch.js");
   const composeAttachments = readText("modules/bgComposeAttachments.js");
   const calendar = readText("modules/bgCalendar.js");
@@ -506,13 +507,13 @@ function verifyConsumerGuards(){
     "policyEditableShare: payload?.policyEditableShare && typeof payload.policyEditableShare === \"object\" ? payload.policyEditableShare : null",
     "Background password dispatch must retain language editability metadata"
   );
-  const clonePasswordDispatch = functionBody(passwordDispatch, "clonePasswordDispatch");
+  const clonePasswordDispatch = functionBody(passwordDelivery, "clonePasswordDispatch");
   assertCode(
     clonePasswordDispatch,
     "policyEditableShare: dispatch.policyEditableShare && typeof dispatch.policyEditableShare === \"object\" ? { ...dispatch.policyEditableShare } : null",
     "Cloned password dispatches must retain language editability metadata"
   );
-  const renderPasswordBodies = functionBody(passwordDispatch, "renderPasswordDispatchBodies");
+  const renderPasswordBodies = functionBody(passwordDelivery, "renderPasswordDispatchBodies");
   assertCode(
     renderPasswordBodies,
     "policyEditableShare: dispatch?.policyEditableShare || null",

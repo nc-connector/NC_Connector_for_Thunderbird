@@ -37,7 +37,9 @@ is intentionally minimal:
 All business logic stays in the background runtime modules (`modules/bgState.js`,
 `modules/bgComposeAttachments.js`, `modules/bgShareCleanupStore.js`,
 `modules/bgComposeShareCleanup.js`, `modules/bgComposeShareInsert.js`,
-`modules/bgComposeFinalize.js`, `modules/bgComposePasswordDispatch.js`,
+`modules/bgComposeFinalize.js`, `modules/bgComposePasswordRecipients.js`,
+`modules/bgComposePasswordMail.js`, `modules/bgComposePasswordDelivery.js`,
+`modules/bgComposePasswordDispatch.js`,
 `modules/passwordPolicyRuntime.js`, `modules/bgCompose.js`,
 `modules/bgCalendarLifecycle.js`, `modules/bgCalendarState.js`,
 `modules/bgCalendarDeparture.js`, `modules/bgCalendar.js`,
@@ -132,6 +134,7 @@ password-dispatch, header, or body mutation cannot be exposed as committed.
   - moderator handoff promotes, persists prepared/delegated iCalendar state, and then performs the expected previous-moderator leave; self-delegation never leaves; transient departure failures survive restart with bounded retry
   - a new event reference aborts in-flight room deletion; the final generation/reference check and token-conditional mapping cleanup prevent stale removal
 - Separate-password follow-up dispatch remains restricted to backend endpoint, active assigned seat, and enabled password protection.
+  - recipient parsing and sender identity resolution, compose-mail handling, delivery/recovery, and pending queue transitions live in separate background files; MV2 links them through ordered scripts in the shared background scope, while a later MV3 conversion must use explicit imports
   - `overlicensed=true` makes the seat unusable, keeps all policy domains inactive, shows the license warning, and blocks background dispatch registration before compose access
   - the options/UI toggle surface is only functional when those runtime conditions are met
   - `accountsRead` is requested only to resolve the actual Thunderbird sender identity of the already-open primary compose window, so the password follow-up can reuse the same sender identity instead of guessing from a visible `From` header string.
