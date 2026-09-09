@@ -387,72 +387,84 @@
 
     async function writeFile(path, file, overwrite, operationOptions = {}){
       return withMappedErrors("write", async () => {
-        const normalizedPath = dav.normalizeVfsPath(path, { allowRoot: false });
-        if (!file || typeof file.slice !== "function"){
-          throw createVfsError("E:PROVIDER", "File content is unavailable", {
-            id: "invalid-file",
-            title: "Invalid file",
-            description: "The file content could not be written to Nextcloud."
-          });
-        }
-        if (typeof fileUpload?.uploadSingleFile !== "function"){
-          throw createVfsError("E:PROVIDER", "Nextcloud upload dependencies are unavailable", {
-            id: "dependencies",
-            title: "Nextcloud storage unavailable",
-            description: "NC Connector could not initialize its Nextcloud upload engine."
-          });
-        }
-        const context = await resolveContext(
-          operationOptions.signal,
-          operationOptions.expectedAccountKey,
-          true
-        );
-        const pathSegments = normalizedPath.slice(1).split("/");
-        const fileName = pathSegments.pop();
-        const relativeFolder = pathSegments.join("/");
-        const uploadFile = Object.freeze({
-          internalId: normalizedPath,
-          itemId: normalizedPath,
-          fileName,
-          displayPath: normalizedPath,
-          relativeDir: "",
-          size: Number(file.size),
-          contentType: file.type || "application/octet-stream",
-          lastModified: Number(file.lastModified) || Date.now(),
-          sourceFile: file
-        });
-        const transfer = await fileUpload.uploadSingleFile({
-          file: uploadFile,
-          davRoot: context.davRoot,
-          uploadRoot: context.uploadRoot,
-          shareRoot: relativeFolder,
-          authHeader: context.authHeader,
-          signal: operationOptions.signal,
-          log: uploadLog,
-          overwrite: overwrite === true,
-          // The VFS contract expects the selected parent to exist already.
-          autoMkcol: false,
-          onStatus: (event) => {
-            if (event?.phase === "summary"){
-              operationOptions.onProgress?.({
-                loaded: event.loadedBytes,
-                total: event.totalBytes
-              });
-            }
+        const completedChanges = [];
+        try{
+          const normalizedPath = dav.normalizeVfsPath(path, { allowRoot: false });
+          if (!file || typeof file.slice !== "function"){
+            throw createVfsError("E:PROVIDER", "File content is unavailable", {
+              id: "invalid-file",
+              title: "Invalid file",
+              description: "The file content could not be written to Nextcloud."
+            });
           }
-        });
-        const resultStatus = Number(transfer?.result?.status) || 0;
-        const created = resultStatus
-          ? resultStatus === 201
-          : overwrite !== true;
-        return Object.freeze({
-          created,
-          changes: [{
+          if (typeof fileUpload?.uploadSingleFile !== "function"){
+            throw createVfsError("E:PROVIDER", "Nextcloud upload dependencies are unavailable", {
+              id: "dependencies",
+              title: "Nextcloud storage unavailable",
+              description: "NC Connector could not initialize its Nextcloud upload engine."
+            });
+          }
+          const context = await resolveContext(
+            operationOptions.signal,
+            operationOptions.expectedAccountKey,
+            true
+          );
+          await createMissingParentFolders(
+            context,
+            normalizedPath,
+            operationOptions.signal,
+            completedChanges
+          );
+          const pathSegments = normalizedPath.slice(1).split("/");
+          const fileName = pathSegments.pop();
+          const relativeFolder = pathSegments.join("/");
+          const uploadFile = Object.freeze({
+            internalId: normalizedPath,
+            itemId: normalizedPath,
+            fileName,
+            displayPath: normalizedPath,
+            relativeDir: "",
+            size: Number(file.size),
+            contentType: file.type || "application/octet-stream",
+            lastModified: Number(file.lastModified) || Date.now(),
+            sourceFile: file
+          });
+          const transfer = await fileUpload.uploadSingleFile({
+            file: uploadFile,
+            davRoot: context.davRoot,
+            uploadRoot: context.uploadRoot,
+            shareRoot: relativeFolder,
+            authHeader: context.authHeader,
+            signal: operationOptions.signal,
+            log: uploadLog,
+            overwrite: overwrite === true,
+            // Parent folders are created explicitly for Direct and chunked writes.
+            autoMkcol: false,
+            onStatus: (event) => {
+              if (event?.phase === "summary"){
+                operationOptions.onProgress?.({
+                  loaded: event.loadedBytes,
+                  total: event.totalBytes
+                });
+              }
+            }
+          });
+          const resultStatus = Number(transfer?.result?.status) || 0;
+          const created = resultStatus
+            ? resultStatus === 201
+            : overwrite !== true;
+          completedChanges.push({
             kind: "file",
             action: created ? "created" : "modified",
             target: { path: normalizedPath }
-          }]
-        });
+          });
+          return Object.freeze({
+            created,
+            changes: completedChanges.slice()
+          });
+        }catch(error){
+          throw attachCompletedChanges(error, completedChanges);
+        }
       });
     }
 
@@ -476,17 +488,60 @@
       return true;
     }
 
+    async function createMissingParentFolders(context, path, signal, completedChanges){
+      const missingPaths = [];
+      let candidate = parentPath(path);
+      while (candidate && candidate !== "/"){
+        const existing = await probeWithContext(context, candidate, signal);
+        if (existing.exists){
+          if (existing.entry.kind !== "directory"){
+            throw createVfsError("E:EXIST", "A parent path is not a folder");
+          }
+          break;
+        }
+        missingPaths.push(candidate);
+        candidate = parentPath(candidate);
+      }
+
+      // Discover upward, then create downward so every MKCOL has a parent.
+      for (let index = missingPaths.length - 1; index >= 0; index--){
+        const targetPath = missingPaths[index];
+        const created = await addFolderWithContext(context, targetPath, signal, true);
+        if (created){
+          completedChanges.push({
+            kind: "directory",
+            action: "created",
+            target: { path: targetPath }
+          });
+        }
+      }
+    }
+
     async function addFolder(path, operationOptions = {}){
       return withMappedErrors("add-folder", async () => {
-        const normalizedPath = dav.normalizeVfsPath(path, { allowRoot: false });
-        const context = await resolveContext(
-          operationOptions.signal,
-          operationOptions.expectedAccountKey
-        );
-        await addFolderWithContext(context, normalizedPath, operationOptions.signal, false);
-        return Object.freeze({
-          changes: [{ kind: "directory", action: "created", target: { path: normalizedPath } }]
-        });
+        const completedChanges = [];
+        try{
+          const normalizedPath = dav.normalizeVfsPath(path, { allowRoot: false });
+          const context = await resolveContext(
+            operationOptions.signal,
+            operationOptions.expectedAccountKey
+          );
+          await createMissingParentFolders(
+            context,
+            normalizedPath,
+            operationOptions.signal,
+            completedChanges
+          );
+          await addFolderWithContext(context, normalizedPath, operationOptions.signal, false);
+          completedChanges.push({
+            kind: "directory",
+            action: "created",
+            target: { path: normalizedPath }
+          });
+          return Object.freeze({ changes: completedChanges.slice() });
+        }catch(error){
+          throw attachCompletedChanges(error, completedChanges);
+        }
       });
     }
 

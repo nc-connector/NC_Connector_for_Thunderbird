@@ -65,7 +65,7 @@ upstream PR commits.
   by `MOVE` with `Overwrite: F`. Direct and chunk MOVE recovery requires the
   operation-owned source to be gone and the target to be a file of the expected
   size; a retained source plus an existing target remains a collision.
-- [ ] **P-02 - VFS contract:** Make provider `writeFile()` and `addFolder()`
+- [x] **P-02 - VFS contract:** Make provider `writeFile()` and `addFolder()`
   create missing parent directories as required by the VFS Toolkit API.
 - [x] Emit the transfer-completion log for shares containing only
   same-Nextcloud server-side copies.
@@ -152,7 +152,7 @@ VFS feature PR has been merged. They are not current product defects.
 - [x] Replace the same-size-only chunk-MOVE recovery expectation and cover an
   older equal-size destination, replay of a create-only Direct stage, ambiguous
   MOVE completion, collision handling, and operation-owned cleanup.
-- [ ] Add VFS contract tests proving that provider `writeFile()` and
+- [x] Add VFS contract tests proving that provider `writeFile()` and
   `addFolder()` create all missing intermediate directories; update the current
   tests and documentation that still require an existing parent.
 - [x] Add one end-to-end attachment lifecycle harness covering detach, context

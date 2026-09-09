@@ -271,6 +271,50 @@ function createStorageHarness(){
   return { context, state, storage };
 }
 
+function vfsRequestPath(url){
+  const pathname = new URL(url).pathname;
+  const marker = "/remote.php/dav/files/canonical-user";
+  const markerIndex = pathname.indexOf(marker);
+  assert(markerIndex >= 0, "DAV requests must stay below the canonical account root");
+  const suffix = pathname.slice(markerIndex + marker.length);
+  return suffix ? decodeURIComponent(suffix) : "/";
+}
+
+function parentDirectory(pathValue){
+  const separatorIndex = pathValue.lastIndexOf("/");
+  return separatorIndex <= 0 ? "/" : pathValue.slice(0, separatorIndex);
+}
+
+function installDirectoryRequestHandler(state, initialDirectories = ["/"]){
+  const directories = new Set(initialDirectories);
+  state.requestHandler = async (options) => {
+    const pathValue = vfsRequestPath(options.url);
+    if (options.method === "PROPFIND"){
+      if (!directories.has(pathValue)){
+        return { ok: false, status: 404, raw: "" };
+      }
+      state.parseQueue.push([{
+        path: pathValue,
+        name: pathValue === "/" ? "" : pathValue.split("/").pop(),
+        kind: "directory"
+      }]);
+      return { ok: true, status: 207, raw: "dav-response" };
+    }
+    if (options.method === "MKCOL"){
+      if (directories.has(pathValue)){
+        return { ok: false, status: 405, raw: "" };
+      }
+      if (!directories.has(parentDirectory(pathValue))){
+        return { ok: false, status: 409, raw: "" };
+      }
+      directories.add(pathValue);
+      return { ok: true, status: 201, raw: "" };
+    }
+    return { ok: true, status: 204, raw: "" };
+  };
+  return directories;
+}
+
 async function checkIdentityAndListing(){
   const { state, storage } = createStorageHarness();
   const first = await storage.getAccountIdentity();
@@ -316,6 +360,7 @@ async function checkIdentityAndListing(){
 
 async function checkReadWriteAndMutations(){
   const { state, storage } = createStorageHarness();
+  installDirectoryRequestHandler(state, ["/", "/Folder"]);
 
   const read = await storage.readFile("/Folder/My File.txt");
   assert(read instanceof Blob, "Read must return File or Blob content");
@@ -327,22 +372,48 @@ async function checkReadWriteAndMutations(){
 
   const upload = new Blob(["content"], { type: "text/plain" });
   const progress = [];
-  await storage.writeFile("/Folder/new.txt", upload, false, {
+  const nestedWrite = await storage.writeFile("/Missing/Deep/new.txt", upload, false, {
     onProgress: (event) => progress.push(event)
   });
   assert(state.uploadCalls.length === 1, "VFS writes must use the shared upload engine exactly once");
-  assert(state.uploadCalls[0].shareRoot === "Folder", "VFS writes must retain the exact destination parent");
+  assert(state.uploadCalls[0].shareRoot === "Missing/Deep", "VFS writes must retain the exact destination parent");
   assert(state.uploadCalls[0].file.fileName === "new.txt", "VFS writes must retain the exact destination filename");
   assert(state.uploadCalls[0].overwrite === false, "Non-overwrite VFS writes must preserve create-only semantics");
-  assert(state.uploadCalls[0].autoMkcol === false, "VFS writes must not create missing parent folders implicitly");
+  assert(state.uploadCalls[0].autoMkcol === false, "VFS writes must create parents before entering the shared upload path");
   assert(
     state.uploadCalls[0].uploadRoot.endsWith("/remote.php/dav/uploads/canonical-user"),
     "VFS writes must provide the account upload root for chunked v2"
   );
   assert(progress.at(-1).loaded === upload.size, "Shared upload progress must be forwarded to the VFS request");
+  assert(
+    JSON.stringify(state.requests.map((request) => [request.method, vfsRequestPath(request.url)]))
+      === JSON.stringify([
+        ["PROPFIND", "/Missing/Deep"],
+        ["PROPFIND", "/Missing"],
+        ["MKCOL", "/Missing"],
+        ["MKCOL", "/Missing/Deep"]
+      ]),
+    "A nested VFS write must discover missing parents and create them from the storage root downward"
+  );
+  assert(
+    JSON.stringify(nestedWrite.changes.map((change) => change.target.path))
+      === JSON.stringify(["/Missing", "/Missing/Deep", "/Missing/Deep/new.txt"]),
+    "A nested VFS write must retain every created parent in its mutation result"
+  );
+
+  state.requests.length = 0;
   await storage.writeFile("/Folder/existing.txt", upload, true);
   assert(state.uploadCalls[1].overwrite === true, "Overwrite VFS writes must preserve replace semantics");
-  assert(state.capabilityChecks === 2, "Every VFS write must enforce the supported Nextcloud version contract");
+  assert(
+    JSON.stringify(state.requests.map((request) => [request.method, vfsRequestPath(request.url)]))
+      === JSON.stringify([["PROPFIND", "/Folder"]]),
+    "A VFS write must accept an existing directory without trying to recreate it"
+  );
+
+  state.requests.length = 0;
+  await storage.writeFile("/root.txt", upload, false);
+  assert(state.requests.length === 0, "A root-level VFS write must not create or probe the storage root");
+  assert(state.capabilityChecks === 3, "Every VFS write must enforce the supported Nextcloud version rule");
 
   state.uploadHandler = async () => {
     throw Object.assign(new Error("Precondition Failed"), { status: 412 });
@@ -354,17 +425,39 @@ async function checkReadWriteAndMutations(){
   );
   state.uploadHandler = null;
 
-  state.requestHandler = async (options) => {
-    if (options.method === "MKCOL"){
-      return { ok: true, status: 201, raw: "" };
-    }
-    if (options.method === "MOVE" || options.method === "DELETE"){
-      return { ok: true, status: 204, raw: "" };
-    }
-    return { ok: true, status: 207, raw: "" };
-  };
-  await storage.addFolder("/Folder/New");
-  assert(state.requests.filter((request) => request.method === "MKCOL").length === 1, "Folder creation must not create parents implicitly");
+  state.requests.length = 0;
+  const nestedFolder = await storage.addFolder("/Archive/2026/Reports");
+  assert(
+    JSON.stringify(state.requests.map((request) => [request.method, vfsRequestPath(request.url)]))
+      === JSON.stringify([
+        ["PROPFIND", "/Archive/2026"],
+        ["PROPFIND", "/Archive"],
+        ["MKCOL", "/Archive"],
+        ["MKCOL", "/Archive/2026"],
+        ["MKCOL", "/Archive/2026/Reports"]
+      ]),
+    "Nested folder creation must create every missing directory from the storage root downward"
+  );
+  assert(
+    JSON.stringify(nestedFolder.changes.map((change) => change.target.path))
+      === JSON.stringify(["/Archive", "/Archive/2026", "/Archive/2026/Reports"]),
+    "Nested folder creation must retain every created directory in its mutation result"
+  );
+
+  state.requests.length = 0;
+  await storage.addFolder("/RootFolder");
+  assert(
+    JSON.stringify(state.requests.map((request) => [request.method, vfsRequestPath(request.url)]))
+      === JSON.stringify([["MKCOL", "/RootFolder"]]),
+    "A root-level folder must create only the requested folder"
+  );
+  await expectFailure(
+    () => storage.addFolder("/RootFolder"),
+    (error) => error.code === "E:EXIST" && error.status === 405,
+    "Folder creation must preserve E:EXIST for the requested folder"
+  );
+
+  state.requests.length = 0;
   await storage.moveFile("/Folder/a.txt", "/Folder/b.txt", false);
   const move = state.requests.find((request) => request.method === "MOVE");
   assert(move.headers.Overwrite === "F", "Non-overwrite move must send Overwrite: F");
@@ -381,6 +474,48 @@ async function checkReadWriteAndMutations(){
   assert(deletion.deleted === true, "Successful DELETE must report deletion");
   const deleteRequest = state.requests.find((request) => request.method === "DELETE");
   assert(deleteRequest.url.endsWith("/Folder/a.txt"), "DELETE must target the exact validated path");
+}
+
+async function checkPartialParentChanges(){
+  const writeHarness = createStorageHarness();
+  installDirectoryRequestHandler(writeHarness.state);
+  writeHarness.state.uploadHandler = async () => {
+    throw Object.assign(new Error("Insufficient Storage"), { status: 507 });
+  };
+  const writeError = await expectFailure(
+    () => writeHarness.storage.writeFile(
+      "/Partial/Write/file.txt",
+      new Blob(["content"], { type: "text/plain" }),
+      false
+    ),
+    (error) => error.code === "E:PROVIDER" && error.status === 507,
+    "A failed nested write must surface the upload error"
+  );
+  assert(
+    JSON.stringify(writeError.completedChanges.map((change) => change.target.path))
+      === JSON.stringify(["/Partial", "/Partial/Write"]),
+    "A failed nested write must report parent directories created before the upload"
+  );
+
+  const folderHarness = createStorageHarness();
+  installDirectoryRequestHandler(folderHarness.state);
+  const directoryHandler = folderHarness.state.requestHandler;
+  folderHarness.state.requestHandler = async (options) => {
+    if (options.method === "MKCOL" && vfsRequestPath(options.url) === "/Partial/Folder/Target"){
+      return { ok: false, status: 507, raw: "" };
+    }
+    return directoryHandler(options);
+  };
+  const folderError = await expectFailure(
+    () => folderHarness.storage.addFolder("/Partial/Folder/Target"),
+    (error) => error.code === "E:PROVIDER" && error.status === 507,
+    "A failed nested folder creation must surface the final DAV error"
+  );
+  assert(
+    JSON.stringify(folderError.completedChanges.map((change) => change.target.path))
+      === JSON.stringify(["/Partial", "/Partial/Folder"]),
+    "A failed nested folder creation must report parents created before the final request"
+  );
 }
 
 async function checkMergeAndShareCopy(){
@@ -465,6 +600,7 @@ async function run(){
   await checkStrictPathsAndServerCopy();
   await checkIdentityAndListing();
   await checkReadWriteAndMutations();
+  await checkPartialParentChanges();
   await checkMergeAndShareCopy();
   console.log("[OK] nextcloud-vfs-storage-check passed");
 }
