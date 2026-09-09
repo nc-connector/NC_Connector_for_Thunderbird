@@ -144,13 +144,13 @@ function run(){
     ),
     "Nested folder children must be independently expandable but not removable yet"
   );
-  const externalRoot = model.sources.find((source) => source.key.startsWith("external-vfs:"))?.nodes[0];
+  const externalRoot = model.sources
+    .find((source) => source.key.startsWith("external-vfs:"))?.nodes[0];
   assert(
     externalRoot?.entry?.id === "external-root"
       && externalRoot.removalTarget?.groupId === "external-folder",
     "A remote folder root must remove exactly its transfer group"
   );
-
   const beforeKeys = collectKeys(model);
   entries[4].status = "uploading";
   const afterKeys = collectKeys(queue.buildModel(entries, options));
@@ -247,6 +247,13 @@ function run(){
       && wizardSource.includes("result?.shareInfo?.folderInfo?.relativeFolder")
       && wizardSource.includes("formatTransferSize(destination.usage)"),
     "The queue must use the upload path builder, reserved result path, and reported unlimited usage"
+  );
+  assert(
+    wizardSource.includes("state.vfsAvailability.external.connections.find")
+      && wizardSource.includes("URL.createObjectURL(sourceIcon)")
+      && wizardSource.includes("releaseUnusedQueueSourceIconUrls(model)")
+      && wizardMarkup.includes(".sharing-queue-source-icon img,"),
+    "External queue groups must render and release provider-reported icons"
   );
 
   const en = readJson("_locales/en/messages.json");

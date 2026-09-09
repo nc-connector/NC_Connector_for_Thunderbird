@@ -729,6 +729,7 @@ Attachment mode specifics:
 - Recipient permissions are enforced as read-only in this mode (`read=true`, `create/write/delete=false`), independent of sharing defaults.
 - Queue UI behavior:
   - entries are grouped by source and rendered as a recursive file/folder tree; top-level folders start expanded and every populated folder can be expanded or collapsed
+  - external VFS group headings use the provider-reported add-on icon; the generic external-source symbol is only a fallback, while Local and My Nextcloud keep their existing symbols
   - rows show the best available path or name, source context, item type, known file size, transfer status, and an item action
   - the remove action applies to a standalone entry or a selected root/transfer group; removing individual children of a selected folder is not implemented yet
   - the summary bar shows queue entries, distinct sources, and the known total size; a separate destination summary shows finite free/total space, unlimited storage, or an unavailable quota result

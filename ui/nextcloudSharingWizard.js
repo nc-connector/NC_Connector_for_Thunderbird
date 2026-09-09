@@ -21,6 +21,7 @@
   let uploadRenderTimer = null;
   let queueView = null;
   const fileEntriesById = new Map();
+  const queueSourceIconUrls = new Map();
   const pendingUploadRowIds = new Set();
   const TOTAL_STEPS = 4;
   const ATTACHMENT_DEFAULT_SHARE_NAME = "email_attachment";
@@ -352,7 +353,48 @@
     return template?.content?.firstElementChild?.cloneNode(true) || null;
   }
 
+  function getExternalQueueSourceIcon(source){
+    if (source?.kind !== 'external-vfs'){
+      return null;
+    }
+    const providerId = String(source?.storageRef?.providerId || '');
+    const storageId = String(source?.storageRef?.storageId || '');
+    if (!providerId || !storageId){
+      return null;
+    }
+    const connection = state.vfsAvailability.external.connections.find((candidate) =>
+      String(candidate?.storageRef?.providerId || '') === providerId
+      && String(candidate?.storageRef?.storageId || '') === storageId);
+    return isProviderIconBlob(connection?.icon) ? connection.icon : null;
+  }
+
   function getQueueSourceIcon(source){
+    const sourceIcon = getExternalQueueSourceIcon(source);
+    if (sourceIcon){
+      let cached = queueSourceIconUrls.get(source.key);
+      if (!cached || cached.blob !== sourceIcon){
+        if (cached){
+          URL.revokeObjectURL(cached.url);
+        }
+        try{
+          cached = {
+            blob: sourceIcon,
+            url: URL.createObjectURL(sourceIcon)
+          };
+          queueSourceIconUrls.set(source.key, cached);
+        }catch(error){
+          queueSourceIconUrls.delete(source.key);
+          logUiError('VFS queue provider icon unavailable', error);
+          cached = null;
+        }
+      }
+      if (cached){
+        const image = document.createElement('img');
+        image.src = cached.url;
+        image.alt = '';
+        return image;
+      }
+    }
     const summary = source?.kind === 'nextcloud'
       ? dom.nextcloudSourceSummary
       : (source?.kind === 'external-vfs'
@@ -361,6 +403,24 @@
     const icon = summary?.querySelector('.source-icon')?.cloneNode(true) || null;
     icon?.classList.remove('source-icon');
     return icon;
+  }
+
+  function isProviderIconBlob(value){
+    return typeof Blob !== 'undefined' && value instanceof Blob;
+  }
+
+  function releaseUnusedQueueSourceIconUrls(model = null){
+    const liveKeys = model
+      ? new Set(model.sources
+        .filter((source) => !!getExternalQueueSourceIcon(source))
+        .map((source) => source.key))
+      : null;
+    for (const [key, cached] of queueSourceIconUrls){
+      if (!liveKeys || !liveKeys.has(key)){
+        URL.revokeObjectURL(cached.url);
+        queueSourceIconUrls.delete(key);
+      }
+    }
   }
 
   function initializeQueueView(){
@@ -1445,6 +1505,7 @@
       throw new Error(response?.error || i18n('sharing_vfs_external_unavailable'));
     }
     const connections = Array.isArray(response.connections) ? response.connections : [];
+    state.vfsAvailability.external.connections = connections;
     if (!connections.length){
       throw new Error(i18n('sharing_vfs_external_unavailable'));
     }
@@ -1751,6 +1812,7 @@
   function renderFileQueue(){
     pendingUploadRowIds.clear();
     const model = queueView.render(state.files);
+    releaseUnusedQueueSourceIconUrls(model);
     if (!state.files.length){
       dom.fileEmptyPlaceholder.style.display = 'block';
       dom.fileQueueTree.hidden = true;
@@ -3041,6 +3103,7 @@
     }
     queueView?.dispose();
     queueView = null;
+    releaseUnusedQueueSourceIconUrls();
     disposeDebugFlagMirror?.();
     disposeDebugFlagMirror = null;
     state.debugEnabled = false;
