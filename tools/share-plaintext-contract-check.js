@@ -473,6 +473,7 @@ function createHarness(){
   vm.createContext(context);
   loadScriptIntoContext("modules/sharingStorage.js", context);
   loadScriptIntoContext("modules/shareTemplateContract.js", context);
+  loadScriptIntoContext("modules/shareBlockRenderer.js", context);
   loadScriptIntoContext("modules/ncSharing.js", context);
   loadScriptIntoContext("modules/bgComposeShareInsert.js", context);
   return { context, storageState, composeState, translations };
@@ -634,8 +635,20 @@ function testTransparentHeaderAssetContract(){
   assert(asset.subarray(1, 4).toString("ascii") === "PNG", "Mail header asset must be a PNG");
   assert(asset.readUInt32BE(16) === 164 && asset.readUInt32BE(20) === 48, "Mail header asset must remain 164x48 pixels");
   assert(asset[25] === 6, "Mail header PNG must carry an alpha channel");
+  const rendererSource = read("modules/shareBlockRenderer.js");
+  assert(rendererSource.includes('loadAssetBase64("ui/assets/header-transparent-164x48.png")'), "Share rendering must embed the transparent mail header asset");
+}
+
+function testShareRendererBoundary(){
   const sharingSource = read("modules/ncSharing.js");
-  assert(sharingSource.includes('loadAssetBase64("ui/assets/header-transparent-164x48.png")'), "Share rendering must embed the transparent mail header asset");
+  const rendererSource = read("modules/shareBlockRenderer.js");
+  assert(sharingSource.includes("NCShareBlockRenderer.create({ i18n, logInternalError })"), "NCSharing must expose the renderer through its existing facade");
+  assert(!sharingSource.includes("async function buildHtmlBlock("), "NCSharing must not own HTML presentation");
+  assert(!sharingSource.includes("async function buildPlainTextBlock("), "NCSharing must not own plain-text presentation");
+  assert(rendererSource.includes("async function buildHtmlBlock("), "Share renderer must own HTML presentation");
+  assert(rendererSource.includes("async function buildPlainTextBlock("), "Share renderer must own plain-text presentation");
+  assert(!rendererSource.includes("NCOcs."), "Share renderer must not perform OCS requests");
+  assert(!rendererSource.includes("NCNextcloudDav."), "Share renderer must not perform DAV requests");
 }
 
 async function testLocalPlainTextBuildSkipsSanitizer(){
@@ -919,6 +932,7 @@ async function testInsertRejectsMissingPlainTextVariant(){
 
 async function run(){
   testTransparentHeaderAssetContract();
+  testShareRendererBoundary();
   await testPermissionsHtmlContract();
   await testPermissionsCrossSanitizerBoundary();
   await testBuiltInNoBreakValues();

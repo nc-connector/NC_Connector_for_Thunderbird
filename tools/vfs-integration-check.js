@@ -983,6 +983,7 @@ function checkManifestAndReviewSurface(){
     "modules/vfsProviderRuntime.js",
     "modules/vfsClientRuntime.js",
     "modules/fileLinkSources.js",
+    "modules/shareBlockRenderer.js",
     "modules/ncSharing.js"
   ];
   let previous = -1;

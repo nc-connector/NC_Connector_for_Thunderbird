@@ -176,6 +176,8 @@ password-dispatch, header, or body mutation cannot be exposed as committed.
 - Share compose insertion is mode-aware:
   - HTML compose receives pre-rendered share HTML from `NCSharing.buildHtmlBlock(...)`
   - plain-text compose receives a dedicated pre-rendered share text block from `NCSharing.buildPlainTextBlock(...)`
+  - both stable facade calls delegate to `modules/shareBlockRenderer.js`; `modules/ncSharing.js` retains Nextcloud path and network work
+  - the renderer is currently connected through ordered MV2 scripts and a shared global object; a later MV3 move must replace that loading mechanism with explicit imports
   - attachment shares resolve `policy.share.attachment_link_target` / `sharingAttachmentsLinkTarget` to either the direct ZIP URL or the canonical share page; invalid local values count as unset so a usable editable backend default may apply, while a missing or invalid locked backend value forces ZIP instead of stored local state
   - ZIP derivation checks the decoded public-URL token against the OCS create-share token when present; an invalid URL or mismatch fails visibly without inserting the original URL
   - manual shares always use the canonical share page, regardless of the attachment default

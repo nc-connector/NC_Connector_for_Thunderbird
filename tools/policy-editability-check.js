@@ -370,7 +370,7 @@ function verifyConsumerGuards(){
   const sharingStorage = readText("modules/sharingStorage.js");
   const talk = readText("ui/talkDialog.js");
   const sharingWizard = readText("ui/nextcloudSharingWizard.js");
-  const sharing = readText("modules/ncSharing.js");
+  const shareBlockRenderer = readText("modules/shareBlockRenderer.js");
   const shareRequestRules = readText("modules/shareRequestRules.js");
   const composeFinalize = readText("modules/bgComposeFinalize.js");
   const passwordDispatch = readText("modules/bgComposePasswordDispatch.js");
@@ -465,7 +465,7 @@ function verifyConsumerGuards(){
     "Manual shares must always use the share-page target"
   );
 
-  const resolveShareLanguage = functionBody(sharing, "resolveShareBlockLanguage");
+  const resolveShareLanguage = functionBody(shareBlockRenderer, "resolveShareBlockLanguage");
   assertCode(resolveShareLanguage, "const editableShare = request?.policyEditableShare;", "Share rendering must consume language editability metadata");
   assertCode(
     resolveShareLanguage,

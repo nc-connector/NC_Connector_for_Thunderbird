@@ -82,6 +82,7 @@ function createHarness(){
   loadScript("modules/sharingStorage.js", context);
   loadScript("modules/shareTemplateContract.js", context);
   loadScript("modules/textUtils.js", context);
+  loadScript("modules/shareBlockRenderer.js", context);
   loadScript("modules/ncSharing.js", context);
   return context;
 }

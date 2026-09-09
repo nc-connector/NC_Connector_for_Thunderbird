@@ -66,6 +66,7 @@
       "modules/vfsClientRuntime.js",
       "modules/fileQueuePathConflicts.js",
       "modules/fileLinkSources.js",
+      "modules/shareBlockRenderer.js",
       "modules/ncSharing.js",
       "modules/bgComposeAttachments.js",
       "modules/bgShareCleanupStore.js",

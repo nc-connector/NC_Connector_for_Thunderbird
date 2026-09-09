@@ -221,6 +221,7 @@ function createSharingHarness(buildDavAccountContext){
   loadScript("modules/textUtils.js", context);
   loadScript("modules/fileQueuePathConflicts.js", context);
   loadScript("modules/fileLinkSources.js", context);
+  loadScript("modules/shareBlockRenderer.js", context);
   loadScript("modules/ncSharing.js", context);
   return { context, requests, transferCalls, davProbes, credentials };
 }

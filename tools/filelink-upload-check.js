@@ -522,6 +522,7 @@ async function run(){
     "modules/fileLinkRootReservation.js",
     "modules/fileLinkUpload.js",
     "modules/fileLinkShare.js",
+    "modules/shareBlockRenderer.js",
     "modules/ncSharing.js",
     "modules/bgFileLinkUpload.js"
   ];

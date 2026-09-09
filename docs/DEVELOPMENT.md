@@ -149,7 +149,8 @@ Key files you’ll touch most:
 - `modules/nccore.js` — Nextcloud auth/login-flow helpers and shared DAV account data
 - `modules/talkAddressbook.js` — system-addressbook CardDAV fetch/cache/search/status helpers
 - `modules/talkcore.js` — Nextcloud Talk API helpers (OCS, room lifecycle, capabilities)
-- `modules/ncSharing.js` — Nextcloud sharing/DAV helpers used by the sharing wizard
+- `modules/shareBlockRenderer.js` — localized HTML/plain-text share-block rendering, templates, badges, and header asset presentation
+- `modules/ncSharing.js` — Nextcloud path, DAV/OCS, and FileLink service used by the sharing wizard; its public render methods delegate to `shareBlockRenderer.js`
 - `modules/icalContract.js` — shared iCal/vCard parser rules (powered by vendored `vendor/ical.js`)
 - `experiments/ncComposePrefs/parent.js` — read-only compose preference bridge (`mail.compose.big_attachments.*`)
 - `ui/talkDialog.html` + `ui/talkDialog.js` — Talk wizard UI
@@ -715,6 +716,7 @@ Key files:
 - `ui/sharingPortRequest.js`
 - `ui/composeAttachmentPrompt.html`
 - `ui/composeAttachmentPrompt.js`
+- `modules/shareBlockRenderer.js`
 - `modules/ncSharing.js`
 - `modules/bgFileLinkUpload.js`
 - `modules/fileLinkUploadPolicy.js`
@@ -800,7 +802,7 @@ Attachment mode specifics:
   - Secrets mode creates one one-time Secrets link per recipient and preserves `Bcc` separation.
   - Secrets are titled `NCC <share label>` when a label exists, otherwise `NCC share password`.
   - HTML follow-up mails render Secrets URLs as localized link text; plain-text follow-up mails keep the full URL visible.
-  - Backend custom password templates (`language_share_html_block=custom` + `share_password_template`) are sanitized in the render path before follow-up registration; rich HTML uses `NCSharing.buildHtmlBlock(...)`, plain text uses `NCSharing.buildPlainTextBlock(...)`, and missing sanitizer or empty sanitized output aborts finalize (fail-closed).
+  - Backend custom password templates (`language_share_html_block=custom` + `share_password_template`) are sanitized in the render path before follow-up registration; rich HTML uses `NCSharing.buildHtmlBlock(...)`, plain text uses `NCSharing.buildPlainTextBlock(...)`, both facade calls delegate to `modules/shareBlockRenderer.js`, and missing sanitizer or empty sanitized output aborts finalize (fail-closed).
   - Follow-up mail delivery mode mirrors the source compose mode (`isPlainText` / `deliveryFormat`) captured from compose details and refreshed on `compose.onBeforeSend`.
   - Follow-up registration now requires both pre-rendered HTML and pre-rendered plain text; when follow-up is plain text, background uses the provided plain-text block and frames it with a fixed 50-character `#` border.
   - For confirmed `sendNow`, the dispatch path first warms the freshly created password compose tab until Thunderbird exposes the complete expected recipient envelope, waits for the applicable backend signature, repeats the identity/recipient/subject comparison after a short settle tick, and then sends with `sendNow`.
@@ -824,6 +826,7 @@ Background:
 - routes the reversible body/header mutation through `modules/bgComposeShareInsert.js`
 - receives pre-rendered share HTML from `NCSharing.buildHtmlBlock(...)`.
 - receives pre-rendered share plain text from `NCSharing.buildPlainTextBlock(...)`.
+- keeps those public `NCSharing` calls stable while `modules/shareBlockRenderer.js` owns presentation and `modules/ncSharing.js` owns Nextcloud path and network work.
 - requires both render variants as part of the runtime message rules.
 - backend custom templates are sanitized in both rendering paths before use; local built-in templates stay on the trusted local render path and are not passed through the backend HTML sanitizer.
 - backend custom templates prune empty optional placeholders (`{RIGHTS}`, `{PASSWORD}`, `{EXPIRATIONDATE}`, `{NOTE}`) before replacement to reduce orphaned labels/wrappers in arbitrary layouts.
@@ -831,7 +834,11 @@ Background:
 - resolves compose mode from `isPlainText` + `deliveryFormat`:
   - HTML compose mode: inserts source HTML near `<body>`.
   - Plain-text compose mode: prefers the pre-rendered `plainText` block, normalizes permission markers (`[x]` / `[ ]`), compacts permission rows inside explicit add-on-generated rights segments, and frames the block with a fixed 60-character `#` border.
-  - For HTML editors with plain-text delivery format, inserts an escaped plain-text rendering to preserve stable plain-text output.
+- For HTML editors with plain-text delivery format, inserts an escaped plain-text rendering to preserve stable plain-text output.
+
+The renderer and sharing service currently connect through ordered MV2 scripts
+and a shared global object. A later MV3 move must replace that loading mechanism
+with explicit imports while keeping the same presentation/network boundary.
 
 ### 10.3 Share block language override
 
