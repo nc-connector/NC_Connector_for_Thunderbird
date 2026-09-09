@@ -132,6 +132,7 @@ Key files you’ll touch most:
 - `modules/vfsProviderRuntime.js` — provider grants, account binding, and Toolkit request bridge
 - `modules/vfsClientRuntime.js` — self/external provider discovery, picker sessions, and sequential reads
 - `modules/fileQueuePathConflicts.js` — linear-time exact/prefix conflict detection for upload queues
+- `ui/sharingQueueEntries.js` — queue entry descriptors, display/target paths, collision inputs, grouped renames, and retry-state reset
 - `modules/passwordPolicyRuntime.js` — background password-policy fetch/generate helper for wizard requests
 - `modules/bgCompose.js` — compose/window/tab listener wiring
 - `modules/bgSignature.js` — central backend email-signature policy orchestration for compose windows
@@ -713,6 +714,7 @@ Responsibilities:
 Key files:
 - `ui/nextcloudSharingWizard.html`
 - `ui/nextcloudSharingWizard.js`
+- `ui/sharingQueueEntries.js`
 - `ui/sharingPortRequest.js`
 - `ui/composeAttachmentPrompt.html`
 - `ui/composeAttachmentPrompt.js`
@@ -754,6 +756,12 @@ Attachment mode specifics:
   - currently uploading rows are highlighted in accent blue; per-item progress and completed state use the queue status controls
   - aggregate progress shows completed files, total files, transferred bytes, total bytes, percentage, and current transfer rate
   - UI progress delivery is limited to 10 updates per second and batches changed queue rows
+- `ui/sharingQueueEntries.js` owns the queue descriptor and path model. The
+  wizard retains DOM rendering, picker/Port handling, upload flow, attachment
+  lifecycle, and finalization.
+- The queue helper is currently loaded before the wizard as an ordered MV2
+  script. A later MV3 move must replace that shared global with an explicit
+  import while keeping the same model/orchestration boundary.
 - Upload uniqueness behavior:
   - local duplicate target paths are resolved before upload (rename prompt)
   - no per-file remote preflight checks are executed for queue entries in a newly reserved share folder

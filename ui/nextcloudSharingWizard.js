@@ -136,6 +136,11 @@
   const dom = {};
   const i18n = NCI18n.translate;
   const wizardTranslate = (key, fallback = "") => i18n(key) || fallback || "";
+  const queueEntries = NCSharingQueueEntries.create({
+    sanitizeFileName: NCSharing.sanitizeFileName,
+    sanitizeRelativeDir: NCSharing.sanitizeRelativeDir,
+    findPathConflict: NCFileQueuePathConflicts.find
+  });
   const SHARE_POLICY_KEYS = NCSharingStorage.SHARE_POLICY_KEYS;
   const DEFAULT_EXPIRE_DAYS = NCSharingStorage.DEFAULT_EXPIRE_DAYS;
   const SHARE_DEFAULT_POLICY_BINDINGS = [
@@ -431,7 +436,7 @@
       container: dom.fileQueueTree,
       scrollContainer: dom.fileQueueWrapper,
       getSourceLabel: getEntrySourceLabel,
-      getTargetPath: getTargetRelativePath,
+      getTargetPath: queueEntries.getTargetRelativePath,
       formatSize: formatTransferSize,
       buildStatusNode,
       canRemove: () => true,
@@ -880,30 +885,7 @@
       || validCount !== expectedCount){
       throw new Error('attachment_launch_context_incomplete');
     }
-    state.files = list.map((item) => {
-      const file = item.file;
-      const fileName = NCSharing.sanitizeFileName(item.name || file.name || 'File');
-      const sourceDisplayPath = resolveEntryDisplayPath({
-        file,
-        source: 'launch',
-        fallbackName: fileName,
-        providedPath: item.displayPath || item.path || item.fullPath || item.name || file.name || ''
-      });
-      const displayDir = extractDisplayDir(sourceDisplayPath);
-      return {
-        id: `entry_${Date.now()}_${Math.random().toString(36).slice(2)}`,
-        file,
-        displayPath: buildDisplayPath(displayDir, fileName),
-        displayDir,
-        relativeDir: '',
-        renamedName: '',
-        status: 'pending',
-        progress: 0,
-        error: '',
-        speedKbps: 0,
-        progressStartedAt: 0
-      };
-    });
+    state.files = list.map((item) => queueEntries.createAttachmentEntry(item));
     if (state.files.length !== expectedCount){
       throw new Error('attachment_launch_queue_incomplete');
     }
@@ -1609,50 +1591,6 @@
     });
   }
 
-  function createRemoteQueueEntry(source, index){
-    const sourceKind = source?.sourceKind === 'nextcloud' ? 'nextcloud' : 'external-vfs';
-    const kind = source?.kind === 'folder' ? 'folder' : 'file';
-    const name = String(source?.name || '').trim();
-    if (!name){
-      throw new Error(i18n('sharing_status_error'));
-    }
-    const relativeDir = String(source?.relativeDir || '').replace(/\\/g, '/').replace(/^\/+|\/+$/g, '');
-    const displayPath = normalizeDisplayPath(source?.displayPath)
-      || buildDisplayPath(relativeDir, name);
-    return {
-      id: `entry_${Date.now()}_${index}_${Math.random().toString(36).slice(2)}`,
-      sourceKind,
-      sourceLabel: String(source?.sourceLabel || '').trim(),
-      kind,
-      name,
-      file: null,
-      storageRef: source?.storageRef && typeof source.storageRef === 'object'
-        ? {
-            providerId: String(source.storageRef.providerId || ''),
-            storageId: String(source.storageRef.storageId || '')
-          }
-        : null,
-      sourcePath: String(source?.sourcePath || ''),
-      size: kind === 'file' && source?.size != null && Number.isFinite(Number(source.size))
-        ? Math.max(0, Number(source.size))
-        : null,
-      lastModified: Math.max(0, Number(source?.lastModified) || 0),
-      contentType: String(source?.contentType || 'application/octet-stream'),
-      transferGroupId: String(source?.transferGroupId || ''),
-      transferRole: String(source?.transferRole || 'item'),
-      transferRoot: source?.transferRoot === true,
-      displayPath,
-      displayDir: extractDisplayDir(displayPath),
-      relativeDir,
-      renamedName: '',
-      status: 'pending',
-      progress: 0,
-      error: '',
-      speedKbps: 0,
-      progressStartedAt: 0
-    };
-  }
-
   async function startVfsSelection({ sourceKind, entryKind } = {}){
     if (state.sourceSelectionInProgress || state.uploadInProgress || state.finalizeStarted){
       return;
@@ -1689,7 +1627,11 @@
         setMessage('');
         return;
       }
-      const entries = sources.map((source, index) => createRemoteQueueEntry(source, index));
+      const entries = sources.map((source, index) => queueEntries.createRemoteEntry(
+        source,
+        index,
+        { invalidNameMessage: i18n('sharing_status_error') }
+      ));
       state.files.push(...entries);
       rebuildFileEntryIndex();
       pendingUploadScroll = '__bottom__';
@@ -1716,7 +1658,7 @@
    */
   function handleFileSelection(event, source){
     const rawInputValue = String(event?.target?.value || '');
-    const selectionRootDir = extractSelectionRootDir(rawInputValue);
+    const selectionRootDir = queueEntries.extractSelectionRootDir(rawInputValue);
     const files = Array.from(event.target.files || []);
     if (!files.length){
       return;
@@ -1742,32 +1684,12 @@
       if (source === 'folder' && relativePath.includes('/')){
         relativeDir = relativePath.slice(0, relativePath.lastIndexOf('/'));
       }
-      const displayPath = resolveEntryDisplayPath({
-        file,
+      return queueEntries.createLocalEntry(file, {
         source,
         relativeDir,
         selectionRootDir,
-        fallbackName: file.name || 'File'
+        queueGroupId
       });
-      const displayDir = extractDisplayDir(displayPath);
-      return {
-        id: `entry_${Date.now()}_${Math.random().toString(36).slice(2)}`,
-        sourceKind: 'local',
-        sourceLabel: '',
-        kind: 'file',
-        name: file.name || 'File',
-        file,
-        displayPath,
-        displayDir,
-        relativeDir,
-        queueGroupId,
-        renamedName: '',
-        status: 'pending',
-        progress: 0,
-        error: '',
-        speedKbps: 0,
-        progressStartedAt: 0
-      };
     });
     state.files.push(...entries);
     rebuildFileEntryIndex();
@@ -2135,7 +2057,7 @@
     state.uploadResult = null;
     pendingUploadScroll = '__top__';
     state.files.forEach((entry) => {
-      resetFileEntry(entry);
+      queueEntries.resetTransferState(entry);
     });
     setUploadStatus('');
     setOverallProgress({ visible: false });
@@ -2217,7 +2139,7 @@
       setUploadStatus(i18n('sharing_status_scanning'));
       setOverallProgress({ visible: true, indeterminate: true });
       state.files.forEach((entry) => {
-        resetFileEntry(entry);
+        queueEntries.resetTransferState(entry);
         entry.status = 'queued';
       });
     }else{
@@ -2386,18 +2308,18 @@
     }
     if (event.phase === 'source_fetch'){
       if (entry.status !== 'fetching'){
-        resetFileEntry(entry);
+        queueEntries.resetTransferState(entry);
       }
       entry.status = 'fetching';
       entry.progress = Math.min(100, Math.max(0, Number(event.percent) || 0));
     }else if (event.phase === 'source_copy'){
-      resetFileEntry(entry);
+      queueEntries.resetTransferState(entry);
       entry.status = 'copying';
     }else if (event.phase === 'source_prepare'){
-      resetFileEntry(entry);
+      queueEntries.resetTransferState(entry);
       entry.status = 'preparing';
     }else if (event.phase === 'start'){
-      resetFileEntry(entry);
+      queueEntries.resetTransferState(entry);
       entry.status = 'uploading';
       entry.progressStartedAt = Date.now();
     }else if (event.phase === 'progress'){
@@ -2702,13 +2624,13 @@
    */
   async function ensureUniqueQueueEntries(){
     while (true){
-      const conflict = findQueuePathConflict();
+      const conflict = queueEntries.findConflict(state.files);
       if (!conflict){
         break;
       }
       if (conflict.type === 'exact'){
         if (!promptForRename(
-          getCollisionRenameTarget(conflict.duplicateEntry),
+          queueEntries.getCollisionRenameTarget(state.files, conflict.duplicateEntry),
           'sharing_prompt_rename_duplicate'
         )){
           return false;
@@ -2717,7 +2639,7 @@
         continue;
       }
       if (!promptForRename(
-        getCollisionRenameTarget(conflict.fileEntry),
+        queueEntries.getCollisionRenameTarget(state.files, conflict.fileEntry),
         'sharing_prompt_rename_file_directory_conflict'
       )){
         return false;
@@ -2729,42 +2651,6 @@
     }
     renderFileQueue();
     return true;
-  }
-
-  function findQueuePathConflict(){
-    const entries = state.files.map((entry) => ({
-      entry,
-      path: getTargetRelativePath(entry),
-      kind: entry.kind || 'file'
-    }));
-    if (!globalThis.NCFileQueuePathConflicts?.find){
-      throw new Error("file_queue_path_conflict_runtime_unavailable");
-    }
-    return NCFileQueuePathConflicts.find(entries);
-  }
-
-  /**
-   * Build a sanitized target path for a file entry.
-   * @param {object} entry
-   * @returns {string}
-   */
-  function getTargetRelativePath(entry){
-    const sanitizedName = NCSharing.sanitizeFileName(
-      entry.renamedName || entry.name || entry.file?.name || 'File'
-    );
-    const sanitizedDir = NCSharing.sanitizeRelativeDir(entry.relativeDir || '');
-    return sanitizedDir ? `${sanitizedDir}/${sanitizedName}` : sanitizedName;
-  }
-
-  function getCollisionRenameTarget(entry){
-    if (entry?.sourceKind !== 'nextcloud'
-      || !entry.transferGroupId
-      || entry.transferRoot){
-      return entry;
-    }
-    return state.files.find((candidate) =>
-      candidate.transferGroupId === entry.transferGroupId && candidate.transferRoot
-    ) || entry;
   }
 
   /**
@@ -2914,139 +2800,6 @@
     state.shareContext = createShareContext();
   }
 
-  function resetFileEntry(entry){
-    entry.status = 'pending';
-    entry.progress = 0;
-    entry.error = '';
-    entry.speedKbps = 0;
-    entry.progressStartedAt = 0;
-  }
-
-  function applyEntryRename(entry, newName){
-    const clean = (newName || '').trim();
-    if (!clean){
-      return;
-    }
-    if (entry.kind === 'folder' && entry.transferGroupId){
-      const oldRoot = normalizeDisplayPath(entry.displayPath);
-      const newRoot = buildDisplayPath(entry.displayDir || entry.relativeDir || '', clean);
-      for (const member of state.files){
-        if (member.transferGroupId !== entry.transferGroupId){
-          continue;
-        }
-        const currentPath = normalizeDisplayPath(member.displayPath);
-        if (member === entry){
-          member.renamedName = clean;
-          member.displayPath = newRoot;
-          member.displayDir = extractDisplayDir(newRoot);
-          continue;
-        }
-        if (!oldRoot || !currentPath.startsWith(`${oldRoot}/`)){
-          continue;
-        }
-        const updatedPath = `${newRoot}${currentPath.slice(oldRoot.length)}`;
-        member.displayPath = updatedPath;
-        member.displayDir = extractDisplayDir(updatedPath);
-        member.relativeDir = member.displayDir;
-      }
-      return;
-    }
-    entry.renamedName = clean;
-    entry.displayPath = buildDisplayPath(entry.displayDir || entry.relativeDir || '', clean);
-  }
-
-  function normalizeDisplayPath(value){
-    const raw = String(value || '').trim();
-    if (!raw){
-      return '';
-    }
-    return raw.replace(/\\/g, '/').replace(/\/+/g, '/');
-  }
-
-  function extractDisplayDir(fullPath){
-    const normalized = normalizeDisplayPath(fullPath);
-    const idx = normalized.lastIndexOf('/');
-    if (idx <= 0){
-      return '';
-    }
-    return normalized.slice(0, idx);
-  }
-
-  function buildDisplayPath(displayDir, fileName){
-    const safeFileName = String(fileName || '').trim();
-    const normalizedDir = normalizeDisplayPath(displayDir).replace(/\/+$/, '');
-    if (!normalizedDir){
-      return safeFileName;
-    }
-    return `${normalizedDir}/${safeFileName}`;
-  }
-
-  /**
-   * Resolve the most useful display path for one file entry.
-   * @param {{file:File,source:string,relativeDir?:string,fallbackName:string,providedPath?:string}} options
-   * @returns {string}
-   */
-  function resolveEntryDisplayPath({
-    file,
-    source,
-    relativeDir = '',
-    selectionRootDir = '',
-    fallbackName = '',
-    providedPath = ''
-  } = {}){
-    const fileName = String(fallbackName || file?.name || 'File').trim() || 'File';
-    if (source === 'folder'){
-      return buildDisplayPath(relativeDir, fileName);
-    }
-    const candidates = [
-      providedPath,
-      file?.webkitRelativePath,
-      file?.relativePath,
-      file?.mozFullPath,
-      file?.path
-    ];
-    for (const candidate of candidates){
-      const normalized = normalizeDisplayPath(candidate);
-      if (!normalized){
-        continue;
-      }
-      const normalizedFileName = fileName.toLowerCase();
-      const normalizedCandidate = normalized.toLowerCase();
-      if (normalizedCandidate.endsWith(`/${normalizedFileName}`) || normalizedCandidate === normalizedFileName){
-        return normalized;
-      }
-      return buildDisplayPath(normalized, fileName);
-    }
-    if (source === 'file'){
-      const root = normalizeDisplayPath(selectionRootDir).replace(/\/+$/, '');
-      if (root){
-        return buildDisplayPath(root, fileName);
-      }
-    }
-    return buildDisplayPath(relativeDir, fileName);
-  }
-
-  /**
-   * Try to resolve the selected source directory from the file input value.
-   * Works only if Thunderbird exposes a non-sanitized native path.
-   * @param {string} inputValue
-   * @returns {string}
-   */
-  function extractSelectionRootDir(inputValue){
-    const normalized = normalizeDisplayPath(inputValue);
-    if (!normalized || !normalized.includes('/')){
-      return '';
-    }
-    if (normalized.toLowerCase().includes('/fakepath/')){
-      return '';
-    }
-    const idx = normalized.lastIndexOf('/');
-    if (idx <= 0){
-      return '';
-    }
-    return normalized.slice(0, idx);
-  }
-
   /**
    * Prompt the user to rename an entry to avoid collisions.
    * @param {object} entry
@@ -3060,7 +2813,7 @@
       setMessage(i18n('sharing_message_rename_cancelled'), 'error');
       return false;
     }
-    applyEntryRename(entry, renamed);
+    queueEntries.renameEntry(state.files, entry, renamed);
     return true;
   }
   function setupWindowSizing(){

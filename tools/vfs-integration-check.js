@@ -1018,6 +1018,10 @@ function checkManifestAndReviewSurface(){
       && wizardHtml.includes('id="fileQueueTree"')
       && wizardHtml.includes('id="queueSummaryText"')
       && wizardHtml.includes('id="queueStorageText"')
+      && wizardHtml.indexOf('<script src="sharingQueueEntries.js"></script>')
+        > wizardHtml.indexOf('<script src="../modules/fileQueuePathConflicts.js"></script>')
+      && wizardHtml.indexOf('<script src="nextcloudSharingWizard.js"></script>')
+        > wizardHtml.indexOf('<script src="sharingQueueEntries.js"></script>')
       && wizardHtml.includes('<script src="sharingQueueTree.js"></script>')
       && (wizardHtml.match(/class="source-icon"/g) || []).length === 3
       && wizardHtml.includes('id="queueRemoveIcon"')

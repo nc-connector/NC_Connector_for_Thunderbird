@@ -20,8 +20,104 @@ function createContext(){
   context.window = context;
   context.self = context;
   vm.createContext(context);
+  loadScript("modules/fileQueuePathConflicts.js", context);
+  loadScript("ui/sharingQueueEntries.js", context);
   loadScript("ui/sharingQueueTree.js", context);
   return context;
+}
+
+function testQueueEntryModel(context){
+  const queueEntries = context.NCSharingQueueEntries.create({
+    sanitizeFileName: (value) => String(value || "").replace(/[\\/:]/g, "_"),
+    sanitizeRelativeDir: (value) => String(value || "").replace(/\\/g, "/").replace(/^\/+|\/+$/g, ""),
+    findPathConflict: context.NCFileQueuePathConflicts.find
+  });
+  assert(
+    queueEntries.normalizeDisplayPath("Folder\\Nested//file.txt") === "Folder/Nested/file.txt",
+    "Queue entry paths must normalize Windows separators"
+  );
+  assert(
+    queueEntries.extractSelectionRootDir("C:\\fakepath\\file.txt") === ""
+      && queueEntries.extractSelectionRootDir("C:\\Files\\file.txt") === "C:/Files",
+    "Queue entry roots must ignore browser fake paths without dropping real exposed paths"
+  );
+
+  const remote = queueEntries.createRemoteEntry({
+    sourceKind: "external-vfs",
+    sourceLabel: "WebDAV · KuP",
+    kind: "file",
+    name: "report:final.pdf",
+    storageRef: { providerId: "webdav@test", storageId: "customer-files" },
+    sourcePath: "/Reports/report:final.pdf",
+    relativeDir: "Reports",
+    size: 42,
+    lastModified: 123,
+    contentType: "application/pdf",
+    transferGroupId: "remote-group"
+  }, 0, { invalidNameMessage: "invalid" });
+  assert(
+    remote.sourceKind === "external-vfs"
+      && remote.storageRef.providerId === "webdav@test"
+      && remote.displayPath === "Reports/report:final.pdf"
+      && remote.size === 42,
+    "Remote queue descriptors must retain provider, path, and file metadata"
+  );
+  assert(
+    queueEntries.getTargetRelativePath(remote) === "Reports/report_final.pdf",
+    "Queue target paths must use the injected Nextcloud sanitizers"
+  );
+
+  const root = {
+    kind: "folder",
+    sourceKind: "nextcloud",
+    transferGroupId: "tree",
+    transferRoot: true,
+    displayPath: "Pack",
+    displayDir: "",
+    relativeDir: "",
+    name: "Pack"
+  };
+  const child = {
+    kind: "file",
+    sourceKind: "nextcloud",
+    transferGroupId: "tree",
+    transferRoot: false,
+    displayPath: "Pack/Sub/file.txt",
+    displayDir: "Pack/Sub",
+    relativeDir: "Pack/Sub",
+    name: "file.txt"
+  };
+  queueEntries.renameEntry([root, child], root, "Renamed");
+  assert(
+    root.displayPath === "Renamed"
+      && child.displayPath === "Renamed/Sub/file.txt"
+      && child.relativeDir === "Renamed/Sub",
+    "Renaming a remote folder root must update every member of its transfer group"
+  );
+  assert(
+    queueEntries.getCollisionRenameTarget([root, child], child) === root,
+    "Nested Nextcloud collisions must rename the selected transfer root"
+  );
+
+  const duplicate = { ...remote, id: "duplicate" };
+  assert(
+    queueEntries.findConflict([remote, duplicate])?.type === "exact",
+    "Queue entry collision checks must use sanitized target paths"
+  );
+  duplicate.status = "error";
+  duplicate.progress = 55;
+  duplicate.error = "failed";
+  duplicate.speedKbps = 12;
+  duplicate.progressStartedAt = 100;
+  queueEntries.resetTransferState(duplicate);
+  assert(
+    duplicate.status === "pending"
+      && duplicate.progress === 0
+      && duplicate.error === ""
+      && duplicate.speedKbps === 0
+      && duplicate.progressStartedAt === 0,
+    "Queue entry retry state must reset as one model operation"
+  );
 }
 
 function collectKeys(model){
@@ -114,6 +210,7 @@ function buildFixture(){
 
 function run(){
   const context = createContext();
+  testQueueEntryModel(context);
   const queue = context.NCSharingQueueTree;
   const entries = buildFixture();
   const options = {
@@ -202,6 +299,7 @@ function run(){
 
   const wizardMarkup = readText("ui/nextcloudSharingWizard.html");
   const wizardSource = readText("ui/nextcloudSharingWizard.js");
+  const queueEntriesSource = readText("ui/sharingQueueEntries.js");
   const sourceLabelStyle = wizardMarkup.match(/\.source-action summary > span\{([\s\S]*?)\}/)?.[1] || "";
   assert(
     wizardMarkup.includes('data-i18n="sharing_button_add_local">+ Local</span>')
@@ -254,6 +352,23 @@ function run(){
       && wizardSource.includes("releaseUnusedQueueSourceIconUrls(model)")
       && wizardMarkup.includes(".sharing-queue-source-icon img,"),
     "External queue groups must render and release provider-reported icons"
+  );
+  const conflictScriptIndex = wizardMarkup.indexOf('<script src="../modules/fileQueuePathConflicts.js"></script>');
+  const entriesScriptIndex = wizardMarkup.indexOf('<script src="sharingQueueEntries.js"></script>');
+  const wizardScriptIndex = wizardMarkup.indexOf('<script src="nextcloudSharingWizard.js"></script>');
+  assert(
+    conflictScriptIndex >= 0
+      && entriesScriptIndex > conflictScriptIndex
+      && wizardScriptIndex > entriesScriptIndex,
+    "Queue entry rules must load after path conflicts and before the Sharing wizard"
+  );
+  assert(
+    wizardSource.includes("NCSharingQueueEntries.create({")
+      && !/function (?:createRemoteQueueEntry|normalizeDisplayPath|resolveEntryDisplayPath|applyEntryRename)\(/.test(wizardSource)
+      && queueEntriesSource.includes("function createRemoteEntry(")
+      && queueEntriesSource.includes("function resolveDisplayPath(")
+      && queueEntriesSource.includes("function renameEntry("),
+    "The Sharing wizard must delegate queue descriptor and path rules to the queue entry model"
   );
 
   const en = readJson("_locales/en/messages.json");
