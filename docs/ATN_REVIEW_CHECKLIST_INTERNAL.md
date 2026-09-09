@@ -161,7 +161,7 @@ It is intended to guide ongoing and future maintenance.
 - Keep VFS business logic in ordinary WebExtension/background modules; do not add an Experiment API for storage access.
 - Use the existing NC Connector account as the sole Nextcloud credential owner. Never duplicate credentials in Toolkit connection or queue records.
 - A provider grant must be explicit, revocable, bound to the verified runtime sender and exact storage ID, and invalidated when server or canonical user changes.
-- Full provider read/write capabilities must be stated in the grant UI. External-provider discovery must remain disabled by default and behind Thunderbird's optional `management` permission.
+- Full provider read/write capabilities must be stated in the grant UI. External-provider discovery must remain disabled by default. Thunderbird's required `management` permission must be declared at installation, while external use remains behind the backend Pro/seat gate and the effective Share-policy switch.
 - Collect and validate the complete mixed-source queue before the first upload mutation. Preserve folders and empty directories.
 - Same-Nextcloud sources must use server-side copy and remain untouched. External sources may exist as one in-memory Toolkit `File` during transfer but must not be persisted or staged on disk.
 - Cancellation and failures may clean only NC Connector's generated share root or partial provider mutations reported by the Toolkit contract. They must never delete or move a selected source.

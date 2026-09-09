@@ -711,7 +711,7 @@ footer{
     <fieldset class="auth-block">
       <legend data-i18n="options_vfs_provider_heading">Eigene Nextcloud</legend>
       <p class="hint" data-i18n="options_vfs_provider_intro">Stellt die bereits eingerichtete Nextcloud-Verbindung für freigegebene Thunderbird-Add-ons bereit.</p>
-      <div class="row">
+      <div id="vfsProviderEnabledRow" class="row">
         <label for="vfsProviderEnabled" class="option-tooltip-wrap" tabindex="0">
           <span data-i18n="options_vfs_provider_enabled_label">NC Connector als VFS-Anbieter aktivieren</span>
           <div class="option-tooltip" role="tooltip">
@@ -737,10 +737,10 @@ footer{
         <p id="vfsNoGrants" class="vfs-empty" data-i18n="options_vfs_no_grants">Noch kein Add-on hat Zugriff.</p>
       </div>
     </fieldset>
-    <fieldset class="auth-block">
+    <fieldset id="vfsExternalSection" class="auth-block">
       <legend data-i18n="options_vfs_external_heading">Externe VFS-Anbieter</legend>
       <p class="hint" data-i18n="options_vfs_external_intro">Dateien anderer Anbieter werden gelesen und anschließend in die Freigabe auf Ihrer Nextcloud hochgeladen.</p>
-      <div class="row">
+      <div id="vfsExternalEnabledRow" class="row">
         <label for="vfsExternalProvidersEnabled" class="option-tooltip-wrap" tabindex="0">
           <span data-i18n="options_vfs_external_enabled_label">Externe VFS-Anbieter aktivieren</span>
           <div class="option-tooltip" role="tooltip">
@@ -750,13 +750,6 @@ footer{
         </label>
         <div class="boolean-control">
           <input id="vfsExternalProvidersEnabled" type="checkbox" disabled>
-        </div>
-      </div>
-      <div class="row">
-        <span data-i18n="options_vfs_external_permission_label">Thunderbird-Berechtigung</span>
-        <div class="vfs-permission-control">
-          <span id="vfsExternalPermissionStatus" class="vfs-badge" data-i18n="options_vfs_external_permission_required">Nicht erteilt</span>
-          <button id="vfsRequestExternalPermission" type="button" class="vfs-action-button" data-i18n="options_vfs_external_permission_button" disabled>Berechtigung erteilen</button>
         </div>
       </div>
       <div class="vfs-subsection">

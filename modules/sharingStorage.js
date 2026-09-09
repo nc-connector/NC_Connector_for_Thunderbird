@@ -31,6 +31,8 @@ const NCSharingStorage = (() => {
     attachmentLinkTarget: "attachment_link_target",
     attachmentsAlwaysConnector: "attachments_always_via_ncconnector",
     attachmentsMinSizeMb: "attachments_min_size_mb",
+    vfsProviderEnabled: "vfs_provider_enabled",
+    vfsExternalProvidersEnabled: "vfs_external_providers_enabled",
     blockLanguage: "language_share_html_block"
   });
   const SHARING_KEYS = {

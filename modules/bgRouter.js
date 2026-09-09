@@ -59,13 +59,16 @@ async function openInNormalThunderbirdTab(url){
 }
 
 async function getVfsOptionsState(){
+  const policyStatus = await NCVfsPolicyRuntime.getPolicyStatus({ refresh: true });
   const [providerStatus, externalStatus] = await Promise.all([
-    NCVfsProviderRuntime.getStatus(),
-    NCVfsClientRuntime.getStatus()
+    NCVfsProviderRuntime.getStatus(policyStatus),
+    NCVfsClientRuntime.getStatus(policyStatus)
   ]);
   return Object.freeze({
     provider: Object.freeze({
       enabled: providerStatus.enabled === true,
+      localEnabled: providerStatus.localEnabled === true,
+      locked: providerStatus.locked === true,
       connectionReady: providerStatus.accountConfigured === true,
       status: providerStatus.accountConfigured
         ? (providerStatus.enabled ? "active" : "inactive")
@@ -78,7 +81,11 @@ async function getVfsOptionsState(){
     }),
     external: Object.freeze({
       enabled: externalStatus.enabled === true,
-      permissionGranted: externalStatus.permissionGranted === true,
+      localEnabled: externalStatus.localEnabled === true,
+      locked: externalStatus.locked === true,
+      entitled: externalStatus.entitled === true,
+      unavailableReason: String(externalStatus.unavailableReason || ""),
+      initialized: externalStatus.initialized === true,
       connections: Object.freeze((externalStatus.connections || []).map((connection) => Object.freeze({
         connectionId: JSON.stringify([
           connection.storageRef?.providerId || "",
@@ -198,6 +205,7 @@ browser.runtime.onMessage.addListener((msg, sender) => {
     }
     if (msg.type === "vfs:findProviderAddons"){
       try{
+        await NCVfsClientRuntime.assertExternalEntitlement({ refresh: true });
         await openInNormalThunderbirdTab(VFS_PROVIDER_SEARCH_URL);
         return { ok:true };
       }catch(error){
@@ -214,10 +222,15 @@ browser.runtime.onMessage.addListener((msg, sender) => {
     }
     if (msg.type === "vfs:options:updateSettings"){
       try{
+        const policyStatus = await NCVfsPolicyRuntime.getPolicyStatus({ refresh: true });
         const external = await NCVfsClientRuntime.setExternalEnabled(
-          msg.payload?.externalProvidersEnabled === true
+          msg.payload?.externalProvidersEnabled === true,
+          policyStatus
         );
-        await NCVfsProviderRuntime.setEnabled(msg.payload?.providerEnabled === true);
+        await NCVfsProviderRuntime.setEnabled(
+          msg.payload?.providerEnabled === true,
+          policyStatus
+        );
         const state = await getVfsOptionsState();
         return {
           ok:true,
@@ -226,19 +239,6 @@ browser.runtime.onMessage.addListener((msg, sender) => {
         };
       }catch(error){
         return messageError("vfs:options:updateSettings", error);
-      }
-    }
-    if (msg.type === "vfs:options:requestExternalProviderPermission"){
-      try{
-        const permissionGranted = await browser.permissions.contains({
-          permissions: ["management"]
-        });
-        if (!permissionGranted){
-          throw new Error(bgI18n("vfs_error_management_permission_missing"));
-        }
-        return { ok:true, state: await getVfsOptionsState() };
-      }catch(error){
-        return messageError("vfs:options:requestExternalProviderPermission", error);
       }
     }
     if (msg.type === "vfs:options:revokeGrant"){

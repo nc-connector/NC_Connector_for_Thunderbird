@@ -974,6 +974,9 @@
   "sharing_password_separate_backend_required_tooltip": {
     "message": "この機能には Nextcloud バックエンドが必要です。"
   },
+  "vfs_external_pro_required_tooltip": {
+    "message": "外部 VFS プロバイダーを使用するには NC Connector Pro が必要です。"
+  },
   "sharing_password_separate_no_seat_tooltip": {
     "message": "この機能を使うには、管理者があなたのアカウントに NC Connector の seat を割り当てる必要があります。"
   },
@@ -1218,7 +1221,7 @@
     "message": "VFS プロバイダーを探す"
   },
   "sharing_vfs_activation_reload_warning": {
-    "message": "VFS 設定では、外部プロバイダーの有効化または検出権限の付与が必要になる場合があります。どちらの変更でも NC Connector が再読み込みされ、現在のファイル選択が解除される可能性があります。それでも VFS 設定を開きますか？"
+    "message": "外部プロバイダーを有効にすると NC Connector が再読み込みされ、現在のファイル選択が解除される場合があります。それでも VFS 設定を開きますか？"
   },
   "sharing_vfs_navigation_failed": {
     "message": "要求されたページを開けませんでした。"

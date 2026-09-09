@@ -24,13 +24,40 @@
     }
   }
 
-  async function hasManagementPermission(){
-    return browser.permissions.contains({ permissions: ['management'] });
+  async function readExternalSetting(){
+    const stored = await browser.storage.local.get(EXTERNAL_ENABLED_KEY);
+    return Object.freeze({
+      enabled: stored[EXTERNAL_ENABLED_KEY] === true,
+      configured: Object.prototype.hasOwnProperty.call(stored, EXTERNAL_ENABLED_KEY)
+    });
   }
 
-  async function readExternalEnabled(){
-    const stored = await browser.storage.local.get({ [EXTERNAL_ENABLED_KEY]: false });
-    return stored[EXTERNAL_ENABLED_KEY] === true;
+  async function resolveExternalSetting({ policyStatus = null, refresh = false } = {}){
+    const local = await readExternalSetting();
+    const resolvedPolicyStatus = policyStatus
+      || await NCVfsPolicyRuntime.getPolicyStatus({ refresh });
+    return NCVfsPolicyRuntime.resolveExternalSetting(
+      resolvedPolicyStatus,
+      local.enabled,
+      local.configured
+    );
+  }
+
+  async function assertExternalEntitlement(options = {}){
+    const setting = await resolveExternalSetting(options);
+    if (!setting.entitled){
+      throw new Error(NCVfsPolicyRuntime.errorMessage(setting.unavailableReason));
+    }
+    return setting;
+  }
+
+  async function assertExternalAccess(options = {}){
+    const setting = await assertExternalEntitlement(options);
+    if (!setting.enabled){
+      const reason = setting.locked ? 'admin_controlled' : 'disabled';
+      throw new Error(NCVfsPolicyRuntime.errorMessage(reason));
+    }
+    return setting;
   }
 
   async function initializeClient(){
@@ -38,9 +65,8 @@
     client = await import(
       browser.runtime.getURL('vendor/vfs-toolkit/vfs-client/vfs-client.mjs')
     );
-    const permissionGranted = await hasManagementPermission();
-    const externalEnabled = await readExternalEnabled();
-    externalDiscoveryInitialized = permissionGranted && externalEnabled;
+    const externalSetting = await resolveExternalSetting();
+    externalDiscoveryInitialized = externalSetting.enabled;
     await client.init({
       enableExternalProviders: externalDiscoveryInitialized,
       configStorageKey: CLIENT_CONFIG_KEY
@@ -179,7 +205,8 @@
   }
 
   async function listExternalConnections(){
-    if (!(await readExternalEnabled()) || !(await hasManagementPermission())){
+    const setting = await resolveExternalSetting();
+    if (!setting.enabled){
       return [];
     }
     const providers = await listConnections();
@@ -189,7 +216,8 @@
   }
 
   async function listExternalProviders(){
-    if (!(await readExternalEnabled()) || !(await hasManagementPermission())){
+    const setting = await resolveExternalSetting();
+    if (!setting.enabled){
       return [];
     }
     const providers = await listConnections();
@@ -206,9 +234,7 @@
   }
 
   async function connectExternalProvider(providerId){
-    if (!(await readExternalEnabled()) || !(await hasManagementPermission())){
-      throw new Error(bgI18n('vfs_error_management_permission_missing'));
-    }
+    await assertExternalAccess({ refresh: true });
     const normalizedProviderId = String(providerId || '').trim();
     if (!normalizedProviderId || normalizedProviderId === SELF_ADDON_ID){
       throw new Error(bgI18n('vfs_error_external_connection_missing'));
@@ -228,9 +254,7 @@
   }
 
   async function disconnectExternalConnection(storageRef){
-    if (!(await readExternalEnabled()) || !(await hasManagementPermission())){
-      throw new Error(bgI18n('vfs_error_management_permission_missing'));
-    }
+    await assertExternalAccess({ refresh: true });
     const normalized = normalizeStorageRef(storageRef);
     if (!normalized || normalized.providerId === SELF_ADDON_ID){
       throw new Error(bgI18n('vfs_error_external_connection_missing'));
@@ -447,6 +471,9 @@
     const sourceKind = request?.sourceKind === 'nextcloud'
       ? 'nextcloud'
       : 'external-vfs';
+    if (sourceKind === 'external-vfs'){
+      await assertExternalAccess({ refresh: true });
+    }
     const entryKind = request?.entryKind === 'folder' ? 'folder' : 'file';
     const connection = sourceKind === 'nextcloud'
       ? await resolveOwnConnection()
@@ -502,36 +529,59 @@
     return Object.freeze({ cancelled: false, entries: Object.freeze(queueEntries) });
   }
 
-  async function getStatus(){
+  async function getStatus(policyStatus = null){
     await readyPromise;
-    const enabled = await readExternalEnabled();
-    const permissionGranted = await hasManagementPermission();
-    const connections = enabled && permissionGranted
+    const setting = await resolveExternalSetting({ policyStatus });
+    const connections = setting.enabled
       ? await listExternalConnections()
       : [];
-    const providers = enabled && permissionGranted
+    const providers = setting.enabled
       ? await listExternalProviders()
       : [];
     return Object.freeze({
-      enabled,
-      permissionGranted,
+      enabled: setting.enabled,
+      localEnabled: setting.localEnabled,
+      locked: setting.locked,
+      entitled: setting.entitled,
+      unavailableReason: setting.unavailableReason,
       initialized: externalDiscoveryInitialized,
       connections: Object.freeze(connections),
       providers: Object.freeze(providers)
     });
   }
 
-  async function setExternalEnabled(enabled){
+  async function setExternalEnabled(enabled, policyStatus = null){
     const nextEnabled = enabled === true;
-    const permissionGranted = await hasManagementPermission();
-    if (nextEnabled && !permissionGranted){
-      throw new Error(bgI18n('vfs_error_management_permission_missing'));
+    const setting = await resolveExternalSetting({
+      policyStatus,
+      refresh: !policyStatus
+    });
+    if (!setting.entitled){
+      if (nextEnabled !== setting.enabled){
+        throw new Error(NCVfsPolicyRuntime.errorMessage(setting.unavailableReason));
+      }
+      return Object.freeze({
+        reloadRequired: setting.enabled !== externalDiscoveryInitialized,
+        ...setting
+      });
+    }
+    if (setting.locked){
+      if (nextEnabled !== setting.enabled){
+        throw new Error(NCVfsPolicyRuntime.errorMessage('admin_controlled'));
+      }
+      return Object.freeze({
+        reloadRequired: setting.enabled !== externalDiscoveryInitialized,
+        ...setting
+      });
     }
     await browser.storage.local.set({ [EXTERNAL_ENABLED_KEY]: nextEnabled });
     return Object.freeze({
       reloadRequired: nextEnabled !== externalDiscoveryInitialized,
       enabled: nextEnabled,
-      permissionGranted
+      localEnabled: nextEnabled,
+      locked: false,
+      entitled: true,
+      unavailableReason: ''
     });
   }
 
@@ -601,11 +651,16 @@
     ready: () => readyPromise,
     getStatus,
     setExternalEnabled,
+    assertExternalEntitlement,
+    assertExternalAccess,
     listExternalConnections,
     listExternalProviders,
     connectExternalProvider,
     disconnectExternalConnection,
     readFile: async (entry, options) => {
+      if (String(entry?.storageRef?.providerId || '') !== SELF_ADDON_ID){
+        await assertExternalAccess();
+      }
       const toolkit = await readyPromise;
       return toolkit.readFile(entry, options);
     }

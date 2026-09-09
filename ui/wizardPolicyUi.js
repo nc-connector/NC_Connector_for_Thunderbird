@@ -10,6 +10,7 @@
   const BACKEND_REQUIRED_FALLBACK = "This feature requires the Nextcloud backend.";
   const NO_SEAT_FALLBACK = "Your administrator must assign an NC Connector seat to your account for this feature.";
   const SEAT_PAUSED_FALLBACK = "Your NC Connector seat is currently paused. Please contact your Nextcloud administrator.";
+  const PRO_REQUIRED_FALLBACK = "External VFS providers require NC Connector Pro.";
 
   function text(translate, key, fallback = ""){
     if (typeof translate !== "function"){
@@ -42,6 +43,25 @@
 
   function isSeparatePasswordFeatureAvailable(policyStatus){
     return NCPolicyState.hasSeatEntitlement(policyStatus);
+  }
+
+  function getVfsExternalUnavailableHint(reason, translate){
+    switch (String(reason || "")){
+      case "backend_required":
+        return text(translate, "sharing_password_separate_backend_required_tooltip", BACKEND_REQUIRED_FALLBACK);
+      case "pro_required":
+        return text(translate, "vfs_external_pro_required_tooltip", PRO_REQUIRED_FALLBACK);
+      case "license_invalid":
+        return text(translate, "policy_warning_license_invalid", LICENSE_INVALID_FALLBACK);
+      case "seat_required":
+        return text(translate, "sharing_password_separate_no_seat_tooltip", NO_SEAT_FALLBACK);
+      case "seat_paused":
+        return text(translate, "sharing_password_separate_paused_tooltip", SEAT_PAUSED_FALLBACK);
+      case "admin_controlled":
+        return getAdminControlledHint(translate);
+      default:
+        return "";
+    }
   }
 
   function readPolicyDomain(status, domain){
@@ -244,6 +264,7 @@
     getAdminControlledHint,
     getSeparatePasswordUnavailableHint,
     isSeparatePasswordFeatureAvailable,
+    getVfsExternalUnavailableHint,
     readPolicyDomain,
     applyPolicyWarningUi,
     readPolicyBoundDefaults,

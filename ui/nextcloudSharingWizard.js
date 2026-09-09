@@ -93,7 +93,9 @@
       external: {
         loadState: 'idle',
         enabled: false,
-        permissionGranted: false,
+        locked: false,
+        entitled: false,
+        unavailableReason: '',
         initialized: false,
         connections: [],
         providers: []
@@ -1168,6 +1170,19 @@
     updateButtons();
   }
 
+  function isExternalSourceBlocked(){
+    const external = state.vfsAvailability.external;
+    return external.entitled !== true || (external.locked && !external.enabled);
+  }
+
+  function getExternalSourceUnavailableTitle(){
+    const external = state.vfsAvailability.external;
+    const reason = external.entitled !== true
+      ? external.unavailableReason
+      : (external.locked && !external.enabled ? 'admin_controlled' : '');
+    return NCWizardPolicyUi.getVfsExternalUnavailableHint(reason, wizardTranslate);
+  }
+
   function updateButtons(){
     const busy = state.shareFolderCheckInProgress
       || state.sourceSelectionInProgress
@@ -1175,6 +1190,7 @@
       || state.finalizeInProgress;
     const sourceControlsDisabled = state.finalizeStarted || busy;
     const externalConnectionReady = state.vfsAvailability.external.connections.length > 0;
+    const externalBlocked = isExternalSourceBlocked();
     queueView?.setRemovalDisabled(sourceControlsDisabled);
     [
       dom.addFilesBtn,
@@ -1191,12 +1207,12 @@
     });
     [dom.addExternalFilesBtn, dom.addExternalFolderBtn].forEach((control) => {
       if (control){
-        control.disabled = sourceControlsDisabled || !externalConnectionReady;
+        control.disabled = sourceControlsDisabled || externalBlocked || !externalConnectionReady;
       }
     });
     [dom.openVfsSettingsBtn, dom.findVfsProvidersBtn].forEach((control) => {
       if (control){
-        control.disabled = sourceControlsDisabled;
+        control.disabled = sourceControlsDisabled || externalBlocked;
       }
     });
     renderExternalSourceMenu();
@@ -1214,7 +1230,8 @@
     setSourceActionState({
       action: dom.externalSourceAction,
       summary: dom.externalSourceSummary,
-      disabled: sourceControlsDisabled
+      disabled: sourceControlsDisabled || externalBlocked,
+      unavailableTitle: getExternalSourceUnavailableTitle()
     });
     if (sourceControlsDisabled){
       closeSourceMenus();
@@ -1269,9 +1286,7 @@
     action?.setAttribute('aria-disabled', isDisabled ? 'true' : 'false');
     summary?.setAttribute('aria-disabled', isDisabled ? 'true' : 'false');
     if (summary){
-      const availabilityBlocked = unavailableTitle
-        && action === dom.nextcloudSourceAction
-        && !state.vfsAvailability.nextcloud;
+      const availabilityBlocked = unavailableTitle && isDisabled;
       summary.title = availabilityBlocked
         ? unavailableTitle
         : String(summary.querySelector('span')?.textContent || '').trim();
@@ -1304,7 +1319,9 @@
     state.vfsAvailability.external = {
       loadState: externalStatus ? 'ready' : 'error',
       enabled: externalStatus?.enabled === true,
-      permissionGranted: externalStatus?.permissionGranted === true,
+      locked: externalStatus?.locked === true,
+      entitled: externalStatus?.entitled === true,
+      unavailableReason: String(externalStatus?.unavailableReason || ''),
       initialized: externalStatus?.initialized === true,
       connections: Array.isArray(externalStatus?.connections)
         ? externalStatus.connections
@@ -1338,8 +1355,6 @@
           noticeKey = 'sharing_vfs_external_load_failed_notice';
         }else if (!external.enabled){
           noticeKey = 'sharing_vfs_external_disabled_notice';
-        }else if (!external.permissionGranted){
-          noticeKey = 'sharing_vfs_external_permission_notice';
         }else if (!external.providers.length){
           noticeKey = 'sharing_vfs_external_no_providers_notice';
         }else{
@@ -1352,7 +1367,7 @@
     if (dom.openVfsSettingsLabel){
       const settingsKey = hasConnections
         ? 'sharing_vfs_add_connection'
-        : (external.enabled && external.permissionGranted && external.providers.length
+        : (external.enabled && external.providers.length
           ? 'sharing_vfs_set_up_connection'
           : 'sharing_vfs_open_settings');
       dom.openVfsSettingsLabel.textContent = i18n(settingsKey);
@@ -1361,8 +1376,7 @@
 
   async function openExternalSourcePage(messageType, { warnBeforeActivation = false } = {}){
     const external = state.vfsAvailability.external;
-    const activationReloadPending = external.initialized !== true
-      || external.permissionGranted !== true;
+    const activationReloadPending = external.enabled && external.initialized !== true;
     if (warnBeforeActivation
       && activationReloadPending
       && state.files.length > 0

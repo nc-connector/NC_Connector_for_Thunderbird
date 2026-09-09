@@ -93,11 +93,12 @@ async function checkRouterLeavesToolkitMessagesUnclaimed(){
       }
     },
     NCVfsClientRuntime: {
+      async assertExternalEntitlement(){},
       async getStatus(){
         externalStatusCalls++;
         return {
           enabled: true,
-          permissionGranted: true,
+          entitled: true,
           initialized: true,
           connections: [{ storageRef: { providerId: "provider@test", storageId: "storage" } }],
           providers: [{ providerId: "provider@test", providerName: "Provider", connectionCount: 1 }]
@@ -969,9 +970,9 @@ async function checkMixedSourcePlan(){
 function checkManifestAndReviewSurface(){
   const manifest = readJson("manifest.json");
   assert(
-    manifest.optional_permissions.includes("management")
-      && !manifest.permissions.includes("management"),
-    "External provider discovery must use an optional management permission"
+    manifest.permissions.includes("management")
+      && !manifest.optional_permissions.includes("management"),
+    "External provider discovery must receive management access during installation"
   );
   const scripts = manifest.background.scripts;
   const expectedOrder = [
@@ -979,6 +980,7 @@ function checkManifestAndReviewSurface(){
     "modules/fileLinkTransfer.js",
     "modules/fileLinkRootReservation.js",
     "modules/fileLinkUpload.js",
+    "modules/vfsPolicyRuntime.js",
     "modules/nextcloudVfsStorage.js",
     "modules/vfsProviderRuntime.js",
     "modules/vfsClientRuntime.js",
@@ -1036,18 +1038,19 @@ function checkManifestAndReviewSurface(){
     "Returning from a VFS picker must not refresh while its runtime actor is closing"
   );
   assert(
-    /action: dom\.externalSourceAction,[\s\S]{0,160}?disabled: sourceControlsDisabled\s*\}/.test(wizardRuntime)
+    /action: dom\.externalSourceAction,[\s\S]{0,220}?disabled: sourceControlsDisabled \|\| externalBlocked/.test(wizardRuntime)
       && wizardRuntime.includes("state.vfsAvailability.external.connections.length > 0")
       && wizardRuntime.includes("type: 'vfs:getExternalStatus'")
-      && wizardRuntime.includes("external.permissionGranted !== true")
+      && wizardRuntime.includes("getVfsExternalUnavailableHint")
       && wizardRuntime.includes("sharing_vfs_activation_reload_warning"),
-    "Other sources must stay reachable for setup and warn before a queue-clearing activation flow"
+    "Other sources must be entitlement-gated and warn before a queue-clearing activation flow"
   );
   const backgroundRouter = readText("modules/bgRouter.js");
   const updateSettingsStart = backgroundRouter.indexOf('msg.type === "vfs:options:updateSettings"');
-  const updateSettingsEnd = backgroundRouter.indexOf('msg.type === "vfs:options:requestExternalProviderPermission"');
+  const updateSettingsEnd = backgroundRouter.indexOf('msg.type === "vfs:options:revokeGrant"');
   const updateSettingsBlock = backgroundRouter.slice(updateSettingsStart, updateSettingsEnd);
   const optionsVfsRuntime = readText("ui/optionsVfs.js");
+  const optionsHtml = readText("options.html");
   const optionsRuntime = readText("options.js");
   assert(
     optionsRuntime.includes('new URLSearchParams(window.location.search).get("tab")')
@@ -1064,14 +1067,30 @@ function checkManifestAndReviewSurface(){
       && /finally\{\s*updateAuthModeUI\(\);\s*\}\s*if \(vfsReloadRequired\)\{[\s\S]*?browser\.runtime\.reload\(\);/s.test(optionsRuntime),
     "VFS setting changes must reload only after the complete options save has settled"
   );
+  assert(
+    !optionsHtml.includes('id="vfsRequestExternalPermission"')
+      && !optionsVfsRuntime.includes("browser.permissions.request")
+      && optionsVfsRuntime.includes("getVfsExternalUnavailableHint"),
+    "VFS settings must explain policy and entitlement gates without a runtime management-permission flow"
+  );
   const sourceRuntime = readText("modules/fileLinkSources.js");
   assert(!sourceRuntime.includes("storage.local"), "External File content must not be staged in extension storage");
   assert(!sourceRuntime.includes("indexedDB"), "External File content must not be staged in IndexedDB");
   assert(!sourceRuntime.includes("showSaveFilePicker"), "External File content must not be staged on disk");
   const clientRuntime = readText("modules/vfsClientRuntime.js");
+  const vfsPolicyRuntime = readText("modules/vfsPolicyRuntime.js");
   assert(
     /const pickerOptions = \{[\s\S]*?showToolbarActions: false,[\s\S]*?showContextMenu: false,[\s\S]*?signal: selection\.controller\.signal[\s\S]*?\};/.test(clientRuntime),
     "NC Connector source pickers must hide Toolkit management actions and context menus through public options"
+  );
+  assert(
+    clientRuntime.includes("assertExternalEntitlement")
+      && clientRuntime.includes("assertExternalAccess")
+      && clientRuntime.includes("if (String(entry?.storageRef?.providerId || '') !== SELF_ADDON_ID)")
+      && vfsPolicyRuntime.includes("SHARE_POLICY_KEYS.vfsExternalProvidersEnabled")
+      && readText("modules/sharingStorage.js").includes('vfsExternalProvidersEnabled: "vfs_external_providers_enabled"')
+      && readText("modules/ncSharing.js").includes("NCVfsClientRuntime.assertExternalAccess({ refresh: true })"),
+    "External VFS access must be checked at discovery, selection, read, and pre-upload boundaries"
   );
   const providerRuntime = readText("modules/vfsProviderRuntime.js");
   const storageRuntime = readText("modules/nextcloudVfsStorage.js");

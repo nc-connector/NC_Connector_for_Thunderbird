@@ -974,6 +974,9 @@
   "sharing_password_separate_backend_required_tooltip": {
     "message": "Tato funkce vyžaduje Nextcloud backend."
   },
+  "vfs_external_pro_required_tooltip": {
+    "message": "Externí poskytovatelé VFS vyžadují NC Connector Pro."
+  },
   "sharing_password_separate_no_seat_tooltip": {
     "message": "Váš správce vám musí pro tuto funkci přiřadit seat NC Connector."
   },
@@ -1218,7 +1221,7 @@
     "message": "Vyhledat poskytovatele VFS"
   },
   "sharing_vfs_activation_reload_warning": {
-    "message": "Nastavení VFS může vyžadovat povolení externích poskytovatelů nebo udělení oprávnění k jejich vyhledávání. Kterákoli z těchto změn může způsobit opětovné načtení aplikace NC Connector a vymazání aktuálního výběru souborů. Přesto otevřít nastavení VFS?"
+    "message": "Povolení externích poskytovatelů může znovu načíst NC Connector a vymazat aktuální výběr souborů. Přesto otevřít nastavení VFS?"
   },
   "sharing_vfs_navigation_failed": {
     "message": "Požadovanou stránku se nepodařilo otevřít."

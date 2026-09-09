@@ -41,6 +41,7 @@
     const value = stored[PROVIDER_STATE_KEY];
     return {
       enabled: value?.enabled === true,
+      enabledConfigured: value?.enabledConfigured === true,
       accountKey: String(value?.accountKey || ''),
       selfStorageId: String(value?.selfStorageId || '')
     };
@@ -49,6 +50,7 @@
   async function writeState(state){
     const value = {
       enabled: state?.enabled === true,
+      enabledConfigured: state?.enabledConfigured === true,
       accountKey: String(state?.accountKey || ''),
       selfStorageId: String(state?.selfStorageId || '')
     };
@@ -141,6 +143,7 @@
       await removeConnections(() => true);
       state = await writeState({
         enabled: state.enabled,
+        enabledConfigured: state.enabledConfigured,
         accountKey: identity.key,
         selfStorageId: createStorageId()
       });
@@ -151,6 +154,7 @@
     }else if (!state.accountKey || !state.selfStorageId){
       state = await writeState({
         enabled: state.enabled,
+        enabledConfigured: state.enabledConfigured,
         accountKey: identity.key,
         selfStorageId: state.selfStorageId || createStorageId()
       });
@@ -177,7 +181,13 @@
     if (normalizedStorageId === state.selfStorageId){
       return state;
     }
-    if (!state.enabled){
+    const policyStatus = await NCVfsPolicyRuntime.getPolicyStatus();
+    const setting = NCVfsPolicyRuntime.resolveProviderSetting(
+      policyStatus,
+      state.enabled,
+      state.enabledConfigured
+    );
+    if (!setting.enabled){
       throw global.NCNextcloudVfsStorage.createVfsError('E:AUTH', 'Nextcloud VFS access is disabled');
     }
     const connections = await readConnections();
@@ -344,7 +354,7 @@
 
   const readyPromise = createProviderImplementation();
 
-  async function getStatus(){
+  async function getStatus(policyStatus = null){
     await readyPromise;
     let account = null;
     try{
@@ -355,6 +365,15 @@
       }
     }
     const state = await readState();
+    const resolvedPolicyStatus = policyStatus || await NCVfsPolicyRuntime.getPolicyStatus();
+    const setting = NCVfsPolicyRuntime.resolveProviderSetting(
+      resolvedPolicyStatus,
+      state.enabled,
+      state.enabledConfigured
+    );
+    if (!setting.enabled){
+      await removeConnections((entry) => entry.addonId !== SELF_ADDON_ID);
+    }
     const connections = await readConnections();
     const grants = connections
       .filter((entry) => entry.addonId !== SELF_ADDON_ID)
@@ -365,7 +384,9 @@
         access: 'read-write'
       }));
     return Object.freeze({
-      enabled: state.enabled,
+      enabled: setting.enabled,
+      localEnabled: setting.localEnabled,
+      locked: setting.locked,
       accountConfigured: !!account,
       accountLabel: account ? getConnectionLabel(account.identity) : '',
       selfStorageRef: account
@@ -375,14 +396,35 @@
     });
   }
 
-  async function setEnabled(enabled){
+  async function setEnabled(enabled, policyStatus = null){
     await readyPromise;
     const current = await readState();
-    await writeState({ ...current, enabled: enabled === true });
-    if (enabled !== true){
+    const resolvedPolicyStatus = policyStatus || await NCVfsPolicyRuntime.getPolicyStatus({ refresh: true });
+    const currentSetting = NCVfsPolicyRuntime.resolveProviderSetting(
+      resolvedPolicyStatus,
+      current.enabled,
+      current.enabledConfigured
+    );
+    if (currentSetting.locked){
+      if ((enabled === true) !== currentSetting.enabled){
+        throw new Error(bgI18n('policy_admin_controlled_tooltip'));
+      }
+      return getStatus(resolvedPolicyStatus);
+    }
+    const next = await writeState({
+      ...current,
+      enabled: enabled === true,
+      enabledConfigured: true
+    });
+    const nextSetting = NCVfsPolicyRuntime.resolveProviderSetting(
+      resolvedPolicyStatus,
+      next.enabled,
+      next.enabledConfigured
+    );
+    if (!nextSetting.enabled){
       await removeConnections((entry) => entry.addonId !== SELF_ADDON_ID);
     }
-    return getStatus();
+    return getStatus(resolvedPolicyStatus);
   }
 
   async function grantConsumer({ setupToken } = {}){
@@ -392,7 +434,13 @@
       throw global.NCNextcloudVfsStorage.createVfsError('E:AUTH', 'Invalid VFS consumer');
     }
     const { state, identity } = await reconcileAccount();
-    if (!state.enabled){
+    const policyStatus = await NCVfsPolicyRuntime.getPolicyStatus({ refresh: true });
+    const setting = NCVfsPolicyRuntime.resolveProviderSetting(
+      policyStatus,
+      state.enabled,
+      state.enabledConfigured
+    );
+    if (!setting.enabled){
       throw global.NCNextcloudVfsStorage.createVfsError('E:AUTH', 'Nextcloud VFS access is disabled');
     }
     const storageId = createStorageId();
@@ -409,7 +457,12 @@
       await removeConnections((entry) => entry.storageId === storageId);
       throw error;
     }
-    if (!current.state.enabled
+    const currentSetting = NCVfsPolicyRuntime.resolveProviderSetting(
+      await NCVfsPolicyRuntime.getPolicyStatus({ refresh: true }),
+      current.state.enabled,
+      current.state.enabledConfigured
+    );
+    if (!currentSetting.enabled
       || current.state.accountKey !== state.accountKey
       || current.state.selfStorageId !== state.selfStorageId){
       await removeConnections((entry) => entry.storageId === storageId);

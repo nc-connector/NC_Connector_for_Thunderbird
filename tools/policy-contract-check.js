@@ -19,7 +19,8 @@ function createActiveStatus(){
       seatAssigned: true,
       isValid: true,
       seatState: "active",
-      overlicensed: false
+      overlicensed: false,
+      mode: "pro"
     },
     policy: {
       share: {
@@ -39,6 +40,26 @@ function createActiveStatus(){
       share: { available: true, active: true }
     }
   };
+}
+
+function loadVfsPolicyRuntime(){
+  const context = {
+    globalThis: null,
+    Date,
+    bgI18n: (key) => key,
+    NCPolicyRuntime: { getPolicyStatus: async () => createActiveStatus() },
+    NCSharingStorage: {
+      SHARE_POLICY_KEYS: {
+        vfsProviderEnabled: "vfs_provider_enabled",
+        vfsExternalProvidersEnabled: "vfs_external_providers_enabled"
+      }
+    }
+  };
+  context.globalThis = context;
+  vm.createContext(context);
+  loadScript("modules/policyState.js", context, "\nglobalThis.NCPolicyState = NCPolicyState;");
+  loadScript("modules/vfsPolicyRuntime.js", context, "\nglobalThis.NCVfsPolicyRuntime = NCVfsPolicyRuntime;");
+  return context.NCVfsPolicyRuntime;
 }
 
 function loadPolicyRuntime(payload){
@@ -109,6 +130,18 @@ async function run(){
 
   assert(policy.isSeatUsable(activeStatus.status) === true, "Active assigned seat should be usable");
   assert(policy.hasSeatEntitlement(activeStatus) === true, "Active endpoint and seat should have entitlement");
+  assert(policy.hasProSeatEntitlement(activeStatus) === true, "An active Pro seat should unlock Pro features");
+  assert(
+    policy.getProSeatUnavailableReason({ ...activeStatus, endpointAvailable: false }) === "backend_required",
+    "A missing backend must explain that Pro-gated features require the backend"
+  );
+  assert(
+    policy.getProSeatUnavailableReason({
+      ...activeStatus,
+      status: { ...activeStatus.status, mode: "community" }
+    }) === "pro_required",
+    "Community mode must not unlock Pro-only VFS sources"
+  );
   assert(
     policy.hasSeatEntitlement({ ...activeStatus, status: { ...activeStatus.status, seatState: "ACTIVE" } }) === true,
     "Seat state matching should be case-insensitive"
@@ -149,6 +182,32 @@ async function run(){
   assert(domainState.available === true && domainState.active === true, "Domain state should be active when policy/editable domains and seat are present");
   const missingEditableState = policy.buildDomainState(activeStatus.policy.share, null, true);
   assert(missingEditableState.available === false && missingEditableState.active === false, "Policy domain without editable metadata should be inactive");
+
+  const vfsPolicy = loadVfsPolicyRuntime();
+  const oldBackendStatus = createActiveStatus();
+  const oldBackendSetting = vfsPolicy.resolveExternalSetting(oldBackendStatus, true, true);
+  assert(
+    oldBackendSetting.enabled === true && oldBackendSetting.locked === false,
+    "A backend without VFS policy keys must preserve the user's local VFS setting"
+  );
+  const lockedStatus = createActiveStatus();
+  lockedStatus.policy.share.vfs_external_providers_enabled = false;
+  lockedStatus.policyEditable.share.vfs_external_providers_enabled = false;
+  const lockedSetting = vfsPolicy.resolveExternalSetting(lockedStatus, true, true);
+  assert(
+    lockedSetting.enabled === false && lockedSetting.locked === true,
+    "A locked backend policy must override the local external-provider setting"
+  );
+  const communitySetting = vfsPolicy.resolveExternalSetting({
+    ...activeStatus,
+    status: { ...activeStatus.status, mode: "community" }
+  }, true, true);
+  assert(
+    communitySetting.enabled === false
+      && communitySetting.entitled === false
+      && communitySetting.unavailableReason === "pro_required",
+    "Community mode must close only the external-provider gate"
+  );
 
   const runtime = loadPolicyRuntime(createOverlicensedPayload());
   const overlicensedStatus = await runtime.getPolicyStatus();

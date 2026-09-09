@@ -144,7 +144,14 @@ Do not use **Save as Template** for a message that contains an NC Connector shar
 The **VFS** options tab controls two independent functions:
 
 - **NC Connector as provider** exposes the already configured Nextcloud account to another compatible Thunderbird add-on. It is disabled by default. Each connection requires an explicit user grant and provides full read/write file access for that Nextcloud user; grants can be revoked in the same tab.
-- **External VFS providers** let users add files and folders from compatible storage add-ons to the Sharing wizard. Provider discovery is disabled by default and requests Thunderbird's optional add-on-management permission only when the user enables it. NC Connector reloads the add-on automatically after activation; reopen the settings if necessary, then use **Connect** beside a detected provider to complete that provider's own setup. Established storage connections can be removed again with **Disconnect**.
+- **External VFS providers** let users add files and folders from compatible storage add-ons to the Sharing wizard. This function requires the NC Connector Backend in Pro mode and an active seat assigned to the current account. Without the backend, the disabled setting and **Other source** action explain that the backend is required. NC Connector receives Thunderbird's add-on-management permission during installation so administrators do not have to manage a second runtime permission. Provider discovery remains disabled until the effective VFS setting enables it. Established storage connections can be removed with **Disconnect** and are retained when the entitlement or policy later closes the gate.
+
+Both switches can be set under **Administration settings → NC Connector Backend → Group Settings → Default Settings → Shares → Thunderbird only – Virtual File System (VFS)**. They support the same editable, forced, group, and user layers as the other Share policies:
+
+- `vfs_provider_enabled` controls whether NC Connector accepts new or existing grants from other add-ons. This switch does not require Pro.
+- `vfs_external_providers_enabled` controls the external-source function. An enabled policy does not bypass the Pro and seat checks.
+
+An older backend that does not return these two keys leaves the local switches editable. Local files, **My Nextcloud**, and NC Connector's own VFS provider continue to work without the backend; only external providers are backend- and Pro-gated.
 
 There is no second Nextcloud login for VFS. Changing the configured Nextcloud server or canonical user invalidates all existing provider grants so they cannot silently point to another account. Changing only the app password for the same account keeps the storage identity.
 

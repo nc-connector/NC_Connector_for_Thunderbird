@@ -20,10 +20,10 @@
     "accountsRead",
     "compose",
     "compose.send",
+    "management",
     "notifications"
   ],
   "optional_permissions": [
-    "management",
     "https://*/*"
   ],
   "background": {
@@ -58,6 +58,7 @@
       "modules/policyState.js",
       "modules/shareRequestRules.js",
       "modules/policyRuntime.js",
+      "modules/vfsPolicyRuntime.js",
       "modules/passwordPolicyRuntime.js",
       "modules/talkAddressbook.js",
       "modules/talkcore.js",

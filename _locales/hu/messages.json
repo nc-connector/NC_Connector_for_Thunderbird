@@ -974,6 +974,9 @@
   "sharing_password_separate_backend_required_tooltip": {
     "message": "Ehhez a funkcióhoz a Nextcloud backend szükséges."
   },
+  "vfs_external_pro_required_tooltip": {
+    "message": "A külső VFS-szolgáltatókhoz NC Connector Pro szükséges."
+  },
   "sharing_password_separate_no_seat_tooltip": {
     "message": "A rendszergazdának ehhez a funkcióhoz NC Connector seatet kell hozzárendelnie a fiókjához."
   },
@@ -1218,7 +1221,7 @@
     "message": "VFS-szolgáltatók keresése"
   },
   "sharing_vfs_activation_reload_warning": {
-    "message": "A VFS-beállításokban szükség lehet a külső szolgáltatók engedélyezésére vagy a felderítési engedély megadására. Bármelyik módosítás hatására újratöltődhet az NC Connector, és törlődhet az aktuális fájlkijelölés. Mégis megnyitja a VFS-beállításokat?"
+    "message": "A külső szolgáltatók engedélyezése újratöltheti az NC Connectort, és törölheti az aktuális fájlkijelölést. Mégis megnyitja a VFS-beállításokat?"
   },
   "sharing_vfs_navigation_failed": {
     "message": "A kért oldalt nem sikerült megnyitni."

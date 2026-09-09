@@ -974,6 +974,9 @@
   "sharing_password_separate_backend_required_tooltip": {
     "message": "Для этой функции требуется backend Nextcloud."
   },
+  "vfs_external_pro_required_tooltip": {
+    "message": "Для внешних поставщиков VFS требуется NC Connector Pro."
+  },
   "sharing_password_separate_no_seat_tooltip": {
     "message": "Для этой функции администратор должен назначить вашей учётной записи seat NC Connector."
   },
@@ -1218,7 +1221,7 @@
     "message": "Найти провайдеров VFS"
   },
   "sharing_vfs_activation_reload_warning": {
-    "message": "В настройках VFS может потребоваться включить внешних провайдеров или предоставить разрешение на их поиск. Любое из этих изменений может привести к перезагрузке NC Connector и сбросу текущего выбора файлов. Всё равно открыть настройки VFS?"
+    "message": "При включении внешних поставщиков NC Connector может перезагрузиться, а текущий выбор файлов — очиститься. Всё равно открыть параметры VFS?"
   },
   "sharing_vfs_navigation_failed": {
     "message": "Не удалось открыть запрошенную страницу."

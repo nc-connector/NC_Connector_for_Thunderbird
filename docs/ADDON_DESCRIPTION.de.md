@@ -77,7 +77,7 @@ Datenfluss:
 - Stellt die bereits eingerichtete Nextcloud nach einer ausdrücklichen, widerrufbaren Freigabe pro Add-on als vollständig schreib- und lesefähigen VFS-Anbieter bereit
 - Nutzt die bestehende Nextcloud-Anmeldung und die gemeinsame DAV-Implementierung; ein Wechsel von Server oder kanonischem Benutzer verwirft vorherige Anbieterfreigaben
 - Nutzt für Anbieter-Schreibvorgänge dieselbe Auswahl zwischen Direct und Chunked v2 sowie dieselben Wiederholungs-, Abbruch-, Fortschritts-, Cleanup- und Log-Pfade; unabhängige VFS-Schreibvorgänge werden nicht zu DAV-Bulk-Batches zusammengefasst
-- Erkennt externe VFS-Anbieter erst, nachdem der Benutzer die Funktion aktiviert und die optionale Thunderbird-Berechtigung zur Add-on-Verwaltung erteilt hat
+- Erkennt externe VFS-Anbieter nur bei wirksamer Freigabe-Policy und wenn das Nextcloud-Backend NC Connector Pro mit aktivem zugewiesenem Seat meldet; der Zugriff auf die Add-on-Verwaltung wird bei der Installation erteilt
 - Unterstützt im Freigabe-Assistenten die Datei- und Ordnerauswahl aus der eingerichteten Nextcloud und externen Anbietern
 
 ### Talk

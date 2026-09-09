@@ -70,6 +70,29 @@ const NCPolicyState = (() => {
     );
   }
 
+  function getProSeatUnavailableReason(status){
+    if (!isEndpointAvailable(status)){
+      return "backend_required";
+    }
+    if (String(status?.status?.mode || "").trim().toLowerCase() !== "pro"){
+      return "pro_required";
+    }
+    if (status?.status?.overlicensed){
+      return "license_invalid";
+    }
+    if (!status?.status?.seatAssigned){
+      return "seat_required";
+    }
+    if (!isSeatUsable(status?.status)){
+      return "seat_paused";
+    }
+    return "";
+  }
+
+  function hasProSeatEntitlement(status){
+    return getProSeatUnavailableReason(status) === "";
+  }
+
   function buildDomainState(policyDomain, editableDomain, seatUsable){
     const available = isObject(policyDomain) && isObject(editableDomain);
     return {
@@ -167,6 +190,8 @@ const NCPolicyState = (() => {
     isSeatUsable,
     isEndpointAvailable,
     hasSeatEntitlement,
+    getProSeatUnavailableReason,
+    hasProSeatEntitlement,
     buildDomainState,
     isDomainAvailable,
     isDomainActive,

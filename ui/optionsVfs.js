@@ -11,7 +11,6 @@
   const MESSAGE_TYPES = Object.freeze({
     getState: "vfs:options:getState",
     updateSettings: "vfs:options:updateSettings",
-    requestExternalPermission: "vfs:options:requestExternalProviderPermission",
     revokeGrant: "vfs:options:revokeGrant",
     connectProvider: "vfs:options:connectProvider",
     disconnectConnection: "vfs:options:disconnectConnection",
@@ -22,13 +21,14 @@
 
   const runtimeNotice = document.getElementById("vfsRuntimeNotice");
   const providerEnabledInput = document.getElementById("vfsProviderEnabled");
+  const providerEnabledRow = document.getElementById("vfsProviderEnabledRow");
   const providerStatusDot = document.getElementById("vfsProviderStatusDot");
   const providerStatus = document.getElementById("vfsProviderStatus");
   const grantList = document.getElementById("vfsGrantList");
   const noGrants = document.getElementById("vfsNoGrants");
   const externalEnabledInput = document.getElementById("vfsExternalProvidersEnabled");
-  const externalPermissionStatus = document.getElementById("vfsExternalPermissionStatus");
-  const requestExternalPermissionButton = document.getElementById("vfsRequestExternalPermission");
+  const externalEnabledRow = document.getElementById("vfsExternalEnabledRow");
+  const externalSection = document.getElementById("vfsExternalSection");
   const refreshConnectionsButton = document.getElementById("vfsRefreshConnections");
   const connectionList = document.getElementById("vfsConnectionList");
   const noConnections = document.getElementById("vfsNoConnections");
@@ -100,13 +100,19 @@
     return {
       provider: {
         enabled: provider.enabled === true,
+        localEnabled: provider.localEnabled === true,
+        locked: provider.locked === true,
         connectionReady: provider.connectionReady === true,
         status: PROVIDER_STATUSES.has(provider.status) ? provider.status : "error",
         grants
       },
       external: {
         enabled: external.enabled === true,
-        permissionGranted: external.permissionGranted === true,
+        localEnabled: external.localEnabled === true,
+        locked: external.locked === true,
+        entitled: external.entitled === true,
+        unavailableReason: normalizeText(external.unavailableReason),
+        initialized: external.initialized === true,
         connections,
         providers
       }
@@ -259,21 +265,46 @@
 
   function updateControls(){
     const providerConnectionReady = currentState?.provider?.connectionReady === true;
-    const permissionGranted = currentState?.external?.permissionGranted === true;
+    const externalEntitled = currentState?.external?.entitled === true;
+    const providerLocked = currentState?.provider?.locked === true;
+    const externalLocked = currentState?.external?.locked === true;
+    const externalHint = global.NCWizardPolicyUi.getVfsExternalUnavailableHint(
+      currentState?.external?.unavailableReason,
+      i18n
+    );
+    const adminHint = i18n("policy_admin_controlled_tooltip");
+    const externalBlocked = !externalEntitled
+      || (externalLocked && currentState?.external?.enabled !== true);
+    const externalSectionHint = externalLocked && currentState?.external?.enabled !== true
+      ? adminHint
+      : externalHint;
     if (providerEnabledInput){
-      providerEnabledInput.disabled = !runtimeAvailable || !providerConnectionReady || actionPending;
+      providerEnabledInput.disabled = !runtimeAvailable
+        || !providerConnectionReady
+        || providerLocked
+        || actionPending;
+    }
+    if (providerEnabledRow){
+      providerEnabledRow.classList.toggle("is-disabled", providerLocked);
+      providerEnabledRow.title = providerLocked ? adminHint : "";
     }
     if (externalEnabledInput){
       externalEnabledInput.disabled = !runtimeAvailable
         || actionPending
-        || (!permissionGranted && currentState?.external?.enabled !== true);
+        || !externalEntitled
+        || externalLocked;
     }
-    if (requestExternalPermissionButton){
-      requestExternalPermissionButton.disabled = !runtimeAvailable || permissionGranted || actionPending;
+    if (externalEnabledRow){
+      externalEnabledRow.classList.toggle("is-disabled", externalLocked);
+      externalEnabledRow.title = externalLocked ? adminHint : externalHint;
+    }
+    if (externalSection){
+      externalSection.classList.toggle("is-disabled", runtimeAvailable && externalBlocked);
+      externalSection.title = externalBlocked ? externalSectionHint : "";
     }
     if (refreshConnectionsButton){
       refreshConnectionsButton.disabled = !runtimeAvailable
-        || !permissionGranted
+        || !externalEntitled
         || currentState?.external?.enabled !== true
         || actionPending;
     }
@@ -281,7 +312,7 @@
       button.disabled = actionPending;
     });
     connectionList?.querySelectorAll("button").forEach((button) => {
-      button.disabled = actionPending;
+      button.disabled = actionPending || !externalEntitled || currentState?.external?.enabled !== true;
     });
   }
 
@@ -305,13 +336,6 @@
     }
     setTone(providerStatusDot, providerPresentation.tone);
 
-    if (externalPermissionStatus){
-      externalPermissionStatus.textContent = i18n(state.external.permissionGranted
-        ? "options_vfs_external_permission_granted"
-        : "options_vfs_external_permission_required");
-      setTone(externalPermissionStatus, state.external.permissionGranted ? "success" : "warning");
-    }
-
     renderGrants(state.provider.grants);
     renderConnections(state.external.connections, state.external.providers);
     hideNotice();
@@ -332,10 +356,6 @@
       providerStatus.textContent = i18n("options_vfs_runtime_unavailable");
     }
     setTone(providerStatusDot, "error");
-    if (externalPermissionStatus){
-      externalPermissionStatus.textContent = i18n("options_vfs_external_permission_required");
-      setTone(externalPermissionStatus, "warning");
-    }
     renderGrants([]);
     renderConnections([], []);
     showNotice("options_vfs_runtime_unavailable");
@@ -434,30 +454,6 @@
 
   providerEnabledInput?.addEventListener("change", markSettingsDirty);
   externalEnabledInput?.addEventListener("change", markSettingsDirty);
-  requestExternalPermissionButton?.addEventListener("click", () => {
-    void (async () => {
-      actionPending = true;
-      updateControls();
-      try{
-        const granted = await browser.permissions.request({ permissions: ["management"] });
-        if (!granted){
-          showNotice("options_vfs_action_failed");
-          return;
-        }
-        const state = await requestState(MESSAGE_TYPES.requestExternalPermission);
-        renderState(state, { preserveSettings: settingsDirty });
-        if (state.external.enabled){
-          global.setTimeout(() => browser.runtime.reload(), 250);
-        }
-      }catch(error){
-        global.NCLogContext.safeConsoleError(LOG_PREFIX, "VFS permission request failed", error);
-        showNotice("options_vfs_action_failed");
-      }finally{
-        actionPending = false;
-        updateControls();
-      }
-    })();
-  });
   refreshConnectionsButton?.addEventListener("click", () => {
     void runAction(refreshConnectionsButton, MESSAGE_TYPES.refreshConnections);
   });

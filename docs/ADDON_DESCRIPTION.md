@@ -77,7 +77,7 @@ Data flow:
 - Exposes the already configured Nextcloud account as a full read/write VFS provider after an explicit, revocable per-add-on grant
 - Uses the existing Nextcloud login and shared DAV implementation; changing server or canonical user invalidates previous provider grants
 - Uses the same Direct and chunked-v2 upload selector, retry, cancellation, progress, cleanup, and log path for provider writes; independent VFS writes are not grouped into DAV Bulk batches
-- Discovers external VFS providers only after the user enables that function and grants the optional Thunderbird add-on-management permission
+- Discovers external VFS providers only when enabled by the effective policy and the Nextcloud backend reports NC Connector Pro with an active assigned seat; add-on-management access is granted during installation
 - Supports file and folder selection from the configured Nextcloud and external providers in the Sharing wizard
 
 ### Talk

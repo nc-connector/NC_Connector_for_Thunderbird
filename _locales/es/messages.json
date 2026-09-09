@@ -974,6 +974,9 @@
   "sharing_password_separate_backend_required_tooltip": {
     "message": "Esta función requiere el backend de Nextcloud."
   },
+  "vfs_external_pro_required_tooltip": {
+    "message": "Los proveedores VFS externos requieren NC Connector Pro."
+  },
   "sharing_password_separate_no_seat_tooltip": {
     "message": "Su administrador debe asignarle un seat de NC Connector para esta función."
   },
@@ -1218,7 +1221,7 @@
     "message": "Buscar proveedores de VFS"
   },
   "sharing_vfs_activation_reload_warning": {
-    "message": "Es posible que los ajustes de VFS requieran activar los proveedores externos o conceder permiso para detectarlos. Cualquiera de estos cambios puede hacer que se vuelva a cargar NC Connector y se borre la selección de archivos actual. ¿Abrir de todos modos los ajustes de VFS?"
+    "message": "Al activar proveedores externos, NC Connector puede volver a cargarse y borrar la selección de archivos actual. ¿Abrir de todos modos los ajustes de VFS?"
   },
   "sharing_vfs_navigation_failed": {
     "message": "No se pudo abrir la página solicitada."

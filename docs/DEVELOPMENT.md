@@ -1063,7 +1063,7 @@ Thunderbird platform references:
 NC Connector uses the vendored Thunderbird VFS Toolkit in two roles:
 
 - As a provider, it exposes the already configured Nextcloud account with full read/write file and folder capabilities after an explicit grant.
-- As a client, it uses its own provider for **+ My Nextcloud** and can discover separately installed providers only after the user enables external providers and grants Thunderbird's optional `management` permission.
+- As a client, it uses its own provider for **+ My Nextcloud** and can discover separately installed providers only when `vfs_external_providers_enabled` is effective and the backend reports Pro mode with an active assigned seat. The required `management` permission is granted at installation.
 
 There is no second Nextcloud login. `modules/nccore.js` resolves the canonical Nextcloud UID and constructs the authenticated File, Upload, and Bulk DAV targets shared by FileLink, VFS, and persistent cleanup. Basic Auth continues to use the configured login alias and app password. A provider storage ID is bound to the normalized server plus canonical UID. Changing either rotates that ID and removes every previous grant; an app-password or login-alias change for the same canonical account does not.
 
@@ -1071,7 +1071,9 @@ The provider implements live list, quota, read, add, move, copy, and delete oper
 
 The Sharing wizard first builds one immutable queue of descriptors. Each row carries a source kind (`local`, `nextcloud`, or `external-vfs`), provider label, source path, target path, item kind, size, and transfer-group metadata. Folder enumeration includes empty directories. Exact and prefix conflicts are resolved before any remote share mutation; removing a selected folder removes its complete transfer group.
 
-The wizard exposes exactly three source menus: **+ Local**, **+ My Nextcloud**, and **+ Other source**. **+ My Nextcloud** stays unavailable until the configured account can be exposed through the local provider. **+ Other source** remains open even when no external connection exists: the menu explains whether discovery is disabled, permission is missing, no compatible provider is installed, or a provider still needs a connection. It offers direct actions for the VFS settings tab and the Thunderbird Add-ons search for VFS providers. Discovery refreshes automatically when the wizard opens or regains focus. The setup and search actions remain available after a connection exists so another provider can be installed or connected. Enabling external providers or restoring their discovery permission can reload the extension; opening the settings from a populated queue therefore requires confirmation while either step is pending. If several external connections are available, NC Connector shows an intermediate connection list with the provider-reported add-on icon before opening a picker locked to that exact storage reference. External connections are removed through the Toolkit's `deleteProviderConnection()` flow, not by editing Toolkit session records directly.
+The wizard exposes exactly three source menus: **+ Local**, **+ My Nextcloud**, and **+ Other source**. **+ My Nextcloud** stays unavailable until the configured account can be exposed through the local provider. **+ Other source** is disabled with a reason tooltip when the backend is missing, the mode is not Pro, the assigned seat is unusable, or a locked policy turns the function off. When entitled, its menu remains open even without a connection and explains whether discovery is disabled, no compatible provider is installed, or a provider still needs a connection. It offers direct actions for the VFS settings tab and the Thunderbird Add-ons search for VFS providers. Discovery refreshes automatically when the wizard opens or regains focus. Enabling discovery can reload the extension; opening the settings from a populated queue therefore requires confirmation while activation is pending. If several external connections are available, NC Connector shows an intermediate connection list with the provider-reported add-on icon before opening a picker locked to that exact storage reference. External connections are removed through the Toolkit's `deleteProviderConnection()` flow, not by editing Toolkit session records directly, and a closed entitlement gate does not delete saved connections.
+
+`modules/vfsPolicyRuntime.js` resolves `vfs_provider_enabled` and `vfs_external_providers_enabled` against the Share policy with a short-lived backend-status cache. Missing keys from an older backend preserve an existing local value. Provider grants use only the provider switch. External discovery, setup, selection, reads, and the pre-upload boundary additionally require Pro mode and a usable assigned seat. The pre-upload check runs before root reservation, so a queued external item cannot begin a Nextcloud mutation after its entitlement has changed. A missing backend leaves all non-external source paths in local mode.
 
 The queue step shows the planned relative target folder from `NCSharing.buildShareFolderInfo()`. After upload it uses the folder returned by root reservation, including an attachment suffix such as `_1`. Finite quota displays free and total space. Nextcloud's unlimited-quota marker displays current usage instead of claiming unlimited physical capacity; missing quota data remains visible as unavailable and does not invent a limit.
 
@@ -1190,7 +1192,6 @@ VFS options/provider:
 - `vfs:findProviderAddons`
 - `vfs:options:getState`
 - `vfs:options:updateSettings`
-- `vfs:options:requestExternalProviderPermission`
 - `vfs:options:refreshConnections`
 - `vfs:options:connectProvider`
 - `vfs:options:revokeGrant`
@@ -1340,7 +1341,7 @@ Common symptoms:
   - If the root or share already exists, background cleanup uses the captured cleanup target and generation ID.
 
 - **No external VFS provider appears**
-  - Enable external VFS providers and grant the optional add-on-management permission. NC Connector reloads the add-on automatically; reopen the settings if necessary and use **Connect** for the detected provider in the VFS tab.
+  - Check the tooltip on **Other source** or the disabled VFS settings section. External providers require the backend in Pro mode, an active assigned seat, and an effective `vfs_external_providers_enabled` policy. After enabling discovery, reopen the settings if NC Connector reloads and use **Connect** for the detected provider.
   - Only established, reachable Toolkit connections appear in the Sharing wizard.
 
 - **A VFS connection stops working after changing the Nextcloud account**

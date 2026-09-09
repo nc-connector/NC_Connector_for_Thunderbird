@@ -344,6 +344,9 @@
     }
     const request = prepared.request;
     const sourcePlan = prepared.sourcePlan;
+    if (sourcePlan.externalFiles.length || sourcePlan.externalDirectories.length){
+      await NCVfsClientRuntime.assertExternalAccess({ refresh: true });
+    }
     const opts = await NCCore.getOpts();
     logDebug(opts, "createFileLink:start", {
       shareName: request?.shareName || "",
