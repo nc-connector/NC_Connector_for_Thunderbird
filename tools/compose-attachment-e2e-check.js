@@ -472,6 +472,32 @@ async function createHarness({ tabId, wizardWindowId }){
     hasSeparatePasswordDispatch(requestTabId){
       return context.PASSWORD_MAIL_DISPATCH_BY_TAB.has(Number(requestTabId));
     },
+    getSeparatePasswordMailDispatchQueue(requestTabId){
+      const queue = context.PASSWORD_MAIL_DISPATCH_BY_TAB.get(Number(requestTabId));
+      return Array.isArray(queue) && queue.length ? queue : null;
+    },
+    hasSeparatePasswordMailDispatch(requestTabId){
+      const queue = context.PASSWORD_MAIL_DISPATCH_BY_TAB.get(Number(requestTabId));
+      return Array.isArray(queue) && queue.length > 0;
+    },
+    retainFailedSavedDraftPasswordDispatches(requestTabId, sourceQueue, failedQueue){
+      const tabId = Number(requestTabId);
+      const processed = new Set(sourceQueue.map((dispatch) => {
+        return String(dispatch?.registrationId || dispatch?.dedupKey || "");
+      }).filter(Boolean));
+      const unprocessed = (context.PASSWORD_MAIL_DISPATCH_BY_TAB.get(tabId) || [])
+        .filter((dispatch) => {
+          const key = String(dispatch?.registrationId || dispatch?.dedupKey || "");
+          return !key || !processed.has(key);
+        });
+      const remaining = unprocessed.concat(failedQueue || []);
+      if (remaining.length){
+        context.PASSWORD_MAIL_DISPATCH_BY_TAB.set(tabId, remaining);
+      }else{
+        context.PASSWORD_MAIL_DISPATCH_BY_TAB.delete(tabId);
+      }
+      return remaining;
+    },
     clearSeparatePasswordDispatch(){},
     scheduleSeparatePasswordDispatchClear(){},
     NCLogContext: {

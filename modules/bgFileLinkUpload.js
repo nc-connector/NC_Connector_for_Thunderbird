@@ -59,9 +59,7 @@ async function trackFailedFileLinkCleanup(session, cleanupEvent){
     shareId: "",
     cleanupTarget: cleanupEvent.root.cleanupTarget || null
   });
-  const cleanupId = SHARING_WIZARD_CLEANUP_BY_WINDOW.get(
-    session.windowId
-  )?.cleanupId || "";
+  const cleanupId = getSharingWizardRemoteCleanupId(session.windowId);
   if (session.disconnected){
     const removed = await deleteSharingWizardRemoteCleanupNow(
       session.windowId,
@@ -169,9 +167,7 @@ async function runFileLinkUploadSession(session, request){
         attachmentMode: preparedRequest.request.attachmentMode === true
       }
     });
-    const cleanupId = SHARING_WIZARD_CLEANUP_BY_WINDOW.get(
-      session.windowId
-    )?.cleanupId || "";
+    const cleanupId = getSharingWizardRemoteCleanupId(session.windowId);
     session.rootHandled = true;
     session.completed = true;
     const delivered = postFileLinkUploadMessage(session, {

@@ -103,6 +103,48 @@ function passwordDispatchRegistrationKey(dispatch){
   return relativeFolder ? `folder:${relativeFolder}` : "";
 }
 
+function passwordDispatchQueueEntryKey(dispatch){
+  return String(
+    dispatch?.registrationId
+      || dispatch?.dedupKey
+      || passwordDispatchRegistrationKey(dispatch)
+      || ""
+  ).trim();
+}
+
+function getSeparatePasswordMailDispatchQueue(tabId){
+  const queue = PASSWORD_MAIL_DISPATCH_BY_TAB.get(tabId);
+  return Array.isArray(queue) && queue.length ? queue : null;
+}
+
+function hasSeparatePasswordMailDispatch(tabId){
+  return getSeparatePasswordMailDispatchQueue(tabId) !== null;
+}
+
+function retainFailedSavedDraftPasswordDispatches(
+  tabId,
+  sourceQueue,
+  failedQueue
+){
+  const processedKeys = new Set(
+    sourceQueue.map(passwordDispatchQueueEntryKey).filter(Boolean)
+  );
+  const current = getSeparatePasswordMailDispatchQueue(tabId);
+  const unprocessed = (current || []).filter((dispatch) => {
+    const key = passwordDispatchQueueEntryKey(dispatch);
+    return !key || !processedKeys.has(key);
+  });
+  const remaining = unprocessed.concat(
+    Array.isArray(failedQueue) ? failedQueue : []
+  );
+  if (remaining.length){
+    PASSWORD_MAIL_DISPATCH_BY_TAB.set(tabId, remaining);
+  }else{
+    PASSWORD_MAIL_DISPATCH_BY_TAB.delete(tabId);
+  }
+  return remaining;
+}
+
 function createPasswordDispatchRegistrationId(){
   return createSecureRuntimeId();
 }

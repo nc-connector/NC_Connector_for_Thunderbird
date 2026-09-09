@@ -460,8 +460,35 @@ function createComposeHarness(){
       calls.passwordClear.push({ tabId, reason: "clear", delayMs: 0 });
       passwordDispatch.delete(tabId);
     },
+    getSeparatePasswordMailDispatchQueue(tabId){
+      const queue = passwordDispatch.get(tabId);
+      return Array.isArray(queue) && queue.length ? queue : null;
+    },
+    hasSeparatePasswordMailDispatch(tabId){
+      const queue = passwordDispatch.get(tabId);
+      return Array.isArray(queue) && queue.length > 0;
+    },
+    retainFailedSavedDraftPasswordDispatches(tabId, sourceQueue, failedQueue){
+      const processed = new Set(sourceQueue.map((dispatch) => {
+        return String(dispatch?.registrationId || dispatch?.dedupKey || "");
+      }).filter(Boolean));
+      const unprocessed = (passwordDispatch.get(tabId) || []).filter((dispatch) => {
+        const key = String(dispatch?.registrationId || dispatch?.dedupKey || "");
+        return !key || !processed.has(key);
+      });
+      const remaining = unprocessed.concat(failedQueue || []);
+      if (remaining.length){
+        passwordDispatch.set(tabId, remaining);
+      }else{
+        passwordDispatch.delete(tabId);
+      }
+      return remaining;
+    },
     cleanupComposeAttachmentTabState(tabId, reason){
       calls.attachmentCleanup.push({ tabId, reason });
+    },
+    getAttachmentPromptIdForWindow(windowId){
+      return String(context.ATTACHMENT_PROMPT_BY_WINDOW.get(windowId) || "");
     },
     resolveAttachmentPrompt(){},
     NCLogContext: {

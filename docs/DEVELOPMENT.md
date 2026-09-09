@@ -161,6 +161,17 @@ Key files you’ll touch most:
 - `ui/wizardPolicyUi.js` — shared policy warning, lock, default, and password-policy UI helpers for Talk/Sharing/options
 - `options.html` + `options.js` — settings UI
 
+Compose lifecycle state stays with its focused owner module. Attachment prompts
+belong to `bgComposeAttachments.js`, password dispatch queues belong to
+`bgComposePasswordDispatch.js`, and wizard/compose cleanup belongs to
+`bgComposeShareCleanup.js`. Listener and finalization modules use named query and
+transition functions instead of reading or changing those maps directly.
+
+The current MV2 background exposes these functions through ordered scripts and a
+shared global scope. A later MV3 migration must replace that loading mechanism
+with explicit module imports while retaining the same state ownership. This
+refactor does not change the manifest version or background lifetime.
+
 ---
 
 ## 4. Running & debugging

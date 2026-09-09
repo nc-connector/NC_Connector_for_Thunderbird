@@ -687,6 +687,10 @@ function createAttachmentPromptId(){
   return `attach-prompt-${Date.now()}-${rand}`;
 }
 
+function getAttachmentPromptIdForWindow(windowId){
+  return String(ATTACHMENT_PROMPT_BY_WINDOW.get(windowId) || "");
+}
+
 function resolveAttachmentPrompt(promptId, decision = "dismiss", source = ""){
   const entry = ATTACHMENT_PROMPT_BY_ID.get(promptId);
   if (!entry){

@@ -178,7 +178,10 @@ function rollbackComposeFinalizeTransaction(transaction, reason = ""){
       rollbackComplete = rollbackComposeShareCleanupArm(
         transaction.cleanupMutation,
         reason
-      ) || COMPOSE_SHARE_CLEANUP_BY_TAB.get(transaction.tabId) !== transaction.cleanupMutation.stagedState;
+      ) || !isComposeShareCleanupStateCurrent(
+        transaction.tabId,
+        transaction.cleanupMutation.stagedState
+      );
     }
     if (transaction.insertMutation?.attempted){
       rollbackComplete = await rollbackSharingInsertMutation(
@@ -206,10 +209,10 @@ function rollbackComposeFinalizeTransaction(transaction, reason = ""){
       }
     }
     if (!rollbackComplete && transaction.draftGroupId){
-      const retainedState = COMPOSE_SHARE_CLEANUP_BY_TAB.get(transaction.tabId);
-      if (retainedState?.draftGroupId === transaction.draftGroupId){
-        retainedState.lifecycleTainted = true;
-      }
+      markComposeShareCleanupLifecycleTainted(
+        transaction.tabId,
+        transaction.draftGroupId
+      );
       try{
         await markPersistentShareCleanupTainted(transaction.draftGroupId);
       }catch(error){

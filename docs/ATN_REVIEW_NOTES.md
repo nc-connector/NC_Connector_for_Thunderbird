@@ -44,6 +44,13 @@ All business logic stays in the background runtime modules (`modules/bgState.js`
 `modules/talkAddressbook.js`, `modules/talkcore.js`, `modules/bgRouter.js`) and uses calendar APIs only
 for persisted monitoring (`browser.calendar.items.onCreated/onUpdated/onRemoved`).
 
+Compose listener and finalization modules do not access lifecycle maps directly.
+Attachment prompts, password dispatch queues, and remote share cleanup each stay
+inside their focused owner module and are reached through named query or
+transition functions. The current MV2 background still makes those functions
+available through ordered scripts in one shared global scope; a later MV3 move
+must replace that loading mechanism with explicit imports.
+
 ---
 
 ## Behavior Guarantees

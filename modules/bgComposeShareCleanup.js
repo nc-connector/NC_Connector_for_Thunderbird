@@ -122,6 +122,12 @@ async function deleteShareCleanupEntry(entry, groupId = ""){
   throw new Error("share_cleanup_descriptor_invalid");
 }
 
+function getSharingWizardRemoteCleanupId(windowId){
+  return String(
+    SHARING_WIZARD_CLEANUP_BY_WINDOW.get(windowId)?.cleanupId || ""
+  );
+}
+
 function clearSharingWizardRemoteCleanup(windowId, reason = "", expectedEntry = null){
   const entry = SHARING_WIZARD_CLEANUP_BY_WINDOW.get(windowId);
   if (!entry){
@@ -317,6 +323,54 @@ function clearComposeShareCleanup(tabId, reason = "", expectedEntry = null){
     shares: Array.isArray(state.entries) ? state.entries.length : 0,
     sendPending: !!state.sendPending
   });
+  return true;
+}
+
+function getComposeShareCleanupState(tabId){
+  return COMPOSE_SHARE_CLEANUP_BY_TAB.get(tabId) || null;
+}
+
+function hasComposeShareCleanup(tabId){
+  return COMPOSE_SHARE_CLEANUP_BY_TAB.has(tabId);
+}
+
+function isComposeShareCleanupStateCurrent(tabId, state){
+  return !!state && COMPOSE_SHARE_CLEANUP_BY_TAB.get(tabId) === state;
+}
+
+function markComposeShareCleanupCommittedFallback(tabId){
+  const state = getComposeShareCleanupState(tabId);
+  if (!state){
+    return null;
+  }
+  state.saved = true;
+  return state;
+}
+
+function markComposeShareCleanupSaveOutcomeUncertain(tabId){
+  const state = getComposeShareCleanupState(tabId);
+  if (!state){
+    return null;
+  }
+  state.saveOutcomeUncertain = true;
+  return state;
+}
+
+function markComposeShareCleanupTabClosed(tabId, expectedState = null){
+  const state = getComposeShareCleanupState(tabId);
+  if (!state || (expectedState && state !== expectedState)){
+    return null;
+  }
+  state.tabClosed = true;
+  return state;
+}
+
+function markComposeShareCleanupLifecycleTainted(tabId, draftGroupId = ""){
+  const state = getComposeShareCleanupState(tabId);
+  if (!state || (draftGroupId && state.draftGroupId !== draftGroupId)){
+    return false;
+  }
+  state.lifecycleTainted = true;
   return true;
 }
 
@@ -869,6 +923,32 @@ function scheduleComposeShareCleanupRetry(
       }
     });
   }, SHARE_CLEANUP_RETRY_DELAYS_MS[retryIndex]);
+  return true;
+}
+
+function scheduleSavedComposeShareCleanupDetach(tabId, state){
+  if (!isComposeShareCleanupStateCurrent(tabId, state)){
+    return false;
+  }
+  if (state.timerId){
+    clearTimeout(state.timerId);
+  }
+  state.timerId = setTimeout(() => {
+    const current = getComposeShareCleanupState(tabId);
+    if (current !== state || !current.saved || !current.sendPending){
+      return;
+    }
+    current.timerId = null;
+    current.sendPending = false;
+    detachSavedComposeShareCleanup(
+      tabId,
+      "saved_send_pending_confirmation_timeout"
+    );
+    L("saved compose send outcome unconfirmed; share retained", {
+      tabId,
+      draftGroupId: bgShortId(current.draftGroupId, 24)
+    });
+  }, COMPOSE_SHARE_CLEANUP_SEND_GRACE_MS);
   return true;
 }
 

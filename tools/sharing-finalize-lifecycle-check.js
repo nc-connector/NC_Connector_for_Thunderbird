@@ -220,6 +220,17 @@ function createFinalizeHarness(options = {}){
       }
       return true;
     },
+    isComposeShareCleanupStateCurrent(tabId, state){
+      return !!state && composeCleanup.get(tabId) === state;
+    },
+    markComposeShareCleanupLifecycleTainted(tabId, draftGroupId = ""){
+      const state = composeCleanup.get(tabId);
+      if (!state || (draftGroupId && state.draftGroupId !== draftGroupId)){
+        return false;
+      }
+      state.lifecycleTainted = true;
+      return true;
+    },
     completeComposeShareCleanupArm(mutation, reason){
       calls.cleanupCommit.push({ mutation, reason });
       mutation.wizardOwnershipTransferred = true;
