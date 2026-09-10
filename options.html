@@ -114,8 +114,12 @@ footer{
 .about-list li{margin-bottom:6px;}
 .about-overview{
   margin:14px 0;
-  white-space:pre-line;
 }
+.about-overview h2{margin:0 0 8px 0; font-size:18px;}
+.about-overview p{margin:0 0 10px 0;}
+.about-overview-section{white-space:pre-line;}
+.about-overview-link{display:inline-block; margin:0 0 14px 0;}
+.about-backend-section{margin-top:14px;}
 .about-more-info-label{
   margin:12px 0 6px 0;
   font-weight:600;
@@ -973,9 +977,16 @@ footer{
       <li><strong data-i18n="options_about_homepage_label">Homepage:</strong> <a id="aboutHomepageLink" href="https://nc-connector.de" target="_blank" rel="noopener" data-i18n="options_about_homepage_link">https://nc-connector.de</a></li>
       <li><strong data-i18n="options_about_license_label">License:</strong> <a id="licenseLink" href="LICENSE.txt" target="_blank" rel="noopener" data-i18n="options_about_license_value">AGPL v3</a></li>
     </ul>
-    <p class="about-overview" data-i18n="options_about_overview_text"></p>
-    <p class="about-more-info-label" data-i18n="options_about_more_info_label"></p>
-    <a id="aboutMoreInfoLink" class="about-more-info-link" href="https://nc-connector.de" target="_blank" rel="noopener" data-i18n="options_about_more_info_link">Visit homepage</a>
+    <div class="about-overview">
+      <h2 data-i18n="options_about_overview_title">More than file links</h2>
+      <p data-i18n="options_about_overview_intro">NC Connector connects Thunderbird directly to your Nextcloud.</p>
+      <a id="aboutMoreInfoLink" class="about-overview-link" href="https://nc-connector.de" target="_blank" rel="noopener" data-i18n="options_about_more_info_link">Visit homepage</a>
+      <p class="about-overview-section" data-i18n="options_about_overview_direct">Available directly</p>
+      <div class="about-backend-section">
+        <p class="about-overview-section" data-i18n="options_about_overview_backend">Optional with the NC Connector backend</p>
+        <a id="aboutBackendLink" class="about-overview-link" href="https://apps.nextcloud.com/apps/ncc_backend_4mc" target="_blank" rel="noopener" data-i18n="options_about_backend_link">NC Connector backend in the Nextcloud App Store</a>
+      </div>
+    </div>
     <p class="hint" data-i18n="options_about_support_note">So NC Connector for Thunderbird can continue to be maintained and improved for free.</p>
     <div class="donation">
       <strong data-i18n="options_about_support_heading">Support</strong>

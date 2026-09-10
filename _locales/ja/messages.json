@@ -959,8 +959,20 @@
   "options_about_homepage_link": {
     "message": "https://nc-connector.de"
   },
-  "options_about_overview_text": {
-    "message": "ファイルリンク以上の機能\n\nNC Connector は、安全なファイル共有、Talk ミーティング、添付ファイル自動化、そして集中管理されたメール署名を Thunderbird と Outlook に直接統合します。これにより、重要なチームのワークフローを本来あるべき場所、つまりメールとカレンダーのクライアント内に保てます。\n\nNC Connector がカバーする内容\n- パスワード、期限日、必要に応じた別送パスワード付きのファイル共有\n- カレンダーの予定から直接 Talk ミーティングを作成・更新\n- 手作業の個別対応ではなく、明確なルールによる添付ファイル自動化\n- 共有ブロックと招待ブロックを普段の作業フローにそのまま挿入\n- Nextcloud プロフィール情報を使った、作成・返信・転送向けの集中メール署名\n\nNextcloud backend を利用する場合\n- Seat の集中割り当てとポリシー管理\n- 共有、Talk 招待、メール署名向けの独自テンプレートとデザイン\n- パスワード別送と組織向けの集中制御\n- 1 Seat = 1 Nextcloud ユーザー\n\nbackend がなくても add-on はそのまま利用できます。backend を使うと、チームや組織向けの集中管理が追加されます。"
+  "options_about_overview_title": {
+    "message": "ファイルリンク以上の機能"
+  },
+  "options_about_overview_intro": {
+    "message": "NC Connector は Thunderbird をお使いの Nextcloud に直接接続します。保護されたファイル共有、Talk ミーティング、添付ファイルの自動化を、使い慣れたメールとカレンダーのワークフロー内で利用できます。"
+  },
+  "options_about_overview_direct": {
+    "message": "すぐに利用できる機能\n- パスワードと有効期限付きの共有\n- カレンダー予定からの Talk ミーティング\n- 大容量添付ファイルの自動共有\n- 自分の Nextcloud を VFS プロバイダーとして提供"
+  },
+  "options_about_overview_backend": {
+    "message": "NC Connector バックエンドで利用できるオプション機能\n- 組織向けのポリシーと委任の集中管理\n- 共有、Talk 招待、メール署名向けの独自テンプレートとデザイン（ブランディング）\n- パスワードの別送\n- 外部 VFS プロバイダーを共有元として利用"
+  },
+  "options_about_backend_link": {
+    "message": "Nextcloud App Store の NC Connector バックエンド"
   },
   "options_about_more_info_label": {
     "message": "詳細情報 -->"

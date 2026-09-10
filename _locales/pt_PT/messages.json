@@ -959,8 +959,20 @@
   "options_about_homepage_link": {
     "message": "https://nc-connector.de"
   },
-  "options_about_overview_text": {
-    "message": "Mais do que links de ficheiros\n\nO NC Connector reúne partilha segura de ficheiros, reuniões no Talk, automatização de anexos e assinaturas de e-mail geridas centralmente diretamente no Thunderbird e no Outlook. Assim, os fluxos de trabalho importantes da equipa permanecem onde devem estar: no cliente de e-mail e calendário.\n\nO que o NC Connector cobre\n- Partilha de ficheiros com palavra-passe, data de expiração e envio separado opcional da palavra-passe\n- Criação e atualização de reuniões no Talk diretamente a partir de eventos do calendário\n- Automatização de anexos com regras claras em vez de passos manuais isolados\n- Blocos consistentes de partilha e convite diretamente no fluxo de trabalho habitual\n- Assinaturas de e-mail centrais para redigir, responder e reencaminhar com dados do perfil Nextcloud\n\nOpcionalmente com backend Nextcloud\n- Atribuição central de Seats e gestão de políticas\n- Modelos e designs próprios para shares, convites do Talk e assinaturas de e-mail\n- Envio separado de palavra-passe e controlo central para organizações\n- 1 Seat = 1 utilizador Nextcloud\n\nSem backend, os add-ons continuam diretamente utilizáveis. Com backend, acrescenta-se o controlo central para equipas e organizações."
+  "options_about_overview_title": {
+    "message": "Mais do que links de ficheiros"
+  },
+  "options_about_overview_intro": {
+    "message": "O NC Connector liga o Thunderbird diretamente ao seu Nextcloud. As partilhas protegidas, as reuniões no Talk e a automatização de anexos permanecem assim no fluxo habitual de e-mail e calendário."
+  },
+  "options_about_overview_direct": {
+    "message": "Disponível diretamente\n- Partilhas com palavra-passe e data de expiração\n- Reuniões no Talk a partir de eventos do calendário\n- Partilha automática de anexos grandes\n- O seu próprio Nextcloud como fornecedor VFS"
+  },
+  "options_about_overview_backend": {
+    "message": "Opcional com o backend do NC Connector\n- Gestão central de políticas e delegações para organizações\n- Modelos e designs personalizados (branding) para partilhas, convites do Talk e assinaturas de e-mail\n- Envio separado da palavra-passe\n- Fornecedores VFS externos como fontes de partilha"
+  },
+  "options_about_backend_link": {
+    "message": "Backend do NC Connector na Nextcloud App Store"
   },
   "options_about_more_info_label": {
     "message": "Mais informacoes -->"

@@ -959,8 +959,20 @@
   "options_about_homepage_link": {
     "message": "https://nc-connector.de"
   },
-  "options_about_overview_text": {
-    "message": "Více než jen odkazy na soubory\n\nNC Connector propojuje bezpečné sdílení souborů, schůzky v Talku, automatizaci příloh i centrálně spravované e-mailové podpisy přímo s Thunderbirdem a Outlookem. Důležité týmové pracovní postupy tak zůstávají tam, kam patří: v poštovním a kalendářovém klientovi.\n\nCo NC Connector pokrývá\n- Sdílení souborů s heslem, datem vypršení platnosti a volitelným samostatným doručením hesla\n- Vytváření a aktualizace schůzek v Talku přímo z kalendářních událostí\n- Automatizaci příloh s jasnými pravidly místo ručních jednotlivých kroků\n- Jednotné bloky pro sdílení a pozvánky přímo v běžném pracovním postupu\n- Centrální e-mailové podpisy pro psaní, odpovědi a přeposílání s využitím údajů profilu Nextcloud\n\nVolitelně s Nextcloud backendem\n- Centrální přidělování Seatů a správa zásad\n- Vlastní šablony a designy pro sdílení, pozvánky do Talku a e-mailové podpisy\n- Samostatné doručování hesel a centrální řízení pro organizace\n- 1 Seat = 1 uživatel Nextcloud\n\nBez backendu zůstávají add-ony přímo použitelné. S backendem přibývá centrální řízení pro týmy a organizace."
+  "options_about_overview_title": {
+    "message": "Více než odkazy na soubory"
+  },
+  "options_about_overview_intro": {
+    "message": "NC Connector propojuje Thunderbird přímo s vaším Nextcloudem. Chráněné sdílení souborů, schůzky Talk a automatizace příloh tak zůstávají v obvyklém pracovním postupu e-mailu a kalendáře."
+  },
+  "options_about_overview_direct": {
+    "message": "Přímo k dispozici\n- Sdílení s heslem a datem vypršení platnosti\n- Schůzky Talk z událostí kalendáře\n- Automatické sdílení velkých příloh\n- Vlastní Nextcloud jako poskytovatel VFS"
+  },
+  "options_about_overview_backend": {
+    "message": "Volitelně s backendem NC Connector\n- Centrální správa zásad a delegování pro organizace\n- Vlastní šablony a vzhledy (branding) pro sdílení, pozvánky Talk a e-mailové podpisy\n- Samostatné doručení hesla\n- Externí poskytovatelé VFS jako zdroje sdílení"
+  },
+  "options_about_backend_link": {
+    "message": "Backend NC Connector v obchodě Nextcloud App Store"
   },
   "options_about_more_info_label": {
     "message": "Vice informaci -->"

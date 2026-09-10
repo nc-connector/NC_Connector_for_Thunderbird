@@ -959,8 +959,20 @@
   "options_about_homepage_link": {
     "message": "https://nc-connector.de"
   },
-  "options_about_overview_text": {
-    "message": "Bien plus que des liens de fichiers\n\nNC Connector réunit le partage sécurisé de fichiers, les réunions Talk, l'automatisation des pièces jointes et des signatures e-mail gérées de manière centralisée directement dans Thunderbird et Outlook. Les flux de travail importants de l'équipe restent ainsi là où ils doivent être : dans le client de messagerie et de calendrier.\n\nCe que couvre NC Connector\n- Partage de fichiers avec mot de passe, date d'expiration et envoi séparé optionnel du mot de passe\n- Création et mise à jour de réunions Talk directement depuis les événements du calendrier\n- Automatisation des pièces jointes avec des règles claires au lieu d'étapes manuelles isolées\n- Blocs de partage et d'invitation homogènes directement dans le flux de travail habituel\n- Signatures e-mail centralisées pour rédiger, répondre et transférer à partir des données de profil Nextcloud\n\nEn option avec le backend Nextcloud\n- Attribution centralisée des Seats et gestion des politiques\n- Modèles et designs personnalisés pour les partages, les invitations Talk et les signatures e-mail\n- Envoi séparé du mot de passe et contrôle centralisé pour les organisations\n- 1 Seat = 1 utilisateur Nextcloud\n\nSans backend, les modules restent directement utilisables. Avec backend, un contrôle centralisé s'ajoute pour les équipes et les organisations."
+  "options_about_overview_title": {
+    "message": "Bien plus que des liens de fichiers"
+  },
+  "options_about_overview_intro": {
+    "message": "NC Connector relie Thunderbird directement à votre Nextcloud. Les partages de fichiers protégés, les réunions Talk et l’automatisation des pièces jointes restent ainsi dans votre flux habituel de messagerie et de calendrier."
+  },
+  "options_about_overview_direct": {
+    "message": "Disponible directement\n- Partages avec mot de passe et date d’expiration\n- Réunions Talk à partir d’événements du calendrier\n- Partage automatique des pièces jointes volumineuses\n- Votre propre Nextcloud comme fournisseur VFS"
+  },
+  "options_about_overview_backend": {
+    "message": "En option avec le backend NC Connector\n- Gestion centralisée des politiques et des délégations pour les organisations\n- Modèles et designs personnalisés (identité visuelle) pour les partages, les invitations Talk et les signatures e-mail\n- Envoi séparé du mot de passe\n- Fournisseurs VFS externes comme sources de partage"
+  },
+  "options_about_backend_link": {
+    "message": "Backend NC Connector dans le Nextcloud App Store"
   },
   "options_about_more_info_label": {
     "message": "Plus d'informations -->"

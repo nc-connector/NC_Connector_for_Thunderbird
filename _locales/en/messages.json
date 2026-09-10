@@ -959,8 +959,20 @@
   "options_about_homepage_link": {
     "message": "https://nc-connector.de"
   },
-  "options_about_overview_text": {
-    "message": "More than file links\n\nNC Connector combines secure file sharing, Talk meetings, attachment automation, and centrally managed email signatures directly in Thunderbird and Outlook. This keeps important team workflows where they belong: in the mail and calendar client.\n\nWhat NC Connector covers\n- File sharing with password, expiration date, and optional separate password delivery\n- Create and update Talk meetings directly from calendar appointments\n- Attachment automation with clear rules instead of manual individual steps\n- Consistent sharing and invitation blocks directly in the familiar workflow\n- Central email signatures for compose, reply, and forward using Nextcloud profile data\n\nOptional with Nextcloud backend\n- Central Seat assignment and policy management\n- Custom templates and designs for shares, Talk invitations, and email signatures\n- Separate password delivery and central control for organizations\n- 1 Seat = 1 Nextcloud user\n\nWithout backend, the add-ins remain directly usable. With backend, central control for teams and organizations is added."
+  "options_about_overview_title": {
+    "message": "More than file links"
+  },
+  "options_about_overview_intro": {
+    "message": "NC Connector connects Thunderbird directly to your Nextcloud. Protected file shares, Talk meetings, and attachment automation stay within your familiar email and calendar workflow."
+  },
+  "options_about_overview_direct": {
+    "message": "Available directly\n- Shares with passwords and expiration dates\n- Talk meetings from calendar events\n- Automatic sharing of large attachments\n- Your own Nextcloud as a VFS provider"
+  },
+  "options_about_overview_backend": {
+    "message": "Optional with the NC Connector backend\n- Central policy and delegation management for organizations\n- Custom templates and designs (branding) for shares, Talk invitations, and email signatures\n- Separate password delivery\n- External VFS providers as sharing sources"
+  },
+  "options_about_backend_link": {
+    "message": "NC Connector backend in the Nextcloud App Store"
   },
   "options_about_more_info_label": {
     "message": "More information -->"

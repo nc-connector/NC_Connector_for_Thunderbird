@@ -959,8 +959,20 @@
   "options_about_homepage_link": {
     "message": "https://nc-connector.de"
   },
-  "options_about_overview_text": {
-    "message": "不只是檔案連結\n\nNC Connector 將安全檔案分享、Talk 會議、附件自動化與集中管理的電子郵件簽名直接整合到 Thunderbird 和 Outlook 中。這樣一來，重要的團隊工作流程就能留在它應在的位置：郵件與行事曆用戶端。\n\nNC Connector 涵蓋的內容\n- 具備密碼、到期日以及可選分開傳送密碼的檔案分享\n- 直接從行事曆事件建立與更新 Talk 會議\n- 以清楚規則實現附件自動化，而不是手動逐一處理\n- 在熟悉的工作流程中直接插入一致的分享區塊與邀請區塊\n- 使用 Nextcloud 個人資料資料的集中電子郵件簽名（用於撰寫、回覆與轉寄）\n\n可選搭配 Nextcloud 後端\n- 集中的 Seat 指派與政策管理\n- 用於分享、Talk 邀請與電子郵件簽名的自訂範本與設計\n- 分開密碼投遞以及面向組織的集中控制\n- 1 Seat = 1 個 Nextcloud 使用者\n\n即使沒有後端，附加元件仍可直接使用。有了後端後，還會增加面向團隊與組織的集中控制。"
+  "options_about_overview_title": {
+    "message": "不只是檔案連結"
+  },
+  "options_about_overview_intro": {
+    "message": "NC Connector 將 Thunderbird 直接連線到您的 Nextcloud。受保護的檔案分享、Talk 會議和附件自動化都保留在熟悉的郵件與行事曆工作流程中。"
+  },
+  "options_about_overview_direct": {
+    "message": "無需後端即可使用\n- 具備密碼和到期日的分享\n- 從行事曆事件建立 Talk 會議\n- 自動分享大型附件\n- 將自己的 Nextcloud 作為 VFS 提供者"
+  },
+  "options_about_overview_backend": {
+    "message": "搭配 NC Connector 後端的選用功能\n- 面向組織的集中政策與委派管理\n- 用於分享、Talk 邀請和電子郵件簽名的自訂範本與設計（品牌設計）\n- 分開傳送密碼\n- 將外部 VFS 提供者作為分享來源"
+  },
+  "options_about_backend_link": {
+    "message": "Nextcloud App Store 中的 NC Connector 後端"
   },
   "options_about_more_info_label": {
     "message": "更多資訊 -->"

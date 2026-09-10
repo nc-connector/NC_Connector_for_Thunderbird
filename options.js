@@ -21,6 +21,7 @@ const SYSTEM_ADDRESSBOOK_ADMIN_URL = "https://github.com/nc-connector/NC_Connect
 const POLICY_ADMIN_URL = "https://github.com/nc-connector/NC_Connector_for_Thunderbird/blob/main/docs/ADMIN.md";
 const ATTACHMENT_AUTOMATION_ADMIN_URL = "https://github.com/nc-connector/NC_Connector_for_Thunderbird/blob/main/docs/ADMIN.md#63-attachment-policy-example";
 const NC_CONNECTOR_HOMEPAGE_URL = "https://nc-connector.de";
+const NC_CONNECTOR_BACKEND_APP_URL = "https://apps.nextcloud.com/apps/ncc_backend_4mc";
 const EMAIL_SIGNATURE_KEYS = {
   onCompose: "emailSignatureOnCompose",
   onReply: "emailSignatureOnReply",
@@ -1716,6 +1717,10 @@ function initAbout(){
   const moreInfoLink = document.getElementById("aboutMoreInfoLink");
   if (moreInfoLink){
     moreInfoLink.href = NC_CONNECTOR_HOMEPAGE_URL;
+  }
+  const backendLink = document.getElementById("aboutBackendLink");
+  if (backendLink){
+    backendLink.href = NC_CONNECTOR_BACKEND_APP_URL;
   }
 }
 

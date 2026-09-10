@@ -959,8 +959,20 @@
   "options_about_homepage_link": {
     "message": "https://nc-connector.de"
   },
-  "options_about_overview_text": {
-    "message": "Meer dan alleen bestandslinks\n\nNC Connector brengt veilig bestanden delen, Talk-vergaderingen, automatisering van bijlagen en centraal beheerde e-mailsignaturen direct samen in Thunderbird en Outlook. Zo blijven belangrijke teamworkflows waar ze horen: in de mail- en agenda-client.\n\nWat NC Connector afdekt\n- Bestanden delen met wachtwoord, vervaldatum en optionele aparte verzending van het wachtwoord\n- Talk-vergaderingen direct vanuit agenda-afspraken aanmaken en bijwerken\n- Automatisering van bijlagen met duidelijke regels in plaats van losse handmatige stappen\n- Eenduidige deel- en uitnodigingsblokken direct in de vertrouwde workflow\n- Centrale e-mailsignaturen voor opstellen, beantwoorden en doorsturen met Nextcloud-profielgegevens\n\nOptioneel met Nextcloud-backend\n- Centrale Seat-toewijzing en beleidsbeheer\n- Eigen sjablonen en ontwerpen voor shares, Talk-uitnodigingen en e-mailsignaturen\n- Aparte wachtwoordverzending en centrale aansturing voor organisaties\n- 1 Seat = 1 Nextcloud-gebruiker\n\nZonder backend blijven de add-ons direct bruikbaar. Met backend komt daar centrale aansturing voor teams en organisaties bij."
+  "options_about_overview_title": {
+    "message": "Meer dan alleen bestandslinks"
+  },
+  "options_about_overview_intro": {
+    "message": "NC Connector verbindt Thunderbird rechtstreeks met uw Nextcloud. Beveiligde shares, Talk-vergaderingen en automatisering van bijlagen blijven zo binnen de vertrouwde e-mail- en agendaworkflow."
+  },
+  "options_about_overview_direct": {
+    "message": "Direct beschikbaar\n- Shares met wachtwoord en vervaldatum\n- Talk-vergaderingen vanuit agenda-items\n- Grote bijlagen automatisch delen\n- Uw eigen Nextcloud als VFS-provider"
+  },
+  "options_about_overview_backend": {
+    "message": "Optioneel met de NC Connector-backend\n- Centraal policy- en delegatiebeheer voor organisaties\n- Eigen sjablonen en ontwerpen (branding) voor shares, Talk-uitnodigingen en e-mailsignaturen\n- Aparte wachtwoordverzending\n- Externe VFS-providers als bronnen voor shares"
+  },
+  "options_about_backend_link": {
+    "message": "NC Connector-backend in de Nextcloud App Store"
   },
   "options_about_more_info_label": {
     "message": "Meer informatie -->"
