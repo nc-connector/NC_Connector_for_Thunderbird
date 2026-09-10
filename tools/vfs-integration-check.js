@@ -193,6 +193,319 @@ async function waitFor(predicate, label){
   throw new Error(label);
 }
 
+function createDeferred(){
+  let resolve;
+  let reject;
+  const promise = new Promise((resolvePromise, rejectPromise) => {
+    resolve = resolvePromise;
+    reject = rejectPromise;
+  });
+  return { promise, resolve, reject };
+}
+
+function createOptionsElement(){
+  const listeners = new Map();
+  const classes = new Set();
+  return {
+    checked: false,
+    children: [],
+    className: "",
+    dataset: {},
+    disabled: false,
+    hidden: false,
+    textContent: "",
+    title: "",
+    type: "",
+    classList: {
+      contains(name){
+        return classes.has(name);
+      },
+      toggle(name, force){
+        const enabled = force === undefined ? !classes.has(name) : force === true;
+        if (enabled){
+          classes.add(name);
+        }else{
+          classes.delete(name);
+        }
+        return enabled;
+      }
+    },
+    addEventListener(type, listener){
+      const entries = listeners.get(type) || [];
+      entries.push(listener);
+      listeners.set(type, entries);
+    },
+    appendChild(child){
+      this.children.push(child);
+      return child;
+    },
+    emit(type){
+      for (const listener of (listeners.get(type) || []).slice()){
+        listener({ currentTarget: this, target: this, type });
+      }
+    },
+    querySelectorAll(){
+      return [];
+    },
+    replaceChildren(...children){
+      this.children = children;
+    },
+    setAttribute(name, value){
+      this[name] = String(value);
+    }
+  };
+}
+
+function createOptionsVfsState({
+  providerConnectionReady = true,
+  providerEnabled = true,
+  providerStatus = "active",
+  externalEnabled = false,
+  externalProviders = []
+} = {}){
+  return {
+    provider: {
+      enabled: providerEnabled,
+      localEnabled: providerEnabled,
+      locked: false,
+      connectionReady: providerConnectionReady,
+      status: providerStatus,
+      grants: []
+    },
+    external: {
+      enabled: externalEnabled,
+      localEnabled: externalEnabled,
+      locked: false,
+      entitled: true,
+      unavailableReason: "",
+      initialized: externalEnabled,
+      connections: [],
+      providers: externalProviders
+    }
+  };
+}
+
+async function checkOptionsVfsRefreshAndSaveRaces(){
+  const elementIds = [
+    "vfsRuntimeNotice",
+    "vfsProviderEnabled",
+    "vfsProviderEnabledRow",
+    "vfsProviderStatusDot",
+    "vfsProviderStatus",
+    "vfsGrantList",
+    "vfsNoGrants",
+    "vfsExternalProvidersEnabled",
+    "vfsExternalEnabledRow",
+    "vfsExternalSection",
+    "vfsFindProviders",
+    "vfsRefreshConnections",
+    "vfsConnectionList",
+    "vfsNoConnections"
+  ];
+  const elements = new Map(elementIds.map((id) => [id, createOptionsElement()]));
+  const documentListeners = new Map();
+  const document = {
+    visibilityState: "visible",
+    addEventListener(type, listener){
+      const entries = documentListeners.get(type) || [];
+      entries.push(listener);
+      documentListeners.set(type, entries);
+    },
+    createElement: () => createOptionsElement(),
+    getElementById: (id) => elements.get(id) || null,
+    emit(type){
+      for (const listener of (documentListeners.get(type) || []).slice()){
+        listener({ target: document, type });
+      }
+    }
+  };
+  let state = createOptionsVfsState({
+    providerConnectionReady: false,
+    providerEnabled: false,
+    providerStatus: "connection_required"
+  });
+  let deferredGetState = null;
+  let getStateCalls = 0;
+  let refreshConnectionsCalls = 0;
+  let updateSettingsCalls = 0;
+  let lastUpdatePayload = null;
+  const windowListeners = new Map();
+  const context = {
+    console,
+    document,
+    NCI18n: { translate: (key) => key },
+    NCLogContext: { safeConsoleError(){} },
+    NCWizardPolicyUi: { getVfsExternalUnavailableHint: () => "" },
+    browser: {
+      runtime: {
+        async sendMessage(message){
+          if (message?.type === "vfs:options:getState"){
+            getStateCalls++;
+            if (deferredGetState){
+              const pending = deferredGetState;
+              deferredGetState = null;
+              return pending.promise;
+            }
+            return { ok: true, state };
+          }
+          if (message?.type === "vfs:options:updateSettings"){
+            updateSettingsCalls++;
+            lastUpdatePayload = message.payload;
+            state = createOptionsVfsState({
+              providerEnabled: message.payload?.providerEnabled === true,
+              externalEnabled: message.payload?.externalProvidersEnabled === true
+            });
+            return {
+              ok: true,
+              state,
+              backgroundRestartRequired: true,
+              reloadRequired: true
+            };
+          }
+          if (message?.type === "vfs:options:refreshConnections"){
+            refreshConnectionsCalls++;
+            return { ok: true, state };
+          }
+          throw new Error(`Unexpected VFS options request: ${message?.type}`);
+        }
+      }
+    },
+    confirm: () => true,
+    addEventListener(type, listener){
+      const entries = windowListeners.get(type) || [];
+      entries.push(listener);
+      windowListeners.set(type, entries);
+    }
+  };
+  context.globalThis = context;
+  context.window = context;
+  vm.createContext(context);
+  loadScript("ui/optionsVfs.js", context);
+
+  await waitFor(
+    () => elements.get("vfsProviderStatus").textContent === "options_vfs_provider_status_connection_required",
+    "VFS options initial state did not render"
+  );
+
+  const callsBeforeCredentialRefresh = getStateCalls;
+  state = createOptionsVfsState();
+  await context.NCVfsOptions.save();
+  assert(
+    getStateCalls === callsBeforeCredentialRefresh + 1
+      && elements.get("vfsProviderStatus").textContent === "options_vfs_provider_status_active",
+    "Saving credentials must refresh VFS status even when no VFS checkbox changed"
+  );
+
+  const staleState = createOptionsVfsState({ externalEnabled: false });
+  const staleResponse = createDeferred();
+  deferredGetState = staleResponse;
+  const callsBeforeStaleRefresh = getStateCalls;
+  const refreshTask = context.NCVfsOptions.refresh();
+  await waitFor(
+    () => getStateCalls === callsBeforeStaleRefresh + 1,
+    "VFS options refresh request did not start"
+  );
+  const externalEnabledInput = elements.get("vfsExternalProvidersEnabled");
+  externalEnabledInput.checked = true;
+  externalEnabledInput.emit("change");
+  const saveTask = context.NCVfsOptions.save();
+  staleResponse.resolve({ ok: true, state: staleState });
+  await refreshTask;
+  assert(
+    externalEnabledInput.checked === true,
+    "A stale asynchronous refresh must not overwrite a checkbox changed while it was pending"
+  );
+  const backgroundRestartRequired = await saveTask;
+  assert(
+    updateSettingsCalls === 1
+      && lastUpdatePayload?.externalProvidersEnabled === true
+      && backgroundRestartRequired === true,
+    "The first save attempt after a checkbox change must persist the selected VFS setting"
+  );
+
+  const staleEnabledState = createOptionsVfsState({ externalEnabled: true });
+  const staleEnabledResponse = createDeferred();
+  deferredGetState = staleEnabledResponse;
+  const disableRefreshTask = context.NCVfsOptions.refresh();
+  await waitFor(
+    () => getStateCalls === callsBeforeStaleRefresh + 2,
+    "VFS options refresh before disabling did not start"
+  );
+  externalEnabledInput.checked = false;
+  externalEnabledInput.emit("change");
+  const disableSaveTask = context.NCVfsOptions.save();
+  staleEnabledResponse.resolve({ ok: true, state: staleEnabledState });
+  await disableRefreshTask;
+  assert(
+    externalEnabledInput.checked === false,
+    "A stale asynchronous refresh must not restore an external-provider checkbox that was cleared"
+  );
+  const disableBackgroundRestartRequired = await disableSaveTask;
+  assert(
+    updateSettingsCalls === 2
+      && lastUpdatePayload?.externalProvidersEnabled === false
+      && disableBackgroundRestartRequired === true,
+    "The first save attempt must persist disabling external VFS providers"
+  );
+
+  const providerEnabledInput = elements.get("vfsProviderEnabled");
+  providerEnabledInput.checked = false;
+  providerEnabledInput.emit("change");
+  state = createOptionsVfsState({
+    externalEnabled: true,
+    externalProviders: [{
+      providerId: "new-provider@test",
+      providerName: "New provider",
+      connectionCount: 0
+    }]
+  });
+  const callsBeforeVisibleRefresh = getStateCalls;
+  document.visibilityState = "hidden";
+  document.emit("visibilitychange");
+  await Promise.resolve();
+  assert(
+    getStateCalls === callsBeforeVisibleRefresh,
+    "A hidden options document must not start a provider-discovery refresh"
+  );
+  document.visibilityState = "visible";
+  document.emit("visibilitychange");
+  await waitFor(
+    () => getStateCalls === callsBeforeVisibleRefresh + 1
+      && elements.get("vfsConnectionList").children.length === 1,
+    "Returning from provider installation must refresh the visible VFS options tab"
+  );
+  assert(
+    providerEnabledInput.checked === false,
+    "The visibility refresh must preserve an unsaved VFS checkbox change"
+  );
+
+  state = createOptionsVfsState({
+    externalEnabled: true,
+    externalProviders: [
+      {
+        providerId: "new-provider@test",
+        providerName: "New provider",
+        connectionCount: 0
+      },
+      {
+        providerId: "second-provider@test",
+        providerName: "Second provider",
+        connectionCount: 0
+      }
+    ]
+  });
+  elements.get("vfsRefreshConnections").emit("click");
+  await waitFor(
+    () => refreshConnectionsCalls === 1
+      && elements.get("vfsConnectionList").children.length === 2,
+    "Refresh connections must render providers installed while options stay open"
+  );
+  assert(
+    providerEnabledInput.checked === false,
+    "An explicit provider refresh must preserve an unsaved VFS checkbox change"
+  );
+}
+
 async function checkProviderSenderBinding(){
   const local = createStorageArea();
   const runtimeEvents = {
@@ -1054,20 +1367,42 @@ function checkManifestAndReviewSurface(){
   const optionsVfsRuntime = readText("ui/optionsVfs.js");
   const optionsHtml = readText("options.html");
   const optionsRuntime = readText("options.js");
+  const optionsSaveStart = optionsRuntime.indexOf("async function save(){");
+  const credentialPersistIndex = optionsRuntime.indexOf(
+    "await browser.storage.local.set({",
+    optionsSaveStart
+  );
+  const vfsSaveIndex = optionsRuntime.indexOf(
+    "NCVfsOptions?.save?.()",
+    credentialPersistIndex
+  );
+  const vfsTabActivationIndex = optionsRuntime.indexOf('if (id === "vfs")');
+  const vfsTabActivationBlock = optionsRuntime.slice(
+    vfsTabActivationIndex,
+    vfsTabActivationIndex + 500
+  );
   assert(
     optionsRuntime.includes('new URLSearchParams(window.location.search).get("tab")')
       && optionsRuntime.includes("order.includes(requestedId)"),
     "Direct options links must validate and activate their requested tab"
   );
   assert(
+    optionsSaveStart >= 0
+      && credentialPersistIndex > optionsSaveStart
+      && vfsSaveIndex > credentialPersistIndex
+      && vfsTabActivationIndex >= 0
+      && vfsTabActivationBlock.includes("NCVfsOptions?.refresh?.()"),
+    "Credential saves and VFS tab activation must request a current VFS status"
+  );
+  assert(
     updateSettingsStart >= 0
       && updateSettingsEnd > updateSettingsStart
-      && updateSettingsBlock.includes("reloadRequired: external.reloadRequired === true")
       && !updateSettingsBlock.includes("browser.runtime.reload")
-      && optionsVfsRuntime.includes("return response.reloadRequired === true;")
-      && /await refreshTalkSystemAddressbookState\(\{ forceRefresh: true \}\);\s*showStatus\([^\n]+\);\s*return vfsReloadRequired;/s.test(optionsRuntime)
-      && /finally\{\s*updateAuthModeUI\(\);\s*\}\s*if \(vfsReloadRequired\)\{[\s\S]*?browser\.runtime\.reload\(\);/s.test(optionsRuntime),
-    "VFS setting changes must reload only after the complete options save has settled"
+      && !/\bbrowser\.runtime\.reload\s*\(/.test(optionsRuntime)
+      && !/\bwindow\.close\s*\(/.test(optionsRuntime)
+      && /browser\.extension(?:\?\.|\.)getBackgroundPage(?:\?\.)?\(\)/.test(optionsRuntime)
+      && /(?:\?\.|\.)location(?:\?\.|\.)reload\s*\(\)/.test(optionsRuntime),
+    "VFS discovery changes must restart only the background page and keep options open"
   );
   assert(
     !optionsHtml.includes('id="vfsRequestExternalPermission"')
@@ -1189,6 +1524,7 @@ function checkManifestAndReviewSurface(){
 async function run(){
   checkManifestAndReviewSurface();
   await checkRouterLeavesToolkitMessagesUnclaimed();
+  await checkOptionsVfsRefreshAndSaveRaces();
   await checkProviderSenderBinding();
   await checkClientLifecycle();
   await checkExternalDiscoverySkipsSelf();

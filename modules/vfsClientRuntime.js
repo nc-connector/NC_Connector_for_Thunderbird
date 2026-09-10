@@ -561,7 +561,7 @@
         throw new Error(NCVfsPolicyRuntime.errorMessage(setting.unavailableReason));
       }
       return Object.freeze({
-        reloadRequired: setting.enabled !== externalDiscoveryInitialized,
+        backgroundRestartRequired: setting.enabled !== externalDiscoveryInitialized,
         ...setting
       });
     }
@@ -570,13 +570,13 @@
         throw new Error(NCVfsPolicyRuntime.errorMessage('admin_controlled'));
       }
       return Object.freeze({
-        reloadRequired: setting.enabled !== externalDiscoveryInitialized,
+        backgroundRestartRequired: setting.enabled !== externalDiscoveryInitialized,
         ...setting
       });
     }
     await browser.storage.local.set({ [EXTERNAL_ENABLED_KEY]: nextEnabled });
     return Object.freeze({
-      reloadRequired: nextEnabled !== externalDiscoveryInitialized,
+      backgroundRestartRequired: nextEnabled !== externalDiscoveryInitialized,
       enabled: nextEnabled,
       localEnabled: nextEnabled,
       locked: false,

@@ -1487,7 +1487,7 @@ async function save(){
     [EMAIL_SIGNATURE_KEYS.onReply]: emailSignatureOnReply,
     [EMAIL_SIGNATURE_KEYS.onForward]: emailSignatureOnForward
   });
-  const vfsReloadRequired = (await globalThis.NCVfsOptions?.save?.()) === true;
+  const vfsBackgroundRestartRequired = (await globalThis.NCVfsOptions?.save?.()) === true;
   emailSignatureStoredState = {
     hasOnCompose: true,
     hasOnReply: true,
@@ -1497,23 +1497,31 @@ async function save(){
   await refreshBackendPolicyStatus();
   await refreshTalkSystemAddressbookState({ forceRefresh: true });
   showStatus(i18n("options_status_saved"));
-  return vfsReloadRequired;
+  return vfsBackgroundRestartRequired;
+}
+
+async function restartBackgroundForVfsDiscovery(){
+  const backgroundPage = await browser.extension.getBackgroundPage();
+  if (!backgroundPage || typeof backgroundPage.location?.reload !== "function"){
+    throw new Error(i18n("options_status_save_failed"));
+  }
+  backgroundPage.location.reload();
 }
 
 if (saveButton){
   saveButton.addEventListener("click", async () => {
-    let vfsReloadRequired = false;
     try{
-      vfsReloadRequired = await save();
+      const vfsBackgroundRestartRequired = await save();
+      if (vfsBackgroundRestartRequired){
+        // The upstream Toolkit configures discovery once per MV2 background page.
+        // Restart that document only so the separate options tab remains open.
+        await restartBackgroundForVfsDiscovery();
+      }
     }catch(error){
       globalThis.NCLogContext.safeConsoleError(OPTIONS_LOG_PREFIX, "save failed", error);
       showStatus(error?.message || i18n("options_status_save_failed"), true);
     }finally{
       updateAuthModeUI();
-    }
-    if (vfsReloadRequired){
-      // External-provider discovery starts with the background; reload after all save-time messages have settled.
-      browser.runtime.reload();
     }
   });
 }
@@ -1664,6 +1672,11 @@ function initTabs(){
       panel.classList.toggle("active", panel.id === `tab-${id}`);
     });
     activeId = id;
+    if (id === "vfs"){
+      if (!initial){
+        void globalThis.NCVfsOptions?.refresh?.();
+      }
+    }
     if (id === "talk"){
       // Talk tab opens should always refresh addressbook availability once.
       void refreshTalkSystemAddressbookState({ forceRefresh: true }).catch((error) => {

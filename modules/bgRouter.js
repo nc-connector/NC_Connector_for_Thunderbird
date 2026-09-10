@@ -245,7 +245,7 @@ browser.runtime.onMessage.addListener((msg, sender) => {
         return {
           ok:true,
           state,
-          reloadRequired: external.reloadRequired === true
+          backgroundRestartRequired: external.backgroundRestartRequired === true
         };
       }catch(error){
         return messageError("vfs:options:updateSettings", error);

@@ -39,6 +39,8 @@
   let currentState = null;
   let settingsDirty = false;
   let actionPending = false;
+  let stateRequestRevision = 0;
+  let pendingRefreshTask = null;
 
   function showNotice(key){
     if (!runtimeNotice){
@@ -371,30 +373,57 @@
   }
 
   async function refresh(options = {}){
-    const hadRuntime = runtimeAvailable;
-    try{
-      const state = await requestState(MESSAGE_TYPES.getState);
-      renderState(state, { preserveSettings: options.preserveSettings === true });
-      return true;
-    }catch(error){
-      global.NCLogContext.safeConsoleError(LOG_PREFIX, "VFS options state load failed", error);
-      if (hadRuntime){
-        showNotice("options_vfs_action_failed");
-        updateControls();
-      }else{
-        renderUnavailable();
-      }
+    if (actionPending){
       return false;
+    }
+    const hadRuntime = runtimeAvailable;
+    const revision = ++stateRequestRevision;
+    const task = (async () => {
+      try{
+        const state = await requestState(MESSAGE_TYPES.getState);
+        if (revision !== stateRequestRevision){
+          return false;
+        }
+        renderState(state, {
+          preserveSettings: options.preserveSettings === true || settingsDirty
+        });
+        return true;
+      }catch(error){
+        if (revision !== stateRequestRevision){
+          return false;
+        }
+        global.NCLogContext.safeConsoleError(LOG_PREFIX, "VFS options state load failed", error);
+        if (hadRuntime){
+          showNotice("options_vfs_action_failed");
+          updateControls();
+        }else{
+          renderUnavailable();
+        }
+        return false;
+      }
+    })();
+    pendingRefreshTask = task;
+    try{
+      return await task;
+    }finally{
+      if (pendingRefreshTask === task){
+        pendingRefreshTask = null;
+      }
     }
   }
 
   async function runAction(button, type, payload){
+    const refreshBeforeAction = pendingRefreshTask;
+    stateRequestRevision += 1;
     actionPending = true;
     updateControls();
     if (button){
       button.disabled = true;
     }
     try{
+      if (refreshBeforeAction){
+        await refreshBeforeAction;
+      }
       const state = await requestState(type, payload);
       renderState(state, { preserveSettings: settingsDirty });
     }catch(error){
@@ -450,19 +479,41 @@
   }
 
   async function save(){
-    if (!runtimeAvailable || !settingsDirty || actionPending){
-      return;
+    if (actionPending){
+      return false;
     }
+    const refreshBeforeSave = pendingRefreshTask;
+    stateRequestRevision += 1;
     actionPending = true;
     updateControls();
     try{
+      if (refreshBeforeSave){
+        await refreshBeforeSave;
+      }
+      if (!settingsDirty){
+        try{
+          const state = await requestState(MESSAGE_TYPES.getState);
+          renderState(state);
+        }catch(error){
+          global.NCLogContext.safeConsoleError(LOG_PREFIX, "VFS options state refresh after save failed", error);
+          if (runtimeAvailable){
+            showNotice("options_vfs_action_failed");
+          }else{
+            renderUnavailable();
+          }
+        }
+        return false;
+      }
+      if (!runtimeAvailable){
+        throw new Error(i18n("options_vfs_runtime_unavailable"));
+      }
       const response = await request(MESSAGE_TYPES.updateSettings, {
         providerEnabled: providerEnabledInput?.checked === true,
         externalProvidersEnabled: externalEnabledInput?.checked === true
       });
       const state = normalizeState(response.state);
       renderState(state);
-      return response.reloadRequired === true;
+      return response.backgroundRestartRequired === true;
     }catch(error){
       global.NCLogContext.safeConsoleError(LOG_PREFIX, "VFS options settings update failed", error);
       showNotice("options_vfs_action_failed");
@@ -487,8 +538,21 @@
     void findProviderAddons();
   });
   global.addEventListener("focus", () => {
-    if (runtimeAvailable && !actionPending){
-      void refresh({ preserveSettings: settingsDirty });
+    if (!actionPending){
+      void refresh();
+    }
+  });
+  global.document?.addEventListener("visibilitychange", () => {
+    if (global.document.visibilityState === "visible" && !actionPending){
+      void refresh();
+    }
+  });
+  browser.runtime.onMessage?.addListener((message) => {
+    if ((message?.type === "vfs-provider-updated"
+      || message?.type === "vfs-provider-removed"
+      || message?.type === "vfs-remove-connection")
+      && !actionPending){
+      void refresh();
     }
   });
 
