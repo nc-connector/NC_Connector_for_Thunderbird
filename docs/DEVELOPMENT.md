@@ -50,6 +50,7 @@ It complements:
   - [10.2 Inserting share blocks into compose (mode-aware)](#102-inserting-share-blocks-into-compose-mode-aware)
   - [10.3 Share block language override](#103-share-block-language-override)
   - [10.4 FileLink upload engine (Nextcloud 32+)](#104-filelink-upload-engine-nextcloud-32)
+  - [10.5 VFS provider, client, and mixed-source materialization](#105-vfs-provider-client-and-mixed-source-materialization)
 - [11. Data model](#11-data-model)
   - [11.1 `X-NCTALK-*` iCalendar properties](#111-x-nctalk--icalendar-properties)
   - [11.2 Internal persistence (`storage.local`)](#112-internal-persistence-storagelocal)
@@ -68,6 +69,7 @@ It complements:
 Goals for this project:
 - Provide **Nextcloud Talk** room creation directly from the **calendar event editor** (dialog + tab).
 - Provide **Nextcloud sharing** directly from the **compose window** (sharing wizard).
+- Let the Sharing wizard combine local files, the configured Nextcloud, and compatible Thunderbird VFS providers without duplicating Nextcloud credentials or upload policy.
 - Maintain **no feature loss** across reviewer-driven changes.
 - Keep custom experiments **minimal and easy to review**.
 - Keep all user-facing text **localized** via WebExtension i18n (`_locales/**/messages.json`).
@@ -115,15 +117,25 @@ Key files you’ll touch most:
 - `modules/bgComposeShareCleanup.js` — compose-tab and wizard-window remote cleanup lifecycle
 - `modules/bgComposeShareInsert.js` — mode-aware share-block insertion (HTML vs plain-text compose)
 - `modules/bgComposeFinalize.js` — background-owned atomic finalize transaction and rollback
-- `modules/bgComposePasswordDispatch.js` — separate-password-mail dispatch and follow-up compose handling
+- `modules/bgComposePasswordRecipients.js` — recipient parsing, envelope comparison, and sender identity resolution for password follow-up mail
+- `modules/bgComposePasswordMail.js` — follow-up compose construction, readiness checks, manual fallback, and notifications
+- `modules/bgComposePasswordDelivery.js` — Secrets expansion, recipient splitting, delivery flow, and recovery
+- `modules/bgComposePasswordDispatch.js` — pending password-dispatch queue and its state transitions
 - `modules/bgFileLinkUpload.js` — background-owned FileLink upload sessions, cancellation, and cleanup handoff
 - `modules/fileLinkUploadPolicy.js` — upload-mode thresholds, batching, concurrency, and retry limits
-- `modules/fileLinkDav.js` — shared DAV request, retry, path-probe, and folder helpers
+- `modules/nextcloudDav.js` — shared DAV request, retry, path, XML, quota, and server-side copy helpers
 - `modules/fileLinkUploadProgress.js` — aggregate and per-item progress throttling
 - `modules/fileLinkBulkUpload.js` — Nextcloud DAV bulk multipart construction, MD5 calculation, and response handling
-- `modules/fileLinkUpload.js` — root reservation plus Direct, Chunked, and Bulk orchestration
+- `modules/fileLinkTransfer.js` — shared Direct/Chunked transfer and staged-file MOVE recovery
+- `modules/fileLinkRootReservation.js` — create-only share-root reservation and collision recovery
+- `modules/fileLinkUpload.js` — upload-plan, progress, directory, and mixed-source orchestration
 - `modules/fileLinkShare.js` — public-share creation and ambiguous-response recovery
+- `modules/fileLinkSources.js` — mixed-source normalization and materialization into the reserved share root
+- `modules/nextcloudVfsStorage.js` — full read/write VFS storage adapter over the configured Nextcloud account
+- `modules/vfsProviderRuntime.js` — provider grants, account binding, and Toolkit request bridge
+- `modules/vfsClientRuntime.js` — self/external provider discovery, picker sessions, and sequential reads
 - `modules/fileQueuePathConflicts.js` — linear-time exact/prefix conflict detection for upload queues
+- `ui/sharingQueueEntries.js` — queue entry descriptors, display/target paths, collision inputs, grouped renames, and retry-state reset
 - `modules/passwordPolicyRuntime.js` — background password-policy fetch/generate helper for wizard requests
 - `modules/bgCompose.js` — compose/window/tab listener wiring
 - `modules/bgSignature.js` — central backend email-signature policy orchestration for compose windows
@@ -138,19 +150,34 @@ Key files you’ll touch most:
 - `modules/hostPermissions.js` — single host-permission gate used by core/talk/sharing runtime modules
 - `modules/managedSetup.js` — reads managed Nextcloud URL values from Thunderbird Enterprise Policy (`storage.managed`)
 - `modules/shareTemplateContract.js` — shared share-template marker rules used by render + insert modules
-- `modules/nccore.js` — Nextcloud auth/login-flow helpers
+- `modules/nccore.js` — Nextcloud auth/login-flow helpers and shared DAV account data
 - `modules/talkAddressbook.js` — system-addressbook CardDAV fetch/cache/search/status helpers
 - `modules/talkcore.js` — Nextcloud Talk API helpers (OCS, room lifecycle, capabilities)
-- `modules/ncSharing.js` — Nextcloud sharing/DAV helpers used by the sharing wizard
+- `modules/shareBlockRenderer.js` — localized HTML/plain-text share-block rendering, templates, badges, and header asset presentation
+- `modules/ncSharing.js` — Nextcloud path, DAV/OCS, and FileLink service used by the sharing wizard; its public render methods delegate to `shareBlockRenderer.js`
 - `modules/icalContract.js` — shared iCal/vCard parser rules (powered by vendored `vendor/ical.js`)
 - `experiments/ncComposePrefs/parent.js` — read-only compose preference bridge (`mail.compose.big_attachments.*`)
 - `ui/talkDialog.html` + `ui/talkDialog.js` — Talk wizard UI
 - `ui/nextcloudSharingWizard.html` + `ui/nextcloudSharingWizard.js` — Sharing wizard UI
+- `ui/optionsVfs.js` — VFS provider/client settings, grants, and external connection setup
+- `ui/vfsProviderSetup.html` + `ui/vfsProviderSetup.js` — explicit full read/write grant confirmation
+- `vendor/vfs-toolkit/**` — pinned Thunderbird VFS Toolkit API 1.3 runtime and local assets
 - `ui/debugForwarder.js` — shared runtime debug forwarding/helper layer for Talk, Sharing, and attachment prompt UIs
 - `ui/addressbookUi.js` — shared system-addressbook tooltip lock helper used by Talk wizard + options
 - `ui/passwordPolicyClient.js` — shared password-policy fetch/generate helper for both wizards
 - `ui/wizardPolicyUi.js` — shared policy warning, lock, default, and password-policy UI helpers for Talk/Sharing/options
 - `options.html` + `options.js` — settings UI
+
+Compose lifecycle state stays with its focused owner module. Attachment prompts
+belong to `bgComposeAttachments.js`, password dispatch queues belong to
+`bgComposePasswordDispatch.js`, and wizard/compose cleanup belongs to
+`bgComposeShareCleanup.js`. Listener and finalization modules use named query and
+transition functions instead of reading or changing those maps directly.
+
+The current MV2 background exposes these functions through ordered scripts and a
+shared global scope. A later MV3 migration must replace that loading mechanism
+with explicit module imports while retaining the same state ownership. This
+refactor does not change the manifest version or background lifetime.
 
 ---
 
@@ -170,7 +197,7 @@ Important for packaging:
 ### 4.2 Developer tools & consoles
 
 To debug, you’ll typically use:
-- The Thunderbird **Developer Console / Error Console** (for `[NCBG]`, `[NCUI][Talk]`, `[NCUI][Sharing]`, `[NCUI][Options]`, `[NCUI][OpenUrlFallback]`, and `[ncCalToolbar]` logs).
+- The Thunderbird **Developer Console / Error Console** (for `[NCBG]`, `[NCUI][Talk]`, `[NCUI][Sharing]`, `[NCUI][Options]`, `[NCUI][ConnectionRequired]`, `[NCUI][OpenUrlFallback]`, and `[ncCalToolbar]` logs).
 - The add-on debug view (background + extension pages).
 
 What to look for:
@@ -178,6 +205,7 @@ What to look for:
 - `[NCUI][Talk]` — Talk wizard UI flow
 - `[NCUI][Sharing]` — Sharing wizard UI flow
 - `[NCUI][Options]` — settings/options page flow
+- `[NCUI][ConnectionRequired]` — missing-account setup notice
 - `[NCUI][OpenUrlFallback]` — browser-open fallback dialog
 - `[ncCalToolbar]` — custom editor integration logs (button/context/read-write lifecycle)
 - The bundled `experiments/calendar/**` package remains upstream/as-is; any console output coming from it is outside the add-on debug-channel rules above.
@@ -279,6 +307,18 @@ Storage backend:
 - `browser.storage.local`
 - `browser.storage.managed` for read-only administrator-provided setup values
 
+The manual compose Sharing action and the calendar Talk action check the same
+effective account returned by `NCCore.getOpts()` before preparing a wizard.
+When URL, user, or app password is missing, `ui/connectionRequired.html` shows
+a compact, action-specific explanation and opens the General options tab through
+`connection:openOptions`; no Sharing or Talk wizard context is created.
+
+The General tab explains directly below the Nextcloud URL that credentials stay
+in the Thunderbird profile and are sent only to the configured server. The VFS
+tab reuses `vfs:findProviderAddons` for its **Find VFS providers** action, so the
+same backend, Pro, seat, and effective Share-policy gate applies in options and
+in the Sharing wizard.
+
 Backend policy precedence for every add-on-editable default:
 1. Inactive/unavailable policy domain: use the stored local value or the add-on fallback.
 2. Active policy with `policy_editable=true`: use a valid stored local value; if none exists, seed the UI/runtime from the backend value.
@@ -325,6 +365,14 @@ Sharing defaults (managed by `modules/sharingStorage.js`):
 - `sharingAttachmentsOfferAboveEnabled`
 - `sharingAttachmentsOfferAboveMb`
 
+VFS:
+- `ncVfsProviderStateV1` (`storage.local`) — provider enable flag, canonical account binding, and opaque self-storage ID
+- `vfs-toolkit-connections` (`storage.local`) — Toolkit provider grants keyed by consumer add-on ID and opaque storage ID
+- `ncVfsExternalProvidersEnabled` (`storage.local`) — explicit external-provider discovery switch
+- `ncVfsClientProvidersV1` (`storage.session`) — providers and connections discovered for the current Thunderbird session
+
+These records contain no Nextcloud password, authorization header, file content, or rendered message data. The configured `baseUrl`, `user`, and `appPass` remain the only Nextcloud credential source.
+
 Advanced language overrides:
 - `shareBlockLang` (`"default"` or a supported locale folder name like `de`, `pt_BR`, `zh_TW`, …)
 - `eventDescriptionLang` (`"default"` or supported locale)
@@ -363,7 +411,7 @@ Current implementation:
   - editor-targeted snapshot/write-back (`getCurrent` / `updateCurrent`)
   - tracked close lifecycle (`onTrackedEditorClosed`)
 - `experiments/calendar/**` remains untouched and is used only for persisted item monitoring.
-- Business logic remains in background runtime modules (`modules/bgState.js`, `modules/bgComposeAttachments.js`, `modules/bgComposeShareCleanup.js`, `modules/bgComposeShareInsert.js`, `modules/bgComposePasswordDispatch.js`, `modules/passwordPolicyRuntime.js`, `modules/bgCompose.js`, `modules/bgCalendarLifecycle.js`, `modules/bgCalendar.js`, `modules/bgRouter.js`, `modules/talkAddressbook.js`, `modules/talkcore.js`).
+- Business logic remains in background runtime modules (`modules/bgState.js`, `modules/bgComposeAttachments.js`, `modules/bgComposeShareCleanup.js`, `modules/bgComposeShareInsert.js`, `modules/bgComposePasswordRecipients.js`, `modules/bgComposePasswordMail.js`, `modules/bgComposePasswordDelivery.js`, `modules/bgComposePasswordDispatch.js`, `modules/passwordPolicyRuntime.js`, `modules/bgCompose.js`, `modules/bgCalendarLifecycle.js`, `modules/bgCalendar.js`, `modules/bgRouter.js`, `modules/talkAddressbook.js`, `modules/talkcore.js`).
 
 ### 7.1.1 Why the Talk popup is assigned with `setPopup()`
 
@@ -674,7 +722,7 @@ Responsibilities:
 - Before manual mode leaves step 1, it asks background to `PROPFIND` the exact share root and remains on step 1 when that root already exists.
 - `modules/bgFileLinkUpload.js` owns the upload, abort controller, share-folder cleanup handoff, and result delivery for the lifetime of that Port.
 - Shared FileLink modules perform DAV/OCS work in the background context.
-- Public-link share creation follows the documented OCS rules: `label` is sent during create, and mutable metadata such as `note` is updated later via form-encoded OCS update arguments.
+- Public-link share creation sends `label` and the initial `note`. A changed note is updated during background finalization with the base URL and authorization captured by that upload; an unchanged note causes no second OCS request.
 - The background is used for **compose insertion**, because the compose APIs are executed from the background.
 - In attachment mode, background removes selected attachments from compose and
   passes them as a one-time launch context to the wizard.
@@ -682,23 +730,32 @@ Responsibilities:
 Key files:
 - `ui/nextcloudSharingWizard.html`
 - `ui/nextcloudSharingWizard.js`
+- `ui/sharingQueueEntries.js`
+- `ui/sharingPortRequest.js`
 - `ui/composeAttachmentPrompt.html`
 - `ui/composeAttachmentPrompt.js`
+- `modules/shareBlockRenderer.js`
 - `modules/ncSharing.js`
 - `modules/bgFileLinkUpload.js`
 - `modules/fileLinkUploadPolicy.js`
-- `modules/fileLinkDav.js`
+- `modules/nextcloudDav.js`
 - `modules/fileLinkUploadProgress.js`
 - `modules/fileLinkBulkUpload.js`
+- `modules/fileLinkTransfer.js`
+- `modules/fileLinkRootReservation.js`
 - `modules/fileLinkUpload.js`
 - `modules/fileLinkShare.js`
+- `modules/fileLinkSources.js`
+- `modules/nextcloudVfsStorage.js`
+- `modules/vfsProviderRuntime.js`
+- `modules/vfsClientRuntime.js`
 - `modules/ocs.js`
 - `modules/nccore.js`
 - `modules/sharingStorage.js`
 
 Attachment mode specifics:
 - Wizard starts in step 3 (files queue), without note step.
-- Share label is fixed at create time; note metadata is pushed at finalize time via the documented OCS update endpoint.
+- Share label is fixed at create time. A note changed after upload is pushed by background finalization; attachment mode always keeps it disabled.
 - Share name base is fixed to `email_attachment` with fixed `_1`, `_2`, ... suffix handling.
 - The effective attachment-link target comes from `sharingAttachmentsLinkTarget` and backend policy key `policy.share.attachment_link_target` (`zip_download` or `share_page`). An invalid local value counts as unset, allowing a usable editable backend default to seed it. A locked valid backend value always wins; a locked missing or invalid backend value forces `zip_download` instead of falling back to stored local state.
 - The target changes only the inserted URL plus `{LINK_INTRO}` / `{LINK_LABEL}` wording. Attachment-mode read-only permissions, hidden permission row, and cleanup behavior stay unchanged.
@@ -706,11 +763,21 @@ Attachment mode specifics:
 - ZIP derivation accepts only an absolute HTTP(S) URL whose path ends in `/s/<token>`; a trailing slash, query, or fragment is accepted and removed. When the OCS create-share response contains a token, the decoded path token must match it. Any invalid shape or mismatch makes finalize show an error and insert neither the original URL nor a share block.
 - Recipient permissions are enforced as read-only in this mode (`read=true`, `create/write/delete=false`), independent of sharing defaults.
 - Queue UI behavior:
-  - path column shows the best available source path (including file name)
-  - path text is horizontally scrollable per row (mouse wheel), while type/status columns remain fixed
-  - currently uploading row is highlighted in accent blue; upload progress and done state use green success styling
+  - entries are grouped by source and rendered as a recursive file/folder tree; top-level folders start expanded and every populated folder can be expanded or collapsed
+  - external VFS group headings use the provider-reported add-on icon; the generic external-source symbol is only a fallback, while Local and My Nextcloud keep their existing symbols
+  - rows show the best available path or name, source context, item type, known file size, transfer status, and an item action
+  - the remove action applies to a standalone entry or a selected root/transfer group; removing individual children of a selected folder is not implemented yet
+  - the summary bar shows queue entries, distinct sources, and the known total size; a separate destination summary shows finite free/total space, unlimited storage, or an unavailable quota result
+  - upload is blocked when the known queued bytes exceed a finite reported destination capacity
+  - currently uploading rows are highlighted in accent blue; per-item progress and completed state use the queue status controls
   - aggregate progress shows completed files, total files, transferred bytes, total bytes, percentage, and current transfer rate
   - UI progress delivery is limited to 10 updates per second and batches changed queue rows
+- `ui/sharingQueueEntries.js` owns the queue descriptor and path model. The
+  wizard retains DOM rendering, picker/Port handling, upload flow, attachment
+  lifecycle, and finalization.
+- The queue helper is currently loaded before the wizard as an ordered MV2
+  script. A later MV3 move must replace that shared global with an explicit
+  import while keeping the same model/orchestration boundary.
 - Upload uniqueness behavior:
   - local duplicate target paths are resolved before upload (rename prompt)
   - no per-file remote preflight checks are executed for queue entries in a newly reserved share folder
@@ -719,7 +786,7 @@ Attachment mode specifics:
   - attachment mode tries its fixed numbered folder-name candidates
 - Share cleanup rules:
   - every created share first has background-owned wizard cleanup; finalize transfers that exact ownership to the compose draft
-  - one `sharing:finalizeRenderedShare` call runs a background transaction: resolve draft group, stage cleanup ownership, stage the optional password dispatch, apply the body/header mutation, then commit
+  - one `sharing:finalizeRenderedShare` call runs a background transaction: resolve draft group, stage cleanup ownership, update a changed note with the upload account, stage the optional password dispatch, apply the body/header mutation, then commit
   - send is blocked while this transaction is active
   - a stage failure or popup/tab close rolls back the exact insertion and password registration and restores the previous cleanup owner; incomplete rollback taints the lifecycle and remains fail-closed
   - cleanup for the complete set is cleared after successful `compose.onAfterSend`; a missing `headerMessageId` is diagnostic only and does not turn a successful `sendNow` or `sendLater` event into failure
@@ -746,6 +813,7 @@ Attachment mode specifics:
   - Thunderbird templates containing an NC Connector share are unsupported. Saving as template records that state and blocks both the template and messages instantiated from it
   - password-dispatch payloads are deliberately not persisted. Before a password-protected share draft can close, background captures the current envelope and opens explicit manual password drafts. Failed or incomplete handoff remains queued and blocks sending the main draft
 - Password separation:
+  - The background implementation is split by responsibility: recipient and identity resolution, compose-mail handling, delivery and recovery, and pending queue transitions. In MV2 these files share the ordered background-script scope; a later MV3 conversion must replace that link with explicit imports.
   - Option + wizard toggle can send the password in a dedicated follow-up mail.
   - This toggle is only active when password protection is enabled.
   - Password delivery defaults to plain text. With backend policy, `share_send_password_mode=secrets` switches follow-up mails to Nextcloud Secrets links.
@@ -759,7 +827,7 @@ Attachment mode specifics:
   - Secrets mode creates one one-time Secrets link per recipient and preserves `Bcc` separation.
   - Secrets are titled `NCC <share label>` when a label exists, otherwise `NCC share password`.
   - HTML follow-up mails render Secrets URLs as localized link text; plain-text follow-up mails keep the full URL visible.
-  - Backend custom password templates (`language_share_html_block=custom` + `share_password_template`) are sanitized in the render path before follow-up registration; rich HTML uses `NCSharing.buildHtmlBlock(...)`, plain text uses `NCSharing.buildPlainTextBlock(...)`, and missing sanitizer or empty sanitized output aborts finalize (fail-closed).
+  - Backend custom password templates (`language_share_html_block=custom` + `share_password_template`) are sanitized in the render path before follow-up registration; rich HTML uses `NCSharing.buildHtmlBlock(...)`, plain text uses `NCSharing.buildPlainTextBlock(...)`, both facade calls delegate to `modules/shareBlockRenderer.js`, and missing sanitizer or empty sanitized output aborts finalize (fail-closed).
   - Follow-up mail delivery mode mirrors the source compose mode (`isPlainText` / `deliveryFormat`) captured from compose details and refreshed on `compose.onBeforeSend`.
   - Follow-up registration now requires both pre-rendered HTML and pre-rendered plain text; when follow-up is plain text, background uses the provided plain-text block and frames it with a fixed 50-character `#` border.
   - For confirmed `sendNow`, the dispatch path first warms the freshly created password compose tab until Thunderbird exposes the complete expected recipient envelope, waits for the applicable backend signature, repeats the identity/recipient/subject comparison after a short settle tick, and then sends with `sendNow`.
@@ -776,13 +844,14 @@ Attachment mode specifics:
 ### 10.2 Inserting share blocks into compose (mode-aware)
 
 The sharing wizard sends one transaction request:
-- `browser.runtime.sendMessage({ type: "sharing:finalizeRenderedShare", payload: { tabId, wizardWindowId, cleanup, passwordDispatch, html, plainText } })`
+- `browser.runtime.sendMessage({ type: "sharing:finalizeRenderedShare", payload: { tabId, wizardWindowId, cleanup, shareNote, passwordDispatch, html, plainText } })`
 
 Background:
 - stages/commits cleanup and optional password dispatch through `modules/bgComposeFinalize.js`
 - routes the reversible body/header mutation through `modules/bgComposeShareInsert.js`
 - receives pre-rendered share HTML from `NCSharing.buildHtmlBlock(...)`.
 - receives pre-rendered share plain text from `NCSharing.buildPlainTextBlock(...)`.
+- keeps those public `NCSharing` calls stable while `modules/shareBlockRenderer.js` owns presentation and `modules/ncSharing.js` owns Nextcloud path and network work.
 - requires both render variants as part of the runtime message rules.
 - backend custom templates are sanitized in both rendering paths before use; local built-in templates stay on the trusted local render path and are not passed through the backend HTML sanitizer.
 - backend custom templates prune empty optional placeholders (`{RIGHTS}`, `{PASSWORD}`, `{EXPIRATIONDATE}`, `{NOTE}`) before replacement to reduce orphaned labels/wrappers in arbitrary layouts.
@@ -790,7 +859,11 @@ Background:
 - resolves compose mode from `isPlainText` + `deliveryFormat`:
   - HTML compose mode: inserts source HTML near `<body>`.
   - Plain-text compose mode: prefers the pre-rendered `plainText` block, normalizes permission markers (`[x]` / `[ ]`), compacts permission rows inside explicit add-on-generated rights segments, and frames the block with a fixed 60-character `#` border.
-  - For HTML editors with plain-text delivery format, inserts an escaped plain-text rendering to preserve stable plain-text output.
+- For HTML editors with plain-text delivery format, inserts an escaped plain-text rendering to preserve stable plain-text output.
+
+The renderer and sharing service currently connect through ordered MV2 scripts
+and a shared global object. A later MV3 move must replace that loading mechanism
+with explicit imports while keeping the same presentation/network boundary.
 
 ### 10.3 Share block language override
 
@@ -875,21 +948,28 @@ Missing, numeric, or different values keep DAV bulk disabled. Direct and chunked
 
 Direct and chunked files run in a pool of at most three workers. Chunks belonging to one file are sent in order. Bulk batches are sent one at a time before the Direct/Chunked pool starts.
 
+`NCFileLinkUpload.uploadFile()` is the only Direct-versus-Chunked selector. The normal FileLink plan, external VFS files, and VFS-provider writes all enter that function. Provider `writeFile()` builds a one-file plan, so it receives the same retry, progress, cancellation, and completion behavior; Bulk remains a queue optimization and is not synthesized across independent provider calls.
+
 Directory planning creates:
 
 - every directory needed by chunked or Bulk destinations
 - only shared parent paths for Direct files
 
-Direct PUT sends `X-NC-WebDAV-Auto-Mkcol: 1`, matching the header checked by Nextcloud's `UploadAutoMkcolPlugin`. This lets Nextcloud create a missing path for an individual Direct destination without one `MKCOL` per unique single-file directory. The Nextcloud 32 developer manual currently omits the hyphen before `Mkcol`; client code follows the server implementation.
+Normal FileLink Direct PUT sends `X-NC-WebDAV-Auto-Mkcol: 1`, matching the header checked by Nextcloud's `UploadAutoMkcolPlugin`. This lets Nextcloud create a missing path for an individual Direct destination without one `MKCOL` per unique single-file directory. The Nextcloud 32 developer manual currently omits the hyphen before `Mkcol`; client code follows the server implementation. VFS-provider writes keep this header disabled and create missing parent directories with ordered `PROPFIND` and `MKCOL` requests before either Direct or chunked transfer.
 
 #### Root reservation and collision handling
 
 Manual wizard mode sends `sharing:checkFolderExists` before leaving step 1. Background resolves the configured login to the canonical Nextcloud UID, builds the target through the same `modules/ncSharing.js` path/date/name rules used by upload, and probes that target with a depth-zero DAV `PROPFIND`. A present target keeps the wizard on step 1 with the localized collision message. Attachment automation skips this preflight because numbered target selection belongs to its upload flow.
 
-`modules/fileLinkUpload.js` reserves the share root in two steps:
+`modules/fileLinkRootReservation.js` reserves the share root in two steps:
 
 1. create a unique staging collection below the configured FileLink base path
 2. `MOVE` it to a candidate target with `Overwrite: F`
+
+The transfer, root-reservation, and orchestration modules currently exchange
+their public objects through ordered MV2 background scripts. A later MV3 move
+must replace that loading mechanism with explicit imports while keeping the
+same responsibilities.
 
 The MOVE is the server-side collision decision. A `412` means that candidate is already present. Manual mode has one candidate and stops with the localized collision message. Attachment automation can try its numbered candidates.
 
@@ -905,7 +985,7 @@ An unused staging collection is removed in `finally`. Once the target exists, ba
 
 #### Direct, Chunked, and Bulk protocols
 
-Direct upload uses an authenticated DAV `PUT` to the final file URL.
+Normal FileLink Direct upload uses an authenticated DAV `PUT` to the final file URL. A create-only VFS-provider Direct write instead uploads to a unique `.ncc-upload-*` sibling in the selected parent and moves that stage to the requested target with `Overwrite: F`. The stage gives retries one operation-owned URL and prevents an unclear successful PUT response from becoming a false collision on the final target. Failed or canceled staged writes remove that stage on a best-effort path.
 
 Chunked upload v2 uses:
 
@@ -913,7 +993,7 @@ Chunked upload v2 uses:
 2. numbered chunk PUTs with `Destination` and `OC-Total-Length`
 3. one MOVE from `<upload-folder>/.file` to the final file URL
 
-The final chunk MOVE is not repeated after an unclear transport or gateway result. A target `PROPFIND` must report a non-collection with the expected content length before the operation is accepted as completed. Failed or canceled chunk sessions delete their upload collection on a best-effort path. Nextcloud expires an upload collection after 24 hours without activity if the client-side delete cannot reach the server.
+The final Direct-stage or chunk MOVE is not repeated after an unclear transport or gateway result. Completion is accepted only when the operation-owned stage or upload collection is absent and the target `PROPFIND` reports a non-collection with the expected content length. For a create-only write, a retained source plus an existing target remains a collision even when both files have the same size. Failed or canceled stages and chunk sessions are deleted on a best-effort path. Nextcloud expires an upload collection after 24 hours without activity if the client-side delete cannot reach the server.
 
 Bulk upload posts `multipart/related` to `/remote.php/dav/bulk`. Every part contains:
 
@@ -945,7 +1025,7 @@ State-changing final MOVE and share-create decisions have separate recovery rule
 
 #### Public-share creation
 
-`modules/fileLinkShare.js` sends the initial public-share create payload without `publicUpload`. It includes the final path, share type, permissions, and the selected password, expiry, label, and note values. The existing finalize path may update mutable share metadata later. For permission handling, both paths send only the exact `permissions` mask because Nextcloud treats the legacy `publicUpload` field as an override. Read plus Edit is sent as `READ | UPDATE` (`3`); Create and Delete stay independent.
+`modules/fileLinkShare.js` sends the initial public-share create payload without `publicUpload`. It includes the final path, share type, permissions, and the selected password, expiry, label, and note values. Background finalization updates the note only when it changed after upload. For permission handling, both paths send only the exact `permissions` mask because Nextcloud treats the legacy `publicUpload` field as an override. Read plus Edit is sent as `READ | UPDATE` (`3`); Create and Delete stay independent.
 
 Both create and metadata update require an explicit successful OCS meta result. HTTP success with an OCS failure status is rejected.
 
@@ -966,7 +1046,7 @@ The wizard opens:
 browser.runtime.connect({ name: "nc-filelink-upload" })
 ```
 
-The Port transfers the start request, batched progress events, final result, cancel request, and serialized error. File values cross the WebExtension boundary through the platform's structured-clone support. `modules/bgFileLinkUpload.js` owns one abort controller per session.
+The Port transfers the start request, batched progress events, final result, cancel request, and serialized error. File values cross the WebExtension boundary through the platform's structured-clone support. `ui/sharingPortRequest.js` owns listener disposal, one-time settlement, client disconnect, and unload cancellation for both Sharing wizard Ports. `modules/bgFileLinkUpload.js` owns one abort controller per session.
 
 Cancellation starts when:
 
@@ -990,6 +1070,39 @@ Thunderbird platform references:
 - [Thunderbird runtime API](https://webextension-api.thunderbird.net/en/esr-mv2/runtime.html)
 - [Thunderbird windows API](https://webextension-api.thunderbird.net/en/mv2/windows.html)
 - [Structured clone algorithm](https://developer.mozilla.org/en-US/docs/Web/API/Web_Workers_API/Structured_clone_algorithm)
+
+### 10.5 VFS provider, client, and mixed-source materialization
+
+NC Connector uses the vendored Thunderbird VFS Toolkit in two roles:
+
+- As a provider, it starts enabled and exposes the already configured Nextcloud account with full read/write file and folder capabilities only after an explicit grant.
+- As a client, it uses its own provider for **+ My Nextcloud** and can discover separately installed providers only when `vfs_external_providers_enabled` is effective and the backend reports Pro mode with an active assigned seat. The required `management` permission is granted at installation.
+
+There is no second Nextcloud login. `modules/nccore.js` resolves the canonical Nextcloud UID and constructs the authenticated File, Upload, and Bulk DAV targets shared by FileLink, VFS, and persistent cleanup. Basic Auth continues to use the configured login alias and app password. A provider storage ID is bound to the normalized server plus canonical UID. Changing either rotates that ID and removes every previous grant; an app-password or login-alias change for the same canonical account does not.
+
+The provider implements live list, quota, read, add, move, copy, and delete operations through the common DAV module. `writeFile()` validates the same Nextcloud 32 capability rules as FileLink and delegates to the existing one-file upload plan instead of issuing a separate PUT. Files up to 20 MiB therefore use the shared Direct path; larger files use the shared chunked-v2 path. With `overwrite: false`, Direct writes use a unique sibling stage followed by `MOVE` with `Overwrite: F`; chunked writes apply `Overwrite: F` to their final MOVE. With `overwrite: true`, Direct writes PUT the target and chunked writes move with `Overwrite: T`. Before either upload mode starts, `writeFile()` discovers the nearest existing ancestor and creates every missing parent from that point downward. `addFolder()` uses the same parent handling and still raises `E:EXIST` when the requested folder itself exists. If the final write or folder creation fails, any parents already created are included in the Toolkit storage-change report. Existing upload log messages are retained and receive `origin: vfs_provider` metadata. Toolkit ports are authorized by the runtime-supplied sender ID and the exact consumer/storage pair. Setup uses a one-time token tied to the requesting port. Each active request has its own abort controller, and every operation rechecks the captured account binding before DAV access.
+
+The Sharing wizard first builds one immutable queue of descriptors. Each row carries a source kind (`local`, `nextcloud`, or `external-vfs`), provider label, source path, target path, item kind, size, and transfer-group metadata. Folder enumeration includes empty directories. Exact and prefix conflicts are resolved before any remote share mutation; removing a selected folder removes its complete transfer group.
+
+The wizard exposes exactly three source menus: **+ Local**, **+ My Nextcloud**, and **+ Other source**. **+ My Nextcloud** stays unavailable until the configured account can be exposed through the local provider. **+ Other source** is disabled with a reason tooltip when the backend is missing, the mode is not Pro, the assigned seat is unusable, or a locked policy turns the function off. When entitled, its menu remains open even without a connection and explains whether discovery is disabled, no compatible provider is installed, or a provider still needs a connection. It offers direct actions for the VFS settings tab and the Thunderbird Add-ons search for VFS providers. Discovery refreshes automatically when the wizard opens or regains focus. Changing discovery restarts only the persistent MV2 background document because the pinned upstream Toolkit configures external discovery once during `init()`; the separate options tab remains open. Opening the settings from a populated queue still requires confirmation because restarting the background runtime invalidates an active queue session. If several external connections are available, NC Connector shows an intermediate connection list with the provider-reported add-on icon before opening a picker locked to that exact storage reference. External connections are removed through the Toolkit's `deleteProviderConnection()` flow, not by editing Toolkit session records directly, and a closed entitlement gate does not delete saved connections.
+
+The VFS options state is refreshed after credential saves, whenever the VFS tab is opened, when the options document becomes visible again, and when the Toolkit reports a provider change. Revision checks prevent an older asynchronous response from overwriting a checkbox edit made while that request was running. **Refresh connections** always requests the latest background state, so a provider discovered after returning from the Thunderbird Add-ons tab appears without reopening the options page.
+
+`modules/vfsPolicyRuntime.js` resolves `vfs_provider_enabled` and `vfs_external_providers_enabled` against the Share policy with a short-lived backend-status cache. Missing keys from an older backend preserve an existing local value. Provider grants use only the provider switch. External discovery, setup, selection, reads, and the pre-upload boundary additionally require Pro mode and a usable assigned seat. The pre-upload check runs before root reservation, so a queued external item cannot begin a Nextcloud mutation after its entitlement has changed. A missing backend leaves all non-external source paths in local mode.
+
+The queue step shows the planned relative target folder from `NCSharing.buildShareFolderInfo()`. After upload it uses the folder returned by root reservation, including an attachment suffix such as `_1`. Finite quota displays free and total space. Nextcloud's unlimited-quota marker displays current usage instead of claiming unlimited physical capacity; missing quota data remains visible as unavailable and does not invent a limit.
+
+Materialization begins only after queue collection is complete and the share root is reserved:
+
+1. local `File` objects use the established Direct, Chunked, or Bulk planner;
+2. roots selected from the same configured Nextcloud use one server-side WebDAV `COPY` each, with `Overwrite: F`; sources are never moved or deleted;
+3. external provider files are read sequentially as complete Toolkit `File` objects and immediately passed to the same `uploadFile()` selector as local FileLink files; no extension storage, IndexedDB, or disk staging path is used.
+
+The complete-`File` contract means one large external file can temporarily require similar Thunderbird memory. Sequential read/upload bounds this to one external file at a time. There is deliberately no fallback that downloads a same-Nextcloud source or silently switches transfer protocols. Cancellation closes the exact picker/request, waits for active transfer work to settle, and then uses the existing background-owned share-root cleanup.
+
+The upload-plan log combines local files with external VFS metadata before transfer. External files are classified as Direct or Chunked but stay outside DAV Bulk, while same-Nextcloud COPY roots are reported separately. The completion log is emitted only after every source transfer has finished.
+
+The Toolkit is pinned to API 1.3 and loaded only from `vendor/vfs-toolkit/**` as local `.mjs` modules. `VENDOR.md` records the upstream base, the exact commits from PRs #96, #97, and #98, the license, and matching source/package hashes. The vendored files contain no NC Connector-specific functional or CSS changes. The VFS descriptor uses the storage-facing name **Nextcloud** while the extension manifest keeps the product name **NC Connector for Thunderbird**. The provider descriptor is refreshed before opening an own-Nextcloud picker; its local loopback port enters the same authenticated Toolkit handler as an external port. Toolkit-owned runtime messages remain with the Toolkit listeners, so the NC Connector background router returns `undefined` for those types. NC Connector passes `showToolbarActions: false` and `showContextMenu: false` to both source pickers. This removes management actions and context menus while retaining search, type filters, directory navigation, and selection. No remote code is loaded.
 
 ---
 
@@ -1056,6 +1169,7 @@ Share cleanup groups:
 
 Common utility:
 - `debug:log` — structured log forwarding (debug-controlled)
+- `connection:openOptions` — opens the General options tab from the missing-account action notice
 - `policy:getStatus` — backend seat/policy status for options and wizards
 - `passwordPolicy:fetch` — returns active password policy endpoints + min length
 - `passwordPolicy:generate` — server-side password generation
@@ -1085,7 +1199,25 @@ Sharing wizard:
 - `sharing:checkAttachmentAutomationAllowed`
 - `sharing:finalizeRenderedShare`
 
+VFS options/provider:
+- `vfs:getStatus`
+- `vfs:getExternalStatus`
+- `vfs:grantConsumer`
+- `vfs:listExternalConnections`
+- `vfs:openOptions`
+- `vfs:findProviderAddons`
+- `vfs:options:getState`
+- `vfs:options:updateSettings`
+- `vfs:options:refreshConnections`
+- `vfs:options:connectProvider`
+- `vfs:options:revokeGrant`
+
 FileLink upload uses the named runtime Port `nc-filelink-upload` instead of one long-lived `runtime.sendMessage()` call:
+
+- wizard → background: `start`, `cancel`
+- background → wizard: `progress`, `result`, `error`
+
+VFS source selection uses a separate named Port, `nc-vfs-source-selection`, so picker/folder traversal can be canceled independently before an upload session starts:
 
 - wizard → background: `start`, `cancel`
 - background → wizard: `progress`, `result`, `error`
@@ -1126,12 +1258,13 @@ This add-on uses Nextcloud APIs such as:
   - Direct/final files: `/remote.php/dav/files/<canonical-uid>/...`
   - Chunked upload v2: `/remote.php/dav/uploads/<canonical-uid>/<upload-id>/...`
   - DAV bulk upload: `/remote.php/dav/bulk`
+  - VFS browsing and mutations stay below `/remote.php/dav/files/<canonical-uid>/...` and use `PROPFIND`, `GET`, `PUT`, `MKCOL`, `COPY`, `MOVE`, and `DELETE` as required
 - Addressbook (system addressbook export):
   - `remote.php/dav/addressbooks/.../?export`
 
 Authentication aliases and DAV identities are intentionally kept separate. Basic Auth uses the configured login (which may be an email address), while `modules/nccore.js` resolves and caches `ocs.data.id` for the current background session. User-scoped FileLink, chunk-upload, and CardDAV paths use only that canonical UID; a missing UID fails explicitly instead of substituting the login.
 
-All endpoint interaction lives in the shared modules (`modules/ocs.js`, `modules/nccore.js`, `modules/policyRuntime.js`, `modules/talkcore.js`, `modules/talkAddressbook.js`, `modules/ncSharing.js`, `modules/ncSecrets.js`).
+All endpoint interaction lives in shared modules, including `modules/ocs.js`, `modules/nccore.js`, `modules/nextcloudDav.js`, `modules/nextcloudVfsStorage.js`, `modules/policyRuntime.js`, `modules/talkcore.js`, `modules/talkAddressbook.js`, `modules/ncSharing.js`, and `modules/ncSecrets.js`.
 
 Login Flow start/poll, backend-policy fetches, Talk/CardDAV control requests,
 and their response-body reads use bounded deadlines. Login Flow polling also has
@@ -1156,7 +1289,7 @@ the same run is not overwritten by a later failure.
 
 Before you ship:
 1. Bump `manifest.json` version.
-2. Update `docs/ATN_REVIEW_NOTES.md` and README “What’s new”.
+2. Update `docs/ATN_REVIEW_NOTES.md` and every affected README, admin, and developer section.
 3. Run the manual tests (Talk dialog + tab editor, sharing wizard, event move/delete, delegation, invitee sync).
 4. Run local review checks:
    - `npm ci`
@@ -1178,7 +1311,7 @@ Before you ship:
    - the Thunderbird webext-linter after installing the current upstream `main`
      package
    Do not duplicate the aggregate's individual scripts in the workflow. Keeping
-   one authoritative check list prevents newly added review checks from being
+   one central check list prevents newly added review checks from being
    omitted in CI.
 8. Sanity check:
    - add-on installs on Thunderbird ESR 140 through ESR 153
@@ -1222,6 +1355,13 @@ Common symptoms:
 - **Upload result is lost when the wizard closes**
   - The Port disconnect aborts active work.
   - If the root or share already exists, background cleanup uses the captured cleanup target and generation ID.
+
+- **No external VFS provider appears**
+  - Check the tooltip on **Other source** or the disabled VFS settings section. External providers require the backend in Pro mode, an active assigned seat, and an effective `vfs_external_providers_enabled` policy. After enabling discovery, keep the settings open and use **Refresh connections** if the detected provider has not appeared yet, then use **Connect**.
+  - Only established, reachable Toolkit connections appear in the Sharing wizard.
+
+- **A VFS connection stops working after changing the Nextcloud account**
+  - This is intentional: changing server or canonical user invalidates old grants. Re-authorize the consuming add-on for the new account.
 
 ---
 

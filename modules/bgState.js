@@ -24,6 +24,8 @@ let EVENT_TOKEN_MAP_STORAGE_REVISION = 0;
 let ROOM_DELETE_RETRY_STORAGE_REVISION = 0;
 const SHARING_POPUP_WIDTH = 660;
 const SHARING_POPUP_HEIGHT = 760;
+const CONNECTION_REQUIRED_POPUP_WIDTH = 480;
+const CONNECTION_REQUIRED_POPUP_HEIGHT = 250;
 const ATTACHMENT_PROMPT_WIDTH = 560;
 const ATTACHMENT_PROMPT_HEIGHT = 260;
 const ATTACHMENT_EVAL_DEBOUNCE_MS = 250;
@@ -31,17 +33,27 @@ const SHARING_LAUNCH_CONTEXT_TTL_MS = 15 * 60 * 1000;
 const CALENDAR_WIZARD_CONTEXT_TTL_MS = 30 * 60 * 1000;
 const CALENDAR_WIZARD_CONTEXTS = new Map();
 const SHARING_LAUNCH_CONTEXTS = new Map();
+const SHARING_WIZARD_REQUEST_BY_WINDOW = new Map();
 const ATTACHMENT_PROMPT_BY_ID = new Map();
 const ATTACHMENT_PROMPT_BY_TAB = new Map();
 const ATTACHMENT_PROMPT_BY_WINDOW = new Map();
 const ATTACHMENT_EVAL_TIMER_BY_TAB = new Map();
 const ATTACHMENT_PENDING_ADDED_BY_TAB = new Map();
 const ATTACHMENT_SUPPRESSED_TABS = new Set();
+const ATTACHMENT_AUTOMATION_BY_TAB = new Map();
+const ATTACHMENT_AUTOMATION_TAB_BY_WINDOW = new Map();
 const PASSWORD_MAIL_DISPATCH_BY_TAB = new Map();
 const COMPOSE_SHARE_CLEANUP_BY_TAB = new Map();
 const SHARING_WIZARD_CLEANUP_BY_WINDOW = new Map();
 const ATTACHMENT_DEFAULT_THRESHOLD_MB = NCSharingStorage.DEFAULT_ATTACHMENT_THRESHOLD_MB;
 const COMPOSE_SHARE_CLEANUP_SEND_GRACE_MS = 15000;
+const SHARE_CLEANUP_RETRY_DELAYS_MS = Object.freeze([
+  2000,
+  5000,
+  10000,
+  30000,
+  60000
+]);
 const ROOM_CLEANUP_DELETE_DELAY_MS = 15 * 1000;
 const ROOM_DELETE_RETRY_DELAYS_MS = [2000, 5000, 10000, 30000, 60000];
 const POPUP_FOCUS_RETRY_DELAYS_MS = [0, 120, 450];
@@ -251,6 +263,43 @@ async function focusPopupWindowBestEffort(windowInfo, options = {}){
     reason: "wm_policy_or_race"
   });
   return false;
+}
+
+/**
+ * Check whether the effective Nextcloud account has all required credentials.
+ * The effective URL includes an optional managed setup value.
+ * @returns {Promise<boolean>}
+ */
+async function isNextcloudAccountConfigured(){
+  const options = await NCCore.getOpts();
+  return !!options?.baseUrl
+    && !!options?.user
+    && !!options?.appPass;
+}
+
+/**
+ * Open the compact setup notice used by manual sharing when no account exists.
+ * @param {"sharing"|"talk"} source
+ * @returns {Promise<object>}
+ */
+async function openConnectionRequiredWindow(source = "sharing"){
+  const popupUrl = new URL(browser.runtime.getURL("ui/connectionRequired.html"));
+  popupUrl.searchParams.set("source", source === "talk" ? "talk" : "sharing");
+  const windowInfo = await browser.windows.create({
+    url: popupUrl.toString(),
+    type: "popup",
+    width: CONNECTION_REQUIRED_POPUP_WIDTH,
+    height: CONNECTION_REQUIRED_POPUP_HEIGHT
+  });
+  const focusApplied = await focusPopupWindowBestEffort(windowInfo, {
+    label: "connection required popup"
+  });
+  L("connection required popup opened", {
+    source: source === "talk" ? "talk" : "sharing",
+    windowId: Number(windowInfo?.id) || 0,
+    focusApplied
+  });
+  return windowInfo;
 }
 
 function shortToken(token, { keepStart = 4, keepEnd = 3 } = {}){

@@ -12,6 +12,9 @@
 *.xhtml text eol=lf
 *.yml text eol=lf
 *.yaml text eol=lf
+vendor/vfs-toolkit/**/*.mjs text eol=lf
+vendor/vfs-toolkit/**/*.svg text eol=lf
+vendor/vfs-toolkit/LICENSE text eol=lf
 
 # Keep binaries untouched
 *.png binary

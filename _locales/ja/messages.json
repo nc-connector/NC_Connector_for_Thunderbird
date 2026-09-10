@@ -251,6 +251,21 @@
   "error_credentials_missing": {
     "message": "Nextcloud の資格情報がありません（アドオンの設定）。"
   },
+  "connection_required_title": {
+    "message": "Nextcloud に接続されていません"
+  },
+  "connection_required_sharing_message": {
+    "message": "共有を追加する前に、アドオン設定で Nextcloud 接続を設定してください。"
+  },
+  "connection_required_talk_message": {
+    "message": "Talk リンクを挿入する前に、アドオン設定で Nextcloud 接続を設定してください。"
+  },
+  "connection_required_open_settings": {
+    "message": "設定を開く"
+  },
+  "options_connection_privacy_hint": {
+    "message": "NC Connector は、ここで入力した Nextcloud サーバーにのみ接続します。ログイン情報はこの Thunderbird プロファイルに保存され、そのサーバーだけに送信されます。開発者やその他の第三者に送信されることはありません。"
+  },
   "error_baseurl_https_required": {
     "message": "HTTPS の Nextcloud URL を使用してください。"
   },
@@ -629,6 +644,9 @@
   "sharing_error_insert_failed_close": {
     "message": "共有を安全に完了できませんでした。共有ウィンドウを閉じ、再試行する前にメッセージを確認してください。"
   },
+  "sharing_attachment_routing_active": {
+    "message": "ファイル共有はまだ処理中です。メッセージを送信する前に共有を完了するか、共有ウィンドウを閉じてください。"
+  },
   "sharing_saved_template_unsupported": {
     "message": "NC Connector の共有を含むメッセージは、Thunderbird のテンプレートとして保存または送信できません。新しいメッセージを作成し、ファイルをもう一度共有してください。"
   },
@@ -669,10 +687,10 @@
     "message": "この日付以降、リンクは利用できません。"
   },
   "sharing_step_files_title": {
-    "message": "ファイルまたはフォルダーを選択"
+    "message": "共有を作成"
   },
   "sharing_base_path_info": {
-    "message": "ベースディレクトリ: $1"
+    "message": "保存先フォルダー:"
   },
   "sharing_files_table_path": {
     "message": "パス"
@@ -682,12 +700,6 @@
   },
   "sharing_files_table_status": {
     "message": "状態"
-  },
-  "sharing_button_add_files": {
-    "message": "ファイルを追加..."
-  },
-  "sharing_button_add_folder": {
-    "message": "フォルダーを追加..."
   },
   "sharing_button_remove": {
     "message": "削除"
@@ -947,8 +959,20 @@
   "options_about_homepage_link": {
     "message": "https://nc-connector.de"
   },
-  "options_about_overview_text": {
-    "message": "ファイルリンク以上の機能\n\nNC Connector は、安全なファイル共有、Talk ミーティング、添付ファイル自動化、そして集中管理されたメール署名を Thunderbird と Outlook に直接統合します。これにより、重要なチームのワークフローを本来あるべき場所、つまりメールとカレンダーのクライアント内に保てます。\n\nNC Connector がカバーする内容\n- パスワード、期限日、必要に応じた別送パスワード付きのファイル共有\n- カレンダーの予定から直接 Talk ミーティングを作成・更新\n- 手作業の個別対応ではなく、明確なルールによる添付ファイル自動化\n- 共有ブロックと招待ブロックを普段の作業フローにそのまま挿入\n- Nextcloud プロフィール情報を使った、作成・返信・転送向けの集中メール署名\n\nNextcloud backend を利用する場合\n- Seat の集中割り当てとポリシー管理\n- 共有、Talk 招待、メール署名向けの独自テンプレートとデザイン\n- パスワード別送と組織向けの集中制御\n- 1 Seat = 1 Nextcloud ユーザー\n\nbackend がなくても add-on はそのまま利用できます。backend を使うと、チームや組織向けの集中管理が追加されます。"
+  "options_about_overview_title": {
+    "message": "ファイルリンク以上の機能"
+  },
+  "options_about_overview_intro": {
+    "message": "NC Connector は Thunderbird をお使いの Nextcloud に直接接続します。保護されたファイル共有、Talk ミーティング、添付ファイルの自動化を、使い慣れたメールとカレンダーのワークフロー内で利用できます。"
+  },
+  "options_about_overview_direct": {
+    "message": "すぐに利用できる機能\n- パスワードと有効期限付きの共有\n- カレンダー予定からの Talk ミーティング\n- 大容量添付ファイルの自動共有\n- 自分の Nextcloud を VFS プロバイダーとして提供"
+  },
+  "options_about_overview_backend": {
+    "message": "NC Connector バックエンドで利用できるオプション機能\n- 組織向けのポリシーと委任の集中管理\n- 共有、Talk 招待、メール署名向けの独自テンプレートとデザイン（ブランディング）\n- パスワードの別送\n- 外部 VFS プロバイダーを共有元として利用"
+  },
+  "options_about_backend_link": {
+    "message": "Nextcloud App Store の NC Connector バックエンド"
   },
   "options_about_more_info_label": {
     "message": "詳細情報 -->"
@@ -976,6 +1000,9 @@
   },
   "sharing_password_separate_backend_required_tooltip": {
     "message": "この機能には Nextcloud バックエンドが必要です。"
+  },
+  "vfs_external_pro_required_tooltip": {
+    "message": "外部 VFS プロバイダーを使用するには NC Connector Pro が必要です。"
   },
   "sharing_password_separate_no_seat_tooltip": {
     "message": "この機能を使うには、管理者があなたのアカウントに NC Connector の seat を割り当てる必要があります。"
@@ -1009,5 +1036,332 @@
   },
   "sharing_status_speed_kbps": {
     "message": "$1 KB/s"
+  },
+  "options_tab_vfs": {
+    "message": "VFS"
+  },
+  "options_vfs_provider_heading": {
+    "message": "マイ Nextcloud"
+  },
+  "options_vfs_provider_intro": {
+    "message": "既存の Nextcloud 接続を、許可した Thunderbird アドオンから利用できるようにします。"
+  },
+  "options_vfs_provider_enabled_label": {
+    "message": "NC Connector を VFS プロバイダーとして有効にする"
+  },
+  "options_vfs_provider_tooltip_title": {
+    "message": "Nextcloud への VFS アクセス"
+  },
+  "options_vfs_provider_tooltip_text": {
+    "message": "明示的に許可したアドオンだけが読み取りと書き込みのアクセス権を取得します。認証情報は共有されません。"
+  },
+  "options_vfs_provider_status_label": {
+    "message": "状態"
+  },
+  "options_vfs_provider_status_active": {
+    "message": "プロバイダーは有効です"
+  },
+  "options_vfs_provider_status_inactive": {
+    "message": "プロバイダーは無効です"
+  },
+  "options_vfs_provider_status_connection_required": {
+    "message": "先に Nextcloud 接続を設定してください"
+  },
+  "options_vfs_provider_status_error": {
+    "message": "プロバイダーエラー"
+  },
+  "options_vfs_runtime_unavailable": {
+    "message": "VFS コンポーネントを利用できません。"
+  },
+  "options_vfs_grants_heading": {
+    "message": "許可済みアドオン"
+  },
+  "options_vfs_grants_hint": {
+    "message": "各許可は 1 つのアドオンにのみ適用され、ここでいつでも取り消せます。"
+  },
+  "options_vfs_access_read_write": {
+    "message": "読み取りと書き込み"
+  },
+  "options_vfs_revoke_button": {
+    "message": "アクセスを取り消す"
+  },
+  "options_vfs_no_grants": {
+    "message": "アクセスを許可したアドオンはまだありません。"
+  },
+  "options_vfs_revoke_confirm": {
+    "message": "$1 のアクセスを取り消しますか？"
+  },
+  "options_vfs_external_heading": {
+    "message": "外部 VFS プロバイダー"
+  },
+  "options_vfs_external_intro": {
+    "message": "他のプロバイダーのファイルを読み取り、Nextcloud 上の共有へアップロードします。"
+  },
+  "options_vfs_external_enabled_label": {
+    "message": "外部 VFS プロバイダーを有効にする"
+  },
+  "options_vfs_external_tooltip_title": {
+    "message": "他のストレージを接続"
+  },
+  "options_vfs_external_tooltip_text": {
+    "message": "NC Connector は、明示的な許可後にのみ互換性のある VFS プロバイダーを検出します。ファイルはプロバイダー間で直接コピーされません。"
+  },
+  "options_vfs_external_permission_label": {
+    "message": "Thunderbird の権限"
+  },
+  "options_vfs_external_permission_granted": {
+    "message": "許可済み"
+  },
+  "options_vfs_external_permission_required": {
+    "message": "未許可"
+  },
+  "options_vfs_external_permission_button": {
+    "message": "権限を許可"
+  },
+  "options_vfs_connections_heading": {
+    "message": "検出された接続"
+  },
+  "options_vfs_connections_hint": {
+    "message": "Thunderbird に設定され、接続可能な互換 VFS プロバイダーがここに表示されます。"
+  },
+  "options_vfs_refresh_button": {
+    "message": "更新"
+  },
+  "options_vfs_connect_button": {
+    "message": "接続"
+  },
+  "options_vfs_disconnect_button": {
+    "message": "切断"
+  },
+  "options_vfs_disconnect_confirm": {
+    "message": "$1 を切断しますか？"
+  },
+  "options_vfs_no_connections": {
+    "message": "VFS 接続が見つかりません。"
+  },
+  "options_vfs_connection_status_connected": {
+    "message": "接続済み"
+  },
+  "options_vfs_connection_status_available": {
+    "message": "利用可能"
+  },
+  "options_vfs_connection_status_unavailable": {
+    "message": "利用不可"
+  },
+  "options_vfs_connection_status_error": {
+    "message": "エラー"
+  },
+  "options_vfs_loading": {
+    "message": "読み込み中…"
+  },
+  "options_vfs_action_failed": {
+    "message": "VFS 操作を完了できませんでした。"
+  },
+  "vfs_error_management_permission_missing": {
+    "message": "外部 VFS プロバイダーの検出に必要な権限がありません。"
+  },
+  "vfs_error_storage_changed": {
+    "message": "ストレージ接続が変更されました。ファイルを選択し直してください。"
+  },
+  "vfs_error_file_metadata_missing": {
+    "message": "ファイル情報が不完全です。ファイルを選択し直してください。"
+  },
+  "vfs_error_file_read_failed": {
+    "message": "ストレージプロバイダーからファイルを読み取れませんでした。"
+  },
+  "vfs_error_file_changed": {
+    "message": "選択後にファイルが変更されました。選択し直してください。"
+  },
+  "vfs_error_invalid_path": {
+    "message": "選択したストレージパスは無効です。"
+  },
+  "vfs_error_root_not_selectable": {
+    "message": "ストレージのルートをフォルダーとして選択することはできません。"
+  },
+  "vfs_error_external_connection_missing": {
+    "message": "選択したストレージ接続は利用できなくなりました。"
+  },
+  "vfs_error_duplicate_path": {
+    "message": "選択内容に同じパスが複数含まれています。"
+  },
+  "sharing_button_add_local": {
+    "message": "+ ローカル"
+  },
+  "sharing_button_add_nextcloud": {
+    "message": "+ マイ Nextcloud"
+  },
+  "sharing_button_add_nextcloud_files": {
+    "message": "ファイルを選択"
+  },
+  "sharing_button_add_nextcloud_folder": {
+    "message": "フォルダーを選択"
+  },
+  "sharing_button_add_external": {
+    "message": "+ その他のソース"
+  },
+  "sharing_button_add_external_files": {
+    "message": "ファイルを選択"
+  },
+  "sharing_button_add_external_folder": {
+    "message": "フォルダーを選択"
+  },
+  "sharing_files_table_source": {
+    "message": "取得元"
+  },
+  "sharing_vfs_connection_heading": {
+    "message": "ストレージを選択"
+  },
+  "sharing_vfs_connection_label": {
+    "message": "ストレージ"
+  },
+  "sharing_vfs_external_unavailable": {
+    "message": "利用できる外部ストレージ接続がありません。"
+  },
+  "sharing_vfs_nextcloud_unavailable_tooltip": {
+    "message": "利用できません。まずアドオン設定で Nextcloud 接続を設定してください。"
+  },
+  "sharing_vfs_external_disabled_notice": {
+    "message": "まず VFS 設定で他の取得元を設定してください。"
+  },
+  "sharing_vfs_external_permission_notice": {
+    "message": "他のストレージプロバイダーを検出する権限がありません。VFS 設定で権限を付与してください。"
+  },
+  "sharing_vfs_external_no_providers_notice": {
+    "message": "互換性のある VFS プロバイダーがインストールされていません。"
+  },
+  "sharing_vfs_external_no_connections_notice": {
+    "message": "互換性のある VFS プロバイダーが見つかりましたが、ストレージが接続されていません。"
+  },
+  "sharing_vfs_external_load_failed_notice": {
+    "message": "他のストレージソースを読み込めませんでした。"
+  },
+  "sharing_vfs_open_settings": {
+    "message": "VFS 設定を開く"
+  },
+  "sharing_vfs_set_up_connection": {
+    "message": "接続を設定"
+  },
+  "sharing_vfs_add_connection": {
+    "message": "別の接続を設定"
+  },
+  "sharing_vfs_find_providers": {
+    "message": "VFS プロバイダーを探す"
+  },
+  "sharing_vfs_activation_reload_warning": {
+    "message": "外部プロバイダーを有効にすると NC Connector が再読み込みされ、現在のファイル選択が解除される場合があります。それでも VFS 設定を開きますか？"
+  },
+  "sharing_vfs_navigation_failed": {
+    "message": "要求されたページを開けませんでした。"
+  },
+  "sharing_vfs_scanning_source": {
+    "message": "選択内容を確認中 ($1)…"
+  },
+  "sharing_vfs_opening_picker": {
+    "message": "ファイル選択画面を開いています…"
+  },
+  "sharing_file_type_folder": {
+    "message": "フォルダー"
+  },
+  "sharing_source_nextcloud": {
+    "message": "マイ Nextcloud"
+  },
+  "sharing_source_external": {
+    "message": "外部ストレージ"
+  },
+  "sharing_source_local": {
+    "message": "ローカル"
+  },
+  "sharing_queue_entries_summary": {
+    "message": "項目数: $1"
+  },
+  "sharing_queue_sources_summary": {
+    "message": "ソース数: $1"
+  },
+  "sharing_queue_total_summary": {
+    "message": "合計サイズ: $1"
+  },
+  "sharing_queue_size_unknown": {
+    "message": "不明"
+  },
+  "sharing_queue_storage_loading": {
+    "message": "ストレージ情報を読み込み中…"
+  },
+  "sharing_queue_storage_available": {
+    "message": "空き容量: $2 中 $1"
+  },
+  "sharing_queue_storage_unlimited": {
+    "message": "ストレージ上限なし · $1 使用中"
+  },
+  "sharing_queue_storage_unknown": {
+    "message": "ストレージ情報を取得できません"
+  },
+  "sharing_queue_storage_insufficient": {
+    "message": "必要: $1 · 利用可能: $2"
+  },
+  "sharing_queue_expand_folder": {
+    "message": "フォルダー「$1」を展開"
+  },
+  "sharing_queue_collapse_folder": {
+    "message": "フォルダー「$1」を折りたたむ"
+  },
+  "sharing_queue_remove_item": {
+    "message": "「$1」を削除"
+  },
+  "sharing_queue_source_group": {
+    "message": "ソース: $1"
+  },
+  "sharing_status_fetching_source": {
+    "message": "ファイルを読み取り中…"
+  },
+  "sharing_status_copying_source": {
+    "message": "コピー中…"
+  },
+  "sharing_status_preparing_source": {
+    "message": "準備中…"
+  },
+  "sharing_status_copying_sources": {
+    "message": "Nextcloud の項目をコピー中 ($1 / $2)…"
+  },
+  "sharing_status_fetching_sources": {
+    "message": "ストレージからファイルを読み取り中 ($1 / $2)…"
+  },
+  "vfs_setup_title": {
+    "message": "Nextcloud へのアクセス"
+  },
+  "vfs_setup_heading": {
+    "message": "Nextcloud へのアクセスを許可しますか？"
+  },
+  "vfs_setup_access_heading": {
+    "message": "読み取りおよび書き込みアクセス"
+  },
+  "vfs_setup_access_read": {
+    "message": "ファイルとフォルダーの閲覧および読み取り"
+  },
+  "vfs_setup_access_write": {
+    "message": "ファイルとフォルダーの作成および変更"
+  },
+  "vfs_setup_access_delete": {
+    "message": "ファイルとフォルダーの削除"
+  },
+  "vfs_setup_allow": {
+    "message": "アクセスを許可"
+  },
+  "vfs_setup_request": {
+    "message": "$1 がこの Nextcloud ストレージへのアクセスを要求しています。"
+  },
+  "vfs_setup_account": {
+    "message": "Nextcloud アカウント: $1"
+  },
+  "vfs_setup_invalid_request": {
+    "message": "アクセス要求は無効です。"
+  },
+  "vfs_setup_provider_unavailable": {
+    "message": "Nextcloud ストレージプロバイダーは利用できません。"
+  },
+  "vfs_setup_granting": {
+    "message": "アクセスを許可しています…"
+  },
+  "vfs_setup_failed": {
+    "message": "アクセスを許可できませんでした。"
   }
 }

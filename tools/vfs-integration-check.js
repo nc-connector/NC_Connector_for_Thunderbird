@@ -1,0 +1,1538 @@
+"use strict";
+
+const path = require("node:path");
+const { pathToFileURL } = require("node:url");
+const vm = require("node:vm");
+const {
+  ROOT,
+  assert,
+  loadScript,
+  readJson,
+  readText
+} = require("./review-check-utils");
+
+function createEvent(){
+  const listeners = [];
+  return {
+    addListener(listener){
+      listeners.push(listener);
+    },
+    removeListener(listener){
+      const index = listeners.indexOf(listener);
+      if (index >= 0){
+        listeners.splice(index, 1);
+      }
+    },
+    hasListener(listener){
+      return listeners.includes(listener);
+    },
+    async emit(...args){
+      return Promise.all(listeners.slice().map((listener) => listener(...args)));
+    },
+    count(){
+      return listeners.length;
+    }
+  };
+}
+
+function createStorageArea(){
+  const values = new Map();
+  return {
+    values,
+    async get(defaults){
+      if (typeof defaults === "string"){
+        return { [defaults]: values.get(defaults) };
+      }
+      const result = { ...(defaults || {}) };
+      for (const key of Object.keys(result)){
+        if (values.has(key)){
+          result[key] = values.get(key);
+        }
+      }
+      return result;
+    },
+    async set(entries){
+      for (const [key, value] of Object.entries(entries || {})){
+        values.set(key, value);
+      }
+    }
+  };
+}
+
+function createPort(senderId){
+  return {
+    name: "vfs-toolkit",
+    sender: { id: senderId },
+    onMessage: createEvent(),
+    onDisconnect: createEvent(),
+    posted: [],
+    disconnected: false,
+    postMessage(message){
+      this.posted.push(message);
+    },
+    disconnect(){
+      this.disconnected = true;
+    }
+  };
+}
+
+async function checkRouterLeavesToolkitMessagesUnclaimed(){
+  let listener = null;
+  let usageCalls = 0;
+  let externalStatusCalls = 0;
+  const openedTabs = [];
+  const focusedWindows = [];
+  const context = {
+    console,
+    URL,
+    L: () => {},
+    NCVfsProviderRuntime: {
+      async getDestinationStorageUsage(){
+        usageCalls++;
+        return { usage: 25, quota: 100, available: 75, state: "finite" };
+      }
+    },
+    NCVfsClientRuntime: {
+      async assertExternalEntitlement(){},
+      async getStatus(){
+        externalStatusCalls++;
+        return {
+          enabled: true,
+          entitled: true,
+          initialized: true,
+          connections: [{ storageRef: { providerId: "provider@test", storageId: "storage" } }],
+          providers: [{ providerId: "provider@test", providerName: "Provider", connectionCount: 1 }]
+        };
+      }
+    },
+    browser: {
+      runtime: {
+        getURL: (pathValue) => `moz-extension://connector/${pathValue}`,
+        onMessage: {
+          addListener(candidate){
+            listener = candidate;
+          }
+        }
+      },
+      tabs: {
+        async create(options){
+          openedTabs.push(options);
+          return { id: openedTabs.length, windowId: options.windowId };
+        }
+      },
+      windows: {
+        async getAll(){
+          return [{ id: 73, focused: false, type: "normal" }];
+        },
+        async update(windowId, options){
+          focusedWindows.push({ windowId, options });
+          return { id: windowId, focused: options.focused === true };
+        }
+      }
+    }
+  };
+  context.globalThis = context;
+  context.window = context;
+  vm.createContext(context);
+  loadScript("modules/bgRouter.js", context);
+  assert(typeof listener === "function", "Background router listener must be registered");
+  for (const type of [
+    "vfs-toolkit-get-connections",
+    "vfs-toolkit-add-connection",
+    "vfs-picker-result",
+    "vfs-provider-updated"
+  ]){
+    assert(
+      listener({ type }, {}) === undefined,
+      `Background router must leave ${type} to the Toolkit listener`
+    );
+  }
+  const usageResponse = await listener({
+    type: "sharing:getDestinationStorageUsage"
+  }, {});
+  assert(
+    usageCalls === 1
+      && usageResponse?.ok === true
+      && usageResponse.usage?.available === 75
+      && usageResponse.usage?.state === "finite",
+    "Sharing capacity requests must return the provider runtime's account-bound storage usage"
+  );
+  const externalResponse = await listener({ type: "vfs:getExternalStatus" }, {});
+  assert(
+    externalStatusCalls === 1
+      && externalResponse?.ok === true
+      && externalResponse.status?.connections?.length === 1,
+    "Sharing source guidance must receive the complete external VFS status"
+  );
+  assert((await listener({ type: "connection:openOptions" }, {}))?.ok === true, "Connection setup options must open");
+  assert((await listener({ type: "vfs:openOptions" }, {}))?.ok === true, "VFS options must open");
+  assert((await listener({ type: "vfs:findProviderAddons" }, {}))?.ok === true, "VFS provider search must open");
+  assert(
+    openedTabs.length === 3
+      && openedTabs[0].windowId === 73
+      && openedTabs[0].url === "moz-extension://connector/options.html?tab=general"
+      && openedTabs[1].url === "moz-extension://connector/options.html?tab=vfs"
+      && openedTabs[2].url === "https://addons.thunderbird.net/search/?q=VFS"
+      && focusedWindows.length === 3
+      && focusedWindows.every((entry) => entry.windowId === 73 && entry.options.focused === true),
+    "Connection and VFS setup pages must open and focus in a normal Thunderbird window"
+  );
+}
+
+function moduleUrl(relativePath, caseName){
+  return `${pathToFileURL(path.join(ROOT, relativePath)).href}?test=${caseName}-${Date.now()}`;
+}
+
+async function waitFor(predicate, label){
+  for (let attempt = 0; attempt < 50; attempt++){
+    if (predicate()){
+      return;
+    }
+    await new Promise((resolve) => setTimeout(resolve, 0));
+  }
+  throw new Error(label);
+}
+
+function createDeferred(){
+  let resolve;
+  let reject;
+  const promise = new Promise((resolvePromise, rejectPromise) => {
+    resolve = resolvePromise;
+    reject = rejectPromise;
+  });
+  return { promise, resolve, reject };
+}
+
+function createOptionsElement(){
+  const listeners = new Map();
+  const classes = new Set();
+  return {
+    checked: false,
+    children: [],
+    className: "",
+    dataset: {},
+    disabled: false,
+    hidden: false,
+    textContent: "",
+    title: "",
+    type: "",
+    classList: {
+      contains(name){
+        return classes.has(name);
+      },
+      toggle(name, force){
+        const enabled = force === undefined ? !classes.has(name) : force === true;
+        if (enabled){
+          classes.add(name);
+        }else{
+          classes.delete(name);
+        }
+        return enabled;
+      }
+    },
+    addEventListener(type, listener){
+      const entries = listeners.get(type) || [];
+      entries.push(listener);
+      listeners.set(type, entries);
+    },
+    appendChild(child){
+      this.children.push(child);
+      return child;
+    },
+    emit(type){
+      for (const listener of (listeners.get(type) || []).slice()){
+        listener({ currentTarget: this, target: this, type });
+      }
+    },
+    querySelectorAll(){
+      return [];
+    },
+    replaceChildren(...children){
+      this.children = children;
+    },
+    setAttribute(name, value){
+      this[name] = String(value);
+    }
+  };
+}
+
+function createOptionsVfsState({
+  providerConnectionReady = true,
+  providerEnabled = true,
+  providerStatus = "active",
+  externalEnabled = false,
+  externalProviders = []
+} = {}){
+  return {
+    provider: {
+      enabled: providerEnabled,
+      localEnabled: providerEnabled,
+      locked: false,
+      connectionReady: providerConnectionReady,
+      status: providerStatus,
+      grants: []
+    },
+    external: {
+      enabled: externalEnabled,
+      localEnabled: externalEnabled,
+      locked: false,
+      entitled: true,
+      unavailableReason: "",
+      initialized: externalEnabled,
+      connections: [],
+      providers: externalProviders
+    }
+  };
+}
+
+async function checkOptionsVfsRefreshAndSaveRaces(){
+  const elementIds = [
+    "vfsRuntimeNotice",
+    "vfsProviderEnabled",
+    "vfsProviderEnabledRow",
+    "vfsProviderStatusDot",
+    "vfsProviderStatus",
+    "vfsGrantList",
+    "vfsNoGrants",
+    "vfsExternalProvidersEnabled",
+    "vfsExternalEnabledRow",
+    "vfsExternalSection",
+    "vfsFindProviders",
+    "vfsRefreshConnections",
+    "vfsConnectionList",
+    "vfsNoConnections"
+  ];
+  const elements = new Map(elementIds.map((id) => [id, createOptionsElement()]));
+  const documentListeners = new Map();
+  const document = {
+    visibilityState: "visible",
+    addEventListener(type, listener){
+      const entries = documentListeners.get(type) || [];
+      entries.push(listener);
+      documentListeners.set(type, entries);
+    },
+    createElement: () => createOptionsElement(),
+    getElementById: (id) => elements.get(id) || null,
+    emit(type){
+      for (const listener of (documentListeners.get(type) || []).slice()){
+        listener({ target: document, type });
+      }
+    }
+  };
+  let state = createOptionsVfsState({
+    providerConnectionReady: false,
+    providerEnabled: false,
+    providerStatus: "connection_required"
+  });
+  let deferredGetState = null;
+  let getStateCalls = 0;
+  let refreshConnectionsCalls = 0;
+  let updateSettingsCalls = 0;
+  let lastUpdatePayload = null;
+  const windowListeners = new Map();
+  const context = {
+    console,
+    document,
+    NCI18n: { translate: (key) => key },
+    NCLogContext: { safeConsoleError(){} },
+    NCWizardPolicyUi: { getVfsExternalUnavailableHint: () => "" },
+    browser: {
+      runtime: {
+        async sendMessage(message){
+          if (message?.type === "vfs:options:getState"){
+            getStateCalls++;
+            if (deferredGetState){
+              const pending = deferredGetState;
+              deferredGetState = null;
+              return pending.promise;
+            }
+            return { ok: true, state };
+          }
+          if (message?.type === "vfs:options:updateSettings"){
+            updateSettingsCalls++;
+            lastUpdatePayload = message.payload;
+            state = createOptionsVfsState({
+              providerEnabled: message.payload?.providerEnabled === true,
+              externalEnabled: message.payload?.externalProvidersEnabled === true
+            });
+            return {
+              ok: true,
+              state,
+              backgroundRestartRequired: true,
+              reloadRequired: true
+            };
+          }
+          if (message?.type === "vfs:options:refreshConnections"){
+            refreshConnectionsCalls++;
+            return { ok: true, state };
+          }
+          throw new Error(`Unexpected VFS options request: ${message?.type}`);
+        }
+      }
+    },
+    confirm: () => true,
+    addEventListener(type, listener){
+      const entries = windowListeners.get(type) || [];
+      entries.push(listener);
+      windowListeners.set(type, entries);
+    }
+  };
+  context.globalThis = context;
+  context.window = context;
+  vm.createContext(context);
+  loadScript("ui/optionsVfs.js", context);
+
+  await waitFor(
+    () => elements.get("vfsProviderStatus").textContent === "options_vfs_provider_status_connection_required",
+    "VFS options initial state did not render"
+  );
+
+  const callsBeforeCredentialRefresh = getStateCalls;
+  state = createOptionsVfsState();
+  await context.NCVfsOptions.save();
+  assert(
+    getStateCalls === callsBeforeCredentialRefresh + 1
+      && elements.get("vfsProviderStatus").textContent === "options_vfs_provider_status_active",
+    "Saving credentials must refresh VFS status even when no VFS checkbox changed"
+  );
+
+  const staleState = createOptionsVfsState({ externalEnabled: false });
+  const staleResponse = createDeferred();
+  deferredGetState = staleResponse;
+  const callsBeforeStaleRefresh = getStateCalls;
+  const refreshTask = context.NCVfsOptions.refresh();
+  await waitFor(
+    () => getStateCalls === callsBeforeStaleRefresh + 1,
+    "VFS options refresh request did not start"
+  );
+  const externalEnabledInput = elements.get("vfsExternalProvidersEnabled");
+  externalEnabledInput.checked = true;
+  externalEnabledInput.emit("change");
+  const saveTask = context.NCVfsOptions.save();
+  staleResponse.resolve({ ok: true, state: staleState });
+  await refreshTask;
+  assert(
+    externalEnabledInput.checked === true,
+    "A stale asynchronous refresh must not overwrite a checkbox changed while it was pending"
+  );
+  const backgroundRestartRequired = await saveTask;
+  assert(
+    updateSettingsCalls === 1
+      && lastUpdatePayload?.externalProvidersEnabled === true
+      && backgroundRestartRequired === true,
+    "The first save attempt after a checkbox change must persist the selected VFS setting"
+  );
+
+  const staleEnabledState = createOptionsVfsState({ externalEnabled: true });
+  const staleEnabledResponse = createDeferred();
+  deferredGetState = staleEnabledResponse;
+  const disableRefreshTask = context.NCVfsOptions.refresh();
+  await waitFor(
+    () => getStateCalls === callsBeforeStaleRefresh + 2,
+    "VFS options refresh before disabling did not start"
+  );
+  externalEnabledInput.checked = false;
+  externalEnabledInput.emit("change");
+  const disableSaveTask = context.NCVfsOptions.save();
+  staleEnabledResponse.resolve({ ok: true, state: staleEnabledState });
+  await disableRefreshTask;
+  assert(
+    externalEnabledInput.checked === false,
+    "A stale asynchronous refresh must not restore an external-provider checkbox that was cleared"
+  );
+  const disableBackgroundRestartRequired = await disableSaveTask;
+  assert(
+    updateSettingsCalls === 2
+      && lastUpdatePayload?.externalProvidersEnabled === false
+      && disableBackgroundRestartRequired === true,
+    "The first save attempt must persist disabling external VFS providers"
+  );
+
+  const providerEnabledInput = elements.get("vfsProviderEnabled");
+  providerEnabledInput.checked = false;
+  providerEnabledInput.emit("change");
+  state = createOptionsVfsState({
+    externalEnabled: true,
+    externalProviders: [{
+      providerId: "new-provider@test",
+      providerName: "New provider",
+      connectionCount: 0
+    }]
+  });
+  const callsBeforeVisibleRefresh = getStateCalls;
+  document.visibilityState = "hidden";
+  document.emit("visibilitychange");
+  await Promise.resolve();
+  assert(
+    getStateCalls === callsBeforeVisibleRefresh,
+    "A hidden options document must not start a provider-discovery refresh"
+  );
+  document.visibilityState = "visible";
+  document.emit("visibilitychange");
+  await waitFor(
+    () => getStateCalls === callsBeforeVisibleRefresh + 1
+      && elements.get("vfsConnectionList").children.length === 1,
+    "Returning from provider installation must refresh the visible VFS options tab"
+  );
+  assert(
+    providerEnabledInput.checked === false,
+    "The visibility refresh must preserve an unsaved VFS checkbox change"
+  );
+
+  state = createOptionsVfsState({
+    externalEnabled: true,
+    externalProviders: [
+      {
+        providerId: "new-provider@test",
+        providerName: "New provider",
+        connectionCount: 0
+      },
+      {
+        providerId: "second-provider@test",
+        providerName: "Second provider",
+        connectionCount: 0
+      }
+    ]
+  });
+  elements.get("vfsRefreshConnections").emit("click");
+  await waitFor(
+    () => refreshConnectionsCalls === 1
+      && elements.get("vfsConnectionList").children.length === 2,
+    "Refresh connections must render providers installed while options stay open"
+  );
+  assert(
+    providerEnabledInput.checked === false,
+    "An explicit provider refresh must preserve an unsaved VFS checkbox change"
+  );
+}
+
+async function checkProviderSenderBinding(){
+  const local = createStorageArea();
+  const runtimeEvents = {
+    onMessage: createEvent(),
+    onMessageExternal: createEvent(),
+    onConnect: createEvent(),
+    onConnectExternal: createEvent()
+  };
+  const windowsRemoved = createEvent();
+  const createdWindows = [];
+  const removedWindows = [];
+  global.browser = {
+    runtime: {
+      id: "provider@test",
+      ...runtimeEvents,
+      getManifest: () => ({ name: "Provider", icons: {} }),
+      getURL: (value) => `moz-extension://provider${value}`,
+      async sendMessage(target){
+        if (typeof target === "string"){
+          return undefined;
+        }
+        const responses = await runtimeEvents.onMessage.emit(
+          target,
+          { id: "provider@test" }
+        );
+        return responses.find((response) => response !== undefined);
+      }
+    },
+    storage: { local },
+    windows: {
+      onRemoved: windowsRemoved,
+      async create(options){
+        createdWindows.push(options);
+        return { id: createdWindows.length };
+      },
+      async remove(windowId){
+        removedWindows.push(windowId);
+      }
+    }
+  };
+
+  const toolkit = await import(moduleUrl(
+    "vendor/vfs-toolkit/vfs-provider/vfs-provider.mjs",
+    "provider"
+  ));
+  let listCalls = 0;
+  const pendingLists = new Map();
+  const cancelledRequests = [];
+  class TestProvider extends toolkit.VfsProviderImplementation {
+    async onList(requestId, _storageId, path){
+      listCalls++;
+      if (path === "/pending"){
+        return new Promise((resolve) => pendingLists.set(requestId, resolve));
+      }
+      return [];
+    }
+    async onCancel(requestId){
+      cancelledRequests.push(requestId);
+      pendingLists.get(requestId)?.([]);
+      pendingLists.delete(requestId);
+    }
+  }
+  const provider = new TestProvider({ name: "Provider", setupPath: "/setup.html" });
+  provider.init();
+  await toolkit.reportNewConnection(
+    "consumer-a@test",
+    "Consumer A",
+    "storage-a",
+    "Storage A",
+    {}
+  );
+
+  const unauthorizedPort = createPort("consumer-b@test");
+  await runtimeEvents.onConnectExternal.emit(unauthorizedPort);
+  await unauthorizedPort.onMessage.emit({
+    requestId: "list-b",
+    cmd: "list",
+    storageId: "storage-a",
+    path: "/"
+  });
+  assert(listCalls === 0, "A storage grant must not be usable by another add-on");
+  assert(
+    unauthorizedPort.posted.some((entry) =>
+      entry.requestId === "list-b" && entry.ok === false && entry.errorCode === "E:AUTH"
+    ),
+    "Unauthorized storage requests must return E:AUTH"
+  );
+
+  const authorizedPort = createPort("consumer-a@test");
+  await runtimeEvents.onConnectExternal.emit(authorizedPort);
+  await authorizedPort.onMessage.emit({
+    requestId: "list-a",
+    cmd: "list",
+    storageId: "storage-a",
+    path: "/"
+  });
+  assert(listCalls === 1, "The add-on owning a storage grant must retain access");
+  assert(
+    authorizedPort.posted.some((entry) => entry.requestId === "list-a" && entry.ok === true),
+    "An authorized storage request must succeed"
+  );
+
+  void authorizedPort.onMessage.emit({
+    requestId: "legacy-list",
+    cmd: "list",
+    storageId: "storage-a",
+    path: "/pending"
+  });
+  await waitFor(
+    () => pendingLists.has("legacy-list"),
+    "The compatibility request did not reach the provider"
+  );
+  await authorizedPort.onMessage.emit({
+    cmd: "cancel",
+    canceledRequestId: "legacy-list"
+  });
+  assert(
+    cancelledRequests.includes("legacy-list"),
+    "The provider must accept the original API 1.3 cancel envelope"
+  );
+
+  await toolkit.reportNewConnection(
+    "provider@test",
+    "Provider",
+    "storage-self",
+    "Self storage",
+    {}
+  );
+  const localPort = provider.connectLocal();
+  const localResponses = [];
+  localPort.onMessage.addListener((message) => localResponses.push(message));
+  localPort.postMessage({
+    requestId: "list-self",
+    cmd: "list",
+    storageId: "storage-self",
+    path: "/"
+  });
+  await waitFor(
+    () => localResponses.some((entry) => entry.requestId === "list-self"),
+    "The co-located provider did not answer through its local port"
+  );
+  assert(listCalls === 3, "The local port must use the normal provider command handler");
+  assert(
+    localResponses.some((entry) => entry.requestId === "list-self" && entry.ok === true),
+    "An authorized local-provider request must succeed"
+  );
+  localPort.disconnect();
+
+  const setupPort = createPort("consumer-b@test");
+  await runtimeEvents.onConnectExternal.emit(setupPort);
+  const setupTask = setupPort.onMessage.emit({
+    requestId: "setup-b",
+    cmd: "openSetup",
+    addonId: "consumer-a@test",
+    addonName: "Claimed name"
+  });
+  await waitFor(() => createdWindows.length === 1, "Provider setup window was not opened");
+  const setupUrl = new URL(createdWindows[0].url);
+  assert(
+    setupUrl.searchParams.get("addonId") === "consumer-b@test",
+    "Provider setup must use the verified Port sender instead of a claimed add-on ID"
+  );
+  const setupToken = setupUrl.searchParams.get("setupToken");
+  await toolkit.reportNewConnection(
+    "consumer-a@test",
+    "Spoofed consumer",
+    "storage-b",
+    "Storage B",
+    {},
+    setupToken
+  );
+  await setupTask;
+  const storedAfterSetup = local.values.get("vfs-toolkit-connections");
+  assert(
+    storedAfterSetup.some((entry) =>
+      entry.addonId === "consumer-b@test" && entry.storageId === "storage-b"
+    ),
+    "Setup completion must persist the verified consumer identity"
+  );
+  assert(
+    !storedAfterSetup.some((entry) =>
+      entry.addonId === "consumer-a@test" && entry.storageId === "storage-b"
+    ),
+    "A setup payload must not spoof another consumer identity"
+  );
+
+  let staleRejected = false;
+  try{
+    await toolkit.reportNewConnection(
+      "consumer-a@test",
+      "Consumer A",
+      "storage-stale",
+      "Stale",
+      {},
+      "unknown-token"
+    );
+  }catch(error){
+    staleRejected = true;
+  }
+  assert(staleRejected, "Unknown setup tokens must be rejected before persistence");
+  assert(
+    !local.values.get("vfs-toolkit-connections").some((entry) =>
+      entry.storageId === "storage-stale"
+    ),
+    "Unknown setup tokens must not create storage grants"
+  );
+
+  const cancelledPort = createPort("consumer-c@test");
+  await runtimeEvents.onConnectExternal.emit(cancelledPort);
+  void cancelledPort.onMessage.emit({
+    requestId: "setup-c",
+    cmd: "openSetup",
+    addonName: "Consumer C"
+  });
+  await waitFor(() => createdWindows.length === 2, "Cancelable setup window was not opened");
+  const cancelledUrl = new URL(createdWindows[1].url);
+  await cancelledPort.onDisconnect.emit();
+  await waitFor(() => removedWindows.includes(2), "Disconnect must close its setup window");
+  let lateCompletionRejected = false;
+  try{
+    await toolkit.reportNewConnection(
+      "consumer-c@test",
+      "Consumer C",
+      "storage-c",
+      "Storage C",
+      {},
+      cancelledUrl.searchParams.get("setupToken")
+    );
+  }catch(error){
+    lateCompletionRejected = true;
+  }
+  assert(lateCompletionRejected, "A disconnected setup request must stay revoked");
+}
+
+function createClientBrowser({ discover, management = null, windowCreate } = {}){
+  const session = createStorageArea();
+  const local = createStorageArea();
+  const runtimeOnMessage = createEvent();
+  const runtimeOnMessageExternal = createEvent();
+  const windowsRemoved = createEvent();
+  const providerPorts = new Map();
+  const connectCalls = [];
+  const removedWindows = [];
+  const browser = {
+    extension: { getBackgroundPage: () => global.window },
+    runtime: {
+      id: "self@test",
+      onMessage: runtimeOnMessage,
+      onMessageExternal: runtimeOnMessageExternal,
+      getURL: (value) => `moz-extension://self/${value}`,
+      getManifest: () => ({ name: "Self" }),
+      async sendMessage(target, message){
+        if (typeof target === "string"){
+          return discover(target, message);
+        }
+        if (target?.type === "vfs-toolkit-discover"){
+          return discover("self@test", target);
+        }
+        const responses = await runtimeOnMessage.emit(
+          target,
+          { id: "self@test" }
+        );
+        return responses.find((response) => response !== undefined);
+      },
+      connect(providerId){
+        const internal = typeof providerId === "object";
+        providerId = internal ? "self@test" : providerId;
+        connectCalls.push({ providerId, internal });
+        if (!providerPorts.has(providerId)){
+          providerPorts.set(providerId, createPort(providerId));
+        }
+        return providerPorts.get(providerId);
+      }
+    },
+    storage: { session, local },
+    windows: {
+      onRemoved: windowsRemoved,
+      async create(options){
+        return windowCreate ? windowCreate(options) : { id: 17 };
+      },
+      async remove(windowId){
+        removedWindows.push(windowId);
+      }
+    }
+  };
+  if (management){
+    browser.management = management;
+  }
+  return {
+    browser,
+    providerPorts,
+    connectCalls,
+    removedWindows,
+    runtimeOnMessage,
+    windowsRemoved
+  };
+}
+
+async function checkClientLifecycle(){
+  const probes = [];
+  const clientHarness = createClientBrowser({
+    discover: async (providerId) => {
+      probes.push(providerId);
+      throw new Error("No external providers expected");
+    }
+  });
+  global.browser = clientHarness.browser;
+  global.window = global;
+  const client = await import(moduleUrl(
+    "vendor/vfs-toolkit/vfs-client/vfs-client.mjs",
+    "client-race"
+  ));
+  await client.init({ configStorageKey: "providers" });
+  assert(probes.length === 0, "A co-located provider must not use runtime discovery");
+  const selfPort = createPort("self@test");
+  let localConnectCount = 0;
+  await client.registerLocalProvider({
+    providerId: "self@test",
+    name: "Self provider",
+    connections: [{ storageId: "self-storage", name: "Nextcloud", capabilities: {} }],
+    icon: null,
+    hasConfig: false
+  }, () => {
+    localConnectCount += 1;
+    return selfPort;
+  });
+  const providers = await client.fetchProviderConnections();
+  assert(
+    providers.some((entry) =>
+      entry.providerId === "self@test"
+        && entry.connections.some((connection) => connection.storageRef.storageId === "self-storage")
+    ),
+    "Self connection must be registered before client init resolves"
+  );
+
+  const usagePromise = client.getStorageUsage({
+    providerId: "self@test",
+    storageId: "self-storage"
+  });
+  await Promise.resolve();
+  const usageMessage = selfPort.posted.find((entry) => entry.cmd === "storageUsage");
+  assert(
+    localConnectCount === 1 && usageMessage,
+    "Self-provider requests must use the registered local provider port"
+  );
+  await selfPort.onMessage.emit({
+    requestId: usageMessage.requestId,
+    ok: true,
+    result: { usage: 1, quota: 2 }
+  });
+  assert((await usagePromise).quota === 2, "Self-provider requests must resolve over the internal port");
+
+  const pickerAbort = new AbortController();
+  const pickerPromise = client.showDirectoryPicker({
+    storageRef: { providerId: "self@test", storageId: "self-storage" },
+    lockStorage: "strict",
+    signal: pickerAbort.signal
+  });
+  await Promise.resolve();
+  pickerAbort.abort();
+  let pickerError = null;
+  try{
+    await pickerPromise;
+  }catch(error){
+    pickerError = error;
+  }
+  assert(pickerError?.name === "AbortError", "Picker cancellation must reject with AbortError");
+  assert(
+    clientHarness.removedWindows.includes(17),
+    "Picker cancellation must close the exact picker window"
+  );
+
+  let setupSettled = false;
+  const setupPromise = client.openProviderSetup("self@test", "Self");
+  setupPromise.finally(() => {
+    setupSettled = true;
+  });
+  await waitFor(
+    () => selfPort.posted.some((entry) => entry.cmd === "openSetup"),
+    "The co-located setup request was not sent"
+  );
+  const setupMessage = selfPort.posted.find((entry) => entry.cmd === "openSetup");
+  await selfPort.onMessage.emit({
+    requestId: setupMessage.requestId,
+    ok: true,
+    result: "new-storage"
+  });
+  await Promise.resolve();
+  assert(
+    !setupSettled,
+    "Co-located setup must wait until the picker cache contains the new connection"
+  );
+  await clientHarness.runtimeOnMessage.emit({
+    type: "vfs-toolkit-add-connection",
+    storageId: "new-storage",
+    name: "New storage",
+    capabilities: {}
+  }, { id: "self@test" });
+  assert(
+    (await setupPromise).storageId === "new-storage",
+    "Co-located setup must resolve after its connection is visible"
+  );
+
+  const deletePromise = client.deleteProviderConnection({
+    providerId: "self@test",
+    storageId: "new-storage"
+  });
+  await waitFor(
+    () => selfPort.posted.some((entry) =>
+      entry.cmd === "deleteConnection" && entry.storageId === "new-storage"
+    ),
+    "The co-located connection delete request was not sent"
+  );
+  const deleteMessage = selfPort.posted.find((entry) =>
+    entry.cmd === "deleteConnection" && entry.storageId === "new-storage"
+  );
+  await selfPort.onMessage.emit({
+    requestId: deleteMessage.requestId,
+    ok: true,
+    result: null
+  });
+  await deletePromise;
+  assert(
+    !(await client.fetchProviderConnections()).some((providerInfo) =>
+      providerInfo.providerId === "self@test"
+        && providerInfo.connections.some((connection) =>
+          connection.storageRef.storageId === "new-storage"
+        )
+    ),
+    "Deleting a co-located connection must update the local picker cache"
+  );
+
+  const requestA = new AbortController();
+  const requestB = new AbortController();
+  const storageRef = { providerId: "external@test", storageId: "external-storage" };
+  const readA = client.readFile({ path: "/a.bin", storageRef }, { signal: requestA.signal });
+  const readB = client.readFile({ path: "/b.bin", storageRef }, { signal: requestB.signal });
+  await Promise.resolve();
+  const providerPort = clientHarness.providerPorts.get("external@test");
+  const readMessages = providerPort.posted.filter((entry) => entry.cmd === "readFile");
+  assert(readMessages.length === 2, "Two reads must create two provider requests");
+  requestA.abort();
+  let readAError = null;
+  try{
+    await readA;
+  }catch(error){
+    readAError = error;
+  }
+  assert(readAError?.name === "AbortError", "Canceled VFS read must reject with AbortError");
+  const cancelMessage = providerPort.posted.find((entry) => entry.cmd === "cancel");
+  assert(
+    cancelMessage?.canceledRequestId === readMessages[0].requestId
+      && typeof cancelMessage.requestId === "string"
+      && cancelMessage.requestId.length > 0,
+    "VFS cancellation must preserve the API 1.3 target and add only a correlation ID"
+  );
+  assert(
+    !providerPort.posted.some((entry) =>
+      entry.cmd === "cancel" && entry.canceledRequestId === readMessages[1].requestId
+    ),
+    "Canceling one read must not cancel another request to the same provider"
+  );
+  await providerPort.onMessage.emit({
+    requestId: readMessages[1].requestId,
+    ok: true,
+    result: { name: "b.bin", size: 1, slice(){} }
+  });
+  const readBResult = await readB;
+  assert(readBResult.name === "b.bin", "The uncanceled provider read must finish normally");
+}
+
+async function checkExternalDiscoverySkipsSelf(){
+  const probes = [];
+  const management = {
+    getAll: async () => [
+      { id: "self@test", enabled: true },
+      { id: "external@test", enabled: true }
+    ],
+    onInstalled: createEvent(),
+    onEnabled: createEvent(),
+    onDisabled: createEvent(),
+    onUninstalled: createEvent()
+  };
+  const harness = createClientBrowser({
+    management,
+    discover: async (providerId) => {
+      probes.push(providerId);
+      return { API_VERSION: "1.3", name: providerId, connections: [] };
+    }
+  });
+  global.browser = harness.browser;
+  global.window = global;
+  const client = await import(moduleUrl(
+    "vendor/vfs-toolkit/vfs-client/vfs-client.mjs",
+    "client-management"
+  ));
+  await client.init({ enableExternalProviders: true, configStorageKey: "providers" });
+  await waitFor(() => probes.includes("external@test"), "External provider was not probed");
+  assert(
+    probes.filter((providerId) => providerId === "self@test").length === 0,
+    "External discovery must not probe the co-located provider"
+  );
+  assert(
+    probes.filter((providerId) => providerId === "external@test").length === 1,
+    "Each external provider must be probed once during initialization"
+  );
+}
+
+function createFile(name, size, type = "application/octet-stream"){
+  return {
+    name,
+    size,
+    type,
+    lastModified: 1000,
+    slice(){
+      return this;
+    }
+  };
+}
+
+async function checkMixedSourcePlan(){
+  const copyCalls = [];
+  const transferOrder = [];
+  const itemEvents = [];
+  const selfStorageRef = { providerId: "self@test", storageId: "self-storage" };
+  const externalStorageRef = { providerId: "external@test", storageId: "external-storage" };
+  let activeReads = 0;
+  let maximumActiveReads = 0;
+  const context = {
+    console,
+    AbortController,
+    DOMException,
+    bgI18n: (key) => key,
+    NCNextcloudDav: {
+      joinPath: (...segments) => segments.filter(Boolean).join("/"),
+      normalizeRelativePath: (value) => String(value || "").replace(/^\/+|\/+$/g, ""),
+      normalizeVfsPath(value, { allowRoot = true } = {}){
+        const pathValue = String(value || "");
+        if (!pathValue.startsWith("/") || (!allowRoot && pathValue === "/")){
+          throw new Error("invalid_path");
+        }
+        return pathValue;
+      },
+      throwIfAborted(signal){
+        if (signal?.aborted){
+          throw new DOMException("Cancelled", "AbortError");
+        }
+      }
+    },
+    NCFileLinkUploadPolicy: {
+      DIRECT_UPLOAD_LIMIT_BYTES: 20
+    },
+    NCFileLinkUpload: {
+      async uploadFile({ file }){
+        const mode = file.size > context.NCFileLinkUploadPolicy.DIRECT_UPLOAD_LIMIT_BYTES
+          ? "chunked"
+          : "direct";
+        transferOrder.push(`upload-${mode}:${file.itemId}`);
+      }
+    },
+    NCVfsProviderRuntime: {
+      async copyIntoShare(storageRef, options){
+        assert(
+          storageRef.providerId === selfStorageRef.providerId
+            && storageRef.storageId === selfStorageRef.storageId,
+          "Same-Nextcloud copy must retain its selected storage lease"
+        );
+        copyCalls.push(options);
+      }
+    },
+    NCVfsClientRuntime: {
+      async readFile(entry, options){
+        activeReads++;
+        maximumActiveReads = Math.max(maximumActiveReads, activeReads);
+        transferOrder.push(`read:${entry.path}`);
+        options.onProgress?.({ percent: 50 });
+        await Promise.resolve();
+        activeReads--;
+        const size = entry.path.endsWith("large.bin") ? 30 : 10;
+        return createFile(entry.path.split("/").pop(), size);
+      }
+    }
+  };
+  context.globalThis = context;
+  context.window = context;
+  vm.createContext(context);
+  loadScript("modules/fileQueuePathConflicts.js", context);
+  loadScript("modules/fileLinkSources.js", context);
+
+  const localFile = createFile("local.txt", 5, "text/plain");
+  const sourcePlan = context.NCFileLinkSources.normalizeItems([
+    {
+      id: "local",
+      sourceKind: "local",
+      kind: "file",
+      file: localFile,
+      name: "local.txt",
+      displayPath: "local.txt"
+    },
+    {
+      id: "nextcloud-file",
+      sourceKind: "nextcloud",
+      kind: "file",
+      name: "cloud.txt",
+      displayPath: "cloud.txt",
+      sourcePath: "/Documents/cloud.txt",
+      storageRef: selfStorageRef,
+      transferGroupId: "nc-file",
+      transferRole: "copy-root",
+      transferRoot: true
+    },
+    {
+      id: "nextcloud-folder",
+      sourceKind: "nextcloud",
+      kind: "folder",
+      name: "Photos",
+      displayPath: "Photos",
+      sourcePath: "/Photos",
+      storageRef: selfStorageRef,
+      transferGroupId: "nc-folder",
+      transferRole: "copy-root",
+      transferRoot: true
+    },
+    {
+      id: "nextcloud-folder-child",
+      sourceKind: "nextcloud",
+      kind: "file",
+      name: "one.jpg",
+      relativeDir: "Photos",
+      displayPath: "Photos/one.jpg",
+      sourcePath: "/Photos/one.jpg",
+      storageRef: selfStorageRef,
+      transferGroupId: "nc-folder",
+      transferRole: "copy-child"
+    },
+    {
+      id: "nextcloud-empty-folder",
+      sourceKind: "nextcloud",
+      kind: "folder",
+      name: "Empty",
+      relativeDir: "Photos",
+      displayPath: "Photos/Empty",
+      sourcePath: "/Photos/Empty",
+      storageRef: selfStorageRef,
+      transferGroupId: "nc-folder",
+      transferRole: "copy-child"
+    },
+    {
+      id: "external-folder",
+      sourceKind: "external-vfs",
+      kind: "folder",
+      name: "External",
+      displayPath: "External",
+      sourcePath: "/External",
+      storageRef: externalStorageRef,
+      transferGroupId: "external-folder",
+      transferRole: "directory",
+      transferRoot: true
+    },
+    {
+      id: "external-small",
+      sourceKind: "external-vfs",
+      kind: "file",
+      name: "small.bin",
+      relativeDir: "External",
+      displayPath: "External/small.bin",
+      sourcePath: "/External/small.bin",
+      storageRef: externalStorageRef,
+      size: 10,
+      transferGroupId: "external-folder"
+    },
+    {
+      id: "external-large",
+      sourceKind: "external-vfs",
+      kind: "file",
+      name: "large.bin",
+      relativeDir: "External/Empty",
+      displayPath: "External/Empty/large.bin",
+      sourcePath: "/External/Empty/large.bin",
+      storageRef: externalStorageRef,
+      size: 30,
+      transferGroupId: "external-folder"
+    }
+  ], {
+    sanitizeFileName: (value) => String(value),
+    sanitizeRelativeDir: (value) => String(value || "")
+  });
+
+  assert(sourcePlan.localFiles.length === 1, "Local files must remain on the existing upload path");
+  assert(sourcePlan.nextcloudCopies.length === 2, "Each enumerated same-Nextcloud file must issue COPY");
+  assert(sourcePlan.nextcloudDirectories.length === 2, "Same-Nextcloud directory rows must remain in the plan");
+  assert(sourcePlan.externalFiles.length === 2, "External files must remain individual transfer items");
+  assert(
+    sourcePlan.deferredUploadFiles.length === 2
+      && sourcePlan.deferredUploadFiles.every((item) => item.sourceFile == null),
+    "External file metadata must enter the aggregate upload plan without staging file content"
+  );
+  assert(
+    sourcePlan.additionalDirectories.includes("External/Empty"),
+    "External folder trees must preserve empty and parent directories"
+  );
+  assert(
+    sourcePlan.additionalDirectories.includes("Photos")
+      && sourcePlan.additionalDirectories.includes("Photos/Empty"),
+    "Same-Nextcloud folder trees must preserve empty and parent directories"
+  );
+
+  const controller = new AbortController();
+  await context.NCFileLinkSources.transferAdditionalSources({
+    plan: sourcePlan,
+    davRoot: "https://cloud.test/remote.php/dav/files/user",
+    uploadRoot: "https://cloud.test/remote.php/dav/uploads/user",
+    shareRoot: "Shares/Target",
+    authHeader: "Basic redacted",
+    signal: controller.signal,
+    onStatus: (event) => itemEvents.push(event),
+    progress: {}
+  });
+  assert(copyCalls.length === 2, "Each enumerated same-Nextcloud file must use one server-side COPY");
+  assert(
+    JSON.stringify(copyCalls.map((entry) => entry.sourcePath)) === JSON.stringify([
+      "/Documents/cloud.txt",
+      "/Photos/one.jpg"
+    ]),
+    "Server-side COPY must transfer exactly the enumerated file snapshot"
+  );
+  assert(
+    copyCalls.every((entry) => entry.kind === "file"),
+    "Same-Nextcloud file snapshots must never use recursive directory COPY"
+  );
+  assert(
+    JSON.stringify(copyCalls.map((entry) => entry.destinationPath)) === JSON.stringify([
+      "/Shares/Target/cloud.txt",
+      "/Shares/Target/Photos/one.jpg"
+    ]),
+    "Server-side COPY destinations must match the enumerated queue paths"
+  );
+  assert(maximumActiveReads === 1, "External VFS files must be read one at a time");
+  assert(
+    JSON.stringify(transferOrder) === JSON.stringify([
+      "read:/External/small.bin",
+      "upload-direct:external-small",
+      "read:/External/Empty/large.bin",
+      "upload-chunked:external-large"
+    ]),
+    "Each external File must be uploaded before the next provider read starts"
+  );
+  assert(
+    itemEvents.some((entry) => entry.itemId === "external-folder" && entry.phase === "done"),
+    "Created external directories must be reflected in the queue"
+  );
+  assert(
+    itemEvents.some((entry) => entry.itemId === "nextcloud-folder" && entry.phase === "done")
+      && itemEvents.some((entry) => entry.itemId === "nextcloud-empty-folder" && entry.phase === "done"),
+    "Created same-Nextcloud directories must be reflected in the queue"
+  );
+
+  let metadataRejected = false;
+  try{
+    context.NCFileLinkSources.normalizeItems([{
+      id: "missing-size",
+      sourceKind: "external-vfs",
+      kind: "file",
+      name: "unknown.bin",
+      sourcePath: "/unknown.bin",
+      storageRef: externalStorageRef
+    }], {
+      sanitizeFileName: (value) => String(value),
+      sanitizeRelativeDir: (value) => String(value || "")
+    });
+  }catch(error){
+    metadataRejected = error.message === "vfs_error_file_metadata_missing";
+  }
+  assert(metadataRejected, "External files without stable size metadata must fail before upload");
+}
+
+function checkManifestAndReviewSurface(){
+  const manifest = readJson("manifest.json");
+  assert(
+    manifest.permissions.includes("management")
+      && !manifest.optional_permissions.includes("management"),
+    "External provider discovery must receive management access during installation"
+  );
+  const scripts = manifest.background.scripts;
+  const expectedOrder = [
+    "modules/nextcloudDav.js",
+    "modules/fileLinkTransfer.js",
+    "modules/fileLinkRootReservation.js",
+    "modules/fileLinkUpload.js",
+    "modules/vfsPolicyRuntime.js",
+    "modules/nextcloudVfsStorage.js",
+    "modules/vfsProviderRuntime.js",
+    "modules/vfsClientRuntime.js",
+    "modules/fileLinkSources.js",
+    "modules/shareBlockRenderer.js",
+    "modules/ncSharing.js"
+  ];
+  let previous = -1;
+  for (const script of expectedOrder){
+    const index = scripts.indexOf(script);
+    assert(index > previous, `${script} must load in dependency order`);
+    previous = index;
+  }
+  assert(!scripts.includes("modules/fileLinkDav.js"), "The replaced DAV module must not remain loaded");
+  const wizardHtml = readText("ui/nextcloudSharingWizard.html");
+  for (const elementId of [
+    "localSourceAction",
+    "nextcloudSourceAction",
+    "externalSourceAction",
+    "addNextcloudFilesBtn",
+    "addNextcloudFolderBtn",
+    "addExternalFilesBtn",
+    "addExternalFolderBtn",
+    "externalPickerActions",
+    "externalSourceNotice",
+    "openVfsSettingsBtn",
+    "findVfsProvidersBtn"
+  ]){
+    assert(wizardHtml.includes(`id="${elementId}"`), `${elementId} must be available in the queue UI`);
+  }
+  assert(
+    !wizardHtml.includes('id="refreshExternalSourcesBtn"'),
+    "Automatic VFS discovery refresh must not be duplicated as a source-menu action"
+  );
+  assert(
+    wizardHtml.includes("grid-template-columns:repeat(3,minmax(0,1fr))")
+      && wizardHtml.includes('id="fileQueueTree"')
+      && wizardHtml.includes('id="queueSummaryText"')
+      && wizardHtml.includes('id="queueStorageText"')
+      && wizardHtml.indexOf('<script src="sharingQueueEntries.js"></script>')
+        > wizardHtml.indexOf('<script src="../modules/fileQueuePathConflicts.js"></script>')
+      && wizardHtml.indexOf('<script src="nextcloudSharingWizard.js"></script>')
+        > wizardHtml.indexOf('<script src="sharingQueueEntries.js"></script>')
+      && wizardHtml.includes('<script src="sharingQueueTree.js"></script>')
+      && (wizardHtml.match(/class="source-icon"/g) || []).length === 3
+      && wizardHtml.includes('id="queueRemoveIcon"')
+      && !wizardHtml.includes('id="removeFileBtn"'),
+    "The queue must retain three icon actions and use its grouped tree, summary, and row removal UI"
+  );
+  const wizardRuntime = readText("ui/nextcloudSharingWizard.js");
+  assert(
+    wizardRuntime.includes("state.vfsPickerReturnFocusSeen = true;")
+      && wizardRuntime.includes("state.skipNextVfsFocusRefresh = !state.vfsPickerReturnFocusSeen;")
+      && /if \(state\.skipNextVfsFocusRefresh\)\{\s*state\.skipNextVfsFocusRefresh = false;\s*return;\s*\}/s.test(wizardRuntime),
+    "Returning from a VFS picker must not refresh while its runtime actor is closing"
+  );
+  assert(
+    /action: dom\.externalSourceAction,[\s\S]{0,220}?disabled: sourceControlsDisabled \|\| externalBlocked/.test(wizardRuntime)
+      && wizardRuntime.includes("state.vfsAvailability.external.connections.length > 0")
+      && wizardRuntime.includes("type: 'vfs:getExternalStatus'")
+      && wizardRuntime.includes("getVfsExternalUnavailableHint")
+      && wizardRuntime.includes("sharing_vfs_activation_reload_warning"),
+    "Other sources must be entitlement-gated and warn before a queue-clearing activation flow"
+  );
+  const backgroundRouter = readText("modules/bgRouter.js");
+  const updateSettingsStart = backgroundRouter.indexOf('msg.type === "vfs:options:updateSettings"');
+  const updateSettingsEnd = backgroundRouter.indexOf('msg.type === "vfs:options:revokeGrant"');
+  const updateSettingsBlock = backgroundRouter.slice(updateSettingsStart, updateSettingsEnd);
+  const optionsVfsRuntime = readText("ui/optionsVfs.js");
+  const optionsHtml = readText("options.html");
+  const optionsRuntime = readText("options.js");
+  const optionsSaveStart = optionsRuntime.indexOf("async function save(){");
+  const credentialPersistIndex = optionsRuntime.indexOf(
+    "await browser.storage.local.set({",
+    optionsSaveStart
+  );
+  const vfsSaveIndex = optionsRuntime.indexOf(
+    "NCVfsOptions?.save?.()",
+    credentialPersistIndex
+  );
+  const vfsTabActivationIndex = optionsRuntime.indexOf('if (id === "vfs")');
+  const vfsTabActivationBlock = optionsRuntime.slice(
+    vfsTabActivationIndex,
+    vfsTabActivationIndex + 500
+  );
+  assert(
+    optionsRuntime.includes('new URLSearchParams(window.location.search).get("tab")')
+      && optionsRuntime.includes("order.includes(requestedId)"),
+    "Direct options links must validate and activate their requested tab"
+  );
+  assert(
+    optionsSaveStart >= 0
+      && credentialPersistIndex > optionsSaveStart
+      && vfsSaveIndex > credentialPersistIndex
+      && vfsTabActivationIndex >= 0
+      && vfsTabActivationBlock.includes("NCVfsOptions?.refresh?.()"),
+    "Credential saves and VFS tab activation must request a current VFS status"
+  );
+  assert(
+    updateSettingsStart >= 0
+      && updateSettingsEnd > updateSettingsStart
+      && !updateSettingsBlock.includes("browser.runtime.reload")
+      && !/\bbrowser\.runtime\.reload\s*\(/.test(optionsRuntime)
+      && !/\bwindow\.close\s*\(/.test(optionsRuntime)
+      && /browser\.extension(?:\?\.|\.)getBackgroundPage(?:\?\.)?\(\)/.test(optionsRuntime)
+      && /(?:\?\.|\.)location(?:\?\.|\.)reload\s*\(\)/.test(optionsRuntime),
+    "VFS discovery changes must restart only the background page and keep options open"
+  );
+  assert(
+    !optionsHtml.includes('id="vfsRequestExternalPermission"')
+      && !optionsVfsRuntime.includes("browser.permissions.request")
+      && optionsVfsRuntime.includes("getVfsExternalUnavailableHint"),
+    "VFS settings must explain policy and entitlement gates without a runtime management-permission flow"
+  );
+  assert(
+    optionsHtml.includes('id="vfsFindProviders"')
+      && optionsHtml.includes('data-i18n="sharing_vfs_find_providers"')
+      && optionsVfsRuntime.includes('findProviderAddons: "vfs:findProviderAddons"')
+      && optionsVfsRuntime.includes("findProvidersButton.disabled = !runtimeAvailable")
+      && optionsVfsRuntime.includes("|| externalBlocked;")
+      && optionsVfsRuntime.includes("await request(MESSAGE_TYPES.findProviderAddons);"),
+    "VFS options must reuse the entitlement-gated provider search path"
+  );
+  const sourceRuntime = readText("modules/fileLinkSources.js");
+  assert(!sourceRuntime.includes("storage.local"), "External File content must not be staged in extension storage");
+  assert(!sourceRuntime.includes("indexedDB"), "External File content must not be staged in IndexedDB");
+  assert(!sourceRuntime.includes("showSaveFilePicker"), "External File content must not be staged on disk");
+  const clientRuntime = readText("modules/vfsClientRuntime.js");
+  const vfsPolicyRuntime = readText("modules/vfsPolicyRuntime.js");
+  assert(
+    /const pickerOptions = \{[\s\S]*?showToolbarActions: false,[\s\S]*?showContextMenu: false,[\s\S]*?signal: selection\.controller\.signal[\s\S]*?\};/.test(clientRuntime),
+    "NC Connector source pickers must hide Toolkit management actions and context menus through public options"
+  );
+  assert(
+    clientRuntime.includes("assertExternalEntitlement")
+      && clientRuntime.includes("assertExternalAccess")
+      && clientRuntime.includes("if (String(entry?.storageRef?.providerId || '') !== SELF_ADDON_ID)")
+      && vfsPolicyRuntime.includes("SHARE_POLICY_KEYS.vfsExternalProvidersEnabled")
+      && readText("modules/sharingStorage.js").includes('vfsExternalProvidersEnabled: "vfs_external_providers_enabled"')
+      && readText("modules/ncSharing.js").includes("NCVfsClientRuntime.assertExternalAccess({ refresh: true })"),
+    "External VFS access must be checked at discovery, selection, read, and pre-upload boundaries"
+  );
+  const providerRuntime = readText("modules/vfsProviderRuntime.js");
+  const storageRuntime = readText("modules/nextcloudVfsStorage.js");
+  assert(
+    !clientRuntime.includes("vfs_self_provider_unavailable"),
+    "A fresh profile without credentials must not permanently reject the VFS client runtime"
+  );
+  assert(
+    clientRuntime.includes("toolkit.openProviderSetup(")
+      && readText("modules/bgRouter.js").includes('msg.type === "vfs:options:connectProvider"')
+      && readText("ui/optionsVfs.js").includes('connectProvider: "vfs:options:connectProvider"'),
+    "External providers must have one explicit Toolkit setup path from the VFS options tab"
+  );
+  assert(
+    clientRuntime.includes("async function disconnectExternalConnection(storageRef)")
+      && clientRuntime.includes("toolkit.deleteProviderConnection(normalized)")
+      && readText("modules/bgRouter.js").includes('msg.type === "vfs:options:disconnectConnection"')
+      && readText("ui/optionsVfs.js").includes("MESSAGE_TYPES.disconnectConnection"),
+    "External connections must be removable through the official Toolkit API"
+  );
+  assert(
+    clientRuntime.includes("client.registerLocalProvider({")
+      && clientRuntime.includes("global.NCVfsProviderRuntime.connectLocal()")
+      && clientRuntime.includes("name: global.NCVfsProviderRuntime.PROVIDER_NAME")
+      && clientRuntime.includes("browser.runtime.getURL('icons/app-32.png')")
+      && clientRuntime.includes("const icon = await loadOwnProviderIcon();")
+      && /connections:[\s\S]{0,300}?icon,\s*hasConfig: false/.test(clientRuntime)
+      && providerRuntime.includes("const PROVIDER_NAME = 'Nextcloud';")
+      && providerRuntime.includes("name: PROVIDER_NAME")
+      && /global\.NCVfsProviderRuntime = Object\.freeze\(\{\s*PROVIDER_NAME,/.test(providerRuntime)
+      && providerRuntime.includes("return provider.connectLocal()"),
+    "The Nextcloud provider must use its storage name, expose its icon locally, refresh the picker cache, and use the provider command path"
+  );
+  assert(
+    wizardHtml.includes('id="vfsProviderFallbackIcon"')
+      && readText("modules/vfsClientRuntime.js").includes("icon: providerInfo.icon || null"),
+    "External storage selection must retain provider icons with a local fallback"
+  );
+  assert(
+    providerRuntime.includes("core: NCCore"),
+    "VFS provider startup must inject the classic-script NCCore binding explicitly"
+  );
+  assert(
+    storageRuntime.includes("fileUpload.uploadSingleFile({")
+      && storageRuntime.includes("getRequiredCapabilities({ ...opts, signal })")
+      && !/async function writeFile[\s\S]*?dav\.xhrRequest\(\{/m.test(storageRuntime),
+    "Provider writes must enforce the Nextcloud contract and use the shared upload engine"
+  );
+  assert(
+    providerRuntime.includes("uploadLog: (message, metadata = {}) => L(message, {")
+      && providerRuntime.includes("origin: 'vfs_provider'"),
+    "Provider uploads must retain the existing upload messages with origin metadata"
+  );
+  assert(
+    providerRuntime.includes("expectedAccountKey"),
+    "Authorized provider operations must stay bound to the account identity they validated"
+  );
+  assert(
+    wizardRuntime.includes("sharing:getDestinationStorageUsage")
+      && !wizardRuntime.includes("quota-available-bytes")
+      && !wizardRuntime.includes("cloud/user")
+      && backgroundRouter.includes('msg.type === "sharing:getDestinationStorageUsage"')
+      && backgroundRouter.includes("NCVfsProviderRuntime.getDestinationStorageUsage()")
+      && providerRuntime.includes("storage.storageUsage({ expectedAccountKey: state.accountKey })"),
+    "Wizard capacity must reuse the account-bound provider storage usage path without owning network code"
+  );
+  assert(
+    providerRuntime.includes("copyIntoShare(storageRef")
+      && !sourceRuntime.includes("getStorage()"),
+    "Same-Nextcloud share copies must use the provider runtime's storage/account lease"
+  );
+  assert(
+    sourceRuntime.includes("NCFileLinkUpload.uploadFile({")
+      && !sourceRuntime.includes("NCFileLinkUpload.uploadDirect({")
+      && !sourceRuntime.includes("NCFileLinkUpload.uploadChunked({"),
+    "External VFS files must use the shared Direct/Chunked upload selector"
+  );
+  assert(
+    providerRuntime.includes("authorization changed during setup")
+      && providerRuntime.includes("current.state.accountKey !== state.accountKey"),
+    "Provider grants must be revalidated if settings change while setup is open"
+  );
+}
+
+async function run(){
+  checkManifestAndReviewSurface();
+  await checkRouterLeavesToolkitMessagesUnclaimed();
+  await checkOptionsVfsRefreshAndSaveRaces();
+  await checkProviderSenderBinding();
+  await checkClientLifecycle();
+  await checkExternalDiscoverySkipsSelf();
+  await checkMixedSourcePlan();
+  console.log("[OK] vfs-integration-check passed");
+}
+
+run().catch((error) => {
+  console.error("[FAIL] vfs-integration-check", error);
+  process.exitCode = 1;
+});

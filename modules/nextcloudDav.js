@@ -54,6 +54,232 @@
     return path ? `${String(davRoot || "").replace(/\/+$/, "")}/${path}` : String(davRoot || "").replace(/\/+$/, "");
   }
 
+  function createPathError(detail){
+    const error = new Error(String(detail || "Invalid DAV path"));
+    error.code = "E:PROVIDER";
+    error.details = Object.freeze({
+      id: "invalid-path",
+      title: "Invalid path",
+      description: "The requested storage path is invalid."
+    });
+    return error;
+  }
+
+  function normalizeDavRoot(value){
+    let parsed;
+    try{
+      parsed = new URL(String(value || ""));
+    }catch(error){
+      throw createPathError("Invalid DAV root");
+    }
+    if (parsed.protocol !== "https:" || parsed.username || parsed.password || parsed.search || parsed.hash){
+      throw createPathError("Invalid DAV root");
+    }
+    parsed.pathname = parsed.pathname.replace(/\/+$/, "");
+    return parsed.toString().replace(/\/+$/, "");
+  }
+
+  /**
+   * Validate a VFS absolute path without decoding it into a second path syntax.
+   * Literal percent signs remain valid filename characters, while encoded path
+   * separators and dot-segments are rejected before URL construction.
+   */
+  function normalizeVfsPath(value, { allowRoot = true } = {}){
+    if (typeof value !== "string" || !value.startsWith("/")){
+      throw createPathError("VFS path must be absolute");
+    }
+    if (value === "/"){
+      if (!allowRoot){
+        throw createPathError("Storage root is not a valid target");
+      }
+      return "/";
+    }
+    if (value.endsWith("/") || value.includes("\\") || /[\u0000-\u001f\u007f]/.test(value)){
+      throw createPathError("VFS path is not canonical");
+    }
+    const segments = value.slice(1).split("/");
+    if (segments.some((segment) => !segment)){
+      throw createPathError("VFS path contains an empty segment");
+    }
+    for (const segment of segments){
+      if (segment === "." || segment === ".."){
+        throw createPathError("VFS path traversal is not allowed");
+      }
+      const encodedShadow = segment.replace(/%25/ig, "%");
+      if (/%(?:2f|5c)/i.test(encodedShadow)){
+        throw createPathError("Encoded path separators are not allowed");
+      }
+      const dotShadow = encodedShadow.replace(/%2e/ig, ".");
+      if (dotShadow === "." || dotShadow === ".."){
+        throw createPathError("Encoded path traversal is not allowed");
+      }
+    }
+    return `/${segments.join("/")}`;
+  }
+
+  function vfsPathToRelative(value, options){
+    const normalized = normalizeVfsPath(value, options);
+    return normalized === "/" ? "" : normalized.slice(1);
+  }
+
+  function buildVfsFileUrl(davRoot, vfsPath, options){
+    const root = normalizeDavRoot(davRoot);
+    const relative = vfsPathToRelative(vfsPath, options);
+    if (!relative){
+      return root;
+    }
+    const encoded = relative.split("/").map((segment) => encodeURIComponent(segment)).join("/");
+    return `${root}/${encoded}`;
+  }
+
+  function decodeUrlSegments(pathname){
+    return String(pathname || "").split("/").filter(Boolean).map((segment) => {
+      if (/%(?:2f|5c)/i.test(segment)){
+        throw createPathError("DAV response contains an encoded path separator");
+      }
+      let decoded;
+      try{
+        decoded = decodeURIComponent(segment);
+      }catch(error){
+        throw createPathError("DAV response contains an invalid encoded path");
+      }
+      if (!decoded || decoded === "." || decoded === ".." || decoded.includes("/") || decoded.includes("\\")){
+        throw createPathError("DAV response contains an invalid path segment");
+      }
+      return decoded;
+    });
+  }
+
+  function hrefToVfsPath(davRoot, href){
+    const rootUrl = new URL(normalizeDavRoot(davRoot));
+    let hrefUrl;
+    try{
+      hrefUrl = new URL(String(href || ""), `${rootUrl.toString().replace(/\/+$/, "")}/`);
+    }catch(error){
+      throw createPathError("DAV response contains an invalid href");
+    }
+    if (hrefUrl.origin !== rootUrl.origin || hrefUrl.search || hrefUrl.hash){
+      throw createPathError("DAV response href is outside the configured storage");
+    }
+    const rootSegments = decodeUrlSegments(rootUrl.pathname);
+    const hrefSegments = decodeUrlSegments(hrefUrl.pathname);
+    if (hrefSegments.length < rootSegments.length
+      || rootSegments.some((segment, index) => hrefSegments[index] !== segment)){
+      throw createPathError("DAV response href is outside the configured storage");
+    }
+    const relative = hrefSegments.slice(rootSegments.length);
+    return normalizeVfsPath(relative.length ? `/${relative.join("/")}` : "/");
+  }
+
+  function firstDavElement(parent, localName){
+    return parent?.getElementsByTagNameNS?.("DAV:", localName)?.[0]
+      || parent?.getElementsByTagName?.(localName)?.[0]
+      || null;
+  }
+
+  function successfulDavProp(response){
+    const propstats = Array.from(response?.getElementsByTagNameNS?.("DAV:", "propstat") || []);
+    if (!propstats.length){
+      return firstDavElement(response, "prop");
+    }
+    const successful = propstats.find((propstat) => {
+      const status = firstDavElement(propstat, "status")?.textContent || "";
+      const match = status.match(/\s(\d{3})(?:\s|$)/);
+      return match && Number(match[1]) >= 200 && Number(match[1]) < 300;
+    });
+    return successful ? firstDavElement(successful, "prop") : null;
+  }
+
+  function parseDavMultiStatus(xmlText, davRoot){
+    if (typeof global.DOMParser !== "function"){
+      throw createTechnicalError("DAV XML parser unavailable");
+    }
+    const document = new global.DOMParser().parseFromString(String(xmlText || ""), "application/xml");
+    if (document.getElementsByTagName("parsererror")?.length){
+      throw createTechnicalError("Invalid DAV XML response");
+    }
+    const responses = Array.from(document.getElementsByTagNameNS("DAV:", "response") || []);
+    return responses.flatMap((response) => {
+      const href = firstDavElement(response, "href")?.textContent || "";
+      const path = hrefToVfsPath(davRoot, href);
+      const prop = successfulDavProp(response);
+      if (!prop){
+        return [];
+      }
+      const isDirectory = !!firstDavElement(firstDavElement(prop, "resourcetype") || prop, "collection");
+      const lengthText = String(firstDavElement(prop, "getcontentlength")?.textContent || "").trim();
+      const length = lengthText ? Number(lengthText) : Number.NaN;
+      const modifiedText = firstDavElement(prop, "getlastmodified")?.textContent || "";
+      const modified = Date.parse(modifiedText);
+      const etag = String(firstDavElement(prop, "getetag")?.textContent || "").replace(/^"|"$/g, "");
+      const name = path === "/" ? "" : path.split("/").pop();
+      return [Object.freeze({
+        path,
+        name,
+        kind: isDirectory ? "directory" : "file",
+        size: !isDirectory && Number.isFinite(length) && length >= 0 ? length : undefined,
+        lastModified: Number.isFinite(modified) ? modified : undefined,
+        etag: etag || undefined
+      })];
+    });
+  }
+
+  function parseDavQuota(xmlText){
+    if (typeof global.DOMParser !== "function"){
+      throw createTechnicalError("DAV XML parser unavailable");
+    }
+    const document = new global.DOMParser().parseFromString(String(xmlText || ""), "application/xml");
+    if (document.getElementsByTagName("parsererror")?.length){
+      throw createTechnicalError("Invalid DAV XML response");
+    }
+    const response = firstDavElement(document, "response");
+    const prop = successfulDavProp(response);
+    if (!prop){
+      return Object.freeze({
+        usage: null,
+        quota: null,
+        available: null,
+        state: "unknown"
+      });
+    }
+    const usedText = String(firstDavElement(prop, "quota-used-bytes")?.textContent || "").trim();
+    const availableText = String(firstDavElement(prop, "quota-available-bytes")?.textContent || "").trim();
+    const usage = usedText ? Number(usedText) : Number.NaN;
+    const available = availableText ? Number(availableText) : Number.NaN;
+    if (!Number.isFinite(usage) || usage < 0){
+      return Object.freeze({
+        usage: null,
+        quota: null,
+        available: null,
+        state: "unknown"
+      });
+    }
+    if (Number.isFinite(available) && available >= 0){
+      return Object.freeze({
+        usage,
+        quota: usage + available,
+        available,
+        state: "finite"
+      });
+    }
+    // Nextcloud uses separate negative sentinels here. Only -3 means
+    // unlimited; -1/-2 must stay unknown instead of enabling a false promise.
+    if (available === -3){
+      return Object.freeze({
+        usage,
+        quota: null,
+        available: null,
+        state: "unlimited"
+      });
+    }
+    return Object.freeze({
+      usage,
+      quota: null,
+      available: null,
+      state: "unknown"
+    });
+  }
+
   function createAbortError(){
     try{
       return new DOMException("Upload canceled", "AbortError");
@@ -131,6 +357,34 @@
     }
   }
 
+  async function readResponseBlob(response, signal){
+    if (!response || typeof response.blob !== "function"){
+      return null;
+    }
+    try{
+      return await response.blob();
+    }catch(error){
+      const lifetime = RESPONSE_LIFETIMES.get(response);
+      if (signal?.aborted){
+        throw createAbortError();
+      }
+      if (lifetime?.isTimedOut()){
+        throw createTimeoutError(error);
+      }
+      if (error?.name === "AbortError"){
+        throw createAbortError();
+      }
+      global.NCLogContext?.safeConsoleError?.(
+        "[NCBG][DAV]",
+        "DAV response blob read failed",
+        error
+      );
+      throw error;
+    }finally{
+      releaseResponseLifetime(response);
+    }
+  }
+
   async function closeResponse(response){
     try{
       await response?.body?.cancel?.();
@@ -159,6 +413,50 @@
       await closeResponse(response);
     }
     return snapshot;
+  }
+
+  async function requestPath({
+    method,
+    url,
+    authHeader,
+    headers = {},
+    body,
+    signal,
+    timeoutMs = CONTROL_REQUEST_TIMEOUT_MS,
+    readBody = true,
+    retryTransport = false,
+    retryStatuses = false,
+    operation = "dav_request",
+    log
+  } = {}){
+    const request = (_attempt, requestSignal) => fetch(url, {
+      method: String(method || "GET").toUpperCase(),
+      headers: {
+        "Authorization": authHeader,
+        ...headers
+      },
+      body,
+      signal: requestSignal,
+      cache: "no-store"
+    });
+    if (retryTransport || retryStatuses){
+      return fetchWithRetry({
+        request,
+        operation,
+        signal,
+        log,
+        retryTransport,
+        retryStatuses,
+        timeoutMs,
+        consume: (response, requestSignal) => snapshotResponse(response, requestSignal, readBody)
+      });
+    }
+    const response = await fetchWithTimeout({
+      request: (requestSignal) => request(1, requestSignal),
+      signal,
+      timeoutMs
+    });
+    return snapshotResponse(response, signal, readBody);
   }
 
   function parseRetryAfter(value, now = Date.now()){
@@ -282,6 +580,7 @@
     signal,
     log,
     retryTransport = true,
+    retryStatuses = true,
     timeoutMs = CONTROL_REQUEST_TIMEOUT_MS,
     consume
   } = {}){
@@ -315,7 +614,8 @@
         await waitForRetry(delayMs, signal);
         continue;
       }
-      if (!NCFileLinkUploadPolicy.isRetryStatus(response.status)
+      if (!retryStatuses
+        || !NCFileLinkUploadPolicy.isRetryStatus(response.status)
         || attempt >= NCFileLinkUploadPolicy.MAX_ATTEMPTS){
         return response;
       }
@@ -758,8 +1058,48 @@
     }
   }
 
+  async function copyWithinDavRoot({
+    davRoot,
+    sourcePath,
+    destinationPath,
+    kind = "file",
+    authHeader,
+    signal,
+    log,
+    overwrite = false
+  } = {}){
+    const normalizedSource = normalizeVfsPath(sourcePath, { allowRoot: false });
+    const normalizedDestination = normalizeVfsPath(destinationPath, { allowRoot: false });
+    if (normalizedSource === normalizedDestination){
+      throw createPathError("DAV source and destination must differ");
+    }
+    if (kind !== "file" && kind !== "directory"){
+      throw createPathError("DAV copy kind is invalid");
+    }
+    const response = await requestPath({
+      method: "COPY",
+      url: buildVfsFileUrl(davRoot, normalizedSource, { allowRoot: false }),
+      authHeader,
+      headers: {
+        "Destination": buildVfsFileUrl(davRoot, normalizedDestination, { allowRoot: false }),
+        "Overwrite": overwrite ? "T" : "F",
+        "Depth": kind === "directory" ? "infinity" : "0"
+      },
+      signal,
+      operation: kind === "directory" ? "dav_copy_folder" : "dav_copy_file",
+      log,
+      retryTransport: false,
+      retryStatuses: false
+    });
+    if (!response.ok){
+      throw createUploadError(response.status, `DAV copy failed (${response.status || "network"})`);
+    }
+    return response;
+  }
+
   const api = Object.freeze({
     AUTO_MKCOL_HEADER,
+    UPLOAD_TIMEOUT_MS,
     CONTROL_REQUEST_TIMEOUT_MS,
     CLEANUP_TIMEOUT_MS,
     createFileLinkId,
@@ -767,15 +1107,26 @@
     normalizeRelativePath,
     joinPath,
     buildFileUrl,
+    normalizeDavRoot,
+    normalizeVfsPath,
+    vfsPathToRelative,
+    buildVfsFileUrl,
+    hrefToVfsPath,
+    parseDavMultiStatus,
+    parseDavQuota,
     createAbortError,
     throwIfAborted,
     createTechnicalError,
     createUploadError,
     readResponseText,
+    readResponseBlob,
     closeResponse,
+    snapshotResponse,
+    requestPath,
     parseRetryAfter,
     fetchWithTimeout,
     fetchWithRetry,
+    xhrRequest,
     xhrWithRetry,
     probePath,
     createCollection,
@@ -785,8 +1136,9 @@
     deleteRemotePath,
     deleteRootReservation,
     deleteTrackedRoot,
-    deleteBestEffort
+    deleteBestEffort,
+    copyWithinDavRoot
   });
 
-  global.NCFileLinkDav = api;
+  global.NCNextcloudDav = api;
 })(typeof window !== "undefined" ? window : (typeof globalThis !== "undefined" ? globalThis : this));

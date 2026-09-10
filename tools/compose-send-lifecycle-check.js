@@ -74,7 +74,8 @@ function createComposeHarness(){
   const control = {
     storeAvailable: true,
     saveDeferred: null,
-    captureRecipientsError: null
+    captureRecipientsError: null,
+    attachmentRoutingBlocked: false
   };
   const calls = {
     composeWrites: [],
@@ -93,6 +94,7 @@ function createComposeHarness(){
     manualNotifications: [],
     failureNotifications: [],
     attachmentCleanup: [],
+    attachmentSendGuard: [],
     passwordClear: [],
     remoteDeletes: []
   };
@@ -177,6 +179,13 @@ function createComposeHarness(){
     SHARING_WIZARD_CLEANUP_BY_WINDOW: wizardCleanup,
     ATTACHMENT_PROMPT_BY_WINDOW: new Map(),
     COMPOSE_SHARE_CLEANUP_SEND_GRACE_MS: 15000,
+    SHARE_CLEANUP_RETRY_DELAYS_MS: Object.freeze([
+      2000,
+      5000,
+      10000,
+      30000,
+      60000
+    ]),
     PERSISTED_SHARE_CLEANUP_READY: Promise.resolve(),
     NCShareTemplateContract: {
       RIGHTS_SEGMENT_START: "[[NCC_RIGHTS_START]]",
@@ -185,11 +194,6 @@ function createComposeHarness(){
     NCHtmlSanitizer: {
       plainTextToHtml(value){
         return String(value || "");
-      }
-    },
-    NCSharing: {
-      async deleteShareFolder(){
-        calls.remoteDeletes.push("legacy");
       }
     },
     setTimeout: timers.setTimeout,
@@ -396,6 +400,10 @@ function createComposeHarness(){
       }
     },
     async openSharingWizardWindow(){},
+    async prepareComposeAttachmentRoutingBeforeSend(tabId){
+      calls.attachmentSendGuard.push(tabId);
+      return control.attachmentRoutingBlocked;
+    },
     async handleComposeAttachmentAdded(){},
     async captureSeparatePasswordDispatchIdentityChange(){},
     async captureSeparatePasswordDispatchRecipients(tabId){
@@ -454,8 +462,35 @@ function createComposeHarness(){
       calls.passwordClear.push({ tabId, reason: "clear", delayMs: 0 });
       passwordDispatch.delete(tabId);
     },
+    getSeparatePasswordMailDispatchQueue(tabId){
+      const queue = passwordDispatch.get(tabId);
+      return Array.isArray(queue) && queue.length ? queue : null;
+    },
+    hasSeparatePasswordMailDispatch(tabId){
+      const queue = passwordDispatch.get(tabId);
+      return Array.isArray(queue) && queue.length > 0;
+    },
+    retainFailedSavedDraftPasswordDispatches(tabId, sourceQueue, failedQueue){
+      const processed = new Set(sourceQueue.map((dispatch) => {
+        return String(dispatch?.registrationId || dispatch?.dedupKey || "");
+      }).filter(Boolean));
+      const unprocessed = (passwordDispatch.get(tabId) || []).filter((dispatch) => {
+        const key = String(dispatch?.registrationId || dispatch?.dedupKey || "");
+        return !key || !processed.has(key);
+      });
+      const remaining = unprocessed.concat(failedQueue || []);
+      if (remaining.length){
+        passwordDispatch.set(tabId, remaining);
+      }else{
+        passwordDispatch.delete(tabId);
+      }
+      return remaining;
+    },
     cleanupComposeAttachmentTabState(tabId, reason){
       calls.attachmentCleanup.push({ tabId, reason });
+    },
+    getAttachmentPromptIdForWindow(windowId){
+      return String(context.ATTACHMENT_PROMPT_BY_WINDOW.get(windowId) || "");
     },
     resolveAttachmentPrompt(){},
     NCLogContext: {
@@ -873,6 +908,42 @@ async function verifyPasswordRefreshFailure(){
   );
 }
 
+async function verifyAttachmentRoutingSendGuard(){
+  const harness = createComposeHarness();
+  harness.setDetails(52, {
+    type: "new",
+    body: "<body><p>Message</p></body>",
+    plainTextBody: "Message",
+    isPlainText: false,
+    customHeaders: []
+  });
+  harness.control.attachmentRoutingBlocked = true;
+  const blocked = await harness.beforeSend(
+    { id:52 },
+    harness.composeDetails.get(52)
+  );
+  assert(blocked?.cancel === true, "Active attachment routing must block compose send");
+  await waitFor(
+    () => harness.calls.notifications.length === 1,
+    "Blocked attachment routing must show its notification"
+  );
+  assert(
+    harness.calls.notifications[0].options.message === "sharing_attachment_routing_active",
+    "Attachment routing must use its dedicated send-blocked message"
+  );
+  assert(
+    harness.calls.attachmentSendGuard.join(",") === "52",
+    "onBeforeSend must query the attachment routing guard"
+  );
+
+  harness.control.attachmentRoutingBlocked = false;
+  const allowed = await harness.beforeSend(
+    { id:52 },
+    harness.composeDetails.get(52)
+  );
+  assert(allowed?.cancel !== true, "A normal compose without attachment routing must remain sendable");
+}
+
 async function verifySavedBaselineRetention(){
   const harness = createComposeHarness();
   const tabId = 56;
@@ -1090,6 +1161,7 @@ async function run(){
   await verifyDraftRecordValidation();
   await verifyForeignMarkerHandling();
   await verifyPasswordRefreshFailure();
+  await verifyAttachmentRoutingSendGuard();
   await verifySavedBaselineRetention();
   await verifyTabCloseWaitsForSave();
   await verifySendLaterManualPasswordDraft();

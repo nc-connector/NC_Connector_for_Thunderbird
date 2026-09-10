@@ -3,6 +3,19 @@
 const vm = require("node:vm");
 const { assert, loadScript } = require("./review-check-utils");
 
+const PASSWORD_DISPATCH_FILES = [
+  "modules/bgComposePasswordRecipients.js",
+  "modules/bgComposePasswordMail.js",
+  "modules/bgComposePasswordDelivery.js",
+  "modules/bgComposePasswordDispatch.js"
+];
+
+function loadPasswordDispatchScripts(context, suffix = ""){
+  for (const [index, file] of PASSWORD_DISPATCH_FILES.entries()){
+    loadScript(file, context, index === PASSWORD_DISPATCH_FILES.length - 1 ? suffix : "");
+  }
+}
+
 function loadDeliveryApi(){
   const context = {
     console,
@@ -14,6 +27,7 @@ function loadDeliveryApi(){
   context.globalThis = context;
   vm.createContext(context);
   loadScript("modules/policyState.js", context, "\nglobalThis.NCPolicyState = NCPolicyState;");
+  loadScript("modules/sharingStorage.js", context, "\nglobalThis.NCSharingStorage = NCSharingStorage;");
   loadScript("modules/sharePasswordDelivery.js", context);
   return context.NCSharePasswordDelivery;
 }
@@ -91,9 +105,9 @@ function createDispatchRegistrationHarness(policyStatus){
   context.globalThis = context;
   vm.createContext(context);
   loadScript("modules/policyState.js", context, "\nglobalThis.NCPolicyState = NCPolicyState;");
+  loadScript("modules/sharingStorage.js", context, "\nglobalThis.NCSharingStorage = NCSharingStorage;");
   loadScript("modules/sharePasswordDelivery.js", context);
-  loadScript(
-    "modules/bgComposePasswordDispatch.js",
+  loadPasswordDispatchScripts(
     context,
     "\nglobalThis.registerSeparatePasswordMailDispatch = registerSeparatePasswordMailDispatch;"
   );
@@ -195,9 +209,9 @@ function createDispatchHarness(composeDetailsByProbe = []){
   context.globalThis = context;
   vm.createContext(context);
   loadScript("modules/policyState.js", context, "\nglobalThis.NCPolicyState = NCPolicyState;");
+  loadScript("modules/sharingStorage.js", context, "\nglobalThis.NCSharingStorage = NCSharingStorage;");
   loadScript("modules/sharePasswordDelivery.js", context);
-  loadScript(
-    "modules/bgComposePasswordDispatch.js",
+  loadPasswordDispatchScripts(
     context,
     "\nglobalThis.passwordDispatchTestApi = { waitForComposeAutoSendReady, sendSeparatePasswordMail };"
   );

@@ -11,8 +11,8 @@
   const DEFAULT_SECRETS_EXPIRE_DAYS = 7;
   const MIN_SECRETS_EXPIRE_DAYS = 1;
   const MAX_SECRETS_EXPIRE_DAYS = 365;
-  const MODE_POLICY_KEY = "share_send_password_mode";
-  const EXPIRE_DAYS_POLICY_KEY = "share_secrets_expire_days";
+  const MODE_POLICY_KEY = NCSharingStorage.SHARE_POLICY_KEYS.passwordDeliveryMode;
+  const EXPIRE_DAYS_POLICY_KEY = NCSharingStorage.SHARE_POLICY_KEYS.secretsExpireDays;
 
   function normalizeMode(value){
     return String(value || "").trim().toLowerCase() === MODE_SECRETS

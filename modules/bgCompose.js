@@ -46,7 +46,7 @@ async function validateComposeShareStateForSend(tabId, details = {}){
       return header.name.toLowerCase() === COMPOSE_SHARE_DRAFT_HEADER.toLowerCase();
     });
   const draftIds = [...new Set(getComposeShareDraftIds(details?.customHeaders))];
-  let state = COMPOSE_SHARE_CLEANUP_BY_TAB.get(tabId) || null;
+  let state = getComposeShareCleanupState(tabId);
   const persistedByDraftId = new Map();
   if (draftIds.length){
     await PERSISTED_SHARE_CLEANUP_READY;
@@ -157,7 +157,7 @@ async function validateComposeShareStateForSend(tabId, details = {}){
   if (draftIds.length !== 1 || draftIds[0] !== state.draftGroupId){
     return { ok: false, reason: "draft_cleanup_marker_mismatch" };
   }
-  const liveUnsavedPasswordDispatch = PASSWORD_MAIL_DISPATCH_BY_TAB.has(tabId)
+  const liveUnsavedPasswordDispatch = hasSeparatePasswordMailDispatch(tabId)
     && (state.saved !== true || state.savePendingChanges === true);
   if (state.passwordHandoffRequired === true
     && state.passwordHandoffComplete !== true
@@ -167,44 +167,11 @@ async function validateComposeShareStateForSend(tabId, details = {}){
   return { ok: true, state };
 }
 
-function passwordDispatchQueueEntryKey(dispatch){
-  return String(
-    dispatch?.registrationId
-      || dispatch?.dedupKey
-      || passwordDispatchRegistrationKey(dispatch)
-      || ""
-  ).trim();
-}
-
-function retainFailedSavedDraftPasswordDispatches(
-  tabId,
-  sourceQueue,
-  failedQueue
-){
-  const processedKeys = new Set(
-    sourceQueue.map(passwordDispatchQueueEntryKey).filter(Boolean)
-  );
-  const current = PASSWORD_MAIL_DISPATCH_BY_TAB.get(tabId);
-  const unprocessed = (Array.isArray(current) ? current : []).filter((dispatch) => {
-    const key = passwordDispatchQueueEntryKey(dispatch);
-    return !key || !processedKeys.has(key);
-  });
-  const remaining = unprocessed.concat(
-    Array.isArray(failedQueue) ? failedQueue : []
-  );
-  if (remaining.length){
-    PASSWORD_MAIL_DISPATCH_BY_TAB.set(tabId, remaining);
-  }else{
-    PASSWORD_MAIL_DISPATCH_BY_TAB.delete(tabId);
-  }
-  return remaining;
-}
-
 async function handoffSavedDraftPasswordDispatch(tabId, options = {}){
   if (SAVED_DRAFT_PASSWORD_HANDOFF_BY_TAB.has(tabId)){
     return SAVED_DRAFT_PASSWORD_HANDOFF_BY_TAB.get(tabId);
   }
-  const queue = PASSWORD_MAIL_DISPATCH_BY_TAB.get(tabId);
+  const queue = getSeparatePasswordMailDispatchQueue(tabId);
   if (!Array.isArray(queue) || !queue.length){
     return null;
   }
@@ -326,6 +293,14 @@ async function rehydrateComposeShareDraftTab(tab){
 browser.composeAction.onClicked.addListener(async (tab) => {
   try{
     L("composeAction.onClicked", { tabId: Number(tab?.id) || 0 });
+    if (!(await isNextcloudAccountConfigured())){
+      L("composeAction.onClicked blocked", {
+        tabId: Number(tab?.id) || 0,
+        reason: "credentials_missing"
+      });
+      await openConnectionRequiredWindow("sharing");
+      return;
+    }
     await openSharingWizardWindow(tab.id);
   }catch(error){
     console.error("[NCBG] composeAction.onClicked", error);
@@ -347,7 +322,7 @@ browser.compose.onAttachmentAdded.addListener((tab, attachment) => {
  */
 browser.compose.onIdentityChanged.addListener((tab, identityId) => {
   const tabId = Number(tab?.id);
-  if (!Number.isInteger(tabId) || tabId <= 0 || !PASSWORD_MAIL_DISPATCH_BY_TAB.has(tabId)){
+  if (!Number.isInteger(tabId) || tabId <= 0 || !hasSeparatePasswordMailDispatch(tabId)){
     return;
   }
   captureSeparatePasswordDispatchIdentityChange(tabId, identityId).catch((error) => {
@@ -362,6 +337,11 @@ browser.compose.onBeforeSend.addListener(async (tab, details) => {
   const tabId = Number(tab?.id);
   if (!Number.isInteger(tabId) || tabId <= 0){
     return {};
+  }
+  if (await prepareComposeAttachmentRoutingBeforeSend(tabId)){
+    L("compose send blocked by attachment routing", { tabId });
+    void showComposeShareBlockedNotification("sharing_attachment_routing_active");
+    return { cancel: true };
   }
   if (isComposeFinalizeTransactionActive(tabId)){
     void showComposeShareBlockedNotification();
@@ -378,15 +358,15 @@ browser.compose.onBeforeSend.addListener(async (tab, details) => {
     );
     return { cancel: true };
   }
-  const hasPasswordDispatch = PASSWORD_MAIL_DISPATCH_BY_TAB.has(tabId);
-  const hasShareCleanup = COMPOSE_SHARE_CLEANUP_BY_TAB.has(tabId);
+  const hasPasswordDispatch = hasSeparatePasswordMailDispatch(tabId);
+  const hasShareCleanup = hasComposeShareCleanup(tabId);
   if (!hasPasswordDispatch && !hasShareCleanup){
     return {};
   }
   try{
     if (hasPasswordDispatch){
       await captureSeparatePasswordDispatchRecipients(tabId, details || {});
-      const queue = PASSWORD_MAIL_DISPATCH_BY_TAB.get(tabId);
+      const queue = getSeparatePasswordMailDispatchQueue(tabId);
       const needsIdentityEnrichment = Array.isArray(queue) && queue.some((dispatch) => {
         return !String(dispatch?.identityId || "").trim()
           || !String(dispatch?.from || "").trim()
@@ -436,8 +416,8 @@ browser.compose.onAfterSend.addListener(async (tab, details) => {
   if (!Number.isInteger(tabId) || tabId <= 0){
     return;
   }
-  const hasPasswordDispatch = PASSWORD_MAIL_DISPATCH_BY_TAB.has(tabId);
-  const hasShareCleanup = COMPOSE_SHARE_CLEANUP_BY_TAB.has(tabId);
+  const hasPasswordDispatch = hasSeparatePasswordMailDispatch(tabId);
+  const hasShareCleanup = hasComposeShareCleanup(tabId);
   if (!hasPasswordDispatch && !hasShareCleanup){
     return;
   }
@@ -455,10 +435,7 @@ browser.compose.onAfterSend.addListener(async (tab, details) => {
       try{
         await commitComposeShareCleanup(tabId, "after_send_success");
       }catch(error){
-        const cleanupState = COMPOSE_SHARE_CLEANUP_BY_TAB.get(tabId);
-        if (cleanupState){
-          cleanupState.saved = true;
-        }
+        markComposeShareCleanupCommittedFallback(tabId);
         console.error("[NCBG] compose share cleanup commit failed", {
           tabId,
           error: error?.message || String(error)
@@ -478,7 +455,7 @@ browser.compose.onAfterSend.addListener(async (tab, details) => {
           error: error?.message || String(error)
         });
       }
-      const retainedState = COMPOSE_SHARE_CLEANUP_BY_TAB.get(tabId);
+      const retainedState = getComposeShareCleanupState(tabId);
       if (sendPendingCleared
         && retainedState?.saved
         && retainedState.tabClosed){
@@ -586,7 +563,7 @@ async function processComposeShareAfterSave(
       return;
     }
   }
-  let state = COMPOSE_SHARE_CLEANUP_BY_TAB.get(tabId) || null;
+  let state = getComposeShareCleanupState(tabId);
   let details = null;
   if (!state){
     try{
@@ -618,7 +595,7 @@ async function processComposeShareAfterSave(
     });
     return;
   }
-  const hasPasswordDispatchQueue = PASSWORD_MAIL_DISPATCH_BY_TAB.has(tabId);
+  const hasPasswordDispatchQueue = hasSeparatePasswordMailDispatch(tabId);
   const passwordHandoffRequired = hasPasswordDispatchQueue
     || state.passwordHandoffRequired === true;
   const passwordHandoffComplete = hasPasswordDispatchQueue
@@ -635,7 +612,7 @@ async function processComposeShareAfterSave(
     }
   );
   await handoffSavedDraftPasswordDispatch(tabId);
-  state = COMPOSE_SHARE_CLEANUP_BY_TAB.get(tabId) || null;
+  state = getComposeShareCleanupState(tabId);
   if (state?.passwordHandoffRequired === true
     && state.passwordHandoffComplete !== true){
     await showComposeShareBlockedNotification(
@@ -666,11 +643,10 @@ function queueComposeShareAfterSave(
       finalizeSnapshot
     ))
     .catch(async (error) => {
-      const state = COMPOSE_SHARE_CLEANUP_BY_TAB.get(tabId);
+      const state = markComposeShareCleanupSaveOutcomeUncertain(tabId);
       if (state){
         // Thunderbird confirmed the save, but durable lifecycle state did not.
         // Never schedule deletion for this uncertain outcome.
-        state.saveOutcomeUncertain = true;
         try{
           await markPersistentShareCleanupExhausted(state.draftGroupId);
         }catch(persistError){
@@ -723,7 +699,7 @@ async function handleComposeWindowRemoved(windowId){
       "wizard_window_removed_during_finalize"
     );
   }
-  const promptId = ATTACHMENT_PROMPT_BY_WINDOW.get(windowId);
+  const promptId = getAttachmentPromptIdForWindow(windowId);
   if (promptId){
     L("compose attachment prompt window removed", {
       windowId,
@@ -731,8 +707,9 @@ async function handleComposeWindowRemoved(windowId){
     });
     resolveAttachmentPrompt(promptId, "dismiss", "prompt_window_closed");
   }
-  if (SHARING_WIZARD_CLEANUP_BY_WINDOW.has(windowId)){
-    const cleanupId = SHARING_WIZARD_CLEANUP_BY_WINDOW.get(windowId)?.cleanupId || "";
+  await releaseComposeAttachmentWizard(windowId, "wizard_window_closed");
+  const cleanupId = getSharingWizardRemoteCleanupId(windowId);
+  if (cleanupId){
     try{
       await markPersistentShareCleanupPending(
         cleanupId,
@@ -773,35 +750,6 @@ browser.tabs.onCreated.addListener((tab) => {
   void rehydrateComposeShareDraftTab(tab);
 });
 
-/**
- * Clear compose-tab scoped runtime state on tab close.
- */
-function scheduleSavedSendPendingDetach(tabId, state){
-  if (!state || COMPOSE_SHARE_CLEANUP_BY_TAB.get(tabId) !== state){
-    return false;
-  }
-  if (state.timerId){
-    clearTimeout(state.timerId);
-  }
-  state.timerId = setTimeout(() => {
-    const current = COMPOSE_SHARE_CLEANUP_BY_TAB.get(tabId);
-    if (current !== state || !current.saved || !current.sendPending){
-      return;
-    }
-    current.timerId = null;
-    current.sendPending = false;
-    detachSavedComposeShareCleanup(
-      tabId,
-      "saved_send_pending_confirmation_timeout"
-    );
-    L("saved compose send outcome unconfirmed; share retained", {
-      tabId,
-      draftGroupId: bgShortId(current.draftGroupId, 24)
-    });
-  }, COMPOSE_SHARE_CLEANUP_SEND_GRACE_MS);
-  return true;
-}
-
 async function handleComposeTabRemoved(tabId){
   L("compose tab removed", { tabId });
   if (COMPOSE_FINALIZE_BY_TAB.has(tabId)){
@@ -812,11 +760,11 @@ async function handleComposeTabRemoved(tabId){
     await saveTask;
   }
   cleanupComposeAttachmentTabState(tabId, "tab_removed");
-  let cleanupEntry = COMPOSE_SHARE_CLEANUP_BY_TAB.get(tabId);
+  let cleanupEntry = getComposeShareCleanupState(tabId);
   if (cleanupEntry?.saved || cleanupEntry?.saveOutcomeUncertain){
-    cleanupEntry.tabClosed = true;
+    cleanupEntry = markComposeShareCleanupTabClosed(tabId, cleanupEntry);
     if (cleanupEntry.saved && cleanupEntry.sendPending){
-      scheduleSavedSendPendingDetach(tabId, cleanupEntry);
+      scheduleSavedComposeShareCleanupDetach(tabId, cleanupEntry);
       return;
     }
     if (cleanupEntry.saved && cleanupEntry.savePendingChanges === true){
@@ -831,7 +779,7 @@ async function handleComposeTabRemoved(tabId){
       return;
     }
     await handoffSavedDraftPasswordDispatch(tabId, { tabClosed: true });
-    cleanupEntry = COMPOSE_SHARE_CLEANUP_BY_TAB.get(tabId);
+    cleanupEntry = getComposeShareCleanupState(tabId);
     if (!cleanupEntry
       || (!cleanupEntry.saved && !cleanupEntry.saveOutcomeUncertain)){
       return;

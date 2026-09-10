@@ -1,7 +1,14 @@
 "use strict";
 
 const vm = require("node:vm");
-const { assert, readText } = require("./review-check-utils");
+const { assert, readJson, readText } = require("./review-check-utils");
+
+const PASSWORD_DISPATCH_FILES = [
+  "modules/bgComposePasswordRecipients.js",
+  "modules/bgComposePasswordMail.js",
+  "modules/bgComposePasswordDelivery.js",
+  "modules/bgComposePasswordDispatch.js"
+];
 
 function createDeferred(){
   let resolve;
@@ -164,9 +171,9 @@ function createHarness(){
     setTimeout
   };
   vm.createContext(context);
-  vm.runInContext(readText("modules/bgComposePasswordDispatch.js"), context, {
-    filename: "modules/bgComposePasswordDispatch.js"
-  });
+  for (const file of PASSWORD_DISPATCH_FILES){
+    vm.runInContext(readText(file), context, { filename: file });
+  }
   return {
     context,
     composeDrafts,
@@ -439,13 +446,45 @@ async function run(){
     "Failed manual fallback must always show a failure notification"
   );
 
-  const source = readText("modules/bgComposePasswordDispatch.js");
-  const signatureIndex = source.indexOf("NCEmailSignature.applyAndWait(");
-  const readinessIndex = source.indexOf("await waitForComposeAutoSendReady(", signatureIndex);
-  const sendIndex = source.indexOf("await sendComposeWithTimeout(", readinessIndex);
+  const recipientsSource = readText("modules/bgComposePasswordRecipients.js");
+  const mailSource = readText("modules/bgComposePasswordMail.js");
+  const deliverySource = readText("modules/bgComposePasswordDelivery.js");
+  const dispatchSource = readText("modules/bgComposePasswordDispatch.js");
+  const signatureIndex = deliverySource.indexOf("NCEmailSignature.applyAndWait(");
+  const readinessIndex = deliverySource.indexOf("await waitForComposeAutoSendReady(", signatureIndex);
+  const sendIndex = deliverySource.indexOf("await sendComposeWithTimeout(", readinessIndex);
   assert(signatureIndex >= 0, "Password auto-send must wait for signature completion");
   assert(readinessIndex > signatureIndex, "Compose readiness must be rechecked after signature completion");
   assert(sendIndex > readinessIndex, "Password mail must send only after signature and readiness checks");
+  const backgroundScripts = readJson("manifest.json").background.scripts;
+  let previousScriptIndex = -1;
+  for (const file of PASSWORD_DISPATCH_FILES){
+    const scriptIndex = backgroundScripts.indexOf(file);
+    assert(scriptIndex > previousScriptIndex, `${file} must load after its password-dispatch dependencies`);
+    previousScriptIndex = scriptIndex;
+  }
+  assert(
+    recipientsSource.includes("await messengerUtilities.parseMailboxString(")
+      && recipientsSource.includes("async function ensureSeparatePasswordDispatchIdentity("),
+    "Recipient parsing and sender identity lookup must stay in the recipient module"
+  );
+  assert(
+    mailSource.includes("async function waitForComposeAutoSendReady(")
+      && mailSource.includes("async function openManualPasswordComposeFallback("),
+    "Compose readiness and manual mail construction must stay in the mail module"
+  );
+  assert(
+    deliverySource.includes("NCSecrets.createSecretLink({")
+      && deliverySource.includes("async function sendSeparatePasswordMail("),
+    "Secrets expansion and delivery orchestration must stay in the delivery module"
+  );
+  assert(
+    dispatchSource.includes("const PASSWORD_MAIL_DISPATCH_CLEAR_TIMER_BY_TAB = new Map();")
+      && dispatchSource.includes("async function registerSeparatePasswordMailDispatch(")
+      && !dispatchSource.includes("browser.compose.sendMessage(")
+      && !dispatchSource.includes("NCSecrets.createSecretLink("),
+    "The dispatch module must own only the pending queue and its transitions"
+  );
 
   console.log("[OK] password-dispatch-regression-check passed");
 }

@@ -11,15 +11,15 @@
 
   async function calculateMd5(file, signal){
     if (typeof global.SparkMD5?.ArrayBuffer !== "function"){
-      throw NCFileLinkDav.createTechnicalError(
+      throw NCNextcloudDav.createTechnicalError(
         "Upload failed (MD5 component unavailable)"
       );
     }
-    const source = NCFileLinkDav.getSourceBlob(file);
+    const source = NCNextcloudDav.getSourceBlob(file);
     const hasher = new global.SparkMD5.ArrayBuffer();
     try{
       for (let offset = 0; offset < file.size; offset += HASH_READ_SIZE_BYTES){
-        NCFileLinkDav.throwIfAborted(signal);
+        NCNextcloudDav.throwIfAborted(signal);
         const end = Math.min(file.size, offset + HASH_READ_SIZE_BYTES);
         hasher.append(await source.slice(offset, end).arrayBuffer());
       }
@@ -43,7 +43,7 @@
     onProgress?.(0, total);
     let lastProgressAt = Date.now();
     for (let index = 0; index < total; index++){
-      NCFileLinkDav.throwIfAborted(signal);
+      NCNextcloudDav.throwIfAborted(signal);
       const file = sourceFiles[index];
       checksums.set(file.internalId, await calculateMd5(file, signal));
       const completed = index + 1;
@@ -63,14 +63,14 @@
   }
 
   function buildRelativeFilePath(file){
-    return NCFileLinkDav.joinPath(file?.relativeDir || "", file?.fileName || "File");
+    return NCNextcloudDav.joinPath(file?.relativeDir || "", file?.fileName || "File");
   }
 
   function buildMultipartDescriptor({
     batch,
     shareRoot,
     checksums,
-    boundary = NCFileLinkDav.createFileLinkId()
+    boundary = NCNextcloudDav.createFileLinkId()
   } = {}){
     const encoder = new TextEncoder();
     const parts = [];
@@ -79,16 +79,16 @@
     const files = Array.isArray(batch?.files) ? batch.files : [];
 
     for (const file of files){
-      const relativePath = NCFileLinkDav.joinPath(shareRoot, buildRelativeFilePath(file));
+      const relativePath = NCNextcloudDav.joinPath(shareRoot, buildRelativeFilePath(file));
       const destinationPath = `/${relativePath}`;
       if (/[\r\n]/.test(destinationPath)){
-        throw NCFileLinkDav.createTechnicalError(
+        throw NCNextcloudDav.createTechnicalError(
           "Upload failed (invalid file path)"
         );
       }
       const checksum = String(checksums?.get(file.internalId) || "").toLowerCase();
       if (!/^[a-f0-9]{32}$/.test(checksum)){
-        throw NCFileLinkDav.createTechnicalError(
+        throw NCNextcloudDav.createTechnicalError(
           "Upload failed (invalid MD5 checksum)"
         );
       }
@@ -105,7 +105,7 @@
       parts.push(header);
       byteOffset += encoder.encode(header).byteLength;
       const dataStart = byteOffset;
-      parts.push(NCFileLinkDav.getSourceBlob(file));
+      parts.push(NCNextcloudDav.getSourceBlob(file));
       byteOffset += file.size;
       const dataEnd = byteOffset;
       parts.push("\r\n");
@@ -139,7 +139,7 @@
     try{
       payload = JSON.parse(String(responseText || ""));
     }catch(error){
-      throw NCFileLinkDav.createTechnicalError(
+      throw NCNextcloudDav.createTechnicalError(
         "Bulk upload returned invalid JSON"
       );
     }
@@ -148,7 +148,7 @@
       if (!result || result.error !== false){
         const detail = result?.message || result?.error || "Bulk upload part failed";
         const status = Number(result?.status ?? result?.statusCode);
-        const error = NCFileLinkDav.createTechnicalError(
+        const error = NCNextcloudDav.createTechnicalError(
           String(detail),
           status === 507 ? 507 : 0
         );
@@ -186,7 +186,7 @@
 
     let result;
     try{
-      result = await NCFileLinkDav.xhrWithRetry({
+      result = await NCNextcloudDav.xhrWithRetry({
         method: "POST",
         url,
         headers: {
@@ -196,7 +196,7 @@
         createBody: async () => {
           const body = buildBody(descriptor);
           if (body.size !== descriptor.contentLength){
-            throw NCFileLinkDav.createTechnicalError(
+            throw NCNextcloudDav.createTechnicalError(
               "Bulk upload body length mismatch"
             );
           }

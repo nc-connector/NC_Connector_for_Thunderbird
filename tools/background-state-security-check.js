@@ -16,6 +16,25 @@ const BG_STATE_SOURCE = fs.readFileSync(
   "utf8"
 );
 
+const LIFECYCLE_STATE_OWNERS = Object.freeze({
+  ATTACHMENT_PROMPT_BY_WINDOW: new Set([
+    "bgState.js",
+    "bgComposeAttachments.js"
+  ]),
+  PASSWORD_MAIL_DISPATCH_BY_TAB: new Set([
+    "bgState.js",
+    "bgComposePasswordDispatch.js"
+  ]),
+  COMPOSE_SHARE_CLEANUP_BY_TAB: new Set([
+    "bgState.js",
+    "bgComposeShareCleanup.js"
+  ]),
+  SHARING_WIZARD_CLEANUP_BY_WINDOW: new Set([
+    "bgState.js",
+    "bgComposeShareCleanup.js"
+  ])
+});
+
 function createStateHarness(storageGet){
   const logs = [];
   const context = vm.createContext({
@@ -85,6 +104,28 @@ async function checkHydrationFailsClosed(){
   assert(rejected === failure, "Background hydration must propagate storage read failures");
 }
 
+async function checkSharedCleanupRetrySchedule(){
+  const harness = createStateHarness(async () => ({
+    debugEnabled: false,
+    nctalkRoomMeta: {},
+    nctalkEventTokenMap: {},
+    nctalkRoomDeleteRetry: {}
+  }));
+  await vm.runInContext("BG_STATE_READY", harness.context);
+  const delays = vm.runInContext(
+    "Array.from(SHARE_CLEANUP_RETRY_DELAYS_MS)",
+    harness.context
+  );
+  assert(
+    JSON.stringify(delays) === JSON.stringify([2000, 5000, 10000, 30000, 60000]),
+    "Share cleanup consumers must use the shared bounded retry schedule"
+  );
+  assert(
+    vm.runInContext("Object.isFrozen(SHARE_CLEANUP_RETRY_DELAYS_MS)", harness.context),
+    "The shared cleanup retry schedule must be immutable"
+  );
+}
+
 async function checkBackgroundDebugRedaction(){
   const harness = createStateHarness(async () => ({
     debugEnabled: true,
@@ -123,9 +164,30 @@ async function checkBackgroundDebugRedaction(){
   assert(output.includes("[redacted]"), "Background debug logs must retain redaction markers");
 }
 
+function checkLifecycleStateOwnership(){
+  const modulesPath = path.join(ROOT, "modules");
+  const moduleFiles = fs.readdirSync(modulesPath)
+    .filter((fileName) => fileName.endsWith(".js"));
+  for (const [symbol, owners] of Object.entries(LIFECYCLE_STATE_OWNERS)){
+    const unexpected = moduleFiles.filter((fileName) => {
+      if (owners.has(fileName)){
+        return false;
+      }
+      const source = fs.readFileSync(path.join(modulesPath, fileName), "utf8");
+      return source.includes(symbol);
+    });
+    assert(
+      unexpected.length === 0,
+      `${symbol} must stay inside ${Array.from(owners).join(", ")}; found in ${unexpected.join(", ")}`
+    );
+  }
+}
+
 async function run(){
   await checkHydrationFailsClosed();
+  await checkSharedCleanupRetrySchedule();
   await checkBackgroundDebugRedaction();
+  checkLifecycleStateOwnership();
   console.log("[OK] background-state-security-check passed");
 }
 

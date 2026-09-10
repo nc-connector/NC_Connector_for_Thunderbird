@@ -251,6 +251,21 @@
   "error_credentials_missing": {
     "message": "Identifiants Nextcloud manquants (options du module)."
   },
+  "connection_required_title": {
+    "message": "Nextcloud n’est pas connecté"
+  },
+  "connection_required_sharing_message": {
+    "message": "Configurez d’abord votre connexion Nextcloud dans les paramètres du module avant d’ajouter un partage."
+  },
+  "connection_required_talk_message": {
+    "message": "Configurez d’abord votre connexion Nextcloud dans les paramètres du module avant d’insérer un lien Talk."
+  },
+  "connection_required_open_settings": {
+    "message": "Ouvrir les paramètres"
+  },
+  "options_connection_privacy_hint": {
+    "message": "NC Connector se connecte uniquement au serveur Nextcloud saisi ici. Vos identifiants sont enregistrés dans ce profil Thunderbird et envoyés uniquement à ce serveur, jamais à nous ni à d’autres tiers."
+  },
   "error_baseurl_https_required": {
     "message": "Veuillez utiliser une URL Nextcloud en HTTPS."
   },
@@ -629,6 +644,9 @@
   "sharing_error_insert_failed_close": {
     "message": "Le partage n’a pas pu être finalisé en toute sécurité. Fermez la fenêtre de partage et vérifiez le message avant de réessayer."
   },
+  "sharing_attachment_routing_active": {
+    "message": "Le partage de fichiers est toujours en cours. Terminez-le ou fermez la fenêtre de partage avant d’envoyer le message."
+  },
   "sharing_saved_template_unsupported": {
     "message": "Les messages contenant un partage NC Connector ne peuvent pas être enregistrés ni envoyés comme modèles Thunderbird. Créez un nouveau message et partagez à nouveau les fichiers."
   },
@@ -669,10 +687,10 @@
     "message": "Passé cette date, le lien ne sera plus accessible."
   },
   "sharing_step_files_title": {
-    "message": "Sélectionner des fichiers ou des dossiers"
+    "message": "Composer le partage"
   },
   "sharing_base_path_info": {
-    "message": "Répertoire de base : $1"
+    "message": "Dossier cible :"
   },
   "sharing_files_table_path": {
     "message": "Chemin"
@@ -682,12 +700,6 @@
   },
   "sharing_files_table_status": {
     "message": "Statut"
-  },
-  "sharing_button_add_files": {
-    "message": "Ajouter des fichiers..."
-  },
-  "sharing_button_add_folder": {
-    "message": "Ajouter un dossier..."
   },
   "sharing_button_remove": {
     "message": "Supprimer"
@@ -947,8 +959,20 @@
   "options_about_homepage_link": {
     "message": "https://nc-connector.de"
   },
-  "options_about_overview_text": {
-    "message": "Bien plus que des liens de fichiers\n\nNC Connector réunit le partage sécurisé de fichiers, les réunions Talk, l'automatisation des pièces jointes et des signatures e-mail gérées de manière centralisée directement dans Thunderbird et Outlook. Les flux de travail importants de l'équipe restent ainsi là où ils doivent être : dans le client de messagerie et de calendrier.\n\nCe que couvre NC Connector\n- Partage de fichiers avec mot de passe, date d'expiration et envoi séparé optionnel du mot de passe\n- Création et mise à jour de réunions Talk directement depuis les événements du calendrier\n- Automatisation des pièces jointes avec des règles claires au lieu d'étapes manuelles isolées\n- Blocs de partage et d'invitation homogènes directement dans le flux de travail habituel\n- Signatures e-mail centralisées pour rédiger, répondre et transférer à partir des données de profil Nextcloud\n\nEn option avec le backend Nextcloud\n- Attribution centralisée des Seats et gestion des politiques\n- Modèles et designs personnalisés pour les partages, les invitations Talk et les signatures e-mail\n- Envoi séparé du mot de passe et contrôle centralisé pour les organisations\n- 1 Seat = 1 utilisateur Nextcloud\n\nSans backend, les modules restent directement utilisables. Avec backend, un contrôle centralisé s'ajoute pour les équipes et les organisations."
+  "options_about_overview_title": {
+    "message": "Bien plus que des liens de fichiers"
+  },
+  "options_about_overview_intro": {
+    "message": "NC Connector relie Thunderbird directement à votre Nextcloud. Les partages de fichiers protégés, les réunions Talk et l’automatisation des pièces jointes restent ainsi dans votre flux habituel de messagerie et de calendrier."
+  },
+  "options_about_overview_direct": {
+    "message": "Disponible directement\n- Partages avec mot de passe et date d’expiration\n- Réunions Talk à partir d’événements du calendrier\n- Partage automatique des pièces jointes volumineuses\n- Votre propre Nextcloud comme fournisseur VFS"
+  },
+  "options_about_overview_backend": {
+    "message": "En option avec le backend NC Connector\n- Gestion centralisée des politiques et des délégations pour les organisations\n- Modèles et designs personnalisés (identité visuelle) pour les partages, les invitations Talk et les signatures e-mail\n- Envoi séparé du mot de passe\n- Fournisseurs VFS externes comme sources de partage"
+  },
+  "options_about_backend_link": {
+    "message": "Backend NC Connector dans le Nextcloud App Store"
   },
   "options_about_more_info_label": {
     "message": "Plus d'informations -->"
@@ -976,6 +1000,9 @@
   },
   "sharing_password_separate_backend_required_tooltip": {
     "message": "Cette fonctionnalité nécessite le backend Nextcloud."
+  },
+  "vfs_external_pro_required_tooltip": {
+    "message": "Les fournisseurs VFS externes nécessitent NC Connector Pro."
   },
   "sharing_password_separate_no_seat_tooltip": {
     "message": "Votre administrateur doit vous attribuer un seat NC Connector pour cette fonctionnalité."
@@ -1009,5 +1036,332 @@
   },
   "sharing_status_speed_kbps": {
     "message": "$1 KB/s"
+  },
+  "options_tab_vfs": {
+    "message": "VFS"
+  },
+  "options_vfs_provider_heading": {
+    "message": "Mon Nextcloud"
+  },
+  "options_vfs_provider_intro": {
+    "message": "Met la connexion Nextcloud existante à la disposition des modules complémentaires Thunderbird autorisés."
+  },
+  "options_vfs_provider_enabled_label": {
+    "message": "Activer NC Connector comme fournisseur VFS"
+  },
+  "options_vfs_provider_tooltip_title": {
+    "message": "Accès VFS à votre Nextcloud"
+  },
+  "options_vfs_provider_tooltip_text": {
+    "message": "Seuls les modules complémentaires explicitement autorisés obtiennent un accès en lecture et en écriture. Les identifiants ne sont pas transmis."
+  },
+  "options_vfs_provider_status_label": {
+    "message": "État"
+  },
+  "options_vfs_provider_status_active": {
+    "message": "Fournisseur actif"
+  },
+  "options_vfs_provider_status_inactive": {
+    "message": "Fournisseur inactif"
+  },
+  "options_vfs_provider_status_connection_required": {
+    "message": "Configurez d’abord la connexion Nextcloud"
+  },
+  "options_vfs_provider_status_error": {
+    "message": "Erreur du fournisseur"
+  },
+  "options_vfs_runtime_unavailable": {
+    "message": "Les composants VFS ne sont pas disponibles."
+  },
+  "options_vfs_grants_heading": {
+    "message": "Modules complémentaires autorisés"
+  },
+  "options_vfs_grants_hint": {
+    "message": "Chaque autorisation concerne un seul module complémentaire et peut être révoquée ici à tout moment."
+  },
+  "options_vfs_access_read_write": {
+    "message": "Lecture et écriture"
+  },
+  "options_vfs_revoke_button": {
+    "message": "Révoquer l’accès"
+  },
+  "options_vfs_no_grants": {
+    "message": "Aucun module complémentaire n’a encore accès."
+  },
+  "options_vfs_revoke_confirm": {
+    "message": "Révoquer l’accès de $1 ?"
+  },
+  "options_vfs_external_heading": {
+    "message": "Fournisseurs VFS externes"
+  },
+  "options_vfs_external_intro": {
+    "message": "Les fichiers d’autres fournisseurs sont lus, puis téléversés dans le partage sur votre Nextcloud."
+  },
+  "options_vfs_external_enabled_label": {
+    "message": "Activer les fournisseurs VFS externes"
+  },
+  "options_vfs_external_tooltip_title": {
+    "message": "Connecter d’autres espaces de stockage"
+  },
+  "options_vfs_external_tooltip_text": {
+    "message": "NC Connector ne détecte les fournisseurs VFS compatibles qu’après votre autorisation explicite. Les fichiers ne sont pas copiés directement entre les fournisseurs."
+  },
+  "options_vfs_external_permission_label": {
+    "message": "Autorisation Thunderbird"
+  },
+  "options_vfs_external_permission_granted": {
+    "message": "Accordée"
+  },
+  "options_vfs_external_permission_required": {
+    "message": "Non accordée"
+  },
+  "options_vfs_external_permission_button": {
+    "message": "Accorder l’autorisation"
+  },
+  "options_vfs_connections_heading": {
+    "message": "Connexions détectées"
+  },
+  "options_vfs_connections_hint": {
+    "message": "Les fournisseurs VFS compatibles configurés et joignables dans Thunderbird apparaissent ici."
+  },
+  "options_vfs_refresh_button": {
+    "message": "Actualiser"
+  },
+  "options_vfs_connect_button": {
+    "message": "Connecter"
+  },
+  "options_vfs_disconnect_button": {
+    "message": "Déconnecter"
+  },
+  "options_vfs_disconnect_confirm": {
+    "message": "Déconnecter $1 ?"
+  },
+  "options_vfs_no_connections": {
+    "message": "Aucune connexion VFS détectée."
+  },
+  "options_vfs_connection_status_connected": {
+    "message": "Connecté"
+  },
+  "options_vfs_connection_status_available": {
+    "message": "Disponible"
+  },
+  "options_vfs_connection_status_unavailable": {
+    "message": "Indisponible"
+  },
+  "options_vfs_connection_status_error": {
+    "message": "Erreur"
+  },
+  "options_vfs_loading": {
+    "message": "Chargement…"
+  },
+  "options_vfs_action_failed": {
+    "message": "L’action VFS n’a pas pu être terminée."
+  },
+  "vfs_error_management_permission_missing": {
+    "message": "L’autorisation de détecter les fournisseurs VFS externes est manquante."
+  },
+  "vfs_error_storage_changed": {
+    "message": "La connexion au stockage a changé. Sélectionnez de nouveau les fichiers."
+  },
+  "vfs_error_file_metadata_missing": {
+    "message": "Les informations du fichier sont incomplètes. Sélectionnez de nouveau le fichier."
+  },
+  "vfs_error_file_read_failed": {
+    "message": "Le fichier n’a pas pu être lu depuis le fournisseur de stockage."
+  },
+  "vfs_error_file_changed": {
+    "message": "Le fichier a changé après sa sélection. Sélectionnez-le de nouveau."
+  },
+  "vfs_error_invalid_path": {
+    "message": "Le chemin de stockage sélectionné n’est pas valide."
+  },
+  "vfs_error_root_not_selectable": {
+    "message": "La racine du stockage ne peut pas être sélectionnée comme dossier."
+  },
+  "vfs_error_external_connection_missing": {
+    "message": "La connexion au stockage sélectionnée n’est plus disponible."
+  },
+  "vfs_error_duplicate_path": {
+    "message": "La sélection contient plusieurs fois le même chemin."
+  },
+  "sharing_button_add_local": {
+    "message": "+ Cet appareil"
+  },
+  "sharing_button_add_nextcloud": {
+    "message": "+ Mon Nextcloud"
+  },
+  "sharing_button_add_nextcloud_files": {
+    "message": "Sélectionner des fichiers"
+  },
+  "sharing_button_add_nextcloud_folder": {
+    "message": "Sélectionner un dossier"
+  },
+  "sharing_button_add_external": {
+    "message": "+ Autre source"
+  },
+  "sharing_button_add_external_files": {
+    "message": "Sélectionner des fichiers"
+  },
+  "sharing_button_add_external_folder": {
+    "message": "Sélectionner un dossier"
+  },
+  "sharing_files_table_source": {
+    "message": "Origine"
+  },
+  "sharing_vfs_connection_heading": {
+    "message": "Sélectionner un stockage"
+  },
+  "sharing_vfs_connection_label": {
+    "message": "Stockage"
+  },
+  "sharing_vfs_external_unavailable": {
+    "message": "Aucune connexion à un stockage externe n’est disponible."
+  },
+  "sharing_vfs_nextcloud_unavailable_tooltip": {
+    "message": "Indisponible. Configurez d’abord une connexion Nextcloud dans les paramètres du module."
+  },
+  "sharing_vfs_external_disabled_notice": {
+    "message": "Configurez d’abord les autres sources dans les paramètres VFS."
+  },
+  "sharing_vfs_external_permission_notice": {
+    "message": "L’autorisation permettant de rechercher d’autres fournisseurs de stockage est manquante. Accordez-la dans les paramètres VFS."
+  },
+  "sharing_vfs_external_no_providers_notice": {
+    "message": "Aucun fournisseur VFS compatible n’est installé."
+  },
+  "sharing_vfs_external_no_connections_notice": {
+    "message": "Un fournisseur VFS compatible a été détecté, mais aucun stockage n’est connecté."
+  },
+  "sharing_vfs_external_load_failed_notice": {
+    "message": "Impossible de charger les autres sources de stockage."
+  },
+  "sharing_vfs_open_settings": {
+    "message": "Ouvrir les paramètres VFS"
+  },
+  "sharing_vfs_set_up_connection": {
+    "message": "Configurer une connexion"
+  },
+  "sharing_vfs_add_connection": {
+    "message": "Configurer une autre connexion"
+  },
+  "sharing_vfs_find_providers": {
+    "message": "Rechercher des fournisseurs VFS"
+  },
+  "sharing_vfs_activation_reload_warning": {
+    "message": "L’activation des fournisseurs externes peut recharger NC Connector et effacer la sélection de fichiers actuelle. Ouvrir quand même les paramètres VFS ?"
+  },
+  "sharing_vfs_navigation_failed": {
+    "message": "Impossible d’ouvrir la page demandée."
+  },
+  "sharing_vfs_scanning_source": {
+    "message": "Analyse de la sélection ($1)…"
+  },
+  "sharing_vfs_opening_picker": {
+    "message": "Ouverture du sélecteur de fichiers…"
+  },
+  "sharing_file_type_folder": {
+    "message": "Dossier"
+  },
+  "sharing_source_nextcloud": {
+    "message": "Mon Nextcloud"
+  },
+  "sharing_source_external": {
+    "message": "Stockage externe"
+  },
+  "sharing_source_local": {
+    "message": "Stockage local"
+  },
+  "sharing_queue_entries_summary": {
+    "message": "Éléments : $1"
+  },
+  "sharing_queue_sources_summary": {
+    "message": "Sources : $1"
+  },
+  "sharing_queue_total_summary": {
+    "message": "Taille totale : $1"
+  },
+  "sharing_queue_size_unknown": {
+    "message": "inconnue"
+  },
+  "sharing_queue_storage_loading": {
+    "message": "Chargement des informations de stockage…"
+  },
+  "sharing_queue_storage_available": {
+    "message": "Espace libre : $1 sur $2"
+  },
+  "sharing_queue_storage_unlimited": {
+    "message": "Aucun quota de stockage · $1 utilisés"
+  },
+  "sharing_queue_storage_unknown": {
+    "message": "Informations de stockage indisponibles"
+  },
+  "sharing_queue_storage_insufficient": {
+    "message": "Requis : $1 · Disponible : $2"
+  },
+  "sharing_queue_expand_folder": {
+    "message": "Développer le dossier « $1 »"
+  },
+  "sharing_queue_collapse_folder": {
+    "message": "Réduire le dossier « $1 »"
+  },
+  "sharing_queue_remove_item": {
+    "message": "Supprimer « $1 »"
+  },
+  "sharing_queue_source_group": {
+    "message": "Source : $1"
+  },
+  "sharing_status_fetching_source": {
+    "message": "Lecture du fichier…"
+  },
+  "sharing_status_copying_source": {
+    "message": "Copie en cours…"
+  },
+  "sharing_status_preparing_source": {
+    "message": "Préparation…"
+  },
+  "sharing_status_copying_sources": {
+    "message": "Copie des éléments Nextcloud ($1 / $2)…"
+  },
+  "sharing_status_fetching_sources": {
+    "message": "Lecture des fichiers du stockage ($1 / $2)…"
+  },
+  "vfs_setup_title": {
+    "message": "Accès à Nextcloud"
+  },
+  "vfs_setup_heading": {
+    "message": "Autoriser l’accès à Nextcloud ?"
+  },
+  "vfs_setup_access_heading": {
+    "message": "Accès en lecture et en écriture"
+  },
+  "vfs_setup_access_read": {
+    "message": "Parcourir et lire les fichiers et dossiers"
+  },
+  "vfs_setup_access_write": {
+    "message": "Créer et modifier des fichiers et dossiers"
+  },
+  "vfs_setup_access_delete": {
+    "message": "Supprimer des fichiers et dossiers"
+  },
+  "vfs_setup_allow": {
+    "message": "Autoriser l’accès"
+  },
+  "vfs_setup_request": {
+    "message": "$1 demande l’accès à ce stockage Nextcloud."
+  },
+  "vfs_setup_account": {
+    "message": "Compte Nextcloud : $1"
+  },
+  "vfs_setup_invalid_request": {
+    "message": "La demande d’accès n’est pas valide."
+  },
+  "vfs_setup_provider_unavailable": {
+    "message": "Le fournisseur de stockage Nextcloud n’est pas disponible."
+  },
+  "vfs_setup_granting": {
+    "message": "Autorisation de l’accès…"
+  },
+  "vfs_setup_failed": {
+    "message": "L’accès n’a pas pu être autorisé."
   }
 }

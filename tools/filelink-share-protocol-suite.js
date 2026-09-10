@@ -52,7 +52,7 @@ function createShareHarness(handler){
   };
   loadUploadModules(context, [
     "modules/fileLinkUploadPolicy.js",
-    "modules/fileLinkDav.js",
+    "modules/nextcloudDav.js",
     "modules/fileLinkShare.js"
   ]);
   return { context, requests };

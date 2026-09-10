@@ -251,6 +251,21 @@
   "error_credentials_missing": {
     "message": "Nextcloud credentials are missing (add-on options)."
   },
+  "connection_required_title": {
+    "message": "Nextcloud is not connected"
+  },
+  "connection_required_sharing_message": {
+    "message": "Set up your Nextcloud connection in the add-on settings before adding a share."
+  },
+  "connection_required_talk_message": {
+    "message": "Set up your Nextcloud connection in the add-on settings before inserting a Talk link."
+  },
+  "connection_required_open_settings": {
+    "message": "Open settings"
+  },
+  "options_connection_privacy_hint": {
+    "message": "NC Connector connects only to the Nextcloud server entered here. Your sign-in details are stored in this Thunderbird profile and sent only to that server—never to us or other third parties."
+  },
   "error_baseurl_https_required": {
     "message": "Please use an HTTPS Nextcloud URL."
   },
@@ -629,6 +644,9 @@
   "sharing_error_insert_failed_close": {
     "message": "Could not complete the share safely. Close the Sharing window and check the message before trying again."
   },
+  "sharing_attachment_routing_active": {
+    "message": "File sharing is still in progress. Finish it or close the sharing window before sending the message."
+  },
   "sharing_saved_template_unsupported": {
     "message": "Messages with an NC Connector share cannot be saved or sent as Thunderbird templates. Create a new message and share the files again."
   },
@@ -669,10 +687,10 @@
     "message": "After this date the link is no longer available."
   },
   "sharing_step_files_title": {
-    "message": "Select files or folders"
+    "message": "Build share"
   },
   "sharing_base_path_info": {
-    "message": "Base directory: $1"
+    "message": "Target folder:"
   },
   "sharing_files_table_path": {
     "message": "Path"
@@ -682,12 +700,6 @@
   },
   "sharing_files_table_status": {
     "message": "Status"
-  },
-  "sharing_button_add_files": {
-    "message": "Add files..."
-  },
-  "sharing_button_add_folder": {
-    "message": "Add folder..."
   },
   "sharing_button_remove": {
     "message": "Remove"
@@ -947,8 +959,20 @@
   "options_about_homepage_link": {
     "message": "https://nc-connector.de"
   },
-  "options_about_overview_text": {
-    "message": "More than file links\n\nNC Connector combines secure file sharing, Talk meetings, attachment automation, and centrally managed email signatures directly in Thunderbird and Outlook. This keeps important team workflows where they belong: in the mail and calendar client.\n\nWhat NC Connector covers\n- File sharing with password, expiration date, and optional separate password delivery\n- Create and update Talk meetings directly from calendar appointments\n- Attachment automation with clear rules instead of manual individual steps\n- Consistent sharing and invitation blocks directly in the familiar workflow\n- Central email signatures for compose, reply, and forward using Nextcloud profile data\n\nOptional with Nextcloud backend\n- Central Seat assignment and policy management\n- Custom templates and designs for shares, Talk invitations, and email signatures\n- Separate password delivery and central control for organizations\n- 1 Seat = 1 Nextcloud user\n\nWithout backend, the add-ins remain directly usable. With backend, central control for teams and organizations is added."
+  "options_about_overview_title": {
+    "message": "More than file links"
+  },
+  "options_about_overview_intro": {
+    "message": "NC Connector connects Thunderbird directly to your Nextcloud. Protected file shares, Talk meetings, and attachment automation stay within your familiar email and calendar workflow."
+  },
+  "options_about_overview_direct": {
+    "message": "Available directly\n- Shares with passwords and expiration dates\n- Talk meetings from calendar events\n- Automatic sharing of large attachments\n- Your own Nextcloud as a VFS provider"
+  },
+  "options_about_overview_backend": {
+    "message": "Optional with the NC Connector backend\n- Central policy and delegation management for organizations\n- Custom templates and designs (branding) for shares, Talk invitations, and email signatures\n- Separate password delivery\n- External VFS providers as sharing sources"
+  },
+  "options_about_backend_link": {
+    "message": "NC Connector backend in the Nextcloud App Store"
   },
   "options_about_more_info_label": {
     "message": "More information -->"
@@ -976,6 +1000,9 @@
   },
   "sharing_password_separate_backend_required_tooltip": {
     "message": "This feature requires the Nextcloud backend."
+  },
+  "vfs_external_pro_required_tooltip": {
+    "message": "External VFS providers require NC Connector Pro."
   },
   "sharing_password_separate_no_seat_tooltip": {
     "message": "Your administrator must assign an NC Connector seat to your account for this feature."
@@ -1009,5 +1036,332 @@
   },
   "sharing_status_speed_kbps": {
     "message": "$1 KB/s"
+  },
+  "options_tab_vfs": {
+    "message": "VFS"
+  },
+  "options_vfs_provider_heading": {
+    "message": "My Nextcloud"
+  },
+  "options_vfs_provider_intro": {
+    "message": "Makes the existing Nextcloud connection available to authorized Thunderbird add-ons."
+  },
+  "options_vfs_provider_enabled_label": {
+    "message": "Enable NC Connector as a VFS provider"
+  },
+  "options_vfs_provider_tooltip_title": {
+    "message": "VFS access to your Nextcloud"
+  },
+  "options_vfs_provider_tooltip_text": {
+    "message": "Only explicitly authorized add-ons receive read and write access. Credentials are not shared."
+  },
+  "options_vfs_provider_status_label": {
+    "message": "Status"
+  },
+  "options_vfs_provider_status_active": {
+    "message": "Provider active"
+  },
+  "options_vfs_provider_status_inactive": {
+    "message": "Provider inactive"
+  },
+  "options_vfs_provider_status_connection_required": {
+    "message": "Set up the Nextcloud connection first"
+  },
+  "options_vfs_provider_status_error": {
+    "message": "Provider error"
+  },
+  "options_vfs_runtime_unavailable": {
+    "message": "The VFS components are unavailable."
+  },
+  "options_vfs_grants_heading": {
+    "message": "Authorized add-ons"
+  },
+  "options_vfs_grants_hint": {
+    "message": "Each authorization applies to one add-on and can be revoked here at any time."
+  },
+  "options_vfs_access_read_write": {
+    "message": "Read & Write"
+  },
+  "options_vfs_revoke_button": {
+    "message": "Revoke access"
+  },
+  "options_vfs_no_grants": {
+    "message": "No add-on has access yet."
+  },
+  "options_vfs_revoke_confirm": {
+    "message": "Revoke access for $1?"
+  },
+  "options_vfs_external_heading": {
+    "message": "External VFS providers"
+  },
+  "options_vfs_external_intro": {
+    "message": "Files from other providers are read and then uploaded to the share on your Nextcloud."
+  },
+  "options_vfs_external_enabled_label": {
+    "message": "Enable external VFS providers"
+  },
+  "options_vfs_external_tooltip_title": {
+    "message": "Connect other storage providers"
+  },
+  "options_vfs_external_tooltip_text": {
+    "message": "NC Connector detects compatible VFS providers only after your explicit permission. Files are not copied directly between providers."
+  },
+  "options_vfs_external_permission_label": {
+    "message": "Thunderbird permission"
+  },
+  "options_vfs_external_permission_granted": {
+    "message": "Granted"
+  },
+  "options_vfs_external_permission_required": {
+    "message": "Not granted"
+  },
+  "options_vfs_external_permission_button": {
+    "message": "Grant permission"
+  },
+  "options_vfs_connections_heading": {
+    "message": "Detected connections"
+  },
+  "options_vfs_connections_hint": {
+    "message": "Compatible VFS providers configured and reachable in Thunderbird appear here."
+  },
+  "options_vfs_refresh_button": {
+    "message": "Refresh"
+  },
+  "options_vfs_connect_button": {
+    "message": "Connect"
+  },
+  "options_vfs_disconnect_button": {
+    "message": "Disconnect"
+  },
+  "options_vfs_disconnect_confirm": {
+    "message": "Disconnect $1?"
+  },
+  "options_vfs_no_connections": {
+    "message": "No VFS connection detected."
+  },
+  "options_vfs_connection_status_connected": {
+    "message": "Connected"
+  },
+  "options_vfs_connection_status_available": {
+    "message": "Available"
+  },
+  "options_vfs_connection_status_unavailable": {
+    "message": "Unavailable"
+  },
+  "options_vfs_connection_status_error": {
+    "message": "Error"
+  },
+  "options_vfs_loading": {
+    "message": "Loading…"
+  },
+  "options_vfs_action_failed": {
+    "message": "The VFS action could not be completed."
+  },
+  "vfs_error_management_permission_missing": {
+    "message": "Permission to detect external VFS providers is missing."
+  },
+  "vfs_error_storage_changed": {
+    "message": "The storage connection changed. Select the files again."
+  },
+  "vfs_error_file_metadata_missing": {
+    "message": "File information is incomplete. Select the file again."
+  },
+  "vfs_error_file_read_failed": {
+    "message": "The file could not be read from the storage provider."
+  },
+  "vfs_error_file_changed": {
+    "message": "The file changed after selection. Select it again."
+  },
+  "vfs_error_invalid_path": {
+    "message": "The selected storage path is invalid."
+  },
+  "vfs_error_root_not_selectable": {
+    "message": "The storage root cannot be selected as a folder."
+  },
+  "vfs_error_external_connection_missing": {
+    "message": "The selected storage connection is no longer available."
+  },
+  "vfs_error_duplicate_path": {
+    "message": "The selection contains the same path more than once."
+  },
+  "sharing_button_add_local": {
+    "message": "+ Local"
+  },
+  "sharing_button_add_nextcloud": {
+    "message": "+ My Nextcloud"
+  },
+  "sharing_button_add_nextcloud_files": {
+    "message": "Select files"
+  },
+  "sharing_button_add_nextcloud_folder": {
+    "message": "Select folder"
+  },
+  "sharing_button_add_external": {
+    "message": "+ Other source"
+  },
+  "sharing_button_add_external_files": {
+    "message": "Select files"
+  },
+  "sharing_button_add_external_folder": {
+    "message": "Select folder"
+  },
+  "sharing_files_table_source": {
+    "message": "Source"
+  },
+  "sharing_vfs_connection_heading": {
+    "message": "Select storage"
+  },
+  "sharing_vfs_connection_label": {
+    "message": "Storage"
+  },
+  "sharing_vfs_external_unavailable": {
+    "message": "No external storage connection is available."
+  },
+  "sharing_vfs_nextcloud_unavailable_tooltip": {
+    "message": "Unavailable. Set up a Nextcloud connection in the add-on settings first."
+  },
+  "sharing_vfs_external_disabled_notice": {
+    "message": "Set up other sources in the VFS settings first."
+  },
+  "sharing_vfs_external_permission_notice": {
+    "message": "Permission to discover other storage providers has not been granted. Grant it in the VFS settings."
+  },
+  "sharing_vfs_external_no_providers_notice": {
+    "message": "No compatible VFS provider is installed."
+  },
+  "sharing_vfs_external_no_connections_notice": {
+    "message": "A compatible VFS provider was found, but no storage is connected."
+  },
+  "sharing_vfs_external_load_failed_notice": {
+    "message": "Other storage sources could not be loaded."
+  },
+  "sharing_vfs_open_settings": {
+    "message": "Open VFS settings"
+  },
+  "sharing_vfs_set_up_connection": {
+    "message": "Set up connection"
+  },
+  "sharing_vfs_add_connection": {
+    "message": "Set up another connection"
+  },
+  "sharing_vfs_find_providers": {
+    "message": "Find VFS providers"
+  },
+  "sharing_vfs_activation_reload_warning": {
+    "message": "Enabling external providers may reload NC Connector and clear the current file selection. Open the VFS settings anyway?"
+  },
+  "sharing_vfs_navigation_failed": {
+    "message": "The requested page could not be opened."
+  },
+  "sharing_vfs_scanning_source": {
+    "message": "Scanning selection ($1)..."
+  },
+  "sharing_vfs_opening_picker": {
+    "message": "Opening file selection..."
+  },
+  "sharing_file_type_folder": {
+    "message": "Folder"
+  },
+  "sharing_source_nextcloud": {
+    "message": "My Nextcloud"
+  },
+  "sharing_source_external": {
+    "message": "External storage"
+  },
+  "sharing_source_local": {
+    "message": "Local"
+  },
+  "sharing_queue_entries_summary": {
+    "message": "Entries: $1"
+  },
+  "sharing_queue_sources_summary": {
+    "message": "Sources: $1"
+  },
+  "sharing_queue_total_summary": {
+    "message": "Total: $1"
+  },
+  "sharing_queue_size_unknown": {
+    "message": "unknown"
+  },
+  "sharing_queue_storage_loading": {
+    "message": "Loading storage information..."
+  },
+  "sharing_queue_storage_available": {
+    "message": "Free space: $1 of $2"
+  },
+  "sharing_queue_storage_unlimited": {
+    "message": "No storage limit · $1 used"
+  },
+  "sharing_queue_storage_unknown": {
+    "message": "Storage information unavailable"
+  },
+  "sharing_queue_storage_insufficient": {
+    "message": "Required: $1 · Available: $2"
+  },
+  "sharing_queue_expand_folder": {
+    "message": "Expand folder $1"
+  },
+  "sharing_queue_collapse_folder": {
+    "message": "Collapse folder $1"
+  },
+  "sharing_queue_remove_item": {
+    "message": "Remove $1"
+  },
+  "sharing_queue_source_group": {
+    "message": "Source: $1"
+  },
+  "sharing_status_fetching_source": {
+    "message": "Reading file..."
+  },
+  "sharing_status_copying_source": {
+    "message": "Copying..."
+  },
+  "sharing_status_preparing_source": {
+    "message": "Preparing..."
+  },
+  "sharing_status_copying_sources": {
+    "message": "Copying Nextcloud items ($1 / $2)..."
+  },
+  "sharing_status_fetching_sources": {
+    "message": "Reading files from storage ($1 / $2)..."
+  },
+  "vfs_setup_title": {
+    "message": "Nextcloud access"
+  },
+  "vfs_setup_heading": {
+    "message": "Allow Nextcloud access?"
+  },
+  "vfs_setup_access_heading": {
+    "message": "Read and write access"
+  },
+  "vfs_setup_access_read": {
+    "message": "Browse and read files and folders"
+  },
+  "vfs_setup_access_write": {
+    "message": "Create and modify files and folders"
+  },
+  "vfs_setup_access_delete": {
+    "message": "Delete files and folders"
+  },
+  "vfs_setup_allow": {
+    "message": "Allow access"
+  },
+  "vfs_setup_request": {
+    "message": "$1 is requesting access to this Nextcloud storage."
+  },
+  "vfs_setup_account": {
+    "message": "Nextcloud account: $1"
+  },
+  "vfs_setup_invalid_request": {
+    "message": "The access request is invalid."
+  },
+  "vfs_setup_provider_unavailable": {
+    "message": "The Nextcloud storage provider is not available."
+  },
+  "vfs_setup_granting": {
+    "message": "Granting access..."
+  },
+  "vfs_setup_failed": {
+    "message": "Access could not be granted."
   }
 }
