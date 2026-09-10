@@ -251,6 +251,21 @@
   "error_credentials_missing": {
     "message": "Brak danych logowania Nextcloud (opcje dodatku)."
   },
+  "connection_required_title": {
+    "message": "Nextcloud nie jest połączony"
+  },
+  "connection_required_sharing_message": {
+    "message": "Przed dodaniem udostępnienia skonfiguruj połączenie z Nextcloud w ustawieniach dodatku."
+  },
+  "connection_required_talk_message": {
+    "message": "Przed wstawieniem łącza Talk skonfiguruj połączenie z Nextcloud w ustawieniach dodatku."
+  },
+  "connection_required_open_settings": {
+    "message": "Otwórz ustawienia"
+  },
+  "options_connection_privacy_hint": {
+    "message": "NC Connector łączy się wyłącznie z serwerem Nextcloud podanym w tym miejscu. Dane logowania są przechowywane w tym profilu Thunderbirda i wysyłane tylko do tego serwera, nigdy do nas ani innych podmiotów trzecich."
+  },
   "error_baseurl_https_required": {
     "message": "Użyj adresu URL Nextcloud z HTTPS."
   },

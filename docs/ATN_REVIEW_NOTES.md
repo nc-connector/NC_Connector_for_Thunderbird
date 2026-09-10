@@ -83,6 +83,9 @@ password-dispatch, header, or body mutation cannot be exposed as committed.
   acknowledged the launch context.
 16) Sending is blocked only while automated attachment routing owns the compose
   tab. A manually opened sharing wizard does not participate in that guard.
+17) Manual Sharing and Talk actions do not initialize their wizard while the
+  effective Nextcloud URL, user, or app password is missing. A local setup
+  notice offers navigation to the General options tab instead.
 
 ---
 
@@ -291,6 +294,9 @@ loading mechanism with explicit imports.
 - External-provider discovery is disabled by default. The required `management` permission is declared at installation because external-provider enumeration is a core VFS capability; there is no runtime permission prompt. External sources additionally require the backend in Pro mode, an active assigned seat, and the effective Share-policy switch. The NC Connector self provider is excluded from external enumeration and remains available without that entitlement.
 - The same external gate is checked for provider search, connection setup, picker selection, file reads, and immediately before a mixed-source upload can reserve its Nextcloud root. Closing the gate retains Toolkit connection records.
 - When the external-source entitlement is open, the Sharing wizard keeps **+ Other source** reachable without a connection and shows the current setup state. Its actions open the local VFS options tab or the public Thunderbird Add-ons VFS search in a normal Thunderbird content tab; discovery refreshes automatically when the wizard opens or regains focus. These navigation actions add no permission and do not modify Toolkit code. A populated queue is warned before entering an enablement flow that can reload the extension.
+- The VFS options tab exposes the same public Thunderbird Add-ons search action
+  and routes it through the identical backend Pro/seat/Share-policy entitlement
+  check used by the Sharing wizard.
 - Both source pickers use the upstream visibility options to hide management actions and context menus while retaining search, type filters, navigation, and selection.
 - Toolkit-owned runtime messages are not answered by NC Connector's general message router. External connection removal uses the Toolkit's provider-side `deleteProviderConnection()` flow and verifies that the exact storage reference disappeared locally.
 - The co-located Nextcloud provider refreshes its descriptor in the Toolkit session cache before selection and uses a local loopback port that enters the normal authenticated provider command handler. External providers continue to use cross-extension messaging.

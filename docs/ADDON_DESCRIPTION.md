@@ -115,7 +115,7 @@ Data flow:
 
 ### Logging and Debug
 - Enable debug mode in options to log detailed traces
-- Logs appear with channels [NCBG], [NCUI][Talk], [NCUI][Sharing], [NCUI][Options], [NCUI][OpenUrlFallback], and `[ncCalToolbar]`
+- Logs appear with channels [NCBG], [NCUI][Talk], [NCUI][Sharing], [NCUI][Options], [NCUI][ConnectionRequired], [NCUI][OpenUrlFallback], and `[ncCalToolbar]`
 - Background logs include OCS/DAV status and metadata decisions (only when debug is enabled)
 - Central redaction removes credentials, tokens, recipients, user identifiers,
   and user-scoped DAV/Talk paths before background output

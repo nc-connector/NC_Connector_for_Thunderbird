@@ -293,6 +293,14 @@ async function rehydrateComposeShareDraftTab(tab){
 browser.composeAction.onClicked.addListener(async (tab) => {
   try{
     L("composeAction.onClicked", { tabId: Number(tab?.id) || 0 });
+    if (!(await isNextcloudAccountConfigured())){
+      L("composeAction.onClicked blocked", {
+        tabId: Number(tab?.id) || 0,
+        reason: "credentials_missing"
+      });
+      await openConnectionRequiredWindow("sharing");
+      return;
+    }
     await openSharingWizardWindow(tab.id);
   }catch(error){
     console.error("[NCBG] composeAction.onClicked", error);

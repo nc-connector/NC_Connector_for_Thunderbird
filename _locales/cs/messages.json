@@ -251,6 +251,21 @@
   "error_credentials_missing": {
     "message": "Chybí přihlašovací údaje k Nextcloud (v nastavení doplňku)."
   },
+  "connection_required_title": {
+    "message": "Nextcloud není připojen"
+  },
+  "connection_required_sharing_message": {
+    "message": "Než přidáte sdílení, nejprve nastavte připojení k Nextcloudu v nastavení doplňku."
+  },
+  "connection_required_talk_message": {
+    "message": "Než vložíte odkaz Talk, nejprve nastavte připojení k Nextcloudu v nastavení doplňku."
+  },
+  "connection_required_open_settings": {
+    "message": "Otevřít nastavení"
+  },
+  "options_connection_privacy_hint": {
+    "message": "NC Connector se připojuje pouze k serveru Nextcloud zadanému zde. Vaše přihlašovací údaje jsou uloženy v tomto profilu Thunderbirdu a odesílají se pouze na tento server, nikdy nám ani jiným třetím stranám."
+  },
   "error_baseurl_https_required": {
     "message": "Použijte prosím URL Nextcloud s HTTPS."
   },

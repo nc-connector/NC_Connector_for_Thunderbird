@@ -251,6 +251,21 @@
   "error_credentials_missing": {
     "message": "Nextcloud の資格情報がありません（アドオンの設定）。"
   },
+  "connection_required_title": {
+    "message": "Nextcloud に接続されていません"
+  },
+  "connection_required_sharing_message": {
+    "message": "共有を追加する前に、アドオン設定で Nextcloud 接続を設定してください。"
+  },
+  "connection_required_talk_message": {
+    "message": "Talk リンクを挿入する前に、アドオン設定で Nextcloud 接続を設定してください。"
+  },
+  "connection_required_open_settings": {
+    "message": "設定を開く"
+  },
+  "options_connection_privacy_hint": {
+    "message": "NC Connector は、ここで入力した Nextcloud サーバーにのみ接続します。ログイン情報はこの Thunderbird プロファイルに保存され、そのサーバーだけに送信されます。開発者やその他の第三者に送信されることはありません。"
+  },
   "error_baseurl_https_required": {
     "message": "HTTPS の Nextcloud URL を使用してください。"
   },

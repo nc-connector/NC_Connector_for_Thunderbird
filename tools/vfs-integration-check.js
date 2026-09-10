@@ -164,16 +164,18 @@ async function checkRouterLeavesToolkitMessagesUnclaimed(){
       && externalResponse.status?.connections?.length === 1,
     "Sharing source guidance must receive the complete external VFS status"
   );
+  assert((await listener({ type: "connection:openOptions" }, {}))?.ok === true, "Connection setup options must open");
   assert((await listener({ type: "vfs:openOptions" }, {}))?.ok === true, "VFS options must open");
   assert((await listener({ type: "vfs:findProviderAddons" }, {}))?.ok === true, "VFS provider search must open");
   assert(
-    openedTabs.length === 2
+    openedTabs.length === 3
       && openedTabs[0].windowId === 73
-      && openedTabs[0].url === "moz-extension://connector/options.html?tab=vfs"
-      && openedTabs[1].url === "https://addons.thunderbird.net/search/?q=VFS"
-      && focusedWindows.length === 2
+      && openedTabs[0].url === "moz-extension://connector/options.html?tab=general"
+      && openedTabs[1].url === "moz-extension://connector/options.html?tab=vfs"
+      && openedTabs[2].url === "https://addons.thunderbird.net/search/?q=VFS"
+      && focusedWindows.length === 3
       && focusedWindows.every((entry) => entry.windowId === 73 && entry.options.focused === true),
-    "VFS setup pages must open and focus in a normal Thunderbird window"
+    "Connection and VFS setup pages must open and focus in a normal Thunderbird window"
   );
 }
 
@@ -1072,6 +1074,15 @@ function checkManifestAndReviewSurface(){
       && !optionsVfsRuntime.includes("browser.permissions.request")
       && optionsVfsRuntime.includes("getVfsExternalUnavailableHint"),
     "VFS settings must explain policy and entitlement gates without a runtime management-permission flow"
+  );
+  assert(
+    optionsHtml.includes('id="vfsFindProviders"')
+      && optionsHtml.includes('data-i18n="sharing_vfs_find_providers"')
+      && optionsVfsRuntime.includes('findProviderAddons: "vfs:findProviderAddons"')
+      && optionsVfsRuntime.includes("findProvidersButton.disabled = !runtimeAvailable")
+      && optionsVfsRuntime.includes("|| externalBlocked;")
+      && optionsVfsRuntime.includes("await request(MESSAGE_TYPES.findProviderAddons);"),
+    "VFS options must reuse the entitlement-gated provider search path"
   );
   const sourceRuntime = readText("modules/fileLinkSources.js");
   assert(!sourceRuntime.includes("storage.local"), "External File content must not be staged in extension storage");

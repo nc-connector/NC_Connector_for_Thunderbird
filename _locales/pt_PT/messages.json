@@ -251,6 +251,21 @@
   "error_credentials_missing": {
     "message": "Credenciais do Nextcloud em falta (definições do add-on)."
   },
+  "connection_required_title": {
+    "message": "O Nextcloud não está ligado"
+  },
+  "connection_required_sharing_message": {
+    "message": "Configure primeiro a ligação ao Nextcloud nas definições do add-on antes de adicionar uma partilha."
+  },
+  "connection_required_talk_message": {
+    "message": "Configure primeiro a ligação ao Nextcloud nas definições do add-on antes de inserir uma ligação do Talk."
+  },
+  "connection_required_open_settings": {
+    "message": "Abrir definições"
+  },
+  "options_connection_privacy_hint": {
+    "message": "O NC Connector liga-se apenas ao servidor Nextcloud indicado aqui. As suas credenciais são guardadas neste perfil do Thunderbird e enviadas apenas para esse servidor, nunca para nós nem para outros terceiros."
+  },
   "error_baseurl_https_required": {
     "message": "Use um URL do Nextcloud com HTTPS."
   },

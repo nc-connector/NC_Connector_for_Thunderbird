@@ -197,7 +197,7 @@ Important for packaging:
 ### 4.2 Developer tools & consoles
 
 To debug, you’ll typically use:
-- The Thunderbird **Developer Console / Error Console** (for `[NCBG]`, `[NCUI][Talk]`, `[NCUI][Sharing]`, `[NCUI][Options]`, `[NCUI][OpenUrlFallback]`, and `[ncCalToolbar]` logs).
+- The Thunderbird **Developer Console / Error Console** (for `[NCBG]`, `[NCUI][Talk]`, `[NCUI][Sharing]`, `[NCUI][Options]`, `[NCUI][ConnectionRequired]`, `[NCUI][OpenUrlFallback]`, and `[ncCalToolbar]` logs).
 - The add-on debug view (background + extension pages).
 
 What to look for:
@@ -205,6 +205,7 @@ What to look for:
 - `[NCUI][Talk]` — Talk wizard UI flow
 - `[NCUI][Sharing]` — Sharing wizard UI flow
 - `[NCUI][Options]` — settings/options page flow
+- `[NCUI][ConnectionRequired]` — missing-account setup notice
 - `[NCUI][OpenUrlFallback]` — browser-open fallback dialog
 - `[ncCalToolbar]` — custom editor integration logs (button/context/read-write lifecycle)
 - The bundled `experiments/calendar/**` package remains upstream/as-is; any console output coming from it is outside the add-on debug-channel rules above.
@@ -305,6 +306,18 @@ Options UI:
 Storage backend:
 - `browser.storage.local`
 - `browser.storage.managed` for read-only administrator-provided setup values
+
+The manual compose Sharing action and the calendar Talk action check the same
+effective account returned by `NCCore.getOpts()` before preparing a wizard.
+When URL, user, or app password is missing, `ui/connectionRequired.html` shows
+a compact, action-specific explanation and opens the General options tab through
+`connection:openOptions`; no Sharing or Talk wizard context is created.
+
+The General tab explains directly below the Nextcloud URL that credentials stay
+in the Thunderbird profile and are sent only to the configured server. The VFS
+tab reuses `vfs:findProviderAddons` for its **Find VFS providers** action, so the
+same backend, Pro, seat, and effective Share-policy gate applies in options and
+in the Sharing wizard.
 
 Backend policy precedence for every add-on-editable default:
 1. Inactive/unavailable policy domain: use the stored local value or the add-on fallback.
@@ -1154,6 +1167,7 @@ Share cleanup groups:
 
 Common utility:
 - `debug:log` — structured log forwarding (debug-controlled)
+- `connection:openOptions` — opens the General options tab from the missing-account action notice
 - `policy:getStatus` — backend seat/policy status for options and wizards
 - `passwordPolicy:fetch` — returns active password policy endpoints + min length
 - `passwordPolicy:generate` — server-side password generation

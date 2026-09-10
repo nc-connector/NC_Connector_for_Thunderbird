@@ -251,6 +251,21 @@
   "error_credentials_missing": {
     "message": "Hiányoznak a Nextcloud hitelesítési adatok (kiegészítő beállításai)."
   },
+  "connection_required_title": {
+    "message": "A Nextcloud nincs csatlakoztatva"
+  },
+  "connection_required_sharing_message": {
+    "message": "Megosztás hozzáadása előtt állítsa be a Nextcloud-kapcsolatot a kiegészítő beállításaiban."
+  },
+  "connection_required_talk_message": {
+    "message": "Talk-hivatkozás beszúrása előtt állítsa be a Nextcloud-kapcsolatot a kiegészítő beállításaiban."
+  },
+  "connection_required_open_settings": {
+    "message": "Beállítások megnyitása"
+  },
+  "options_connection_privacy_hint": {
+    "message": "Az NC Connector kizárólag az itt megadott Nextcloud-kiszolgálóhoz csatlakozik. A bejelentkezési adatok ebben a Thunderbird-profilban tárolódnak, és csak erre a kiszolgálóra kerülnek elküldésre, nekünk vagy más harmadik félnek soha."
+  },
   "error_baseurl_https_required": {
     "message": "Kérjük, HTTPS-es Nextcloud URL-t használjon."
   },

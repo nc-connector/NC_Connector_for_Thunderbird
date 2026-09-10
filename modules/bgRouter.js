@@ -193,6 +193,16 @@ browser.runtime.onMessage.addListener((msg, sender) => {
         return messageError("vfs:getExternalStatus", error);
       }
     }
+    if (msg.type === "connection:openOptions"){
+      try{
+        const optionsUrl = new URL(browser.runtime.getURL("options.html"));
+        optionsUrl.searchParams.set("tab", "general");
+        await openInNormalThunderbirdTab(optionsUrl.href);
+        return { ok:true };
+      }catch(error){
+        return messageError("connection:openOptions", error);
+      }
+    }
     if (msg.type === "vfs:openOptions"){
       try{
         const optionsUrl = new URL(browser.runtime.getURL("options.html"));

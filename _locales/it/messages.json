@@ -251,6 +251,21 @@
   "error_credentials_missing": {
     "message": "Credenziali Nextcloud mancanti (opzioni del componente aggiuntivo)."
   },
+  "connection_required_title": {
+    "message": "Nextcloud non è connesso"
+  },
+  "connection_required_sharing_message": {
+    "message": "Configura prima la connessione Nextcloud nelle impostazioni del componente aggiuntivo, quindi aggiungi una condivisione."
+  },
+  "connection_required_talk_message": {
+    "message": "Configura prima la connessione Nextcloud nelle impostazioni del componente aggiuntivo, quindi inserisci un collegamento Talk."
+  },
+  "connection_required_open_settings": {
+    "message": "Apri impostazioni"
+  },
+  "options_connection_privacy_hint": {
+    "message": "NC Connector si connette esclusivamente al server Nextcloud indicato qui. Le credenziali vengono archiviate in questo profilo Thunderbird e inviate solo a tale server, mai a noi o ad altre terze parti."
+  },
   "error_baseurl_https_required": {
     "message": "Usa un URL Nextcloud con HTTPS."
   },

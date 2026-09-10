@@ -438,6 +438,12 @@ footer{
   justify-content:space-between;
   gap:12px;
 }
+.vfs-subsection-actions{
+  display:flex;
+  flex-wrap:wrap;
+  justify-content:flex-end;
+  gap:8px;
+}
 .vfs-subsection h3{
   margin:0;
   font-size:1em;
@@ -561,7 +567,10 @@ footer{
           <p class="option-tooltip-text" data-i18n="options_managed_nextcloud_url_tooltip">This Nextcloud URL is managed by your administrator.</p>
         </div>
       </label>
-      <input id="baseUrl" type="url" data-i18n-placeholder="options_base_url_placeholder" placeholder="https://cloud.example.com">
+      <div class="field-stack">
+        <input id="baseUrl" type="url" data-i18n-placeholder="options_base_url_placeholder" placeholder="https://cloud.example.com">
+        <p class="hint" data-i18n="options_connection_privacy_hint">NC Connector connects only to the Nextcloud server entered here. Your sign-in details are stored in this Thunderbird profile and sent only to that server, never to us or other third parties.</p>
+      </div>
     </div>
     <fieldset id="authBlock" class="auth-block">
       <legend data-i18n="options_auth_heading">Authentication</legend>
@@ -755,7 +764,10 @@ footer{
       <div class="vfs-subsection">
         <div class="vfs-subsection-heading">
           <h3 data-i18n="options_vfs_connections_heading">Erkannte Verbindungen</h3>
-          <button id="vfsRefreshConnections" type="button" class="vfs-action-button" data-i18n="options_vfs_refresh_button" disabled>Aktualisieren</button>
+          <div class="vfs-subsection-actions">
+            <button id="vfsFindProviders" type="button" class="vfs-action-button" data-i18n="sharing_vfs_find_providers" disabled>VFS-Anbieter finden</button>
+            <button id="vfsRefreshConnections" type="button" class="vfs-action-button" data-i18n="options_vfs_refresh_button" disabled>Aktualisieren</button>
+          </div>
         </div>
         <p class="hint" data-i18n="options_vfs_connections_hint">Hier erscheinen kompatible VFS-Anbieter, die in Thunderbird eingerichtet und erreichbar sind.</p>
         <div id="vfsConnectionList" class="vfs-list" role="list"></div>

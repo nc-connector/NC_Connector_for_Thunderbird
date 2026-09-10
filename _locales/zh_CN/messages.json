@@ -251,6 +251,21 @@
   "error_credentials_missing": {
     "message": "缺少 Nextcloud 凭据（附加组件设置）。"
   },
+  "connection_required_title": {
+    "message": "Nextcloud 尚未连接"
+  },
+  "connection_required_sharing_message": {
+    "message": "添加共享前，请先在附加组件设置中配置 Nextcloud 连接。"
+  },
+  "connection_required_talk_message": {
+    "message": "插入 Talk 链接前，请先在附加组件设置中配置 Nextcloud 连接。"
+  },
+  "connection_required_open_settings": {
+    "message": "打开设置"
+  },
+  "options_connection_privacy_hint": {
+    "message": "NC Connector 仅连接到此处填写的 Nextcloud 服务器。您的登录信息保存在此 Thunderbird 配置文件中，并且只会发送到该服务器，绝不会发送给我们或其他第三方。"
+  },
   "error_baseurl_https_required": {
     "message": "请使用 HTTPS 的 Nextcloud URL。"
   },

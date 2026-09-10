@@ -1388,15 +1388,42 @@ function testExperimentShutdownLifecycle(){
 
 function testStaticLifecycleRules(){
   const stateSource = readText("modules/bgState.js");
+  const composeSource = readText("modules/bgCompose.js");
   const calendarSource = readText("modules/bgCalendar.js");
   const lifecycleSource = readText("modules/bgCalendarLifecycle.js");
   const talkSource = readText("modules/talkcore.js");
   const addressbookSource = readText("modules/talkAddressbook.js");
   const routerSource = readText("modules/bgRouter.js");
   const dialogSource = readText("ui/talkDialog.js");
+  const connectionRequiredHtml = readText("ui/connectionRequired.html");
+  const connectionRequiredSource = readText("ui/connectionRequired.js");
   const toolbarSource = readText("experiments/ncCalToolbar/parent.js");
 
   assert(stateSource.includes("const BG_STATE_READY = (async () =>"), "Background state must expose one readiness promise");
+  assert(
+    stateSource.includes("async function isNextcloudAccountConfigured()")
+      && stateSource.includes("const options = await NCCore.getOpts();")
+      && stateSource.includes("async function openConnectionRequiredWindow(source = \"sharing\")"),
+    "Manual action setup gates must use the effective Nextcloud account"
+  );
+  assert(
+    /if \(!\(await isNextcloudAccountConfigured\(\)\)\)\{[\s\S]{0,300}?await openConnectionRequiredWindow\(\"sharing\"\);[\s\S]{0,80}?return;[\s\S]{0,100}?await openSharingWizardWindow\(tab\.id\);/.test(composeSource),
+    "Manual sharing must show setup guidance before opening its wizard"
+  );
+  assert(
+    calendarSource.includes("TALK_CONNECTION_REQUIRED_POPUP_PATH")
+      && calendarSource.includes("const configured = await isNextcloudAccountConfigured();")
+      && /if \(!\(await isNextcloudAccountConfigured\(\)\)\)\{[\s\S]{0,160}?return;/.test(calendarSource),
+    "The Talk action must select its setup notice before preparing a wizard context"
+  );
+  assert(
+    connectionRequiredHtml.includes('id="openSettingsBtn"')
+      && connectionRequiredHtml.includes('data-i18n="connection_required_title"')
+      && connectionRequiredSource.includes('type: "connection:openOptions"')
+      && connectionRequiredSource.includes('"connection_required_talk_message"')
+      && connectionRequiredSource.includes('"connection_required_sharing_message"'),
+    "The missing-connection notice must provide localized, source-specific setup navigation"
+  );
   assert(calendarSource.includes("await BG_STATE_READY;"), "Calendar handlers must wait for background hydration");
   assert(
     calendarSource.includes("departureCalendarId: String(item.calendarId || \"\")")

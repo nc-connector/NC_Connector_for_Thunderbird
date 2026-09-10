@@ -251,6 +251,21 @@
   "error_credentials_missing": {
     "message": "Отсутствуют учетные данные Nextcloud (настройки дополнения)."
   },
+  "connection_required_title": {
+    "message": "Nextcloud не подключён"
+  },
+  "connection_required_sharing_message": {
+    "message": "Перед добавлением общего ресурса настройте подключение к Nextcloud в параметрах дополнения."
+  },
+  "connection_required_talk_message": {
+    "message": "Перед вставкой ссылки Talk настройте подключение к Nextcloud в параметрах дополнения."
+  },
+  "connection_required_open_settings": {
+    "message": "Открыть настройки"
+  },
+  "options_connection_privacy_hint": {
+    "message": "NC Connector подключается только к указанному здесь серверу Nextcloud. Данные для входа хранятся в этом профиле Thunderbird и отправляются только на этот сервер — никогда нам или другим третьим лицам."
+  },
   "error_baseurl_https_required": {
     "message": "Используйте URL Nextcloud с HTTPS."
   },

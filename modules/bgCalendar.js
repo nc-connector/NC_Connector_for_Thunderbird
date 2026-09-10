@@ -11,10 +11,14 @@
  */
 
 const TALK_DIALOG_POPUP_PATH = "ui/talkDialog.html";
+const TALK_CONNECTION_REQUIRED_POPUP_PATH = "ui/connectionRequired.html?source=talk";
+const TALK_POPUP_CREDENTIAL_KEYS = new Set(["baseUrl", "user", "appPass"]);
+let TALK_POPUP_CONFIGURATION_REVISION = 0;
 
 void configureTalkCalendarItemPopup();
 
 async function configureTalkCalendarItemPopup(){
+  const revision = ++TALK_POPUP_CONFIGURATION_REVISION;
   try{
     if (typeof browser.calendarItemAction?.setPopup !== "function"){
       console.error("[NCBG] calendarItemAction.setPopup missing");
@@ -24,12 +28,41 @@ async function configureTalkCalendarItemPopup(){
     // manifest default_popup can be resolved twice into a broken nested
     // moz-extension://.../moz-extension://... URL. Move this back to the
     // manifest once upstream handles already expanded popup URLs correctly.
-    await browser.calendarItemAction.setPopup({ popup: TALK_DIALOG_POPUP_PATH });
-    L("calendar item action popup configured", { popup: TALK_DIALOG_POPUP_PATH });
+    const configured = await isNextcloudAccountConfigured();
+    if (revision !== TALK_POPUP_CONFIGURATION_REVISION){
+      return;
+    }
+    const popup = configured
+      ? TALK_DIALOG_POPUP_PATH
+      : TALK_CONNECTION_REQUIRED_POPUP_PATH;
+    await browser.calendarItemAction.setPopup({ popup });
+    L("calendar item action popup configured", {
+      popup,
+      configured
+    });
   }catch(error){
     console.error("[NCBG] calendar item action popup configure failed", error);
+    if (revision === TALK_POPUP_CONFIGURATION_REVISION
+      && typeof browser.calendarItemAction?.setPopup === "function"){
+      try{
+        await browser.calendarItemAction.setPopup({
+          popup: TALK_CONNECTION_REQUIRED_POPUP_PATH
+        });
+      }catch(fallbackError){
+        console.error("[NCBG] calendar item action setup popup configure failed", fallbackError);
+      }
+    }
   }
 }
+
+browser.storage.onChanged.addListener((changes, areaName) => {
+  const credentialsChanged = areaName === "managed"
+    || (areaName === "local" && Object.keys(changes || {}).some((key) => TALK_POPUP_CREDENTIAL_KEYS.has(key)));
+  if (!credentialsChanged){
+    return;
+  }
+  void configureTalkCalendarItemPopup();
+});
 
 /**
  * Entry point from the official calendar_item_action button.
@@ -38,6 +71,10 @@ async function configureTalkCalendarItemPopup(){
 browser.ncCalToolbar?.onClicked?.addListener((snapshot) => {
   return (async () => {
     try{
+      if (!(await isNextcloudAccountConfigured())){
+        L("ncCalToolbar.onClicked blocked", { reason: "credentials_missing" });
+        return;
+      }
       const requestedEditorId = typeof snapshot?.editorId === "string" ? snapshot.editorId.trim() : "";
       if (!requestedEditorId || !/^ed-[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/.test(requestedEditorId)){
         console.error("[NCBG] ncCalToolbar.onClicked missing or invalid editorId");

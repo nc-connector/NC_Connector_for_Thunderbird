@@ -14,7 +14,8 @@
     revokeGrant: "vfs:options:revokeGrant",
     connectProvider: "vfs:options:connectProvider",
     disconnectConnection: "vfs:options:disconnectConnection",
-    refreshConnections: "vfs:options:refreshConnections"
+    refreshConnections: "vfs:options:refreshConnections",
+    findProviderAddons: "vfs:findProviderAddons"
   });
   const PROVIDER_STATUSES = new Set(["active", "inactive", "connection_required", "error"]);
   const CONNECTION_STATUSES = new Set(["connected", "available", "unavailable", "error"]);
@@ -29,6 +30,7 @@
   const externalEnabledInput = document.getElementById("vfsExternalProvidersEnabled");
   const externalEnabledRow = document.getElementById("vfsExternalEnabledRow");
   const externalSection = document.getElementById("vfsExternalSection");
+  const findProvidersButton = document.getElementById("vfsFindProviders");
   const refreshConnectionsButton = document.getElementById("vfsRefreshConnections");
   const connectionList = document.getElementById("vfsConnectionList");
   const noConnections = document.getElementById("vfsNoConnections");
@@ -308,6 +310,12 @@
         || currentState?.external?.enabled !== true
         || actionPending;
     }
+    if (findProvidersButton){
+      findProvidersButton.disabled = !runtimeAvailable
+        || actionPending
+        || externalBlocked;
+      findProvidersButton.title = externalBlocked ? externalSectionHint : "";
+    }
     grantList?.querySelectorAll("button").forEach((button) => {
       button.disabled = actionPending;
     });
@@ -423,6 +431,24 @@
     });
   }
 
+  async function findProviderAddons(){
+    if (actionPending){
+      return;
+    }
+    actionPending = true;
+    updateControls();
+    try{
+      await request(MESSAGE_TYPES.findProviderAddons);
+      hideNotice();
+    }catch(error){
+      global.NCLogContext.safeConsoleError(LOG_PREFIX, "VFS provider search failed", error);
+      showNotice("sharing_vfs_navigation_failed");
+    }finally{
+      actionPending = false;
+      updateControls();
+    }
+  }
+
   async function save(){
     if (!runtimeAvailable || !settingsDirty || actionPending){
       return;
@@ -456,6 +482,9 @@
   externalEnabledInput?.addEventListener("change", markSettingsDirty);
   refreshConnectionsButton?.addEventListener("click", () => {
     void runAction(refreshConnectionsButton, MESSAGE_TYPES.refreshConnections);
+  });
+  findProvidersButton?.addEventListener("click", () => {
+    void findProviderAddons();
   });
   global.addEventListener("focus", () => {
     if (runtimeAvailable && !actionPending){
