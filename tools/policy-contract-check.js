@@ -185,6 +185,25 @@ async function run(){
 
   const vfsPolicy = loadVfsPolicyRuntime();
   const oldBackendStatus = createActiveStatus();
+  const defaultProviderSetting = vfsPolicy.resolveProviderSetting(oldBackendStatus, false, false);
+  assert(
+    defaultProviderSetting.enabled === true
+      && defaultProviderSetting.localEnabled === true
+      && defaultProviderSetting.configured === false,
+    "The built-in NC Connector VFS provider must start enabled"
+  );
+  const disabledProviderSetting = vfsPolicy.resolveProviderSetting(oldBackendStatus, false, true);
+  assert(
+    disabledProviderSetting.enabled === false
+      && disabledProviderSetting.localEnabled === false
+      && disabledProviderSetting.configured === true,
+    "An explicit local choice must be able to disable the NC Connector VFS provider"
+  );
+  const defaultExternalSetting = vfsPolicy.resolveExternalSetting(oldBackendStatus, false, false);
+  assert(
+    defaultExternalSetting.enabled === false && defaultExternalSetting.entitled === true,
+    "External VFS providers must remain disabled until the user enables them"
+  );
   const oldBackendSetting = vfsPolicy.resolveExternalSetting(oldBackendStatus, true, true);
   assert(
     oldBackendSetting.enabled === true && oldBackendSetting.locked === false,

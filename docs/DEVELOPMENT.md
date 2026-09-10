@@ -1062,7 +1062,7 @@ Thunderbird platform references:
 
 NC Connector uses the vendored Thunderbird VFS Toolkit in two roles:
 
-- As a provider, it exposes the already configured Nextcloud account with full read/write file and folder capabilities after an explicit grant.
+- As a provider, it starts enabled and exposes the already configured Nextcloud account with full read/write file and folder capabilities only after an explicit grant.
 - As a client, it uses its own provider for **+ My Nextcloud** and can discover separately installed providers only when `vfs_external_providers_enabled` is effective and the backend reports Pro mode with an active assigned seat. The required `management` permission is granted at installation.
 
 There is no second Nextcloud login. `modules/nccore.js` resolves the canonical Nextcloud UID and constructs the authenticated File, Upload, and Bulk DAV targets shared by FileLink, VFS, and persistent cleanup. Basic Auth continues to use the configured login alias and app password. A provider storage ID is bound to the normalized server plus canonical UID. Changing either rotates that ID and removes every previous grant; an app-password or login-alias change for the same canonical account does not.

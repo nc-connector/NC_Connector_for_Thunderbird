@@ -143,7 +143,7 @@ Do not use **Save as Template** for a message that contains an NC Connector shar
 
 The **VFS** options tab controls two independent functions:
 
-- **NC Connector as provider** exposes the already configured Nextcloud account to another compatible Thunderbird add-on. It is disabled by default. Each connection requires an explicit user grant and provides full read/write file access for that Nextcloud user; grants can be revoked in the same tab.
+- **NC Connector as provider** exposes the already configured Nextcloud account to another compatible Thunderbird add-on. It is enabled by default. Each connection still requires an explicit user grant and provides full read/write file access for that Nextcloud user; grants can be revoked in the same tab.
 - **External VFS providers** let users add files and folders from compatible storage add-ons to the Sharing wizard. This function requires the NC Connector Backend in Pro mode and an active seat assigned to the current account. Without the backend, the disabled setting and **Other source** action explain that the backend is required. NC Connector receives Thunderbird's add-on-management permission during installation so administrators do not have to manage a second runtime permission. Provider discovery remains disabled until the effective VFS setting enables it. Established storage connections can be removed with **Disconnect** and are retained when the entitlement or policy later closes the gate.
 
 Both switches can be set under **Administration settings → NC Connector Backend → Group Settings → Default Settings → Shares → Thunderbird only – Virtual File System (VFS)**. They support the same editable, forced, group, and user layers as the other Share policies:

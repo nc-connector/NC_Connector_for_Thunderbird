@@ -62,7 +62,7 @@ const NCVfsPolicyRuntime = (() => {
     return resolveBooleanSetting(
       policyStatus,
       NCSharingStorage.SHARE_POLICY_KEYS.vfsProviderEnabled,
-      localEnabled,
+      configured === true ? localEnabled : true,
       configured
     );
   }
