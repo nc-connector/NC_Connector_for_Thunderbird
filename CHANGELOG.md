@@ -4,6 +4,18 @@ All notable changes to **NC Connector for Thunderbird** will be documented in th
 
 This project targets **Thunderbird ESR 140** through **ESR 153**.
 
+## 3.4.0
+
+### Added
+- VFS Toolkit integration now adds files or folders from your own Nextcloud, Google Drive, OneDrive, WebDAV, and other compatible VFS providers to sharing queues.
+
+### Changed
+- Thunderbird share block rendering now matches the other NC Connector clients, including branding, labels, dates, and permission indicators.
+
+### Fixed
+- Improved French translations for sharing permissions, expiration guidance, license-seat warnings, and custom-template settings.
+- Nextcloud share metadata updates now preserve the existing edit-permission mask.
+
 ## 3.3.0
 
 ### Added

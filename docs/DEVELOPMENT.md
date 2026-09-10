@@ -84,9 +84,9 @@ Non-goals:
 
 Thunderbird:
 - Target: **Thunderbird ESR 140 through ESR 153**
-  Enforced by `manifest.json`:
+  The manifest permits installation on Thunderbird releases through 157:
   - `strict_min_version: "140.0"`
-  - `strict_max_version: "153.*"`
+  - `strict_max_version: "157.*"`
 
 Nextcloud:
 - Requires Nextcloud 32 or newer with:

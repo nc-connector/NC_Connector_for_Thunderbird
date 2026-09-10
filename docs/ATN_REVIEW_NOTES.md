@@ -1,8 +1,7 @@
 # Reviewer Notes
 NC Connector for Thunderbird (`{4a35421f-0906-439c-bff2-8eef39e2baee}`)
 
-This document summarizes the reviewer-relevant behavior of the current
-development branch. The branch currently retains manifest version 3.3.0;
+This document summarizes the reviewer-relevant behavior of version 3.4.0;
 release-specific differences remain in `CHANGELOG.md`.
 
 ---
@@ -89,10 +88,10 @@ password-dispatch, header, or body mutation cannot be exposed as committed.
 
 ---
 
-## Reviewer Alignment Notes (3.3.0)
+## Reviewer Alignment Notes (3.4.0)
 
 - Core rules are explicit; fallback behavior is bounded and logged instead of relying on silent heuristics.
-- `strict_min_version` is set to `140.0`. The add-on uses Thunderbird APIs added after ESR 115, including `browser.messengerUtilities.parseMailboxString(...)`, and targets the supported ESR 140 through ESR 153 range.
+- `strict_min_version` is set to `140.0`. The add-on uses Thunderbird APIs added after ESR 115, including `browser.messengerUtilities.parseMailboxString(...)`, and targets the supported ESR 140 through ESR 153 range. `strict_max_version` remains `157.*` so compatible Thunderbird releases through 157 can install it.
 - Active runtime paths touched in this release log failures explicitly; silent failure is not intended behavior.
 - Experiment scope is restricted to editor UI/context needs plus the read-only
   compose preference lookup required for attachment-automation conflict locking.

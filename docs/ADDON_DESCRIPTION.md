@@ -124,7 +124,7 @@ Data flow:
   - attachment wizard/prompt flow in `[NCUI][Sharing]`
 
 ## Compatibility and Requirements
-- Thunderbird ESR 140 through 153 (strict_min_version 140.0, strict_max_version 153.*)
+- Thunderbird ESR 140 through ESR 153 (manifest compatibility: strict_min_version 140.0, strict_max_version 157.*)
 - Nextcloud 32 or newer with OCS endpoints enabled; Talk is required for Talk and calendar features
 - File sharing via DAV and OCS (remote.php and files_sharing API)
 - App password or Login Flow v2 for authentication
