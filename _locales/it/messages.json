@@ -981,13 +981,64 @@
     "message": "Vai al sito web"
   },
   "policy_warning_title": {
-    "message": "La policy backend non è attualmente disponibile."
+    "message": "Stato di NC Connector"
   },
   "policy_warning_license_invalid": {
-    "message": "La licenza o l'assegnazione del seat di NC Connector non è attualmente valida. Verranno usate le impostazioni locali. Contatti l'amministratore Nextcloud."
+    "message": "Il backend non ha potuto confermare l’accesso alle funzionalità Pro. Le funzionalità di base restano disponibili."
   },
   "policy_warning_admin_link_label": {
-    "message": "Apri la guida di configurazione per l'amministratore"
+    "message": "Gestisci la licenza nel backend"
+  },
+  "policy_license_grace_format": {
+    "message": "La licenza è scaduta. Le funzionalità Pro restano disponibili fino al $1."
+  },
+  "policy_license_grace": {
+    "message": "La licenza è scaduta. Le funzionalità Pro restano disponibili durante il periodo di tolleranza."
+  },
+  "policy_license_expired": {
+    "message": "La licenza è scaduta. Le funzionalità Pro non sono disponibili. È possibile continuare a utilizzare le funzionalità di base."
+  },
+  "policy_license_inactive": {
+    "message": "La licenza è attualmente inattiva. Le funzionalità Pro non sono disponibili."
+  },
+  "policy_license_invalid": {
+    "message": "La licenza non è valida. Le funzionalità Pro non sono disponibili."
+  },
+  "policy_license_activation_conflict": {
+    "message": "Questa licenza è già attivata per un’altra installazione di Nextcloud."
+  },
+  "policy_license_activation_required": {
+    "message": "Non è stato possibile confermare l’attivazione della licenza per questa installazione di Nextcloud."
+  },
+  "policy_license_offline_expired": {
+    "message": "Non è stato possibile verificare la licenza in tempo. Le funzionalità Pro non saranno disponibili finché la verifica non sarà completata correttamente."
+  },
+  "policy_license_connection_error": {
+    "message": "La sincronizzazione della licenza non è riuscita. Questo non significa che la licenza non sia valida."
+  },
+  "policy_license_last_sync_format": {
+    "message": "Ultima sincronizzazione riuscita: $1."
+  },
+  "policy_license_offline_until_format": {
+    "message": "Scadenza della verifica offline: $1."
+  },
+  "policy_license_admin_hint": {
+    "message": "Verifichi la licenza nel backend di Nextcloud."
+  },
+  "policy_license_user_hint": {
+    "message": "Contatti l’amministratore Nextcloud."
+  },
+  "policy_warning_seat_suspended": {
+    "message": "Il posto di licenza NC Connector è sospeso. Le funzionalità Pro non sono disponibili."
+  },
+  "policy_warning_seat_unavailable": {
+    "message": "Il posto di licenza NC Connector assegnato non è attualmente disponibile."
+  },
+  "policy_warning_backend_unavailable": {
+    "message": "Non è stato possibile recuperare lo stato del backend di Nextcloud. Verifichi la connessione e riprovi."
+  },
+  "policy_warning_overlicensed": {
+    "message": "I posti di licenza assegnati superano la capacità disponibile della licenza. Le funzionalità Pro non sono attualmente disponibili."
   },
   "policy_admin_controlled_tooltip": {
     "message": "Controllato dall'amministratore"

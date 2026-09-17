@@ -981,13 +981,64 @@
     "message": "Ga naar de homepage"
   },
   "policy_warning_title": {
-    "message": "Het backendbeleid is momenteel niet beschikbaar."
+    "message": "NC Connector-status"
   },
   "policy_warning_license_invalid": {
-    "message": "Uw NC Connector-licentie of seat-toewijzing is momenteel niet geldig. Lokale instellingen worden gebruikt. Neem contact op met uw Nextcloud-beheerder."
+    "message": "De backend kon de toegang tot Pro-functies niet bevestigen. De basisfuncties blijven beschikbaar."
   },
   "policy_warning_admin_link_label": {
-    "message": "Handleiding voor beheerders openen"
+    "message": "Licentie beheren in de backend"
+  },
+  "policy_license_grace_format": {
+    "message": "Uw licentie is verlopen. De Pro-functies blijven beschikbaar tot $1."
+  },
+  "policy_license_grace": {
+    "message": "Uw licentie is verlopen. De Pro-functies blijven beschikbaar tijdens de respijtperiode."
+  },
+  "policy_license_expired": {
+    "message": "Uw licentie is verlopen. De Pro-functies zijn niet beschikbaar. U kunt de basisfuncties blijven gebruiken."
+  },
+  "policy_license_inactive": {
+    "message": "Uw licentie is momenteel inactief. De Pro-functies zijn niet beschikbaar."
+  },
+  "policy_license_invalid": {
+    "message": "Uw licentie is ongeldig. De Pro-functies zijn niet beschikbaar."
+  },
+  "policy_license_activation_conflict": {
+    "message": "Deze licentie is al geactiveerd voor een andere Nextcloud-installatie."
+  },
+  "policy_license_activation_required": {
+    "message": "De licentieactivering voor deze Nextcloud-installatie kon niet worden bevestigd."
+  },
+  "policy_license_offline_expired": {
+    "message": "De licentie kon niet op tijd worden geverifieerd. De Pro-functies zijn niet beschikbaar totdat de verificatie slaagt."
+  },
+  "policy_license_connection_error": {
+    "message": "De licentiesynchronisatie is mislukt. Dit betekent niet dat de licentie ongeldig is."
+  },
+  "policy_license_last_sync_format": {
+    "message": "Laatste geslaagde synchronisatie: $1."
+  },
+  "policy_license_offline_until_format": {
+    "message": "Uiterste datum voor offlineverificatie: $1."
+  },
+  "policy_license_admin_hint": {
+    "message": "Controleer de licentie in uw Nextcloud-backend."
+  },
+  "policy_license_user_hint": {
+    "message": "Neem contact op met uw Nextcloud-beheerder."
+  },
+  "policy_warning_seat_suspended": {
+    "message": "Uw NC Connector-licentieplaats is geschorst. De Pro-functies zijn niet beschikbaar."
+  },
+  "policy_warning_seat_unavailable": {
+    "message": "Uw toegewezen NC Connector-licentieplaats is momenteel niet beschikbaar."
+  },
+  "policy_warning_backend_unavailable": {
+    "message": "De status van de Nextcloud-backend kon niet worden opgehaald. Controleer de verbinding en probeer het opnieuw."
+  },
+  "policy_warning_overlicensed": {
+    "message": "Het aantal toegewezen licentieplaatsen overschrijdt de beschikbare licentiecapaciteit. De Pro-functies zijn momenteel niet beschikbaar."
   },
   "policy_admin_controlled_tooltip": {
     "message": "Door beheerder beheerd"

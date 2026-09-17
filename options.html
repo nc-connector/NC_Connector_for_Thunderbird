@@ -399,7 +399,15 @@ footer{
   margin:6px 0 0 0;
   font-size:12px;
   line-height:1.45;
+  white-space:pre-line;
+  overflow-wrap:anywhere;
 }
+.policy-warning-row.is-informational .policy-warning{
+  border-color:#b8860b;
+  background:rgba(218,165,32,0.12);
+  color:var(--tb-text);
+}
+.policy-warning-link[hidden]{display:none;}
 .policy-warning-link{
   display:inline-block;
   margin-top:8px;
@@ -552,13 +560,13 @@ footer{
     <button type="button" class="tab-btn" data-tab="about" data-i18n="options_tab_about">About</button>
   </div>
   <div class="policy-warning-row" id="policyWarningRow" hidden>
-    <div class="policy-warning" role="alert">
+    <div class="policy-warning">
       <p class="policy-warning-title">
         <span aria-hidden="true">⚠️ </span>
-        <span data-i18n="policy_warning_title">Backend policy is currently unavailable.</span>
+        <span data-i18n="policy_warning_title"></span>
       </p>
-      <p class="policy-warning-text" id="policyWarningText" data-i18n="policy_warning_license_invalid">Your NC Connector license or seat is currently not valid. Local settings are used. Please contact your Nextcloud administrator.</p>
-      <a id="policyWarningAdminLink" class="policy-warning-link" data-i18n="policy_warning_admin_link_label" target="_blank" rel="noopener noreferrer" href="https://github.com/nc-connector/NC_Connector_for_Thunderbird/blob/main/docs/ADMIN.md">Open admin setup guide</a>
+      <p class="policy-warning-text" id="policyWarningText"></p>
+      <a id="policyWarningAdminLink" class="policy-warning-link" target="_blank" rel="noopener noreferrer" hidden></a>
     </div>
   </div>
   <section id="tab-general" class="tab-panel active">

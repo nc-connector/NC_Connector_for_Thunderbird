@@ -981,13 +981,64 @@
     "message": "访问主页"
   },
   "policy_warning_title": {
-    "message": "后端策略当前不可用。"
+    "message": "NC Connector 状态"
   },
   "policy_warning_license_invalid": {
-    "message": "您的 NC Connector 许可证或席位分配当前无效。将使用本地设置。请联系您的 Nextcloud 管理员。"
+    "message": "后端无法确认 Pro 功能的访问权限。基本功能仍然可用。"
   },
   "policy_warning_admin_link_label": {
-    "message": "打开管理员设置指南"
+    "message": "在后台管理许可证"
+  },
+  "policy_license_grace_format": {
+    "message": "您的许可证已过期。Pro 功能在 $1 之前仍然可用。"
+  },
+  "policy_license_grace": {
+    "message": "您的许可证已过期。Pro 功能在宽限期内仍然可用。"
+  },
+  "policy_license_expired": {
+    "message": "您的许可证已过期。Pro 功能不可用。您仍可使用基本功能。"
+  },
+  "policy_license_inactive": {
+    "message": "您的许可证目前处于未激活状态。Pro 功能不可用。"
+  },
+  "policy_license_invalid": {
+    "message": "您的许可证无效。Pro 功能不可用。"
+  },
+  "policy_license_activation_conflict": {
+    "message": "此许可证已在另一个 Nextcloud 实例中激活。"
+  },
+  "policy_license_activation_required": {
+    "message": "无法确认此 Nextcloud 实例的许可证激活状态。"
+  },
+  "policy_license_offline_expired": {
+    "message": "未能及时验证许可证。在验证成功之前，Pro 功能不可用。"
+  },
+  "policy_license_connection_error": {
+    "message": "许可证同步失败。这并不意味着许可证无效。"
+  },
+  "policy_license_last_sync_format": {
+    "message": "上次成功同步时间：$1。"
+  },
+  "policy_license_offline_until_format": {
+    "message": "离线验证截止时间：$1。"
+  },
+  "policy_license_admin_hint": {
+    "message": "请在 Nextcloud 后台检查许可证。"
+  },
+  "policy_license_user_hint": {
+    "message": "请联系您的 Nextcloud 管理员。"
+  },
+  "policy_warning_seat_suspended": {
+    "message": "您的 NC Connector 授权席位已暂停。Pro 功能不可用。"
+  },
+  "policy_warning_seat_unavailable": {
+    "message": "分配给您的 NC Connector 授权席位目前不可用。"
+  },
+  "policy_warning_backend_unavailable": {
+    "message": "无法获取 Nextcloud 后端状态。请检查连接并重试。"
+  },
+  "policy_warning_overlicensed": {
+    "message": "已分配的席位数超过许可证的可用额度。Pro 功能目前不可用。"
   },
   "policy_admin_controlled_tooltip": {
     "message": "由管理员控制"

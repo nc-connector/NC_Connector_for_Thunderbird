@@ -23,7 +23,6 @@
 
   const LOG_PREFIX = "[NCUI][Talk]";
   const SYSTEM_ADDRESSBOOK_ADMIN_URL = "https://github.com/nc-connector/NC_Connector_for_Thunderbird/blob/main/docs/ADMIN.md#43-talk-and-system-address-book";
-  const POLICY_ADMIN_URL = "https://github.com/nc-connector/NC_Connector_for_Thunderbird/blob/main/docs/ADMIN.md";
   const params = new URLSearchParams(window.location.search);
   const contextId = (params.get("contextId") || "").trim();
   const policyWarningRow = document.getElementById("policyWarningRow");
@@ -141,7 +140,7 @@
     }
     return fallback || "";
   };
-  const wizardTranslate = (key, fallback = "") => t(key, fallback);
+  const wizardTranslate = (key, substitutions) => t(key, "", substitutions);
   const TALK_POLICY_RUNTIME_BINDINGS = [
     {
       name: "descriptionLanguage",
@@ -202,7 +201,6 @@
       active: false,
       talk: null,
       editable: null,
-      warningVisible: false,
       warningCode: "",
       descriptionLanguage: "",
       descriptionType: "plain_text",
@@ -236,9 +234,6 @@
       link.href = SYSTEM_ADDRESSBOOK_ADMIN_URL;
     }
   });
-  if (policyWarningAdminLink){
-    policyWarningAdminLink.href = POLICY_ADMIN_URL;
-  }
 
   function normalizeDescriptionLanguage(value){
     return NCI18nOverride.normalizeLanguageOverride(value, { allowCustom: true });
@@ -261,7 +256,6 @@
       state.policy.active = domainState.active;
       state.policy.talk = domainState.policy;
       state.policy.editable = domainState.editable;
-      state.policy.warningVisible = domainState.warningVisible;
       state.policy.warningCode = domainState.warningCode;
       const runtimeDefaults = {
         descriptionLanguage: "",
@@ -293,7 +287,8 @@
     NCWizardPolicyUi.applyPolicyWarningUi({
       row: policyWarningRow,
       textElement: policyWarningText,
-      warningVisible: state.policy.warningVisible,
+      adminLink: policyWarningAdminLink,
+      policyStatus: state.policy.status,
       translate: wizardTranslate
     });
   }

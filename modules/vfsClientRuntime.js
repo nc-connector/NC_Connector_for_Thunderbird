@@ -544,6 +544,7 @@
       locked: setting.locked,
       entitled: setting.entitled,
       unavailableReason: setting.unavailableReason,
+      notice: setting.notice,
       initialized: externalDiscoveryInitialized,
       connections: Object.freeze(connections),
       providers: Object.freeze(providers)

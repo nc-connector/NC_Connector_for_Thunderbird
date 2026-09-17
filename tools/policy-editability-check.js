@@ -34,6 +34,8 @@ const EDITABLE_POLICY_KEYS = [
 function loadPolicyApis(){
   const context = {
     console,
+    URL,
+    Date,
     globalThis: null,
     window: null
   };
@@ -116,6 +118,131 @@ function getCoerce(policyState, type){
 
 function assertEqual(actual, expected, message){
   assert(actual === expected, `${message}: expected ${JSON.stringify(expected)}, got ${JSON.stringify(actual)}`);
+}
+
+function verifyPolicyNoticeUi(policyState, policyUi){
+  const makeStatus = (fields = {}) => ({
+    endpointAvailable: true,
+    endpointUrl: "https://cloud.example.test/nextcloud/apps/ncc_backend_4mc/api/v1/status",
+    status: { seatAssigned: true, seatState: "active", isValid: true, mode: "pro", ...fields }
+  });
+  const translate = (key) => key;
+  const messages = [
+    [{ accessStatus: "EXPIRED", isValid: false }, "policy_license_expired"],
+    [{ accessStatus: "INACTIVE", isValid: false }, "policy_license_inactive"],
+    [{ accessStatus: "INVALID", isValid: false }, "policy_license_invalid"],
+    [{ accessStatus: "ACTIVATION_REQUIRED", licenseActivationState: "conflict", isValid: false }, "policy_license_activation_conflict"],
+    [{ accessStatus: "ACTIVATION_REQUIRED", licenseActivationState: "proof_required", isValid: false }, "policy_license_activation_required"],
+    [{ accessStatus: "OFFLINE_EXPIRED", isValid: false }, "policy_license_offline_expired"],
+    [{ isValid: false }, "policy_warning_license_invalid"],
+    [{ overlicensed: true }, "policy_warning_overlicensed"],
+    [{ seatState: "suspended_overlimit" }, "policy_warning_seat_suspended"],
+    [{ seatState: "revoked" }, "policy_warning_seat_unavailable"],
+    [{ seatAssigned: false }, "sharing_password_separate_no_seat_tooltip"],
+    [{ accessStatus: "GRACE" }, "policy_license_grace"],
+    [{ licenseConnectionError: true }, "policy_license_connection_error"]
+  ];
+  for (const [fields, key] of messages){
+    const status = makeStatus(fields);
+    const message = policyUi.getPolicyWarningMessage(status, translate);
+    assert(message.startsWith(key), `${key}: banner must explain the actual status`);
+    if (!policyState.hasSeatEntitlement(status)){
+      assertEqual(policyUi.getSeparatePasswordUnavailableHint(status, translate), message, `${key}: password hint must match the banner`);
+      assertEqual(policyUi.getVfsExternalUnavailableHint(policyState.getProSeatUnavailableReason(status), translate, policyState.getStatusNotice(status)), message, `${key}: VFS hint must match the banner`);
+    }else{
+      assertEqual(policyUi.getSeparatePasswordUnavailableHint(status, translate), "", `${key}: informational notices must not disable password delivery`);
+    }
+  }
+  assertEqual(policyUi.getPolicyWarningMessage(makeStatus(), translate), "", "Active licenses need no banner");
+  assertEqual(policyUi.getVfsExternalUnavailableHint("seat_paused", translate), "policy_warning_license_invalid", "Legacy VFS reason alone must not claim that a seat is suspended");
+  assertEqual(policyUi.getVfsExternalUnavailableHint("admin_controlled", translate, policyState.getStatusNotice(makeStatus({ accessStatus: "GRACE" }))), "policy_admin_controlled_tooltip", "Locked feature policy must keep its own explanation");
+  assertEqual(policyUi.getVfsExternalUnavailableHint("", translate, policyState.getStatusNotice(makeStatus({ accessStatus: "GRACE" }))), "", "An available VFS feature must not get an unavailable hint");
+
+  const catalog = JSON.parse(readText("_locales/en/messages.json"));
+  const calls = [];
+  const localize = (key, substitutions) => {
+    calls.push({ key, substitutions });
+    assert(catalog[key]?.message, `Notice localization key ${key} must exist`);
+    assert(substitutions === undefined || Array.isArray(substitutions), "Notice text must use native i18n substitutions, not fallback text");
+    return catalog[key].message.replace(/\$(\d+)/g, (match, index) => String(substitutions?.[Number(index) - 1] ?? match));
+  };
+  const graceUntilIso = "2026-09-30T12:00:00Z";
+  const lastSyncAtIso = "2026-09-16T12:00:00Z";
+  const offlineUntilIso = "2026-09-30T11:00:00Z";
+  const graceStatus = makeStatus({ accessStatus: "GRACE", graceUntilIso });
+  const graceMessage = policyUi.getPolicyWarningMessage(graceStatus, localize);
+  assert(graceMessage.includes(new Date(graceUntilIso).toLocaleString()) && !graceMessage.includes("$1"), "Grace must substitute a localized date");
+  assert(calls.some((call) => call.key === "policy_license_grace_format" && call.substitutions.length === 1), "Grace must pass its date as a substitution");
+  const expired = makeStatus({
+    accessStatus: "EXPIRED", isValid: false, licenseConnectionError: true,
+    licenseLastSyncAtIso: lastSyncAtIso, licenseOfflineUntilIso: offlineUntilIso, graceUntilIso
+  });
+  const expiredMessage = policyUi.getPolicyWarningMessage(expired, localize);
+  assert(expiredMessage.startsWith(catalog.policy_license_expired.message), "Sync details must follow the blocking license cause");
+  assert(expiredMessage.includes(catalog.policy_license_connection_error.message), "Sync failures must remain distinct secondary context");
+  assert(expiredMessage.includes(new Date(lastSyncAtIso).toLocaleString()) && expiredMessage.includes(new Date(offlineUntilIso).toLocaleString()), "Sync dates must use localized substitutions");
+  assert(!expiredMessage.includes(catalog.policy_license_grace.message), "Future dates must not produce a grace promise after expiry");
+  for (const value of [null, "", "not-a-date", {}, []]){
+    const message = policyUi.getPolicyWarningMessage(makeStatus({ accessStatus: "GRACE", graceUntilIso: value }), localize);
+    assert(message.startsWith(catalog.policy_license_grace.message), "Invalid dates must use the date-free grace explanation");
+    assert(!message.includes("Invalid Date") && !message.includes("$1"), "Invalid dates must never leak into notice text");
+  }
+
+  const classes = new Set();
+  const attributes = {};
+  const row = {
+    hidden: true,
+    classList: { toggle(name, enabled){ enabled ? classes.add(name) : classes.delete(name); } },
+    setAttribute(name, value){ attributes[name] = value; }
+  };
+  const textElement = { textContent: "" };
+  Object.defineProperty(textElement, "innerHTML", { set(){ throw new Error("Notice text must not be written as HTML"); } });
+  const adminLink = {
+    hidden: false,
+    href: "https://stale.example.test/",
+    removeAttribute(name){ delete this[name]; }
+  };
+  const show = (policyStatus, messageTranslate = translate) => policyUi.applyPolicyWarningUi({ row, textElement, adminLink, policyStatus, translate: messageTranslate });
+  const adminStatus = makeStatus({ accessStatus: "GRACE", canManageLicense: true });
+  show(adminStatus);
+  assert(!row.hidden && classes.has("is-informational") && attributes.role === "status", "Grace must use an informational banner");
+  assert(!adminLink.hidden && adminLink.href === "https://cloud.example.test/nextcloud/index.php/settings/admin/ncc_backend_4mc", "Admins must get their own backend license page");
+  assert(textElement.textContent.includes("policy_license_admin_hint") && !textElement.textContent.includes("policy_license_user_hint"), "Admins must receive their own action guidance");
+  show(makeStatus({ accessStatus: "GRACE", canManageLicense: true, seatAssigned: false }));
+  assert(!adminLink.hidden && textElement.textContent.includes("sharing_password_separate_no_seat_tooltip"), "Grace for an administrator without a seat must also explain the missing personal assignment");
+  show(makeStatus({ accessStatus: "EXPIRED", isValid: false }));
+  assert(!classes.has("is-informational") && attributes.role === "alert", "Blocking errors must clear an old informational style");
+  assert(adminLink.hidden && !Object.prototype.hasOwnProperty.call(adminLink, "href"), "Normal users must lose both the visible admin link and its href");
+  assert(textElement.textContent.includes("policy_license_user_hint"), "Normal users must receive administrator-contact guidance");
+  show(makeStatus({ accessStatus: "EXPIRED", isValid: false }), () => "<img src=x onerror=alert(1)>");
+  assert(textElement.textContent.includes("<img src=x onerror=alert(1)>"), "Notice rendering must keep translated content as plain text");
+  for (const canManageLicense of [undefined, null, false, "true", 1, {}]){
+    show(makeStatus({ accessStatus: "EXPIRED", isValid: false, canManageLicense }));
+    assert(adminLink.hidden && !Object.prototype.hasOwnProperty.call(adminLink, "href"), "Only an explicit full-admin flag may show a management link");
+  }
+  show(makeStatus());
+  assert(row.hidden && textElement.textContent === "" && adminLink.hidden, "Returning to active status must clear stale notice UI");
+  show({ endpointAvailable: false, reason: "endpoint_missing", fetchSucceeded: false });
+  assert(row.hidden, "A missing optional backend must have no banner");
+  show({ endpointAvailable: false, reason: "network_error", fetchSucceeded: false });
+  assert(!row.hidden && textElement.textContent === "policy_warning_backend_unavailable" && adminLink.hidden, "Network failure must not display a license-management action");
+
+  const suffix = "/index.php/settings/admin/ncc_backend_4mc";
+  for (const prefix of ["https://cloud.example.test", "https://cloud.example.test/nextcloud", "https://cloud.example.test:8443/team/cloud"]){
+    for (const endpointPath of ["/apps/ncc_backend_4mc/api/v1/status", "/index.php/apps/ncc_backend_4mc/api/v1/status"]){
+      assertEqual(policyUi.getLicenseAdminUrl({ ...adminStatus, endpointUrl: prefix + endpointPath }), prefix + suffix, "Admin links must preserve the configured HTTPS origin and subdirectory");
+    }
+  }
+  for (const endpointUrl of [
+    "", "/apps/ncc_backend_4mc/api/v1/status", "http://cloud.example.test/apps/ncc_backend_4mc/api/v1/status",
+    "javascript:alert(1)", "https://user:password@cloud.example.test/apps/ncc_backend_4mc/api/v1/status",
+    "https://cloud.example.test/apps/ncc_backend_4mc/api/v1/status?next=evil", "https://cloud.example.test/apps/ncc_backend_4mc/api/v1/status#evil",
+    "https://cloud.example.test/?next=/apps/ncc_backend_4mc/api/v1/status", "https://cloud.example.test/#/apps/ncc_backend_4mc/api/v1/status",
+    "https://cloud.example.test/unrelated/status"
+  ]){
+    assertEqual(policyUi.getLicenseAdminUrl({ ...adminStatus, endpointUrl }), "", "Unsafe or unrelated endpoint URLs must not produce an admin link");
+  }
+  assertEqual(policyUi.getLicenseAdminUrl({ ...makeStatus(), endpointUrl: adminStatus.endpointUrl }), "", "Non-admins must not get an admin URL");
 }
 
 function verifyAttachmentLinkTargetValues(sharingStorage){
@@ -381,6 +508,20 @@ function verifyConsumerGuards(){
   const calendar = readText("modules/bgCalendar.js");
   const signature = readText("modules/bgSignature.js");
 
+  for (const [name, source, status, link] of [
+    ["options", options, "runtimePolicyStatus", "policyWarningAdminLink"],
+    ["Talk", talk, "state.policy.status", "policyWarningAdminLink"],
+    ["Sharing", sharingWizard, "state.policy.status", "dom.policyWarningAdminLink"]
+  ]){
+    const warningCall = source.match(/NCWizardPolicyUi\.applyPolicyWarningUi\(\{([\s\S]*?)\}\)/)?.[1] || "";
+    assertCode(warningCall, `policyStatus: ${status}`, `${name} must pass the complete policy status to its banner`);
+    assertCode(warningCall, `adminLink: ${link}`, `${name} must let the shared banner control its admin link`);
+    assert(!warningCall.includes("warningVisible:"), `${name} must not reduce a notice to a legacy visibility flag`);
+    assert(!source.includes("POLICY_ADMIN_URL"), `${name} must not retain a fixed license-guide URL`);
+  }
+  assertCode(sharingWizard, "getVfsExternalUnavailableHint(reason, wizardTranslate, external.notice)", "Sharing must pass the background VFS notice to the shared formatter");
+  assertCode(readText("ui/optionsVfs.js"), "currentState?.external?.notice", "VFS options must consume the background notice");
+
   assertCode(talk, "const localRuntimeNames = new Set();", "Talk runtime policy defaults must track local values");
   assertCode(talk, "localRuntimeNames.add(\"descriptionLanguage\");", "Talk language must mark its stored value as local");
   assertCode(talk, "{ localNames: localRuntimeNames }", "Talk runtime policy resolution must receive its local-value metadata");
@@ -593,6 +734,7 @@ function run(){
   verifySharePolicyKeyRegistry(sharingStorage);
   verifyAttachmentLinkTargetLockedFallback(sharingStorage, policyUi);
   verifyPolicyTable(policyState, policyUi);
+  verifyPolicyNoticeUi(policyState, policyUi);
   verifyConsumerGuards();
   console.log("[OK] policy-editability-check passed (25 editable keys, 4 policy states, consumer guards)");
 }

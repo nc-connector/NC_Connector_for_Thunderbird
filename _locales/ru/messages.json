@@ -981,13 +981,64 @@
     "message": "Перейти на сайт"
   },
   "policy_warning_title": {
-    "message": "Политика бэкенда сейчас недоступна."
+    "message": "Состояние NC Connector"
   },
   "policy_warning_license_invalid": {
-    "message": "Лицензия или назначение seat для NC Connector сейчас недействительны. Будут использованы локальные настройки. Пожалуйста, обратитесь к администратору Nextcloud."
+    "message": "Серверная часть не смогла подтвердить доступ к функциям Pro. Базовые функции остаются доступными."
   },
   "policy_warning_admin_link_label": {
-    "message": "Открыть руководство по настройке для администратора"
+    "message": "Управление лицензией в панели администрирования"
+  },
+  "policy_license_grace_format": {
+    "message": "Срок действия вашей лицензии истёк. Функции Pro остаются доступными до $1."
+  },
+  "policy_license_grace": {
+    "message": "Срок действия вашей лицензии истёк. Функции Pro остаются доступными в течение льготного периода."
+  },
+  "policy_license_expired": {
+    "message": "Срок действия вашей лицензии истёк. Функции Pro недоступны. Вы по-прежнему можете использовать базовые функции."
+  },
+  "policy_license_inactive": {
+    "message": "Ваша лицензия сейчас неактивна. Функции Pro недоступны."
+  },
+  "policy_license_invalid": {
+    "message": "Ваша лицензия недействительна. Функции Pro недоступны."
+  },
+  "policy_license_activation_conflict": {
+    "message": "Эта лицензия уже активирована для другой установки Nextcloud."
+  },
+  "policy_license_activation_required": {
+    "message": "Не удалось подтвердить активацию лицензии для этой установки Nextcloud."
+  },
+  "policy_license_offline_expired": {
+    "message": "Не удалось вовремя проверить лицензию. Функции Pro недоступны до успешного завершения проверки."
+  },
+  "policy_license_connection_error": {
+    "message": "Не удалось синхронизировать лицензию. Это не означает, что лицензия недействительна."
+  },
+  "policy_license_last_sync_format": {
+    "message": "Последняя успешная синхронизация: $1."
+  },
+  "policy_license_offline_until_format": {
+    "message": "Крайний срок автономной проверки: $1."
+  },
+  "policy_license_admin_hint": {
+    "message": "Проверьте лицензию в панели администрирования Nextcloud."
+  },
+  "policy_license_user_hint": {
+    "message": "Обратитесь к администратору Nextcloud."
+  },
+  "policy_warning_seat_suspended": {
+    "message": "Действие вашего лицензионного места NC Connector приостановлено. Функции Pro недоступны."
+  },
+  "policy_warning_seat_unavailable": {
+    "message": "Назначенное вам лицензионное место NC Connector сейчас недоступно."
+  },
+  "policy_warning_backend_unavailable": {
+    "message": "Не удалось получить состояние серверной части Nextcloud. Проверьте подключение и повторите попытку."
+  },
+  "policy_warning_overlicensed": {
+    "message": "Количество назначенных лицензионных мест превышает доступную ёмкость лицензии. Функции Pro сейчас недоступны."
   },
   "policy_admin_controlled_tooltip": {
     "message": "Управляется администратором"

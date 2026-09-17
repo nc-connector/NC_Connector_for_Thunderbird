@@ -981,13 +981,64 @@
     "message": "Visit homepage"
   },
   "policy_warning_title": {
-    "message": "Backend policy is currently unavailable."
+    "message": "NC Connector status"
   },
   "policy_warning_license_invalid": {
-    "message": "Your NC Connector license or seat is currently not valid. Local settings are used. Please contact your Nextcloud administrator."
+    "message": "The backend could not confirm access to Pro features. Basic features remain available."
   },
   "policy_warning_admin_link_label": {
-    "message": "Open admin setup guide"
+    "message": "Manage license in backend"
+  },
+  "policy_license_grace_format": {
+    "message": "Your license has expired. Pro features remain available until $1."
+  },
+  "policy_license_grace": {
+    "message": "Your license has expired. Pro features remain available during the grace period."
+  },
+  "policy_license_expired": {
+    "message": "Your license has expired. Pro features are unavailable. You can still use the basic features."
+  },
+  "policy_license_inactive": {
+    "message": "Your license is currently inactive. Pro features are unavailable."
+  },
+  "policy_license_invalid": {
+    "message": "Your license is invalid. Pro features are unavailable."
+  },
+  "policy_license_activation_conflict": {
+    "message": "This license is already activated for another Nextcloud installation."
+  },
+  "policy_license_activation_required": {
+    "message": "License activation for this Nextcloud could not be confirmed."
+  },
+  "policy_license_offline_expired": {
+    "message": "The license could not be verified in time. Pro features are unavailable until verification succeeds."
+  },
+  "policy_license_connection_error": {
+    "message": "License synchronization failed. This does not mean that the license is invalid."
+  },
+  "policy_license_last_sync_format": {
+    "message": "Last successful synchronization: $1."
+  },
+  "policy_license_offline_until_format": {
+    "message": "Offline verification deadline: $1."
+  },
+  "policy_license_admin_hint": {
+    "message": "Check the license in your Nextcloud backend."
+  },
+  "policy_license_user_hint": {
+    "message": "Please contact your Nextcloud administrator."
+  },
+  "policy_warning_seat_suspended": {
+    "message": "Your NC Connector seat is suspended. Pro features are unavailable."
+  },
+  "policy_warning_seat_unavailable": {
+    "message": "Your assigned NC Connector seat is currently unavailable."
+  },
+  "policy_warning_backend_unavailable": {
+    "message": "The Nextcloud backend status could not be retrieved. Please check the connection and try again."
+  },
+  "policy_warning_overlicensed": {
+    "message": "The assigned seats exceed the available license capacity. Pro features are currently unavailable."
   },
   "policy_admin_controlled_tooltip": {
     "message": "Admin controlled"

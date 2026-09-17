@@ -70,6 +70,71 @@ const NCPolicyState = (() => {
     );
   }
 
+  function getStatusNoticeCode(policyStatus){
+    if (policyStatus?.fetchSucceeded === false){
+      return ["credentials_missing", "endpoint_missing", "permission_missing", "local_defaults"].includes(policyStatus.reason)
+        ? ""
+        : "backend_unavailable";
+    }
+    const status = policyStatus?.status;
+    if (!isEndpointAvailable(policyStatus) || !isObject(status)){
+      return "";
+    }
+    if (!status.seatAssigned && status.canManageLicense !== true){
+      return "no_seat";
+    }
+    const licenseStatus = String(status.licenseStatus || "").trim().toUpperCase();
+    const accessStatus = String(status.accessStatus || "").trim().toUpperCase();
+    if (status.isValid !== true){
+      // Access refusals can differ from the purchased license's commercial status.
+      switch (accessStatus || licenseStatus){
+        case "EXPIRED":
+          return "license_expired";
+        case "INACTIVE":
+          return "license_inactive";
+        case "INVALID":
+          return "license_invalid_explicit";
+        case "ACTIVATION_REQUIRED":
+          return String(status.licenseActivationState || "").trim().toLowerCase() === "conflict"
+            ? "license_activation_conflict"
+            : "license_activation_required";
+        case "OFFLINE_EXPIRED":
+          return "license_offline_expired";
+        default:
+          return "license_invalid";
+      }
+    }
+    if (status.overlicensed){
+      return "overlicensed";
+    }
+    const seatState = String(status.seatState || "").trim().toLowerCase();
+    if (status.seatAssigned && seatState !== ACTIVE_SEAT_STATE){
+      return seatState === "suspended_overlimit" ? "seat_paused" : "seat_unavailable";
+    }
+    if ((accessStatus || licenseStatus) === "GRACE"){
+      return "license_grace";
+    }
+    if (status.licenseConnectionError === true){
+      return "license_connection_error";
+    }
+    return status.seatAssigned ? "" : "no_seat";
+  }
+
+  function getStatusNotice(policyStatus){
+    const status = policyStatus?.status;
+    const code = getStatusNoticeCode(policyStatus);
+    return Object.freeze({
+      code,
+      license: code.startsWith("license_") || code === "overlicensed",
+      canManageLicense: status?.canManageLicense === true,
+      seatAssigned: status?.seatAssigned === true,
+      graceUntilIso: typeof status?.graceUntilIso === "string" ? status.graceUntilIso : null,
+      connectionError: status?.licenseConnectionError === true,
+      lastSyncAtIso: typeof status?.licenseLastSyncAtIso === "string" ? status.licenseLastSyncAtIso : null,
+      offlineUntilIso: typeof status?.licenseOfflineUntilIso === "string" ? status.licenseOfflineUntilIso : null
+    });
+  }
+
   function getProSeatUnavailableReason(status){
     if (!isEndpointAvailable(status)){
       return "backend_required";
@@ -190,6 +255,7 @@ const NCPolicyState = (() => {
     isSeatUsable,
     isEndpointAvailable,
     hasSeatEntitlement,
+    getStatusNotice,
     getProSeatUnavailableReason,
     hasProSeatEntitlement,
     buildDomainState,

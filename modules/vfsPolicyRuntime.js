@@ -13,7 +13,7 @@ const NCVfsPolicyRuntime = (() => {
     pro_required: "vfs_external_pro_required_tooltip",
     license_invalid: "policy_warning_license_invalid",
     seat_required: "sharing_password_separate_no_seat_tooltip",
-    seat_paused: "sharing_password_separate_paused_tooltip",
+    seat_paused: "policy_warning_license_invalid",
     admin_controlled: "policy_admin_controlled_tooltip",
     disabled: "sharing_vfs_external_disabled_notice"
   });
@@ -80,7 +80,8 @@ const NCVfsPolicyRuntime = (() => {
       ...setting,
       enabled: setting.enabled && entitled,
       entitled,
-      unavailableReason
+      unavailableReason,
+      notice: NCPolicyState.getStatusNotice(policyStatus)
     });
   }
 

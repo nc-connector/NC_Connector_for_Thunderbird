@@ -981,13 +981,64 @@
     "message": "ホームページを開く"
   },
   "policy_warning_title": {
-    "message": "バックエンドポリシーは現在利用できません。"
+    "message": "NC Connector の状態"
   },
   "policy_warning_license_invalid": {
-    "message": "NC Connector のライセンスまたはシート割り当ては現在有効ではありません。ローカル設定が使用されます。Nextcloud 管理者に連絡してください。"
+    "message": "バックエンドで Pro 機能へのアクセスを確認できませんでした。基本機能は引き続き利用できます。"
   },
   "policy_warning_admin_link_label": {
-    "message": "管理者向けセットアップガイドを開く"
+    "message": "バックエンドでライセンスを管理"
+  },
+  "policy_license_grace_format": {
+    "message": "ライセンスの有効期限が切れています。Pro 機能は $1 まで引き続き利用できます。"
+  },
+  "policy_license_grace": {
+    "message": "ライセンスの有効期限が切れています。猶予期間中は Pro 機能を引き続き利用できます。"
+  },
+  "policy_license_expired": {
+    "message": "ライセンスの有効期限が切れています。Pro 機能は利用できません。基本機能は引き続き利用できます。"
+  },
+  "policy_license_inactive": {
+    "message": "ライセンスは現在無効化されています。Pro 機能は利用できません。"
+  },
+  "policy_license_invalid": {
+    "message": "ライセンスが無効です。Pro 機能は利用できません。"
+  },
+  "policy_license_activation_conflict": {
+    "message": "このライセンスは、別の Nextcloud インストール環境ですでに有効化されています。"
+  },
+  "policy_license_activation_required": {
+    "message": "この Nextcloud のライセンス有効化を確認できませんでした。"
+  },
+  "policy_license_offline_expired": {
+    "message": "制限時間内にライセンスを検証できませんでした。検証が成功するまで Pro 機能は利用できません。"
+  },
+  "policy_license_connection_error": {
+    "message": "ライセンスの同期に失敗しました。これはライセンスが無効であることを意味するものではありません。"
+  },
+  "policy_license_last_sync_format": {
+    "message": "最後に成功した同期: $1。"
+  },
+  "policy_license_offline_until_format": {
+    "message": "オフライン検証の期限: $1。"
+  },
+  "policy_license_admin_hint": {
+    "message": "Nextcloud のバックエンドでライセンスを確認してください。"
+  },
+  "policy_license_user_hint": {
+    "message": "Nextcloud の管理者にお問い合わせください。"
+  },
+  "policy_warning_seat_suspended": {
+    "message": "NC Connector のライセンス枠が停止されています。Pro 機能は利用できません。"
+  },
+  "policy_warning_seat_unavailable": {
+    "message": "割り当てられた NC Connector のライセンス枠は現在利用できません。"
+  },
+  "policy_warning_backend_unavailable": {
+    "message": "Nextcloud のバックエンドの状態を取得できませんでした。接続を確認して、もう一度お試しください。"
+  },
+  "policy_warning_overlicensed": {
+    "message": "割り当てられたライセンス枠の数が、ライセンスで利用できる上限を超えています。Pro 機能は現在利用できません。"
   },
   "policy_admin_controlled_tooltip": {
     "message": "管理者により制御"

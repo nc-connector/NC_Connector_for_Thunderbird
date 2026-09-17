@@ -30,7 +30,6 @@
   const LOG_CHANNEL = 'NCUI';
   const LOG_PREFIX = `[${LOG_CHANNEL}][${LOG_LABEL}]`;
   const SHARING_KEYS = NCSharingStorage.SHARING_KEYS;
-  const POLICY_ADMIN_URL = "https://github.com/nc-connector/NC_Connector_for_Thunderbird/blob/main/docs/ADMIN.md";
   let disposeDebugFlagMirror = null;
 
   function logUiError(scope, reportedError){
@@ -48,7 +47,6 @@
       state.policy.active = domainState.active;
       state.policy.share = domainState.policy;
       state.policy.editable = domainState.editable;
-      state.policy.warningVisible = domainState.warningVisible;
       state.policy.warningCode = domainState.warningCode;
       log('Policy status', {
         active: state.policy.active,
@@ -61,7 +59,8 @@
     NCWizardPolicyUi.applyPolicyWarningUi({
       row: dom.policyWarningRow,
       textElement: dom.policyWarningText,
-      warningVisible: state.policy.warningVisible,
+      adminLink: dom.policyWarningAdminLink,
+      policyStatus: state.policy.status,
       translate: wizardTranslate
     });
   }
@@ -131,13 +130,12 @@
       active: false,
       share: null,
       editable: null,
-      warningVisible: false,
       warningCode: ""
     }
   };
   const dom = {};
   const i18n = NCI18n.translate;
-  const wizardTranslate = (key, fallback = "") => i18n(key) || fallback || "";
+  const wizardTranslate = (key, substitutions) => i18n(key, substitutions);
   const queueEntries = NCSharingQueueEntries.create({
     sanitizeFileName: NCSharing.sanitizeFileName,
     sanitizeRelativeDir: NCSharing.sanitizeRelativeDir,
@@ -206,9 +204,6 @@
 
   async function init(){
     cacheElements();
-    if (dom.policyWarningAdminLink){
-      dom.policyWarningAdminLink.href = POLICY_ADMIN_URL;
-    }
     setWizardReady(false);
     NCTalkDomI18n.translatePage(i18n, { titleKey: "sharing_dialog_title" });
     dom.vfsConnectionList?.setAttribute('aria-label', i18n('sharing_vfs_connection_label'));
@@ -1180,7 +1175,7 @@
     const reason = external.entitled !== true
       ? external.unavailableReason
       : (external.locked && !external.enabled ? 'admin_controlled' : '');
-    return NCWizardPolicyUi.getVfsExternalUnavailableHint(reason, wizardTranslate);
+    return NCWizardPolicyUi.getVfsExternalUnavailableHint(reason, wizardTranslate, external.notice);
   }
 
   function updateButtons(){
@@ -1322,6 +1317,7 @@
       locked: externalStatus?.locked === true,
       entitled: externalStatus?.entitled === true,
       unavailableReason: String(externalStatus?.unavailableReason || ''),
+      notice: externalStatus?.notice || null,
       initialized: externalStatus?.initialized === true,
       connections: Array.isArray(externalStatus?.connections)
         ? externalStatus.connections

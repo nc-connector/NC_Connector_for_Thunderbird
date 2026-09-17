@@ -260,8 +260,8 @@ async function run(){
   assert(delivery.resolveSecretsExpireDays({ policy: { share: {} }, policyEditable: { share: {} } }) === 7, "Missing policy expiry key should use default");
   assert(wizardPolicy.isSeparatePasswordFeatureAvailable(createSeatStatus(true)) === false, "Overlicensed seat must disable separate password delivery");
   assert(
-    wizardPolicy.getSeparatePasswordUnavailableHint(createSeatStatus(true), (key) => key) === "policy_warning_license_invalid",
-    "Overlicensed password delivery should show the license warning"
+    wizardPolicy.getSeparatePasswordUnavailableHint(createSeatStatus(true), (key) => key) === "policy_warning_overlicensed\npolicy_license_user_hint",
+    "Overlicensed password delivery should explain the capacity issue and contact action"
   );
 
   const blockedRegistration = createDispatchRegistrationHarness(createSeatStatus(true));

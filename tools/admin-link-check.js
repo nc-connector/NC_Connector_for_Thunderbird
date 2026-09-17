@@ -59,6 +59,18 @@ function run(){
   const failures = [];
   let linkCount = 0;
 
+  for (const file of ["options.html", "ui/talkDialog.html", "ui/nextcloudSharingWizard.html"]){
+    const content = readText(file);
+    const link = content.match(/<a\b[^>]*\bid="policyWarningAdminLink"[^>]*>/)?.[0] || "";
+    assert(link && /\bhidden\b/.test(link), `${file}: license management links must start hidden`);
+    assert(!/\bhref\s*=/.test(link), `${file}: license management links must have no static target`);
+    assert(/\brel="noopener noreferrer"/.test(link), `${file}: backend links must isolate the opened page`);
+    assert(content.includes("is-informational") && content.includes("#b8860b"), `${file}: informational notices must use their yellow warning style`);
+  }
+  for (const file of ["options.js", "ui/talkDialog.js", "ui/nextcloudSharingWizard.js"]){
+    assert(!readText(file).includes("POLICY_ADMIN_URL"), `${file}: license links must use the configured backend rather than a fixed guide`);
+  }
+
   for (const filePath of listTextFiles(ROOT)){
     const content = fs.readFileSync(filePath, "utf8");
     for (const match of content.matchAll(ADMIN_LINK_PATTERN)){

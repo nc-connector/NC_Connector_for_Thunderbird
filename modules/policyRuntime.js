@@ -17,6 +17,7 @@ const NCPolicyRuntime = (() => {
     POLICY_DOMAINS,
     isObject,
     isSeatUsable,
+    getStatusNotice,
     buildDomainState
   } = NCPolicyState;
 
@@ -28,14 +29,13 @@ const NCPolicyRuntime = (() => {
     return isObject(object) && Object.prototype.hasOwnProperty.call(object, key);
   }
 
-  function getSeatWarningCode(status){
-    if (status?.overlicensed){
-      return "overlicensed";
-    }
-    const seatState = String(status?.seatState || "none").trim().toLowerCase();
-    return status?.seatAssigned && (!status?.isValid || seatState !== "active")
-      ? "license_invalid"
-      : "";
+  function withStatusWarning(result){
+    const notice = getStatusNotice(result);
+    result.warning = {
+      visible: !!notice.code,
+      code: notice.code
+    };
+    return result;
   }
 
   function isBackendStatusPayload(payload){
@@ -50,8 +50,7 @@ const NCPolicyRuntime = (() => {
     const seatAssigned = !!details?.seatAssigned;
     const isValid = details?.isValid !== false;
     const overlicensed = !!details?.overlicensed;
-    const warningCode = getSeatWarningCode({ seatAssigned, seatState, isValid, overlicensed });
-    return {
+    return withStatusWarning({
       ok: true,
       fetchSucceeded: false,
       cached: false,
@@ -67,6 +66,13 @@ const NCPolicyRuntime = (() => {
         overlicensed,
         mode: String(details?.licenseMode || ""),
         isValid,
+        licenseStatus: "",
+        accessStatus: "",
+        canManageLicense: false,
+        licenseActivationState: "",
+        licenseConnectionError: false,
+        licenseLastSyncAtIso: null,
+        licenseOfflineUntilIso: null,
         expiresAtIso: details?.expiresAtIso || null,
         graceUntilIso: details?.graceUntilIso || null
       },
@@ -77,12 +83,8 @@ const NCPolicyRuntime = (() => {
         email_signature: { available: false, active: false }
       },
       policy: { share: null, talk: null, email_signature: null },
-      policyEditable: { share: null, talk: null, email_signature: null },
-      warning: {
-        visible: !!warningCode,
-        code: warningCode
-      }
-    };
+      policyEditable: { share: null, talk: null, email_signature: null }
+    });
   }
 
   function buildPolicyResponseDebug(response, endpointUrl, raw = ""){
@@ -193,6 +195,7 @@ const NCPolicyRuntime = (() => {
    */
   function normalizeStatusPayload(payload){
     const rawStatus = isObject(payload?.status) ? payload.status : {};
+    const activation = isObject(rawStatus.license_activation) ? rawStatus.license_activation : null;
     const status = {
       userId: String(rawStatus.user_id || ""),
       seatAssigned: !!rawStatus.seat_assigned,
@@ -200,6 +203,13 @@ const NCPolicyRuntime = (() => {
       overlicensed: !!rawStatus.overlicensed,
       mode: String(rawStatus.mode || ""),
       isValid: rawStatus.is_valid === true,
+      licenseStatus: typeof rawStatus.license_status === "string" ? rawStatus.license_status.trim().toUpperCase() : "",
+      accessStatus: typeof rawStatus.access_status === "string" ? rawStatus.access_status.trim().toUpperCase() : "",
+      canManageLicense: rawStatus.can_manage_license === true,
+      licenseActivationState: typeof activation?.state === "string" ? activation.state.trim().toLowerCase() : "",
+      licenseConnectionError: rawStatus.license_connection_error === true,
+      licenseLastSyncAtIso: typeof rawStatus.license_last_sync_at_iso === "string" ? rawStatus.license_last_sync_at_iso.trim() || null : null,
+      licenseOfflineUntilIso: typeof rawStatus.license_offline_until_iso === "string" ? rawStatus.license_offline_until_iso.trim() || null : null,
       expiresAtIso: rawStatus.expires_at_iso || null,
       graceUntilIso: rawStatus.grace_until_iso || null
     };
@@ -219,8 +229,7 @@ const NCPolicyRuntime = (() => {
     const reason = policyActive
       ? "policy_active"
       : (status.overlicensed ? "overlicensed" : (seatUsable ? "policy_domains_unavailable" : "seat_not_usable"));
-    const warningCode = getSeatWarningCode(status);
-    return {
+    return withStatusWarning({
       ok: true,
       fetchSucceeded: true,
       cached: false,
@@ -241,12 +250,8 @@ const NCPolicyRuntime = (() => {
         share: editableShare,
         talk: editableTalk,
         email_signature: editableEmailSignature
-      },
-      warning: {
-        visible: !!warningCode,
-        code: warningCode
       }
-    };
+    });
   }
 
   async function readPolicyStatusFromCredentials({
@@ -342,7 +347,7 @@ const NCPolicyRuntime = (() => {
         response = fallbackResult.response;
         raw = fallbackResult.raw;
       }catch(error){
-        const localResult = buildLocalModeResult("endpoint_missing", {
+        const localResult = buildLocalModeResult("network_error", {
           endpointAvailable: false,
           endpointChecked: true,
           endpointUrl

@@ -224,6 +224,13 @@ textarea{
 .policy-warning-title{
   font-weight:700;
 }
+.policy-warning.is-informational{
+  border-color:#b8860b;
+  background:rgba(218,165,32,0.12);
+  color:var(--tb-text);
+}
+#policyWarningText{white-space:pre-line;overflow-wrap:anywhere;}
+.policy-warning a[hidden]{display:none;}
 .policy-warning a{
   display:inline-block;
   margin-top:6px;
@@ -684,9 +691,9 @@ textarea{
     <div class="dialog-content">
 <div class="message" id="messageBar"></div>
       <div class="policy-warning" id="policyWarningRow" hidden>
-        <div class="policy-warning-title"><span aria-hidden="true">⚠️ </span><span data-i18n="policy_warning_title">Backend policy is currently unavailable.</span></div>
-        <div id="policyWarningText" data-i18n="policy_warning_license_invalid">Your NC Connector license or seat is currently not valid. Local settings are used. Please contact your Nextcloud administrator.</div>
-        <a id="policyWarningAdminLink" data-i18n="policy_warning_admin_link_label" target="_blank" rel="noopener noreferrer" href="https://github.com/nc-connector/NC_Connector_for_Thunderbird/blob/main/docs/ADMIN.md">Open admin setup guide</a>
+        <div class="policy-warning-title"><span aria-hidden="true">⚠️ </span><span data-i18n="policy_warning_title"></span></div>
+        <div id="policyWarningText"></div>
+        <a id="policyWarningAdminLink" target="_blank" rel="noopener noreferrer" hidden></a>
       </div>
       <div class="section-grid section-grid-two">
         <div class="section">
@@ -858,7 +865,6 @@ textarea{
   <script src="domI18n.js"></script>
   <script src="talkDialog.js"></script>
 </body>
-
 
 
 

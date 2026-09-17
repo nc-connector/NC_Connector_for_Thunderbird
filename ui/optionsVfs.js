@@ -116,6 +116,7 @@
         locked: external.locked === true,
         entitled: external.entitled === true,
         unavailableReason: normalizeText(external.unavailableReason),
+        notice: external.notice || null,
         initialized: external.initialized === true,
         connections,
         providers
@@ -274,7 +275,8 @@
     const externalLocked = currentState?.external?.locked === true;
     const externalHint = global.NCWizardPolicyUi.getVfsExternalUnavailableHint(
       currentState?.external?.unavailableReason,
-      i18n
+      i18n,
+      currentState?.external?.notice
     );
     const adminHint = i18n("policy_admin_controlled_tooltip");
     const externalBlocked = !externalEntitled

@@ -981,13 +981,64 @@
     "message": "Prejit na domovskou stranku"
   },
   "policy_warning_title": {
-    "message": "Backendová politika je momentálně nedostupná."
+    "message": "Stav NC Connector"
   },
   "policy_warning_license_invalid": {
-    "message": "Licence nebo přiřazení seatu NC Connectoru není momentálně platné. Použijí se místní nastavení. Obraťte se prosím na správce Nextcloudu."
+    "message": "Serverová část nemohla potvrdit přístup k funkcím Pro. Základní funkce zůstávají dostupné."
   },
   "policy_warning_admin_link_label": {
-    "message": "Otevřít návod pro správce"
+    "message": "Spravovat licenci v administračním rozhraní"
+  },
+  "policy_license_grace_format": {
+    "message": "Platnost vaší licence vypršela. Funkce Pro zůstávají dostupné do $1."
+  },
+  "policy_license_grace": {
+    "message": "Platnost vaší licence vypršela. Funkce Pro zůstávají dostupné během ochranné lhůty."
+  },
+  "policy_license_expired": {
+    "message": "Platnost vaší licence vypršela. Funkce Pro nejsou dostupné. Základní funkce můžete nadále používat."
+  },
+  "policy_license_inactive": {
+    "message": "Vaše licence je momentálně neaktivní. Funkce Pro nejsou dostupné."
+  },
+  "policy_license_invalid": {
+    "message": "Vaše licence je neplatná. Funkce Pro nejsou dostupné."
+  },
+  "policy_license_activation_conflict": {
+    "message": "Tato licence je již aktivována pro jinou instalaci Nextcloud."
+  },
+  "policy_license_activation_required": {
+    "message": "Aktivaci licence pro tuto instalaci Nextcloud se nepodařilo potvrdit."
+  },
+  "policy_license_offline_expired": {
+    "message": "Licenci se nepodařilo ověřit včas. Funkce Pro nejsou dostupné, dokud ověření neproběhne úspěšně."
+  },
+  "policy_license_connection_error": {
+    "message": "Synchronizace licence se nezdařila. To neznamená, že je licence neplatná."
+  },
+  "policy_license_last_sync_format": {
+    "message": "Poslední úspěšná synchronizace: $1."
+  },
+  "policy_license_offline_until_format": {
+    "message": "Termín ověření bez připojení: $1."
+  },
+  "policy_license_admin_hint": {
+    "message": "Zkontrolujte licenci v administračním rozhraní Nextcloud."
+  },
+  "policy_license_user_hint": {
+    "message": "Obraťte se na správce vaší instalace Nextcloud."
+  },
+  "policy_warning_seat_suspended": {
+    "message": "Vaše licenční místo NC Connector je pozastaveno. Funkce Pro nejsou dostupné."
+  },
+  "policy_warning_seat_unavailable": {
+    "message": "Vaše přidělené licenční místo NC Connector je momentálně nedostupné."
+  },
+  "policy_warning_backend_unavailable": {
+    "message": "Nepodařilo se načíst stav serverové části Nextcloud. Zkontrolujte připojení a zkuste to znovu."
+  },
+  "policy_warning_overlicensed": {
+    "message": "Počet přiřazených licenčních míst překračuje dostupnou kapacitu licence. Funkce Pro jsou momentálně nedostupné."
   },
   "policy_admin_controlled_tooltip": {
     "message": "Řízeno správcem"

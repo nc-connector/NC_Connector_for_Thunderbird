@@ -981,13 +981,64 @@
     "message": "Ugras a honlapra"
   },
   "policy_warning_title": {
-    "message": "A háttérszabályzat jelenleg nem érhető el."
+    "message": "Az NC Connector állapota"
   },
   "policy_warning_license_invalid": {
-    "message": "Az NC Connector licence vagy a seat-hozzárendelés jelenleg nem érvényes. A helyi beállítások lesznek használva. Kérjük, forduljon a Nextcloud rendszergazdájához."
+    "message": "A kiszolgáló nem tudta megerősíteni a Pro funkciókhoz való hozzáférést. Az alapfunkciók továbbra is elérhetők."
   },
   "policy_warning_admin_link_label": {
-    "message": "Adminisztrátori beállítási útmutató megnyitása"
+    "message": "Licenc kezelése a felügyeleti felületen"
+  },
+  "policy_license_grace_format": {
+    "message": "A licence lejárt. A Pro funkciók eddig maradnak elérhetők: $1."
+  },
+  "policy_license_grace": {
+    "message": "A licence lejárt. A Pro funkciók a türelmi idő alatt továbbra is elérhetők."
+  },
+  "policy_license_expired": {
+    "message": "A licence lejárt. A Pro funkciók nem érhetők el. Az alapfunkciókat továbbra is használhatja."
+  },
+  "policy_license_inactive": {
+    "message": "A licence jelenleg inaktív. A Pro funkciók nem érhetők el."
+  },
+  "policy_license_invalid": {
+    "message": "A licence érvénytelen. A Pro funkciók nem érhetők el."
+  },
+  "policy_license_activation_conflict": {
+    "message": "Ez a licenc már aktiválva van egy másik Nextcloud-példányhoz."
+  },
+  "policy_license_activation_required": {
+    "message": "A licenc aktiválását nem sikerült megerősíteni ehhez a Nextcloud-példányhoz."
+  },
+  "policy_license_offline_expired": {
+    "message": "A licencet nem sikerült időben ellenőrizni. A Pro funkciók a sikeres ellenőrzésig nem érhetők el."
+  },
+  "policy_license_connection_error": {
+    "message": "A licenc szinkronizálása sikertelen volt. Ez nem jelenti azt, hogy a licenc érvénytelen."
+  },
+  "policy_license_last_sync_format": {
+    "message": "Utolsó sikeres szinkronizálás: $1."
+  },
+  "policy_license_offline_until_format": {
+    "message": "A kapcsolat nélküli ellenőrzés határideje: $1."
+  },
+  "policy_license_admin_hint": {
+    "message": "Ellenőrizze a licencet a Nextcloud felügyeleti felületén."
+  },
+  "policy_license_user_hint": {
+    "message": "Forduljon a Nextcloud rendszergazdájához."
+  },
+  "policy_warning_seat_suspended": {
+    "message": "Az Ön NC Connector-licenchelye fel van függesztve. A Pro funkciók nem érhetők el."
+  },
+  "policy_warning_seat_unavailable": {
+    "message": "Az Önhöz rendelt NC Connector-licenchely jelenleg nem érhető el."
+  },
+  "policy_warning_backend_unavailable": {
+    "message": "Nem sikerült lekérni a Nextcloud kiszolgálóoldali állapotát. Ellenőrizze a kapcsolatot, és próbálja újra."
+  },
+  "policy_warning_overlicensed": {
+    "message": "A hozzárendelt licenchelyek száma meghaladja a rendelkezésre álló licenckapacitást. A Pro funkciók jelenleg nem érhetők el."
   },
   "policy_admin_controlled_tooltip": {
     "message": "Rendszergazda által vezérelt"

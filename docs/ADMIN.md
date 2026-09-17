@@ -198,6 +198,12 @@ Operational rules:
 - an unavailable or unusable seat disables backend-only functions
 - each policy domain is evaluated separately; a missing signature policy does not disable Share or Talk policies
 
+Settings, Sharing and Talk show the license status reported by the backend. A yellow grace-period notice includes the deadline when available; it does not disable otherwise usable Pro features. Expired, inactive or invalid licenses, activation problems and an exceeded offline verification deadline have distinct messages. A failed license synchronization is reported separately from a license refusal, with the last successful synchronization and offline deadline when supplied by the backend.
+
+Users without an assigned seat retain the seat-assignment hint. Full Nextcloud administrators see license notices even without a seat and can open **Manage license in backend**, which links to their own Nextcloud administration. Other users are directed to their administrator. A paused-seat message is shown only for an actually suspended seat. Disabled backend features use the same reasons in their tooltips.
+
+Older backends that do not supply detailed license status retain a generic access warning; the add-on does not guess a cause from expiry dates. With no backend installed, normal local Sharing and Talk remain available without a license warning. If the backend status cannot be retrieved, check the connection and reopen the settings or wizard after resolving the problem.
+
 Separate password delivery is available only with a reachable backend and usable assigned seat. After **Send now**, the password follow-up is sent only after Thunderbird confirms that the primary message was sent. After **Send later**, NC Connector opens a clearly marked password draft instead of sending it automatically; the user sends that draft manually only after the main message has actually left the Outbox. If automatic follow-up delivery fails, NC Connector keeps or opens a prepared draft for manual sending. A follow-up failure after primary-message delivery does not delete the committed share.
 
 ### 4.5 Debug logging

@@ -18,7 +18,6 @@ const normalizeAttachmentThresholdMb = NCSharingStorage.normalizeAttachmentThres
 const normalizeAttachmentLinkTarget = NCSharingStorage.normalizeAttachmentLinkTarget;
 const OPTIONS_LOG_PREFIX = "[NCUI][Options]";
 const SYSTEM_ADDRESSBOOK_ADMIN_URL = "https://github.com/nc-connector/NC_Connector_for_Thunderbird/blob/main/docs/ADMIN.md#43-talk-and-system-address-book";
-const POLICY_ADMIN_URL = "https://github.com/nc-connector/NC_Connector_for_Thunderbird/blob/main/docs/ADMIN.md";
 const ATTACHMENT_AUTOMATION_ADMIN_URL = "https://github.com/nc-connector/NC_Connector_for_Thunderbird/blob/main/docs/ADMIN.md#63-attachment-policy-example";
 const NC_CONNECTOR_HOMEPAGE_URL = "https://nc-connector.de";
 const NC_CONNECTOR_BACKEND_APP_URL = "https://apps.nextcloud.com/apps/ncc_backend_4mc";
@@ -333,9 +332,6 @@ initLanguageOverrideSelects();
 initTalkDefaultRoomTypePicker();
 if (optionsTalkAddressbookAdminLink){
   optionsTalkAddressbookAdminLink.href = SYSTEM_ADDRESSBOOK_ADMIN_URL;
-}
-if (policyWarningAdminLink){
-  policyWarningAdminLink.href = POLICY_ADMIN_URL;
 }
 if (sharingAttachmentsAdminLink){
   sharingAttachmentsAdminLink.href = ATTACHMENT_AUTOMATION_ADMIN_URL;
@@ -705,19 +701,9 @@ function normalizeEmailAddress(value){
 }
 
 function getEmailSignatureUnavailableHint(){
-  const status = runtimePolicyStatus?.status;
-  const seatState = String(status?.seatState || "").trim().toLowerCase();
-  if (!NCPolicyState.isEndpointAvailable(runtimePolicyStatus)){
-    return i18n("sharing_password_separate_backend_required_tooltip")
-      || "This feature requires the Nextcloud backend.";
-  }
-  if (!status?.seatAssigned){
-    return i18n("sharing_password_separate_no_seat_tooltip")
-      || "Your administrator must assign an NC Connector seat to your account for this feature.";
-  }
-  if (!status?.isValid || seatState !== "active"){
-    return i18n("sharing_password_separate_paused_tooltip")
-      || "Your NC Connector seat is currently paused. Please contact your Nextcloud administrator.";
+  const entitlementHint = getSeparatePasswordUnavailableHint();
+  if (entitlementHint){
+    return entitlementHint;
   }
   if (!NCPolicyState.isDomainAvailable(runtimePolicyStatus, "email_signature")){
     return i18n("options_signature_backend_update_required_tooltip")
@@ -807,11 +793,11 @@ function applyEmailSignatureSettingsOverlay(){
 }
 
 function applyPolicyWarningUi(){
-  const warning = runtimePolicyStatus?.warning || {};
   NCWizardPolicyUi.applyPolicyWarningUi({
     row: policyWarningRow,
     textElement: policyWarningText,
-    warningVisible: warning.visible,
+    adminLink: policyWarningAdminLink,
+    policyStatus: runtimePolicyStatus,
     translate: i18n
   });
 }

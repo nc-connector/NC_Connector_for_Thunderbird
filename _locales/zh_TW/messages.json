@@ -981,13 +981,64 @@
     "message": "前往首頁"
   },
   "policy_warning_title": {
-    "message": "後端策略目前無法使用。"
+    "message": "NC Connector 狀態"
   },
   "policy_warning_license_invalid": {
-    "message": "您的 NC Connector 授權或席位指派目前無效。將使用本機設定。請聯絡您的 Nextcloud 管理員。"
+    "message": "後端無法確認 Pro 功能的存取權限。基本功能仍可使用。"
   },
   "policy_warning_admin_link_label": {
-    "message": "開啟管理員設定指南"
+    "message": "在後台管理授權"
+  },
+  "policy_license_grace_format": {
+    "message": "您的授權已到期。Pro 功能在 $1 之前仍可使用。"
+  },
+  "policy_license_grace": {
+    "message": "您的授權已到期。Pro 功能在寬限期內仍可使用。"
+  },
+  "policy_license_expired": {
+    "message": "您的授權已到期。Pro 功能無法使用。您仍可使用基本功能。"
+  },
+  "policy_license_inactive": {
+    "message": "您的授權目前處於未啟用狀態。Pro 功能無法使用。"
+  },
+  "policy_license_invalid": {
+    "message": "您的授權無效。Pro 功能無法使用。"
+  },
+  "policy_license_activation_conflict": {
+    "message": "此授權已在另一個 Nextcloud 執行個體中啟用。"
+  },
+  "policy_license_activation_required": {
+    "message": "無法確認此 Nextcloud 執行個體的授權啟用狀態。"
+  },
+  "policy_license_offline_expired": {
+    "message": "未能及時驗證授權。在驗證成功之前，Pro 功能無法使用。"
+  },
+  "policy_license_connection_error": {
+    "message": "授權同步失敗。這並不代表授權無效。"
+  },
+  "policy_license_last_sync_format": {
+    "message": "上次成功同步時間：$1。"
+  },
+  "policy_license_offline_until_format": {
+    "message": "離線驗證截止時間：$1。"
+  },
+  "policy_license_admin_hint": {
+    "message": "請在 Nextcloud 後台檢查授權。"
+  },
+  "policy_license_user_hint": {
+    "message": "請聯絡您的 Nextcloud 管理員。"
+  },
+  "policy_warning_seat_suspended": {
+    "message": "您的 NC Connector 授權席次已暫停。Pro 功能無法使用。"
+  },
+  "policy_warning_seat_unavailable": {
+    "message": "指派給您的 NC Connector 授權席次目前無法使用。"
+  },
+  "policy_warning_backend_unavailable": {
+    "message": "無法取得 Nextcloud 後端狀態。請檢查連線後再試一次。"
+  },
+  "policy_warning_overlicensed": {
+    "message": "已指派的席次數超過授權的可用額度。Pro 功能目前無法使用。"
   },
   "policy_admin_controlled_tooltip": {
     "message": "由管理員控制"
