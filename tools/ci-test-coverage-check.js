@@ -10,7 +10,6 @@ const {
 const ROOT = path.resolve(__dirname, "..");
 const REVIEW_RUNNER = "tools/check-review-clean.js";
 const WEBEXT_RUNNER = "tools/webext-linter-check.js";
-const WEBEXT_DEPENDENCY_CHECK = "tools/webext-linter-dependency-check.js";
 
 function checkReviewAggregator(){
   const reviewSource = readText(REVIEW_RUNNER);
@@ -19,8 +18,7 @@ function checkReviewAggregator(){
     .map((entry) => `tools/${entry.name}`)
     .filter((relativePath) => ![
       REVIEW_RUNNER,
-      WEBEXT_RUNNER,
-      WEBEXT_DEPENDENCY_CHECK
+      WEBEXT_RUNNER
     ].includes(relativePath))
     .sort();
 
@@ -44,9 +42,10 @@ function checkPackageScripts(){
   );
   assert(
     scripts["test:webext-linter"]
-      === "npm run webext-linter:update && npm run webext-linter:audit && npm run webext-linter:check",
-    "The WebExtension linter command must update, audit, and review"
+      === "npm run webext-linter:update && npm run webext-linter:check",
+    "The WebExtension linter command must update and review"
   );
+  assert(!packageJson.overrides, "The linter must use upstream dependency versions without local overrides");
 }
 
 function checkGithubWorkflow(){
@@ -54,7 +53,6 @@ function checkGithubWorkflow(){
   const requiredCommands = [
     "run: npm run test:review",
     "run: npm run webext-linter:update",
-    "run: npm run webext-linter:audit",
     "run: npm run webext-linter:check"
   ];
   const missing = requiredCommands.filter((command) => !workflow.includes(command));

@@ -1298,10 +1298,9 @@ Before you ship:
 6. Run Thunderbird's review linter against a clean add-on folder payload:
    - `npm run test:webext-linter`
    - the script installs only the current `main` package from `thunderbird/webext-linter` before each run; no pinned or legacy linter is used as a fallback.
-   - root-level npm overrides keep the linter's ZIP and URI parser dependencies
-     on the audited `adm-zip >= 0.6.0` and `fast-uri >= 3.1.4` versions; the
-     dependency check resolves the packages from the installed linter itself
-     before any add-on archive is inspected.
+   - use the upstream dependency versions without local npm overrides or patches
+     to linter rules. The local runner only prepares the add-on payload and calls
+     upstream `verify.js`; GitHub Actions uses the same update and review commands.
    - the linter already covers generic review rules such as unsafe dynamic HTML writes, manifest/path issues, permissions, vendor files, and Thunderbird API version checks.
 7. GitHub Actions runs two jobs on pushes, pull requests, and manual workflow runs:
    - the complete `npm run test:review` aggregate, so every check registered in
