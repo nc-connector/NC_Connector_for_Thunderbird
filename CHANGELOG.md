@@ -4,6 +4,17 @@ All notable changes to **NC Connector for Thunderbird** will be documented in th
 
 This project targets **Thunderbird ESR 140** through **ESR 153**.
 
+## 3.4.1
+
+### Changed
+- Settings and the Sharing and Talk wizards now show clearer license warnings for grace periods, expired or inactive licenses, activation issues, and offline verification limits.
+- Nextcloud administrators can open backend license management directly from license warnings; other users are directed to their administrator.
+- Updated license-related messages and translations across all 15 supported languages, including hints for unavailable backend features.
+
+### Fixed
+- Temporary license synchronization failures are no longer confused with license refusals, and grace-period warnings leave otherwise available Pro features enabled.
+- Paused-seat messages now appear only for suspended seats; older backends retain a general access warning when detailed license status is unavailable.
+
 ## 3.4.0
 
 ### Added
