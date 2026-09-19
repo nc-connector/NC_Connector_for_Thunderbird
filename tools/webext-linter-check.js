@@ -11,7 +11,6 @@ const projectRoot = path.resolve(__dirname, "..");
 const linterVerify = path.join(
   projectRoot,
   "node_modules",
-  "@thunderbirdops",
   "webext-linter",
   "verify.js"
 );
@@ -21,9 +20,10 @@ function run(command, args, cwd = projectRoot){
     cwd,
     stdio: "inherit"
   });
-  if (result.status !== 0){
-    process.exit(result.status || 1);
+  if (result.error){
+    console.error(`[webext-linter] Could not start the verifier: ${result.error.message}`);
   }
+  return result.status ?? 1;
 }
 
 function resolveTarget(){
@@ -97,14 +97,14 @@ if (!fs.existsSync(requestedTarget)){
 }
 
 const prepared = prepareFolderTarget(requestedTarget);
+let exitCode;
 try{
-  run(process.execPath, [
+  exitCode = run(process.execPath, [
     linterVerify,
     prepared.target,
-    "--allow-experiments",
-    "--report-format",
-    "text"
+    "--allow-experiments"
   ], prepared.cwd);
 }finally{
   prepared.cleanup();
 }
+process.exit(exitCode);

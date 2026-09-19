@@ -39,6 +39,7 @@
     "test:release-consistency": "node tools/release-consistency-check.js",
     "test:webext-linter": "npm run webext-linter:update && npm run webext-linter:check",
     "webext-linter:update": "npm install --no-save --no-package-lock --prefer-online https://github.com/thunderbird/webext-linter/archive/refs/heads/main.tar.gz",
-    "webext-linter:check": "node tools/webext-linter-check.js"
+    "webext-linter:check": "node tools/webext-linter-check.js",
+    "webext-linter": "node node_modules/webext-linter/verify.js"
   }
 }

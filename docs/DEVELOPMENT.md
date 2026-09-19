@@ -1305,6 +1305,16 @@ Before you ship:
      to linter rules. The local runner only prepares the add-on payload and calls
      upstream `verify.js`; GitHub Actions uses the same update and review commands.
    - the linter already covers generic review rules such as unsafe dynamic HTML writes, manifest/path issues, permissions, vendor files, and Thunderbird API version checks.
+   - the installed upstream package is `webext-linter`. The wrapper adds only
+     `--allow-experiments`, required for this add-on; check selection and report
+     format retain upstream defaults.
+   - `npm run webext-linter -- <candidate.xpi> --allow-experiments --llm-review`
+     starts upstream's native LLM review against an actual package. Continue with
+     `npm run webext-linter -- --llm-verdict <review-file>` using the file named
+     in its prompt. Keep the XPI, extracted sources, and installed linter unchanged
+     until the final report. Do not use the temporary-folder check wrapper for
+     this multi-pass review, or combine LLM mode with JSON or `--report-out`.
+     Producing the initial prompt does not complete the review.
 7. GitHub Actions runs two jobs on pushes, pull requests, and manual workflow runs:
    - the complete `npm run test:review` aggregate, so every check registered in
      `tools/check-review-clean.js` is covered automatically, including FileLink,
