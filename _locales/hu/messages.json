@@ -1034,6 +1034,9 @@
   "policy_warning_seat_unavailable": {
     "message": "Az Önhöz rendelt NC Connector-licenchely jelenleg nem érhető el."
   },
+  "policy_warning_no_seat": {
+    "message": "Nincs NC Connector seat hozzárendelve a fiókjához. A megosztást és a Talkot továbbra is használhatja a helyi beállításokkal. A Pro funkciókhoz a rendszergazda által hozzárendelt seat szükséges."
+  },
   "policy_warning_backend_unavailable": {
     "message": "Nem sikerült lekérni a Nextcloud kiszolgálóoldali állapotát. Ellenőrizze a kapcsolatot, és próbálja újra."
   },

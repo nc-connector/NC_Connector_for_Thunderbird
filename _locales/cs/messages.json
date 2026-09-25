@@ -1034,6 +1034,9 @@
   "policy_warning_seat_unavailable": {
     "message": "Vaše přidělené licenční místo NC Connector je momentálně nedostupné."
   },
+  "policy_warning_no_seat": {
+    "message": "K vašemu účtu není přiřazen žádný seat NC Connectoru. Sdílení a Talk můžete nadále používat s místním nastavením. Funkce Pro vyžadují seat přiřazený správcem."
+  },
   "policy_warning_backend_unavailable": {
     "message": "Nepodařilo se načíst stav serverové části Nextcloud. Zkontrolujte připojení a zkuste to znovu."
   },

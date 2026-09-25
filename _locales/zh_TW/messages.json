@@ -1034,6 +1034,9 @@
   "policy_warning_seat_unavailable": {
     "message": "指派給您的 NC Connector 授權席次目前無法使用。"
   },
+  "policy_warning_no_seat": {
+    "message": "您的帳戶未指派 NC Connector 席位。您仍可使用本機設定進行分享及使用 Talk。使用 Pro 功能需要管理員為您指派席位。"
+  },
   "policy_warning_backend_unavailable": {
     "message": "無法取得 Nextcloud 後端狀態。請檢查連線後再試一次。"
   },

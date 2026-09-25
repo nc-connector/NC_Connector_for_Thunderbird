@@ -1034,6 +1034,9 @@
   "policy_warning_seat_unavailable": {
     "message": "分配给您的 NC Connector 授权席位目前不可用。"
   },
+  "policy_warning_no_seat": {
+    "message": "您的账户未分配 NC Connector 席位。您仍可使用本地设置进行共享和使用 Talk。使用 Pro 功能需要管理员为您分配席位。"
+  },
   "policy_warning_backend_unavailable": {
     "message": "无法获取 Nextcloud 后端状态。请检查连接并重试。"
   },

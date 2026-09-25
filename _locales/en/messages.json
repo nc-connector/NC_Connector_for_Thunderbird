@@ -1034,6 +1034,9 @@
   "policy_warning_seat_unavailable": {
     "message": "Your assigned NC Connector seat is currently unavailable."
   },
+  "policy_warning_no_seat": {
+    "message": "No NC Connector seat is assigned to your account. You can continue to use sharing and Talk with your local settings. Pro features require a seat assigned by your administrator."
+  },
   "policy_warning_backend_unavailable": {
     "message": "The Nextcloud backend status could not be retrieved. Please check the connection and try again."
   },

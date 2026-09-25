@@ -1034,6 +1034,9 @@
   "policy_warning_seat_unavailable": {
     "message": "Назначенное вам лицензионное место NC Connector сейчас недоступно."
   },
+  "policy_warning_no_seat": {
+    "message": "Для вашей учётной записи не назначен seat NC Connector. Вы можете продолжать пользоваться общим доступом и Talk с локальными настройками. Для функций Pro требуется seat, назначенный администратором."
+  },
   "policy_warning_backend_unavailable": {
     "message": "Не удалось получить состояние серверной части Nextcloud. Проверьте подключение и повторите попытку."
   },

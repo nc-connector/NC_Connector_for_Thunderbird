@@ -1,6 +1,8 @@
 "use strict";
 
 const vm = require("node:vm");
+const fs = require("node:fs");
+const path = require("node:path");
 const { assert, loadScript, readText } = require("./review-check-utils");
 
 const EDITABLE_POLICY_KEYS = [
@@ -138,7 +140,7 @@ function verifyPolicyNoticeUi(policyState, policyUi){
     [{ overlicensed: true }, "policy_warning_overlicensed"],
     [{ seatState: "suspended_overlimit" }, "policy_warning_seat_suspended"],
     [{ seatState: "revoked" }, "policy_warning_seat_unavailable"],
-    [{ seatAssigned: false }, "sharing_password_separate_no_seat_tooltip"],
+    [{ seatAssigned: false }, "policy_warning_no_seat"],
     [{ accessStatus: "GRACE" }, "policy_license_grace"],
     [{ licenseConnectionError: true }, "policy_license_connection_error"]
   ];
@@ -147,8 +149,9 @@ function verifyPolicyNoticeUi(policyState, policyUi){
     const message = policyUi.getPolicyWarningMessage(status, translate);
     assert(message.startsWith(key), `${key}: banner must explain the actual status`);
     if (!policyState.hasSeatEntitlement(status)){
-      assertEqual(policyUi.getSeparatePasswordUnavailableHint(status, translate), message, `${key}: password hint must match the banner`);
-      assertEqual(policyUi.getVfsExternalUnavailableHint(policyState.getProSeatUnavailableReason(status), translate, policyState.getStatusNotice(status)), message, `${key}: VFS hint must match the banner`);
+      const featureMessage = key === "policy_warning_no_seat" ? "sharing_password_separate_no_seat_tooltip" : message;
+      assertEqual(policyUi.getSeparatePasswordUnavailableHint(status, translate), featureMessage, `${key}: password hint must explain the unavailable feature`);
+      assertEqual(policyUi.getVfsExternalUnavailableHint(policyState.getProSeatUnavailableReason(status), translate, policyState.getStatusNotice(status)), featureMessage, `${key}: VFS hint must explain the unavailable feature`);
     }else{
       assertEqual(policyUi.getSeparatePasswordUnavailableHint(status, translate), "", `${key}: informational notices must not disable password delivery`);
     }
@@ -203,13 +206,31 @@ function verifyPolicyNoticeUi(policyState, policyUi){
     removeAttribute(name){ delete this[name]; }
   };
   const show = (policyStatus, messageTranslate = translate) => policyUi.applyPolicyWarningUi({ row, textElement, adminLink, policyStatus, translate: messageTranslate });
+  for (const locale of fs.readdirSync(path.join(__dirname, "..", "_locales"))){
+    const messages = JSON.parse(readText(`_locales/${locale}/messages.json`));
+    const localizeNotice = (key) => messages[key]?.message || "";
+    const banner = messages.policy_warning_no_seat?.message;
+    const featureHint = messages.sharing_password_separate_no_seat_tooltip.message;
+    assert(banner && banner !== featureHint, `${locale}: the general no-seat notice must differ from the restricted-feature hint`);
+    for (const canManageLicense of [false, true]){
+      const noSeat = makeStatus({ seatAssigned: false, seatState: "none", canManageLicense });
+      show(noSeat, localizeNotice);
+      assertEqual(textElement.textContent, banner, `${locale}: shared settings/Share/Talk banner must use the general no-seat notice`);
+      assert(!row.hidden && classes.has("is-informational") && attributes.role === "status" && adminLink.hidden, "No seat must remain informational without a license-management link");
+      assertEqual(policyUi.getSeparatePasswordUnavailableHint(noSeat, localizeNotice), featureHint, `${locale}: password and signature hints must keep their feature-specific text`);
+      assertEqual(policyUi.getVfsExternalUnavailableHint("seat_required", localizeNotice, policyState.getStatusNotice(noSeat)), featureHint, `${locale}: external-source hints must keep their feature-specific text`);
+      assert(!policyUi.isSeparatePasswordFeatureAvailable(noSeat), "The notice must not enable a seat-restricted feature");
+    }
+  }
   const adminStatus = makeStatus({ accessStatus: "GRACE", canManageLicense: true });
   show(adminStatus);
   assert(!row.hidden && classes.has("is-informational") && attributes.role === "status", "Grace must use an informational banner");
   assert(!adminLink.hidden && adminLink.href === "https://cloud.example.test/nextcloud/index.php/settings/admin/ncc_backend_4mc", "Admins must get their own backend license page");
   assert(textElement.textContent.includes("policy_license_admin_hint") && !textElement.textContent.includes("policy_license_user_hint"), "Admins must receive their own action guidance");
-  show(makeStatus({ accessStatus: "GRACE", canManageLicense: true, seatAssigned: false }));
-  assert(!adminLink.hidden && textElement.textContent.includes("sharing_password_separate_no_seat_tooltip"), "Grace for an administrator without a seat must also explain the missing personal assignment");
+  const adminWithoutSeat = makeStatus({ accessStatus: "GRACE", canManageLicense: true, seatAssigned: false });
+  show(adminWithoutSeat);
+  assert(!adminLink.hidden && textElement.textContent.includes("policy_warning_no_seat"), "Grace for an administrator without a seat must also explain the available local settings");
+  assert(policyUi.getSeparatePasswordUnavailableHint(adminWithoutSeat, translate).includes("sharing_password_separate_no_seat_tooltip"), "Administrator grace tooltips must retain the missing-seat feature hint");
   show(makeStatus({ accessStatus: "EXPIRED", isValid: false }));
   assert(!classes.has("is-informational") && attributes.role === "alert", "Blocking errors must clear an old informational style");
   assert(adminLink.hidden && !Object.prototype.hasOwnProperty.call(adminLink, "href"), "Normal users must lose both the visible admin link and its href");

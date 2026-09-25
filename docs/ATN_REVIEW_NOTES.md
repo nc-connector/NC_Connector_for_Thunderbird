@@ -23,7 +23,7 @@ release-specific differences remain in `CHANGELOG.md`.
 
 ## License status messages in 3.4.1
 
-- Settings, Sharing, Talk, and disabled-feature hints use the same localized license status messages across all 15 supported languages.
+- Settings, Sharing and Talk use shared localized license status messages across all 15 supported languages. The no-seat banner explains that local Sharing and Talk remain available; disabled Pro features retain their separate seat-requirement hints.
 - Optional backend status fields distinguish grace periods, license refusals, activation issues, and synchronization failures. Existing entitlement checks remain unchanged; the add-on does not infer access from local date comparisons.
 - License-management links are shown only to Nextcloud administrators and point to the configured Nextcloud's backend administration. The mail add-on does not contact the license server directly.
 - Older backend responses remain supported. Without the backend, normal local Sharing and Talk remain available without a license warning.

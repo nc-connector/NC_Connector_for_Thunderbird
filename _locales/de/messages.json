@@ -1034,6 +1034,9 @@
   "policy_warning_seat_unavailable": {
     "message": "Ihr zugewiesener NC Connector Seat ist derzeit nicht verfügbar."
   },
+  "policy_warning_no_seat": {
+    "message": "Ihrem Konto ist kein NC Connector Seat zugewiesen. Freigaben und Talk können Sie weiterhin mit Ihren lokalen Einstellungen nutzen. Für Pro-Funktionen benötigen Sie einen vom Administrator zugeteilten Seat."
+  },
   "policy_warning_backend_unavailable": {
     "message": "Der Status des Nextcloud-Backends konnte nicht abgerufen werden. Bitte prüfen Sie die Verbindung und versuchen Sie es erneut."
   },

@@ -11,7 +11,7 @@
   const PRO_REQUIRED_FALLBACK = "External VFS providers require NC Connector Pro.";
   const NOTICE_KEYS = Object.freeze({
     backend_unavailable: "policy_warning_backend_unavailable",
-    no_seat: "sharing_password_separate_no_seat_tooltip",
+    no_seat: "policy_warning_no_seat",
     license_expired: "policy_license_expired",
     license_inactive: "policy_license_inactive",
     license_invalid_explicit: "policy_license_invalid",
@@ -41,8 +41,9 @@
     return Number.isFinite(date.getTime()) ? date.toLocaleString() : "";
   }
 
-  function getStatusNoticeMessage(notice, translate){
-    const key = NOTICE_KEYS[notice?.code];
+  function getStatusNoticeMessage(notice, translate, forFeature = false){
+    const noSeatKey = forFeature ? "sharing_password_separate_no_seat_tooltip" : NOTICE_KEYS.no_seat;
+    const key = notice?.code === "no_seat" ? noSeatKey : NOTICE_KEYS[notice?.code];
     if (!key){
       return "";
     }
@@ -68,7 +69,7 @@
         ? "policy_license_admin_hint"
         : "policy_license_user_hint"));
       if (notice.canManageLicense && !notice.seatAssigned && notice.code === "license_grace"){
-        lines.push(text(translate, "sharing_password_separate_no_seat_tooltip"));
+        lines.push(text(translate, noSeatKey));
       }
     }else if (notice.code === "seat_paused" || notice.code === "seat_unavailable"){
       lines.push(text(translate, "policy_license_user_hint"));
@@ -112,7 +113,7 @@
     }
     const notice = NCPolicyState.getStatusNotice(policyStatus);
     if (notice.code){
-      return getStatusNoticeMessage(notice, translate);
+      return getStatusNoticeMessage(notice, translate, true);
     }
     if (!NCPolicyState.isEndpointAvailable(policyStatus)){
       return text(translate, "sharing_password_separate_backend_required_tooltip", BACKEND_REQUIRED_FALLBACK);
@@ -126,7 +127,7 @@
 
   function getVfsExternalUnavailableHint(reason, translate, notice){
     if (reason && reason !== "admin_controlled" && notice?.code){
-      return getStatusNoticeMessage(notice, translate);
+      return getStatusNoticeMessage(notice, translate, true);
     }
     switch (String(reason || "")){
       case "backend_required":

@@ -1034,6 +1034,9 @@
   "policy_warning_seat_unavailable": {
     "message": "Uw toegewezen NC Connector-licentieplaats is momenteel niet beschikbaar."
   },
+  "policy_warning_no_seat": {
+    "message": "Aan uw account is geen NC Connector-seat toegewezen. U kunt delen en Talk blijven gebruiken met uw lokale instellingen. Voor Pro-functies is een door uw beheerder toegewezen seat nodig."
+  },
   "policy_warning_backend_unavailable": {
     "message": "De status van de Nextcloud-backend kon niet worden opgehaald. Controleer de verbinding en probeer het opnieuw."
   },

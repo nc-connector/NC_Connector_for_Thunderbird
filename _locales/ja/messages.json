@@ -1034,6 +1034,9 @@
   "policy_warning_seat_unavailable": {
     "message": "割り当てられた NC Connector のライセンス枠は現在利用できません。"
   },
+  "policy_warning_no_seat": {
+    "message": "あなたのアカウントには NC Connector のシートが割り当てられていません。共有と Talk はローカル設定で引き続き利用できます。Pro 機能を利用するには、管理者によるシートの割り当てが必要です。"
+  },
   "policy_warning_backend_unavailable": {
     "message": "Nextcloud のバックエンドの状態を取得できませんでした。接続を確認して、もう一度お試しください。"
   },

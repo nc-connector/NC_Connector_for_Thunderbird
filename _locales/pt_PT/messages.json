@@ -1034,6 +1034,9 @@
   "policy_warning_seat_unavailable": {
     "message": "O posto de licença do NC Connector que lhe foi atribuído está atualmente indisponível."
   },
+  "policy_warning_no_seat": {
+    "message": "Nenhum seat do NC Connector está atribuído à sua conta. Pode continuar a utilizar a partilha e o Talk com as suas definições locais. As funcionalidades Pro requerem um seat atribuído pelo administrador."
+  },
   "policy_warning_backend_unavailable": {
     "message": "Não foi possível obter o estado do backend do Nextcloud. Verifique a ligação e tente novamente."
   },
