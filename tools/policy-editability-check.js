@@ -137,7 +137,6 @@ function verifyPolicyNoticeUi(policyState, policyUi){
     [{ accessStatus: "ACTIVATION_REQUIRED", licenseActivationState: "proof_required", isValid: false }, "policy_license_activation_required"],
     [{ accessStatus: "OFFLINE_EXPIRED", isValid: false }, "policy_license_offline_expired"],
     [{ isValid: false }, "policy_warning_license_invalid"],
-    [{ overlicensed: true }, "policy_warning_overlicensed"],
     [{ seatState: "suspended_overlimit" }, "policy_warning_seat_suspended"],
     [{ seatState: "revoked" }, "policy_warning_seat_unavailable"],
     [{ seatAssigned: false }, "policy_warning_no_seat"],
@@ -146,18 +145,18 @@ function verifyPolicyNoticeUi(policyState, policyUi){
   ];
   for (const [fields, key] of messages){
     const status = makeStatus(fields);
-    const message = policyUi.getPolicyWarningMessage(status, translate);
+    const message = policyState.getStatusNoticeMessage(policyState.getStatusNotice(status), translate);
     assert(message.startsWith(key), `${key}: banner must explain the actual status`);
     if (!policyState.hasSeatEntitlement(status)){
       const featureMessage = key === "policy_warning_no_seat" ? "sharing_password_separate_no_seat_tooltip" : message;
       assertEqual(policyUi.getSeparatePasswordUnavailableHint(status, translate), featureMessage, `${key}: password hint must explain the unavailable feature`);
-      assertEqual(policyUi.getVfsExternalUnavailableHint(policyState.getProSeatUnavailableReason(status), translate, policyState.getStatusNotice(status)), featureMessage, `${key}: VFS hint must explain the unavailable feature`);
+      assertEqual(policyUi.getVfsExternalUnavailableHint(policyState.getSeatUnavailableReason(status), translate, policyState.getStatusNotice(status)), featureMessage, `${key}: VFS hint must explain the unavailable feature`);
     }else{
       assertEqual(policyUi.getSeparatePasswordUnavailableHint(status, translate), "", `${key}: informational notices must not disable password delivery`);
     }
   }
-  assertEqual(policyUi.getPolicyWarningMessage(makeStatus(), translate), "", "Active licenses need no banner");
-  assertEqual(policyUi.getVfsExternalUnavailableHint("seat_paused", translate), "policy_warning_license_invalid", "Legacy VFS reason alone must not claim that a seat is suspended");
+  assertEqual(policyState.getStatusNoticeMessage(policyState.getStatusNotice(makeStatus()), translate), "", "Active licenses need no banner");
+  assertEqual(policyUi.getVfsExternalUnavailableHint("seat_paused", translate), "policy_warning_seat_suspended\npolicy_license_user_hint", "Personal suspension must have the same explanation in VFS");
   assertEqual(policyUi.getVfsExternalUnavailableHint("admin_controlled", translate, policyState.getStatusNotice(makeStatus({ accessStatus: "GRACE" }))), "policy_admin_controlled_tooltip", "Locked feature policy must keep its own explanation");
   assertEqual(policyUi.getVfsExternalUnavailableHint("", translate, policyState.getStatusNotice(makeStatus({ accessStatus: "GRACE" }))), "", "An available VFS feature must not get an unavailable hint");
 
@@ -173,20 +172,20 @@ function verifyPolicyNoticeUi(policyState, policyUi){
   const lastSyncAtIso = "2026-09-16T12:00:00Z";
   const offlineUntilIso = "2026-09-30T11:00:00Z";
   const graceStatus = makeStatus({ accessStatus: "GRACE", graceUntilIso });
-  const graceMessage = policyUi.getPolicyWarningMessage(graceStatus, localize);
+  const graceMessage = policyState.getStatusNoticeMessage(policyState.getStatusNotice(graceStatus), localize);
   assert(graceMessage.includes(new Date(graceUntilIso).toLocaleString()) && !graceMessage.includes("$1"), "Grace must substitute a localized date");
   assert(calls.some((call) => call.key === "policy_license_grace_format" && call.substitutions.length === 1), "Grace must pass its date as a substitution");
   const expired = makeStatus({
     accessStatus: "EXPIRED", isValid: false, licenseConnectionError: true,
     licenseLastSyncAtIso: lastSyncAtIso, licenseOfflineUntilIso: offlineUntilIso, graceUntilIso
   });
-  const expiredMessage = policyUi.getPolicyWarningMessage(expired, localize);
+  const expiredMessage = policyState.getStatusNoticeMessage(policyState.getStatusNotice(expired), localize);
   assert(expiredMessage.startsWith(catalog.policy_license_expired.message), "Sync details must follow the blocking license cause");
   assert(expiredMessage.includes(catalog.policy_license_connection_error.message), "Sync failures must remain distinct secondary context");
   assert(expiredMessage.includes(new Date(lastSyncAtIso).toLocaleString()) && expiredMessage.includes(new Date(offlineUntilIso).toLocaleString()), "Sync dates must use localized substitutions");
   assert(!expiredMessage.includes(catalog.policy_license_grace.message), "Future dates must not produce a grace promise after expiry");
   for (const value of [null, "", "not-a-date", {}, []]){
-    const message = policyUi.getPolicyWarningMessage(makeStatus({ accessStatus: "GRACE", graceUntilIso: value }), localize);
+    const message = policyState.getStatusNoticeMessage(policyState.getStatusNotice(makeStatus({ accessStatus: "GRACE", graceUntilIso: value })), localize);
     assert(message.startsWith(catalog.policy_license_grace.message), "Invalid dates must use the date-free grace explanation");
     assert(!message.includes("Invalid Date") && !message.includes("$1"), "Invalid dates must never leak into notice text");
   }
@@ -218,7 +217,7 @@ function verifyPolicyNoticeUi(policyState, policyUi){
       assertEqual(textElement.textContent, banner, `${locale}: shared settings/Share/Talk banner must use the general no-seat notice`);
       assert(!row.hidden && classes.has("is-informational") && attributes.role === "status" && adminLink.hidden, "No seat must remain informational without a license-management link");
       assertEqual(policyUi.getSeparatePasswordUnavailableHint(noSeat, localizeNotice), featureHint, `${locale}: password and signature hints must keep their feature-specific text`);
-      assertEqual(policyUi.getVfsExternalUnavailableHint("seat_required", localizeNotice, policyState.getStatusNotice(noSeat)), featureHint, `${locale}: external-source hints must keep their feature-specific text`);
+      assertEqual(policyUi.getVfsExternalUnavailableHint("no_seat", localizeNotice, policyState.getStatusNotice(noSeat)), featureHint, `${locale}: external-source hints must keep their feature-specific text`);
       assert(!policyUi.isSeparatePasswordFeatureAvailable(noSeat), "The notice must not enable a seat-restricted feature");
     }
   }

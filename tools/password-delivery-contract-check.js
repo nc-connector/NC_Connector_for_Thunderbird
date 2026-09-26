@@ -66,14 +66,16 @@ function createStatus(modeValue, expireDays = 30){
   };
 }
 
-function createSeatStatus(overlicensed = false){
+function createSeatStatus(overrides = {}){
   return {
     endpointAvailable: true,
     status: {
+      mode: "pro",
       seatAssigned: true,
       seatState: "active",
       isValid: true,
-      overlicensed
+      overlicensed: false,
+      ...overrides
     }
   };
 }
@@ -258,13 +260,35 @@ async function run(){
   assert(delivery.resolveSecretsExpireDays(createStatus("secrets", 21)) === 21, "Policy expiry should be used");
   assert(delivery.resolveSecretsExpireDays(createStatus("secrets", null)) === 7, "Null policy expiry should use default");
   assert(delivery.resolveSecretsExpireDays({ policy: { share: {} }, policyEditable: { share: {} } }) === 7, "Missing policy expiry key should use default");
-  assert(wizardPolicy.isSeparatePasswordFeatureAvailable(createSeatStatus(true)) === false, "Overlicensed seat must disable separate password delivery");
+  for (const mode of ["community", "pro"]){
+    const activeStatus = createSeatStatus({ mode, overlicensed: true });
+    assert(
+      wizardPolicy.isSeparatePasswordFeatureAvailable(activeStatus) === true,
+      `An active ${mode} seat must keep separate password delivery during global overcapacity`
+    );
+    assert(
+      wizardPolicy.getSeparatePasswordUnavailableHint(activeStatus, (key) => key) === "",
+      `An active ${mode} seat must not show an unavailable-feature hint`
+    );
+    const activeRegistration = createDispatchRegistrationHarness(activeStatus);
+    const activeError = await expectFailure(
+      activeRegistration.register(9, {}),
+      "Missing active-seat payload should be rejected after the entitlement check"
+    );
+    assert(
+      activeError.message === "password_or_html_or_plaintext_missing",
+      `An active ${mode} seat must pass the backend entitlement check`
+    );
+  }
+
+  const pausedStatus = createSeatStatus({ seatState: "suspended_overlimit", overlicensed: true });
+  assert(wizardPolicy.isSeparatePasswordFeatureAvailable(pausedStatus) === false, "A personally paused seat must disable separate password delivery");
   assert(
-    wizardPolicy.getSeparatePasswordUnavailableHint(createSeatStatus(true), (key) => key) === "policy_warning_overlicensed\npolicy_license_user_hint",
-    "Overlicensed password delivery should explain the capacity issue and contact action"
+    wizardPolicy.getSeparatePasswordUnavailableHint(pausedStatus, (key) => key) === "policy_warning_seat_suspended\npolicy_license_user_hint",
+    "A paused seat must explain the personal suspension and contact action"
   );
 
-  const blockedRegistration = createDispatchRegistrationHarness(createSeatStatus(true));
+  const blockedRegistration = createDispatchRegistrationHarness(pausedStatus);
   const blockedError = await expectFailure(
     blockedRegistration.register(9, {
       password: "Password-1!",
@@ -272,18 +296,14 @@ async function run(){
       plainText: "Password",
       deliveryMode: "secrets"
     }),
-    "Overlicensed password dispatch should be rejected"
+    "Password dispatch for a personally paused seat must be rejected"
   );
-  assert(blockedError.message === "sharing_error_insert_failed", "Overlicensed password dispatch should report the insert error");
+  assert(
+    blockedError.message === "policy_warning_seat_suspended\npolicy_license_user_hint",
+    "Paused password dispatch must report the same suspension as its feature hint"
+  );
   assert(blockedRegistration.getComposeDetailsCalls() === 0, "Rejected password dispatch must stop before compose access");
   assert(blockedRegistration.queue.size === 0, "Rejected password dispatch must not enter the queue");
-
-  const activeRegistration = createDispatchRegistrationHarness(createSeatStatus(false));
-  const activeError = await expectFailure(
-    activeRegistration.register(9, {}),
-    "Missing active-seat payload should be rejected after the entitlement check"
-  );
-  assert(activeError.message === "password_or_html_or_plaintext_missing", "Active seat should pass the backend entitlement check");
 
   const equivalentDetails = {
     identityId: "identity-1",

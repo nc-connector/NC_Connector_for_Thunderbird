@@ -20,8 +20,9 @@ function createDeferred(){
   return { promise, resolve, reject };
 }
 
-function createHarness(){
+function createHarness(options = {}){
   const composeDrafts = [];
+  const composeReads = [];
   const sendCalls = [];
   const notifications = [];
   const removedTabs = [];
@@ -50,7 +51,8 @@ function createHarness(){
         sendCalls.push({ tabId, options });
         return nextSendPromise;
       },
-      async getComposeDetails(){
+      async getComposeDetails(tabId){
+        composeReads.push(tabId);
         return {
           identityId: "identity-1",
           from: "Sender <sender@example.test>",
@@ -127,12 +129,16 @@ function createHarness(){
     },
     NCPolicyRuntime: {
       async getPolicyStatus(){
-        return { entitled: true };
-      }
-    },
-    NCPolicyState: {
-      hasSeatEntitlement(status){
-        return status?.entitled === true;
+        return options.policyStatus || {
+          endpointAvailable: true,
+          fetchSucceeded: true,
+          status: {
+            mode: "pro",
+            seatAssigned: true,
+            seatState: "active",
+            isValid: true
+          }
+        };
       }
     },
     NCSecrets: {
@@ -171,12 +177,16 @@ function createHarness(){
     setTimeout
   };
   vm.createContext(context);
+  vm.runInContext(readText("modules/policyState.js"), context, {
+    filename: "modules/policyState.js"
+  });
   for (const file of PASSWORD_DISPATCH_FILES){
     vm.runInContext(readText(file), context, { filename: file });
   }
   return {
     context,
     composeDrafts,
+    composeReads,
     sendCalls,
     notifications,
     removedTabs,
@@ -217,7 +227,100 @@ function createDispatch(overrides = {}){
   };
 }
 
+async function verifyPasswordRegistrationDenials(){
+  for (const scenario of [
+    {
+      name: "no assigned seat",
+      status: { seatAssigned: false, seatState: "none" },
+      message: "sharing_password_separate_no_seat_tooltip"
+    },
+    {
+      name: "paused seat",
+      status: { seatState: "suspended_overlimit", overlicensed: true },
+      message: "policy_warning_seat_suspended"
+    },
+    {
+      name: "expired license",
+      status: { isValid: false, accessStatus: "EXPIRED" },
+      message: "policy_license_expired"
+    },
+    {
+      name: "unreachable backend without a confirmed snapshot",
+      policy: { endpointAvailable: false, fetchSucceeded: false, reason: "network_error" },
+      message: "policy_warning_backend_unavailable"
+    }
+  ]){
+    const harness = createHarness({
+      policyStatus: {
+        endpointAvailable: true,
+        fetchSucceeded: true,
+        status: {
+          mode: "pro",
+          seatAssigned: true,
+          seatState: "active",
+          isValid: true,
+          ...scenario.status
+        },
+        ...scenario.policy
+      }
+    });
+    const existingQueue = [createDispatch({ shareId: "existing-share" })];
+    harness.context.PASSWORD_MAIL_DISPATCH_BY_TAB.set(20, existingQueue);
+    harness.context.scheduleSeparatePasswordDispatchClear(20, "pending_send", 30000);
+    const clearTimer = vm.runInContext(
+      "PASSWORD_MAIL_DISPATCH_CLEAR_TIMER_BY_TAB.get(20)",
+      harness.context
+    );
+    let message = "";
+    let timerRetained = false;
+    try{
+      await harness.context.registerSeparatePasswordMailDispatch(20, createDispatch());
+    }catch(error){
+      message = error.message;
+    }finally{
+      timerRetained = clearTimer === vm.runInContext(
+        "PASSWORD_MAIL_DISPATCH_CLEAR_TIMER_BY_TAB.get(20)",
+        harness.context
+      );
+      harness.context.cancelSeparatePasswordDispatchClear(20, "test_cleanup");
+    }
+    assert(
+      message.startsWith(scenario.message),
+      `${scenario.name} must explain why password registration is unavailable`
+    );
+    assert(timerRetained, `${scenario.name} must not cancel an existing dispatch timer`);
+    assert(
+      harness.context.PASSWORD_MAIL_DISPATCH_BY_TAB.get(20) === existingQueue
+        && existingQueue.length === 1,
+      `${scenario.name} must not append, remove, or replace an existing dispatch`
+    );
+    assert(
+      harness.composeReads.length === 0
+        && harness.composeDrafts.length === 0
+        && harness.sendCalls.length === 0,
+      `${scenario.name} must stop before reading or changing compose state`
+    );
+  }
+
+  for (const mode of ["community", "pro"]){
+    const harness = createHarness({
+      policyStatus: {
+        endpointAvailable: true,
+        fetchSucceeded: true,
+        status: { mode, seatAssigned: true, seatState: "active", isValid: true, overlicensed: true }
+      }
+    });
+    const registration = await harness.context.registerSeparatePasswordMailDispatch(20, createDispatch());
+    assert(
+      !!registration.registrationId
+        && harness.context.PASSWORD_MAIL_DISPATCH_BY_TAB.get(20)?.length === 1,
+      `An active ${mode} seat must permit registration despite global overcapacity`
+    );
+  }
+}
+
 async function run(){
+  await verifyPasswordRegistrationDenials();
   const harness = createHarness();
   const duplicateSecrets = createDispatch({
     deliveryMode: "secrets",

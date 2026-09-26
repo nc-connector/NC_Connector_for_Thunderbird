@@ -80,13 +80,26 @@ async function checkRouterLeavesToolkitMessagesUnclaimed(){
   let listener = null;
   let usageCalls = 0;
   let externalStatusCalls = 0;
+  let policyStatus = {
+    endpointAvailable: true,
+    fetchSucceeded: true,
+    status: { mode: "pro", seatAssigned: true, seatState: "active", isValid: true }
+  };
   const openedTabs = [];
   const focusedWindows = [];
   const context = {
     console,
     URL,
     L: () => {},
+    NCPolicyRuntime: {
+      async getPolicyStatus(){
+        return policyStatus;
+      }
+    },
     NCVfsProviderRuntime: {
+      async getStatus(){
+        return { enabled: true, accountConfigured: true };
+      },
       async getDestinationStorageUsage(){
         usageCalls++;
         return { usage: 25, quota: 100, available: 75, state: "finite" };
@@ -94,11 +107,10 @@ async function checkRouterLeavesToolkitMessagesUnclaimed(){
     },
     NCVfsClientRuntime: {
       async assertExternalEntitlement(){},
-      async getStatus(){
+      async getStatus(status = policyStatus){
         externalStatusCalls++;
         return {
-          enabled: true,
-          entitled: true,
+          ...context.NCVfsPolicyRuntime.resolveExternalSetting(status, true, true),
           initialized: true,
           connections: [{ storageRef: { providerId: "provider@test", storageId: "storage" } }],
           providers: [{ providerId: "provider@test", providerName: "Provider", connectionCount: 1 }]
@@ -134,6 +146,10 @@ async function checkRouterLeavesToolkitMessagesUnclaimed(){
   context.globalThis = context;
   context.window = context;
   vm.createContext(context);
+  loadScript("modules/policyState.js", context, "\nglobalThis.NCPolicyState = NCPolicyState;");
+  loadScript("modules/sharingStorage.js", context, "\nglobalThis.NCSharingStorage = NCSharingStorage;");
+  loadScript("modules/vfsPolicyRuntime.js", context, "\nglobalThis.NCVfsPolicyRuntime = NCVfsPolicyRuntime;");
+  loadScript("ui/wizardPolicyUi.js", context);
   loadScript("modules/bgRouter.js", context);
   assert(typeof listener === "function", "Background router listener must be registered");
   for (const type of [
@@ -164,6 +180,49 @@ async function checkRouterLeavesToolkitMessagesUnclaimed(){
       && externalResponse.status?.connections?.length === 1,
     "Sharing source guidance must receive the complete external VFS status"
   );
+  for (const canManageLicense of [false, true]){
+    for (const accessStatus of ["GRACE", "EXPIRED", "OFFLINE_EXPIRED"]){
+      policyStatus = {
+        endpointAvailable: true,
+        fetchSucceeded: true,
+        status: {
+          mode: "pro",
+          seatAssigned: accessStatus !== "GRACE",
+          seatState: accessStatus === "GRACE" ? "none" : "active",
+          isValid: accessStatus === "GRACE",
+          accessStatus,
+          canManageLicense,
+          licenseConnectionError: true,
+          graceUntilIso: "2026-09-30T12:00:00Z",
+          licenseLastSyncAtIso: "2026-09-16T12:00:00Z",
+          licenseOfflineUntilIso: "2026-09-30T11:00:00Z",
+          unrelatedData: "must-not-appear-in-vfs-options"
+        }
+      };
+      const optionsResponse = await listener({ type: "vfs:options:getState" }, {});
+      assert(optionsResponse?.ok === true, "VFS options must return its state");
+      const external = optionsResponse.state.external;
+      const serializedNotice = JSON.stringify(external.notice);
+      assert(
+        serializedNotice === JSON.stringify(context.NCPolicyState.getStatusNotice(policyStatus)),
+        `${accessStatus}: VFS options must retain the serializable notice with role, seat and synchronization metadata`
+      );
+      assert(
+        !JSON.stringify(external).includes("must-not-appear-in-vfs-options"),
+        "VFS options must forward the notice descriptor, not the backend status payload"
+      );
+      const translate = (key, substitutions) => `${key}${substitutions ? `:${substitutions.join(",")}` : ""}`;
+      const hint = context.NCWizardPolicyUi.getVfsExternalUnavailableHint(
+        external.unavailableReason,
+        translate,
+        JSON.parse(serializedNotice)
+      );
+      assert(
+        hint === context.NCPolicyState.getSeatUnavailableMessage(policyStatus, translate),
+        `${accessStatus}: VFS options must show the same personal refusal and guidance as other feature surfaces`
+      );
+    }
+  }
   assert((await listener({ type: "connection:openOptions" }, {}))?.ok === true, "Connection setup options must open");
   assert((await listener({ type: "vfs:openOptions" }, {}))?.ok === true, "VFS options must open");
   assert((await listener({ type: "vfs:findProviderAddons" }, {}))?.ok === true, "VFS provider search must open");

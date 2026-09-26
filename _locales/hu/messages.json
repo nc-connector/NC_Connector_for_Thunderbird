@@ -990,10 +990,10 @@
     "message": "Licenc kezelése a felügyeleti felületen"
   },
   "policy_license_grace_format": {
-    "message": "A licence lejárt. A Pro funkciók eddig maradnak elérhetők: $1."
+    "message": "A licenc lejárt. Az aktív, hozzárendelt Seattel rendelkező felhasználók eddig használhatják tovább a Pro funkciókat: $1."
   },
   "policy_license_grace": {
-    "message": "A licence lejárt. A Pro funkciók a türelmi idő alatt továbbra is elérhetők."
+    "message": "A licenc lejárt. Az aktív, hozzárendelt Seattel rendelkező felhasználók a türelmi idő alatt tovább használhatják a Pro funkciókat."
   },
   "policy_license_expired": {
     "message": "A licence lejárt. A Pro funkciók nem érhetők el. Az alapfunkciókat továbbra is használhatja."
@@ -1040,9 +1040,6 @@
   "policy_warning_backend_unavailable": {
     "message": "Nem sikerült lekérni a Nextcloud kiszolgálóoldali állapotát. Ellenőrizze a kapcsolatot, és próbálja újra."
   },
-  "policy_warning_overlicensed": {
-    "message": "A hozzárendelt licenchelyek száma meghaladja a rendelkezésre álló licenckapacitást. A Pro funkciók jelenleg nem érhetők el."
-  },
   "policy_admin_controlled_tooltip": {
     "message": "Rendszergazda által vezérelt"
   },
@@ -1055,14 +1052,8 @@
   "sharing_password_separate_backend_required_tooltip": {
     "message": "Ehhez a funkcióhoz a Nextcloud backend szükséges."
   },
-  "vfs_external_pro_required_tooltip": {
-    "message": "A külső VFS-szolgáltatókhoz NC Connector Pro szükséges."
-  },
   "sharing_password_separate_no_seat_tooltip": {
     "message": "A rendszergazdának ehhez a funkcióhoz NC Connector seatet kell hozzárendelnie a fiókjához."
-  },
-  "sharing_password_separate_paused_tooltip": {
-    "message": "Az Ön NC Connector seatje jelenleg szünetel. Kérjük, forduljon a Nextcloud rendszergazdájához."
   },
   "options_tab_signature": {
     "message": "Aláírás"
@@ -1160,18 +1151,6 @@
   "options_vfs_external_tooltip_text": {
     "message": "Az NC Connector csak az Ön kifejezett engedélye után észleli a kompatibilis VFS-szolgáltatókat. A fájlok nem kerülnek közvetlenül átmásolásra a szolgáltatók között."
   },
-  "options_vfs_external_permission_label": {
-    "message": "Thunderbird-engedély"
-  },
-  "options_vfs_external_permission_granted": {
-    "message": "Megadva"
-  },
-  "options_vfs_external_permission_required": {
-    "message": "Nincs megadva"
-  },
-  "options_vfs_external_permission_button": {
-    "message": "Engedély megadása"
-  },
   "options_vfs_connections_heading": {
     "message": "Észlelt kapcsolatok"
   },
@@ -1210,9 +1189,6 @@
   },
   "options_vfs_action_failed": {
     "message": "A VFS-műveletet nem sikerült befejezni."
-  },
-  "vfs_error_management_permission_missing": {
-    "message": "Hiányzik a külső VFS-szolgáltatók észleléséhez szükséges engedély."
   },
   "vfs_error_storage_changed": {
     "message": "A tárhelykapcsolat megváltozott. Válassza ki újra a fájlokat."
@@ -1276,9 +1252,6 @@
   },
   "sharing_vfs_external_disabled_notice": {
     "message": "Először állítson be további forrásokat a VFS beállításaiban."
-  },
-  "sharing_vfs_external_permission_notice": {
-    "message": "Hiányzik a további tárhelyszolgáltatók felderítéséhez szükséges engedély. Adja meg a VFS beállításaiban."
   },
   "sharing_vfs_external_no_providers_notice": {
     "message": "Nincs telepítve kompatibilis VFS-szolgáltató."

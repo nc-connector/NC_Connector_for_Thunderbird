@@ -9,11 +9,6 @@ const NCVfsPolicyRuntime = (() => {
   const DOMAIN = "share";
   const CACHE_MS = 30 * 1000;
   const ERROR_KEYS = Object.freeze({
-    backend_required: "sharing_password_separate_backend_required_tooltip",
-    pro_required: "vfs_external_pro_required_tooltip",
-    license_invalid: "policy_warning_license_invalid",
-    seat_required: "sharing_password_separate_no_seat_tooltip",
-    seat_paused: "policy_warning_license_invalid",
     admin_controlled: "policy_admin_controlled_tooltip",
     disabled: "sharing_vfs_external_disabled_notice"
   });
@@ -74,7 +69,7 @@ const NCVfsPolicyRuntime = (() => {
       localEnabled,
       configured
     );
-    const unavailableReason = NCPolicyState.getProSeatUnavailableReason(policyStatus);
+    const unavailableReason = NCPolicyState.getSeatUnavailableReason(policyStatus);
     const entitled = unavailableReason === "";
     return Object.freeze({
       ...setting,
@@ -85,7 +80,10 @@ const NCVfsPolicyRuntime = (() => {
     });
   }
 
-  function errorMessage(reason){
+  function errorMessage(reason, notice){
+    if (reason && !Object.prototype.hasOwnProperty.call(ERROR_KEYS, reason)){
+      return NCPolicyState.getStatusNoticeMessage({ ...notice, code: reason }, bgI18n, true);
+    }
     const key = ERROR_KEYS[String(reason || "")] || ERROR_KEYS.disabled;
     return bgI18n(key);
   }

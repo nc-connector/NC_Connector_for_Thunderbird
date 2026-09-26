@@ -86,7 +86,7 @@ async function registerSeparatePasswordMailDispatch(tabId, payload = {}, options
       isValid: policyStatus?.status?.isValid === true,
       overlicensed: policyStatus?.status?.overlicensed === true
     });
-    throw new Error(bgI18n("sharing_error_insert_failed"));
+    throw new Error(NCPolicyState.getSeatUnavailableMessage(policyStatus, bgI18n));
   }
   cancelSeparatePasswordDispatchClear(tabId, "register");
   const password = String(payload.password || "").trim();

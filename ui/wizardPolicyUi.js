@@ -6,79 +6,11 @@
 (function(global){
   "use strict";
 
-  const BACKEND_REQUIRED_FALLBACK = "This feature requires the Nextcloud backend.";
-  const NO_SEAT_FALLBACK = "Your administrator must assign an NC Connector seat to your account for this feature.";
-  const PRO_REQUIRED_FALLBACK = "External VFS providers require NC Connector Pro.";
-  const NOTICE_KEYS = Object.freeze({
-    backend_unavailable: "policy_warning_backend_unavailable",
-    no_seat: "policy_warning_no_seat",
-    license_expired: "policy_license_expired",
-    license_inactive: "policy_license_inactive",
-    license_invalid_explicit: "policy_license_invalid",
-    license_activation_conflict: "policy_license_activation_conflict",
-    license_activation_required: "policy_license_activation_required",
-    license_offline_expired: "policy_license_offline_expired",
-    license_invalid: "policy_warning_license_invalid",
-    overlicensed: "policy_warning_overlicensed",
-    seat_paused: "policy_warning_seat_suspended",
-    seat_unavailable: "policy_warning_seat_unavailable",
-    license_grace: "policy_license_grace",
-    license_connection_error: "policy_license_connection_error"
-  });
-
   function text(translate, key, fallback = "", substitutions){
     if (typeof translate !== "function"){
       return fallback || "";
     }
     return translate(key, substitutions) || fallback || "";
-  }
-
-  function formatNoticeDate(value){
-    if (typeof value !== "string" || !value.trim()){
-      return "";
-    }
-    const date = new Date(value);
-    return Number.isFinite(date.getTime()) ? date.toLocaleString() : "";
-  }
-
-  function getStatusNoticeMessage(notice, translate, forFeature = false){
-    const noSeatKey = forFeature ? "sharing_password_separate_no_seat_tooltip" : NOTICE_KEYS.no_seat;
-    const key = notice?.code === "no_seat" ? noSeatKey : NOTICE_KEYS[notice?.code];
-    if (!key){
-      return "";
-    }
-    const graceUntil = formatNoticeDate(notice.graceUntilIso);
-    const lines = [notice.code === "license_grace" && graceUntil
-      ? text(translate, "policy_license_grace_format", "", [graceUntil])
-      : text(translate, key)];
-    if (notice.license){
-      if (notice.connectionError && notice.code !== "license_connection_error"){
-        lines.push(text(translate, "policy_license_connection_error"));
-      }
-      if (notice.connectionError || notice.code === "license_offline_expired"){
-        const lastSync = formatNoticeDate(notice.lastSyncAtIso);
-        const offlineUntil = formatNoticeDate(notice.offlineUntilIso);
-        if (lastSync){
-          lines.push(text(translate, "policy_license_last_sync_format", "", [lastSync]));
-        }
-        if (offlineUntil){
-          lines.push(text(translate, "policy_license_offline_until_format", "", [offlineUntil]));
-        }
-      }
-      lines.push(text(translate, notice.canManageLicense
-        ? "policy_license_admin_hint"
-        : "policy_license_user_hint"));
-      if (notice.canManageLicense && !notice.seatAssigned && notice.code === "license_grace"){
-        lines.push(text(translate, noSeatKey));
-      }
-    }else if (notice.code === "seat_paused" || notice.code === "seat_unavailable"){
-      lines.push(text(translate, "policy_license_user_hint"));
-    }
-    return lines.filter(Boolean).join("\n");
-  }
-
-  function getPolicyWarningMessage(policyStatus, translate){
-    return getStatusNoticeMessage(NCPolicyState.getStatusNotice(policyStatus), translate);
   }
 
   function getLicenseAdminUrl(policyStatus){
@@ -108,17 +40,7 @@
   }
 
   function getSeparatePasswordUnavailableHint(policyStatus, translate){
-    if (NCPolicyState.hasSeatEntitlement(policyStatus)){
-      return "";
-    }
-    const notice = NCPolicyState.getStatusNotice(policyStatus);
-    if (notice.code){
-      return getStatusNoticeMessage(notice, translate, true);
-    }
-    if (!NCPolicyState.isEndpointAvailable(policyStatus)){
-      return text(translate, "sharing_password_separate_backend_required_tooltip", BACKEND_REQUIRED_FALLBACK);
-    }
-    return text(translate, "policy_warning_license_invalid");
+    return NCPolicyState.getSeatUnavailableMessage(policyStatus, translate);
   }
 
   function isSeparatePasswordFeatureAvailable(policyStatus){
@@ -126,25 +48,9 @@
   }
 
   function getVfsExternalUnavailableHint(reason, translate, notice){
-    if (reason && reason !== "admin_controlled" && notice?.code){
-      return getStatusNoticeMessage(notice, translate, true);
-    }
-    switch (String(reason || "")){
-      case "backend_required":
-        return text(translate, "sharing_password_separate_backend_required_tooltip", BACKEND_REQUIRED_FALLBACK);
-      case "pro_required":
-        return text(translate, "vfs_external_pro_required_tooltip", PRO_REQUIRED_FALLBACK);
-      case "license_invalid":
-        return text(translate, "policy_warning_license_invalid");
-      case "seat_required":
-        return text(translate, "sharing_password_separate_no_seat_tooltip", NO_SEAT_FALLBACK);
-      case "seat_paused":
-        return text(translate, "policy_warning_license_invalid");
-      case "admin_controlled":
-        return getAdminControlledHint(translate);
-      default:
-        return "";
-    }
+    return reason === "admin_controlled"
+      ? getAdminControlledHint(translate)
+      : NCPolicyState.getStatusNoticeMessage({ ...notice, code: reason }, translate, true);
   }
 
   function readPolicyDomain(status, domain){
@@ -163,7 +69,7 @@
       return;
     }
     const notice = NCPolicyState.getStatusNotice(policyStatus);
-    const message = getStatusNoticeMessage(notice, translate);
+    const message = NCPolicyState.getStatusNoticeMessage(notice, translate);
     const informational = ["license_grace", "license_connection_error", "backend_unavailable", "no_seat"].includes(notice.code);
     row.hidden = !message;
     row.classList.toggle("is-informational", informational);
@@ -354,7 +260,6 @@
 
   global.NCWizardPolicyUi = {
     getAdminControlledHint,
-    getPolicyWarningMessage,
     getLicenseAdminUrl,
     getSeparatePasswordUnavailableHint,
     isSeparatePasswordFeatureAvailable,

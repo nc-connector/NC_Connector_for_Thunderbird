@@ -8,6 +8,22 @@
 const NCPolicyState = (() => {
   const POLICY_DOMAINS = Object.freeze(["share", "talk", "email_signature"]);
   const ACTIVE_SEAT_STATE = "active";
+  const NOTICE_KEYS = Object.freeze({
+    backend_required: "sharing_password_separate_backend_required_tooltip",
+    backend_unavailable: "policy_warning_backend_unavailable",
+    no_seat: "policy_warning_no_seat",
+    license_expired: "policy_license_expired",
+    license_inactive: "policy_license_inactive",
+    license_invalid_explicit: "policy_license_invalid",
+    license_activation_conflict: "policy_license_activation_conflict",
+    license_activation_required: "policy_license_activation_required",
+    license_offline_expired: "policy_license_offline_expired",
+    license_invalid: "policy_warning_license_invalid",
+    seat_paused: "policy_warning_seat_suspended",
+    seat_unavailable: "policy_warning_seat_unavailable",
+    license_grace: "policy_license_grace",
+    license_connection_error: "policy_license_connection_error"
+  });
 
   function isObject(value){
     return !!value && typeof value === "object" && !Array.isArray(value);
@@ -55,7 +71,6 @@ const NCPolicyState = (() => {
       seatStatus?.seatAssigned
       && seatStatus?.isValid
       && seatState === ACTIVE_SEAT_STATE
-      && !seatStatus?.overlicensed
     );
   }
 
@@ -70,7 +85,7 @@ const NCPolicyState = (() => {
     );
   }
 
-  function getStatusNoticeCode(policyStatus){
+  function getStatusNoticeCode(policyStatus, forFeature = false){
     if (policyStatus?.fetchSucceeded === false){
       return ["credentials_missing", "endpoint_missing", "permission_missing", "local_defaults"].includes(policyStatus.reason)
         ? ""
@@ -80,7 +95,7 @@ const NCPolicyState = (() => {
     if (!isEndpointAvailable(policyStatus) || !isObject(status)){
       return "";
     }
-    if (!status.seatAssigned && status.canManageLicense !== true){
+    if (!status.seatAssigned && (forFeature || status.canManageLicense !== true)){
       return "no_seat";
     }
     const licenseStatus = String(status.licenseStatus || "").trim().toUpperCase();
@@ -104,9 +119,6 @@ const NCPolicyState = (() => {
           return "license_invalid";
       }
     }
-    if (status.overlicensed){
-      return "overlicensed";
-    }
     const seatState = String(status.seatState || "").trim().toLowerCase();
     if (status.seatAssigned && seatState !== ACTIVE_SEAT_STATE){
       return seatState === "suspended_overlimit" ? "seat_paused" : "seat_unavailable";
@@ -120,12 +132,12 @@ const NCPolicyState = (() => {
     return status.seatAssigned ? "" : "no_seat";
   }
 
-  function getStatusNotice(policyStatus){
+  function getStatusNotice(policyStatus, forFeature = false){
     const status = policyStatus?.status;
-    const code = getStatusNoticeCode(policyStatus);
+    const code = getStatusNoticeCode(policyStatus, forFeature);
     return Object.freeze({
       code,
-      license: code.startsWith("license_") || code === "overlicensed",
+      license: code.startsWith("license_"),
       canManageLicense: status?.canManageLicense === true,
       seatAssigned: status?.seatAssigned === true,
       graceUntilIso: typeof status?.graceUntilIso === "string" ? status.graceUntilIso : null,
@@ -135,27 +147,63 @@ const NCPolicyState = (() => {
     });
   }
 
-  function getProSeatUnavailableReason(status){
-    if (!isEndpointAvailable(status)){
-      return "backend_required";
+  function getSeatUnavailableReason(status){
+    if (hasSeatEntitlement(status)){
+      return "";
     }
-    if (String(status?.status?.mode || "").trim().toLowerCase() !== "pro"){
-      return "pro_required";
-    }
-    if (status?.status?.overlicensed){
-      return "license_invalid";
-    }
-    if (!status?.status?.seatAssigned){
-      return "seat_required";
-    }
-    if (!isSeatUsable(status?.status)){
-      return "seat_paused";
-    }
-    return "";
+    return getStatusNoticeCode(status, true)
+      || (isEndpointAvailable(status) ? "license_invalid" : "backend_required");
   }
 
-  function hasProSeatEntitlement(status){
-    return getProSeatUnavailableReason(status) === "";
+  function formatNoticeDate(value){
+    if (typeof value !== "string" || !value.trim()){
+      return "";
+    }
+    const date = new Date(value);
+    return Number.isFinite(date.getTime()) ? date.toLocaleString() : "";
+  }
+
+  function getStatusNoticeMessage(notice, translate, forFeature = false){
+    const noSeatKey = forFeature ? "sharing_password_separate_no_seat_tooltip" : NOTICE_KEYS.no_seat;
+    const code = forFeature && notice?.license && !notice.seatAssigned ? "no_seat" : notice?.code;
+    const key = code === "no_seat" ? noSeatKey : NOTICE_KEYS[code];
+    if (!key){
+      return "";
+    }
+    const graceUntil = formatNoticeDate(notice.graceUntilIso);
+    const lines = [code === "license_grace" && graceUntil
+      ? translate("policy_license_grace_format", [graceUntil])
+      : translate(key)];
+    if (notice.license && code !== "no_seat"){
+      if (notice.connectionError && code !== "license_connection_error"){
+        lines.push(translate("policy_license_connection_error"));
+      }
+      if (notice.connectionError || code === "license_offline_expired"){
+        const lastSync = formatNoticeDate(notice.lastSyncAtIso);
+        const offlineUntil = formatNoticeDate(notice.offlineUntilIso);
+        if (lastSync){
+          lines.push(translate("policy_license_last_sync_format", [lastSync]));
+        }
+        if (offlineUntil){
+          lines.push(translate("policy_license_offline_until_format", [offlineUntil]));
+        }
+      }
+      lines.push(translate(notice.canManageLicense ? "policy_license_admin_hint" : "policy_license_user_hint"));
+      if (!notice.seatAssigned){
+        lines.push(translate(noSeatKey));
+      }
+    }else if (code === "seat_paused" || code === "seat_unavailable"){
+      lines.push(translate(notice.canManageLicense ? "policy_license_admin_hint" : "policy_license_user_hint"));
+    }
+    return lines.filter(Boolean).join("\n");
+  }
+
+  function getSeatUnavailableMessage(status, translate){
+    const code = getSeatUnavailableReason(status);
+    if (!code){
+      return "";
+    }
+    return getStatusNoticeMessage({ ...getStatusNotice(status, true), code }, translate, true);
   }
 
   function buildDomainState(policyDomain, editableDomain, seatUsable){
@@ -256,8 +304,9 @@ const NCPolicyState = (() => {
     isEndpointAvailable,
     hasSeatEntitlement,
     getStatusNotice,
-    getProSeatUnavailableReason,
-    hasProSeatEntitlement,
+    getSeatUnavailableReason,
+    getStatusNoticeMessage,
+    getSeatUnavailableMessage,
     buildDomainState,
     isDomainAvailable,
     isDomainActive,

@@ -144,12 +144,12 @@ Do not use **Save as Template** for a message that contains an NC Connector shar
 The **VFS** options tab controls two independent functions:
 
 - **NC Connector as provider** exposes the already configured Nextcloud account to another compatible Thunderbird add-on. It is enabled by default. Each connection still requires an explicit user grant and provides full read/write file access for that Nextcloud user; grants can be revoked in the same tab.
-- **External VFS providers** let users add files and folders from compatible storage add-ons to the Sharing wizard. This function requires the NC Connector Backend in Pro mode and an active seat assigned to the current account. Without the backend, the disabled setting and **Other source** action explain that the backend is required. NC Connector receives Thunderbird's add-on-management permission during installation so administrators do not have to manage a second runtime permission. Provider discovery remains disabled until the effective VFS setting enables it. Established storage connections can be removed with **Disconnect** and are retained when the entitlement or policy later closes the gate.
+- **External VFS providers** let users add files and folders from compatible storage add-ons to the Sharing wizard. This function requires the NC Connector Backend and valid access with an active seat assigned to the current account, including the free Community Seat. Without the backend, the disabled setting and **Other source** action explain that the backend is required. NC Connector receives Thunderbird's add-on-management permission during installation so administrators do not have to manage a second runtime permission. Provider discovery remains disabled until the effective VFS setting enables it. Established storage connections can be removed with **Disconnect** and are retained when the entitlement or policy later closes the gate.
 
 Both switches can be set under **Administration settings → NC Connector Backend → Group Settings → Default Settings → Shares → Thunderbird only – Virtual File System (VFS)**. They support the same editable, forced, group, and user layers as the other Share policies:
 
 - `vfs_provider_enabled` controls whether NC Connector accepts new or existing grants from other add-ons. This switch does not require Pro.
-- `vfs_external_providers_enabled` controls the external-source function. An enabled policy does not bypass the Pro and seat checks.
+- `vfs_external_providers_enabled` controls the external-source function. An enabled policy does not bypass the valid active Seat check.
 
 An older backend that does not return these two keys leaves the local switches editable. Local files, **My Nextcloud**, and NC Connector's own VFS provider continue to work without the backend; only external providers are backend- and Pro-gated.
 
@@ -191,7 +191,7 @@ When `ncc_backend_4mc` is installed, the add-on reads central policies when the 
 
 Operational rules:
 
-- an active assigned seat activates the corresponding policy domains
+- valid access with an active assigned seat activates the corresponding policy domains, equally in Community and Pro; global overcapacity does not suspend the remaining active seats
 - editable values allow a local user choice
 - locked values remain controlled by the backend
 - an unavailable backend leaves normal local Share and Talk defaults active
@@ -200,7 +200,7 @@ Operational rules:
 
 Settings, Sharing and Talk show the license status reported by the backend. A yellow grace-period notice includes the deadline when available; it does not disable otherwise usable Pro features. Expired, inactive or invalid licenses, activation problems and an exceeded offline verification deadline have distinct messages. A failed license synchronization is reported separately from a license refusal, with the last successful synchronization and offline deadline when supplied by the backend.
 
-Users without an assigned seat see a notice explaining that Sharing and Talk remain available with local settings; Pro features require a seat assigned by their administrator. Disabled Pro features retain their short seat-requirement tooltips. Full Nextcloud administrators see license notices even without a seat and can open **Manage license in backend**, which links to their own Nextcloud administration. Other users are directed to their administrator. A paused-seat message is shown only for an actually suspended seat.
+Users without an assigned seat see a notice explaining that Sharing and Talk remain available with local settings; Pro features require a seat assigned by their administrator. Disabled Pro features retain their short seat-requirement tooltips. Full Nextcloud administrators see license notices together with their missing-seat explanation even without a seat and can open **Manage license in backend**, which links to their own Nextcloud administration. Other users are directed to their administrator. A paused-seat message is shown only for an actually suspended seat.
 
 Older backends that do not supply detailed license status retain a generic access warning; the add-on does not guess a cause from expiry dates. With no backend installed, normal local Sharing and Talk remain available without a license warning. If the backend status cannot be retrieved, check the connection and reopen the settings or wizard after resolving the problem.
 

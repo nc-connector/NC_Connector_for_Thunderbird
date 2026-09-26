@@ -990,10 +990,10 @@
     "message": "在后台管理许可证"
   },
   "policy_license_grace_format": {
-    "message": "您的许可证已过期。Pro 功能在 $1 之前仍然可用。"
+    "message": "您的许可证已过期。已分配有效席位的用户可以继续使用 Pro 功能，直到 $1。"
   },
   "policy_license_grace": {
-    "message": "您的许可证已过期。Pro 功能在宽限期内仍然可用。"
+    "message": "您的许可证已过期。已分配有效席位的用户可以在宽限期内继续使用 Pro 功能。"
   },
   "policy_license_expired": {
     "message": "您的许可证已过期。Pro 功能不可用。您仍可使用基本功能。"
@@ -1040,9 +1040,6 @@
   "policy_warning_backend_unavailable": {
     "message": "无法获取 Nextcloud 后端状态。请检查连接并重试。"
   },
-  "policy_warning_overlicensed": {
-    "message": "已分配的席位数超过许可证的可用额度。Pro 功能目前不可用。"
-  },
   "policy_admin_controlled_tooltip": {
     "message": "由管理员控制"
   },
@@ -1055,14 +1052,8 @@
   "sharing_password_separate_backend_required_tooltip": {
     "message": "此功能需要 Nextcloud 后端。"
   },
-  "vfs_external_pro_required_tooltip": {
-    "message": "外部 VFS 提供商需要 NC Connector Pro。"
-  },
   "sharing_password_separate_no_seat_tooltip": {
     "message": "要使用此功能，管理员必须为您的账户分配 NC Connector 席位。"
-  },
-  "sharing_password_separate_paused_tooltip": {
-    "message": "您的 NC Connector 席位当前已暂停。请联系您的 Nextcloud 管理员。"
   },
   "options_tab_signature": {
     "message": "签名"
@@ -1160,18 +1151,6 @@
   "options_vfs_external_tooltip_text": {
     "message": "只有在您明确授权后，NC Connector 才会检测兼容的 VFS 提供商。文件不会在提供商之间直接复制。"
   },
-  "options_vfs_external_permission_label": {
-    "message": "Thunderbird 权限"
-  },
-  "options_vfs_external_permission_granted": {
-    "message": "已授予"
-  },
-  "options_vfs_external_permission_required": {
-    "message": "未授予"
-  },
-  "options_vfs_external_permission_button": {
-    "message": "授予权限"
-  },
   "options_vfs_connections_heading": {
     "message": "检测到的连接"
   },
@@ -1210,9 +1189,6 @@
   },
   "options_vfs_action_failed": {
     "message": "无法完成 VFS 操作。"
-  },
-  "vfs_error_management_permission_missing": {
-    "message": "缺少检测外部 VFS 提供商所需的权限。"
   },
   "vfs_error_storage_changed": {
     "message": "存储连接已更改。请重新选择文件。"
@@ -1276,9 +1252,6 @@
   },
   "sharing_vfs_external_disabled_notice": {
     "message": "请先在 VFS 设置中配置其他来源。"
-  },
-  "sharing_vfs_external_permission_notice": {
-    "message": "缺少发现其他存储提供商的权限。请在 VFS 设置中授予该权限。"
   },
   "sharing_vfs_external_no_providers_notice": {
     "message": "未安装兼容的 VFS 提供商。"

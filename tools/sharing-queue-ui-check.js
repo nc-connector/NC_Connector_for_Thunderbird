@@ -403,7 +403,6 @@ function run(){
     "sharing_queue_remove_item",
     "sharing_queue_source_group",
     "sharing_vfs_external_disabled_notice",
-    "sharing_vfs_external_permission_notice",
     "sharing_vfs_external_no_providers_notice",
     "sharing_vfs_external_no_connections_notice",
     "sharing_vfs_external_load_failed_notice",

@@ -146,7 +146,7 @@ function verifyStatusNotices(policy, vfsPolicy){
     { name: "sync failure", fields: { licenseStatus: "ACTIVE", accessStatus: "ACTIVE", licenseConnectionError: true }, code: "license_connection_error", usable: true },
     { name: "legacy active", fields: {}, code: "", usable: true },
     { name: "legacy invalid", fields: { isValid: false }, code: "license_invalid" },
-    { name: "overlicensed", fields: { overlicensed: true }, code: "overlicensed" },
+    { name: "active despite overcapacity", fields: { overlicensed: true }, code: "", usable: true },
     { name: "suspended seat", fields: { seatState: "suspended_overlimit" }, code: "seat_paused", seat: true },
     { name: "unavailable seat", fields: { seatState: "revoked" }, code: "seat_unavailable", seat: true }
   ];
@@ -165,11 +165,10 @@ function verifyStatusNotices(policy, vfsPolicy){
         assert(notice.canManageLicense === canManageLicense, `${label}: keep the verified admin role`);
         const usable = seatAssigned && entry.usable === true;
         assert(policy.hasSeatEntitlement(status) === usable, `${label}: notice metadata must not change seat access`);
-        assert(policy.hasProSeatEntitlement(status) === usable, `${label}: notice metadata must not change Pro access`);
         const vfs = vfsPolicy.resolveExternalSetting(status, true, true);
         assert(vfs.enabled === usable && vfs.entitled === usable, `${label}: VFS must retain the existing gate`);
         assert(vfs.notice?.code === expected, `${label}: VFS must carry the shared notice`);
-        assert(vfs.unavailableReason === policy.getProSeatUnavailableReason(status), `${label}: VFS reason codes must remain unchanged`);
+        assert(vfs.unavailableReason === policy.getSeatUnavailableReason(status), `${label}: VFS reason codes must remain unchanged`);
         assert(JSON.stringify(status) === before, `${label}: classification must not mutate policy state`);
       }
     }
@@ -273,17 +272,16 @@ async function run(){
 
   assert(policy.isSeatUsable(activeStatus.status) === true, "Active assigned seat should be usable");
   assert(policy.hasSeatEntitlement(activeStatus) === true, "Active endpoint and seat should have entitlement");
-  assert(policy.hasProSeatEntitlement(activeStatus) === true, "An active Pro seat should unlock Pro features");
   assert(
-    policy.getProSeatUnavailableReason({ ...activeStatus, endpointAvailable: false }) === "backend_required",
+    policy.getSeatUnavailableReason({ ...activeStatus, endpointAvailable: false }) === "backend_required",
     "A missing backend must explain that Pro-gated features require the backend"
   );
   assert(
-    policy.getProSeatUnavailableReason({
+    policy.getSeatUnavailableReason({
       ...activeStatus,
       status: { ...activeStatus.status, mode: "community" }
-    }) === "pro_required",
-    "Community mode must not unlock Pro-only VFS sources"
+    }) === "",
+    "An active Community Seat must have the same feature access as a Pro Seat"
   );
   assert(
     policy.hasSeatEntitlement({ ...activeStatus, status: { ...activeStatus.status, seatState: "ACTIVE" } }) === true,
@@ -315,10 +313,10 @@ async function run(){
   };
   assert(policy.isLocked(inactiveStatus, "share", "share_set_password") === false, "Inactive policy domain must not lock local settings");
   assert(policy.hasSeatEntitlement({ ...activeStatus, endpointAvailable: false }) === false, "Missing backend endpoint must disable seat entitlement");
-  assert(policy.isSeatUsable({ ...activeStatus.status, overlicensed: true }) === false, "Overlicensed seat must not be usable");
+  assert(policy.isSeatUsable({ ...activeStatus.status, overlicensed: true }) === true, "Global overcapacity must not suspend an active seat");
   assert(
-    policy.hasSeatEntitlement({ ...activeStatus, status: { ...activeStatus.status, overlicensed: true } }) === false,
-    "Overlicensed seat must not retain backend-only entitlement"
+    policy.hasSeatEntitlement({ ...activeStatus, status: { ...activeStatus.status, overlicensed: true } }) === true,
+    "An active seat must retain entitlement despite global overcapacity"
   );
 
   const domainState = policy.buildDomainState(activeStatus.policy.share, activeStatus.policyEditable.share, true);
@@ -365,28 +363,76 @@ async function run(){
     status: { ...activeStatus.status, mode: "community" }
   }, true, true);
   assert(
-    communitySetting.enabled === false
-      && communitySetting.entitled === false
-      && communitySetting.unavailableReason === "pro_required",
-    "Community mode must close only the external-provider gate"
+    communitySetting.enabled === true
+      && communitySetting.entitled === true
+      && communitySetting.unavailableReason === "",
+    "Community mode must support external providers with an active assigned seat"
   );
 
   const runtime = loadPolicyRuntime(createOverlicensedPayload());
   const overlicensedStatus = await runtime.getPolicyStatus();
-  assert(overlicensedStatus.policyActive === false, "Overlicensed status must disable backend policy");
-  assert(overlicensedStatus.mode === "local", "Overlicensed status must select local mode");
-  assert(overlicensedStatus.reason === "overlicensed", "Overlicensed status should expose its own mode reason");
-  assert(overlicensedStatus.warning?.visible === true, "Overlicensed status should show the policy warning");
-  assert(overlicensedStatus.warning?.code === "overlicensed", "Overlicensed status should expose its own warning code");
+  assert(overlicensedStatus.policyActive === true, "An active seat must retain backend policy during overcapacity");
+  assert(overlicensedStatus.mode === "policy", "An active seat must retain backend policy mode");
+  assert(overlicensedStatus.reason === "policy_active", "Global capacity must not replace the personal result");
+  assert(overlicensedStatus.warning?.visible === false, "An active seat must not receive an unavailable warning");
+  assert(overlicensedStatus.warning?.code === "", "Overcapacity alone is not a personal warning");
   for (const domain of ["share", "talk", "email_signature"]){
     assert(overlicensedStatus.policyDomains?.[domain]?.available === true, `Overlicensed ${domain} domain should remain detectable`);
-    assert(overlicensedStatus.policyDomains?.[domain]?.active === false, `Overlicensed ${domain} domain must be inactive`);
+    assert(overlicensedStatus.policyDomains?.[domain]?.active === true, `Active seat must keep ${domain} during overcapacity`);
   }
 
   verifyStatusNotices(policy, vfsPolicy);
   await verifyRuntimeMetadata(policy);
+  await verifySeatParity(policy, vfsPolicy);
 
   console.log("[OK] policy-contract-check passed");
+}
+
+async function verifySeatParity(policy, vfsPolicy){
+  for (const accessStatus of ["ACTIVE", "GRACE", "EXPIRED", "INACTIVE", "INVALID", "ACTIVATION_REQUIRED", "OFFLINE_EXPIRED", "UNKNOWN"]){
+    for (const seatState of ["active", "suspended_overlimit", "none"]){
+      for (const overlicensed of [false, true]){
+        for (const canManageLicense of [false, true]){
+          for (const connectionError of [false, true]){
+            const valid = ["ACTIVE", "GRACE"].includes(accessStatus);
+            const usable = valid && seatState === "active";
+            let previous = null;
+            for (const mode of ["community", "pro"]){
+              const payload = createOverlicensedPayload();
+              Object.assign(payload.status, {
+                mode, seat_state: seatState, seat_assigned: seatState !== "none", is_valid: valid,
+                overlicensed, access_status: accessStatus, can_manage_license: canManageLicense,
+                license_connection_error: connectionError
+              });
+              const status = await loadPolicyRuntime(payload).getPolicyStatus();
+              const label = `${mode}/${accessStatus}/${seatState}/over=${overlicensed}/admin=${canManageLicense}/sync=${connectionError}`;
+              assert(policy.hasSeatEntitlement(status) === usable, `${label}: personal Seat controls access`);
+              for (const domain of ["share", "talk", "email_signature"]){
+                assert(policy.isDomainActive(status, domain) === usable, `${label}: ${domain} must follow personal access`);
+              }
+              const setting = vfsPolicy.resolveExternalSetting(status, true, true);
+              assert(setting.enabled === usable && setting.entitled === usable, `${label}: external sources must share the Seat gate`);
+              const notice = policy.getStatusNotice(status);
+              const featureMessage = policy.getSeatUnavailableMessage(status, (key) => key);
+              if (!usable){
+                assert(featureMessage.length > 0, `${label}: every denied feature needs a reason`);
+                assert(vfsPolicy.errorMessage(setting.unavailableReason, setting.notice) === featureMessage, `${label}: VFS action must retain the same cause`);
+                if (seatState === "none"){
+                  assert(featureMessage === "sharing_password_separate_no_seat_tooltip", `${label}: an admin still needs a personal Seat`);
+                  assert(policy.getStatusNoticeMessage(notice, (key) => key).includes("policy_warning_no_seat"), `${label}: general notice must retain local-use explanation`);
+                }
+              }else{
+                assert(featureMessage === "", `${label}: informational notices must not block features`);
+              }
+              const result = JSON.stringify({ policyActive: status.policyActive, domains: status.policyDomains, setting, notice, featureMessage });
+              assert(previous === null || previous === result, `${label}: Community and Pro must be identical`);
+              previous = result;
+            }
+          }
+        }
+      }
+    }
+  }
 }
 
 run().catch((error) => {

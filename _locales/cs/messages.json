@@ -990,10 +990,10 @@
     "message": "Spravovat licenci v administračním rozhraní"
   },
   "policy_license_grace_format": {
-    "message": "Platnost vaší licence vypršela. Funkce Pro zůstávají dostupné do $1."
+    "message": "Licence vypršela. Uživatelé s aktivně přiřazeným seatem mohou funkce Pro používat do $1."
   },
   "policy_license_grace": {
-    "message": "Platnost vaší licence vypršela. Funkce Pro zůstávají dostupné během ochranné lhůty."
+    "message": "Licence vypršela. Uživatelé s aktivně přiřazeným seatem mohou funkce Pro používat během ochranné lhůty."
   },
   "policy_license_expired": {
     "message": "Platnost vaší licence vypršela. Funkce Pro nejsou dostupné. Základní funkce můžete nadále používat."
@@ -1040,9 +1040,6 @@
   "policy_warning_backend_unavailable": {
     "message": "Nepodařilo se načíst stav serverové části Nextcloud. Zkontrolujte připojení a zkuste to znovu."
   },
-  "policy_warning_overlicensed": {
-    "message": "Počet přiřazených licenčních míst překračuje dostupnou kapacitu licence. Funkce Pro jsou momentálně nedostupné."
-  },
   "policy_admin_controlled_tooltip": {
     "message": "Řízeno správcem"
   },
@@ -1055,14 +1052,8 @@
   "sharing_password_separate_backend_required_tooltip": {
     "message": "Tato funkce vyžaduje Nextcloud backend."
   },
-  "vfs_external_pro_required_tooltip": {
-    "message": "Externí poskytovatelé VFS vyžadují NC Connector Pro."
-  },
   "sharing_password_separate_no_seat_tooltip": {
     "message": "Váš správce vám musí pro tuto funkci přiřadit seat NC Connector."
-  },
-  "sharing_password_separate_paused_tooltip": {
-    "message": "Váš seat NC Connector je momentálně pozastaven. Obraťte se prosím na správce Nextcloud."
   },
   "options_tab_signature": {
     "message": "Podpis"
@@ -1160,18 +1151,6 @@
   "options_vfs_external_tooltip_text": {
     "message": "NC Connector rozpozná kompatibilní poskytovatele VFS až po vašem výslovném povolení. Soubory se nekopírují přímo mezi poskytovateli."
   },
-  "options_vfs_external_permission_label": {
-    "message": "Oprávnění Thunderbirdu"
-  },
-  "options_vfs_external_permission_granted": {
-    "message": "Uděleno"
-  },
-  "options_vfs_external_permission_required": {
-    "message": "Neuděleno"
-  },
-  "options_vfs_external_permission_button": {
-    "message": "Udělit oprávnění"
-  },
   "options_vfs_connections_heading": {
     "message": "Zjištěná připojení"
   },
@@ -1210,9 +1189,6 @@
   },
   "options_vfs_action_failed": {
     "message": "Akci VFS se nepodařilo dokončit."
-  },
-  "vfs_error_management_permission_missing": {
-    "message": "Chybí oprávnění k rozpoznání externích poskytovatelů VFS."
   },
   "vfs_error_storage_changed": {
     "message": "Připojení k úložišti se změnilo. Vyberte soubory znovu."
@@ -1276,9 +1252,6 @@
   },
   "sharing_vfs_external_disabled_notice": {
     "message": "Nejprve nastavte další zdroje v nastavení VFS."
-  },
-  "sharing_vfs_external_permission_notice": {
-    "message": "Chybí oprávnění k vyhledání dalších poskytovatelů úložiště. Udělte ho v nastavení VFS."
   },
   "sharing_vfs_external_no_providers_notice": {
     "message": "Není nainstalován žádný kompatibilní poskytovatel VFS."

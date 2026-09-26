@@ -338,7 +338,10 @@ async function handleSharingFinalizeTransaction(payload = {}){
   if (passwordDispatch){
     policyStatus = await NCPolicyRuntime.getPolicyStatus();
     if (!NCPolicyState.hasSeatEntitlement(policyStatus)){
-      return { ok: false, error: bgI18n("sharing_error_insert_failed") };
+      return {
+        ok: false,
+        error: NCPolicyState.getSeatUnavailableMessage(policyStatus, bgI18n)
+      };
     }
   }
 

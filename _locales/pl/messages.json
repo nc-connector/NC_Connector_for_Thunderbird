@@ -990,10 +990,10 @@
     "message": "Zarządzaj licencją w panelu administracyjnym"
   },
   "policy_license_grace_format": {
-    "message": "Twoja licencja wygasła. Funkcje Pro pozostają dostępne do $1."
+    "message": "Licencja wygasła. Użytkownicy z przypisanym aktywnym stanowiskiem mogą nadal korzystać z funkcji Pro do $1."
   },
   "policy_license_grace": {
-    "message": "Twoja licencja wygasła. Funkcje Pro pozostają dostępne w okresie karencji."
+    "message": "Licencja wygasła. Użytkownicy z przypisanym aktywnym stanowiskiem mogą nadal korzystać z funkcji Pro w okresie karencji."
   },
   "policy_license_expired": {
     "message": "Twoja licencja wygasła. Funkcje Pro są niedostępne. Nadal możesz korzystać z funkcji podstawowych."
@@ -1040,9 +1040,6 @@
   "policy_warning_backend_unavailable": {
     "message": "Nie udało się pobrać stanu serwera Nextcloud. Sprawdź połączenie i spróbuj ponownie."
   },
-  "policy_warning_overlicensed": {
-    "message": "Liczba przypisanych stanowisk licencyjnych przekracza limit określony w licencji. Funkcje Pro są obecnie niedostępne."
-  },
   "policy_admin_controlled_tooltip": {
     "message": "Sterowane przez administratora"
   },
@@ -1055,14 +1052,8 @@
   "sharing_password_separate_backend_required_tooltip": {
     "message": "Ta funkcja wymaga backendu Nextcloud."
   },
-  "vfs_external_pro_required_tooltip": {
-    "message": "Zewnętrzni dostawcy VFS wymagają NC Connector Pro."
-  },
   "sharing_password_separate_no_seat_tooltip": {
     "message": "Administrator musi przypisać do Twojego konta seat NC Connector, aby użyć tej funkcji."
-  },
-  "sharing_password_separate_paused_tooltip": {
-    "message": "Twój seat NC Connector jest obecnie wstrzymany. Skontaktuj się z administratorem Nextcloud."
   },
   "options_tab_signature": {
     "message": "Podpis"
@@ -1160,18 +1151,6 @@
   "options_vfs_external_tooltip_text": {
     "message": "NC Connector wykrywa zgodnych dostawców VFS dopiero po wyraźnym udzieleniu zgody. Pliki nie są kopiowane bezpośrednio między dostawcami."
   },
-  "options_vfs_external_permission_label": {
-    "message": "Uprawnienie Thunderbirda"
-  },
-  "options_vfs_external_permission_granted": {
-    "message": "Udzielono"
-  },
-  "options_vfs_external_permission_required": {
-    "message": "Nie udzielono"
-  },
-  "options_vfs_external_permission_button": {
-    "message": "Udziel uprawnienia"
-  },
   "options_vfs_connections_heading": {
     "message": "Wykryte połączenia"
   },
@@ -1210,9 +1189,6 @@
   },
   "options_vfs_action_failed": {
     "message": "Nie udało się ukończyć operacji VFS."
-  },
-  "vfs_error_management_permission_missing": {
-    "message": "Brakuje uprawnienia do wykrywania zewnętrznych dostawców VFS."
   },
   "vfs_error_storage_changed": {
     "message": "Połączenie z magazynem uległo zmianie. Wybierz pliki ponownie."
@@ -1276,9 +1252,6 @@
   },
   "sharing_vfs_external_disabled_notice": {
     "message": "Najpierw skonfiguruj inne źródła w ustawieniach VFS."
-  },
-  "sharing_vfs_external_permission_notice": {
-    "message": "Brakuje uprawnienia do wyszukiwania innych dostawców usług przechowywania danych. Nadaj je w ustawieniach VFS."
   },
   "sharing_vfs_external_no_providers_notice": {
     "message": "Nie zainstalowano żadnego zgodnego dostawcy VFS."

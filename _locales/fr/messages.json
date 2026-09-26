@@ -990,10 +990,10 @@
     "message": "Gérer la licence dans le backend"
   },
   "policy_license_grace_format": {
-    "message": "Votre licence a expiré. Les fonctionnalités Pro restent disponibles jusqu’au $1."
+    "message": "Votre licence a expiré. Les utilisateurs disposant d’un Seat attribué et actif peuvent continuer à utiliser les fonctions Pro jusqu’au $1."
   },
   "policy_license_grace": {
-    "message": "Votre licence a expiré. Les fonctionnalités Pro restent disponibles pendant le délai de grâce."
+    "message": "Votre licence a expiré. Les utilisateurs disposant d’un Seat attribué et actif peuvent continuer à utiliser les fonctions Pro pendant le délai de grâce."
   },
   "policy_license_expired": {
     "message": "Votre licence a expiré. Les fonctionnalités Pro ne sont pas disponibles. Vous pouvez continuer à utiliser les fonctionnalités de base."
@@ -1040,9 +1040,6 @@
   "policy_warning_backend_unavailable": {
     "message": "L’état du backend Nextcloud n’a pas pu être récupéré. Veuillez vérifier la connexion et réessayer."
   },
-  "policy_warning_overlicensed": {
-    "message": "Le nombre d’attributions de licence dépasse la capacité disponible de la licence. Les fonctionnalités Pro sont actuellement indisponibles."
-  },
   "policy_admin_controlled_tooltip": {
     "message": "Contrôlé par l'administrateur"
   },
@@ -1055,14 +1052,8 @@
   "sharing_password_separate_backend_required_tooltip": {
     "message": "Cette fonctionnalité nécessite le backend Nextcloud."
   },
-  "vfs_external_pro_required_tooltip": {
-    "message": "Les fournisseurs VFS externes nécessitent NC Connector Pro."
-  },
   "sharing_password_separate_no_seat_tooltip": {
     "message": "Votre administrateur doit vous attribuer un seat NC Connector pour cette fonctionnalité."
-  },
-  "sharing_password_separate_paused_tooltip": {
-    "message": "Votre seat NC Connector est actuellement en pause. Veuillez contacter votre administrateur Nextcloud."
   },
   "options_tab_signature": {
     "message": "Signature"
@@ -1160,18 +1151,6 @@
   "options_vfs_external_tooltip_text": {
     "message": "NC Connector ne détecte les fournisseurs VFS compatibles qu’après votre autorisation explicite. Les fichiers ne sont pas copiés directement entre les fournisseurs."
   },
-  "options_vfs_external_permission_label": {
-    "message": "Autorisation Thunderbird"
-  },
-  "options_vfs_external_permission_granted": {
-    "message": "Accordée"
-  },
-  "options_vfs_external_permission_required": {
-    "message": "Non accordée"
-  },
-  "options_vfs_external_permission_button": {
-    "message": "Accorder l’autorisation"
-  },
   "options_vfs_connections_heading": {
     "message": "Connexions détectées"
   },
@@ -1210,9 +1189,6 @@
   },
   "options_vfs_action_failed": {
     "message": "L’action VFS n’a pas pu être terminée."
-  },
-  "vfs_error_management_permission_missing": {
-    "message": "L’autorisation de détecter les fournisseurs VFS externes est manquante."
   },
   "vfs_error_storage_changed": {
     "message": "La connexion au stockage a changé. Sélectionnez de nouveau les fichiers."
@@ -1276,9 +1252,6 @@
   },
   "sharing_vfs_external_disabled_notice": {
     "message": "Configurez d’abord les autres sources dans les paramètres VFS."
-  },
-  "sharing_vfs_external_permission_notice": {
-    "message": "L’autorisation permettant de rechercher d’autres fournisseurs de stockage est manquante. Accordez-la dans les paramètres VFS."
   },
   "sharing_vfs_external_no_providers_notice": {
     "message": "Aucun fournisseur VFS compatible n’est installé."

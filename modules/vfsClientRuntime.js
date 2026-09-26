@@ -46,7 +46,7 @@
   async function assertExternalEntitlement(options = {}){
     const setting = await resolveExternalSetting(options);
     if (!setting.entitled){
-      throw new Error(NCVfsPolicyRuntime.errorMessage(setting.unavailableReason));
+      throw new Error(NCVfsPolicyRuntime.errorMessage(setting.unavailableReason, setting.notice));
     }
     return setting;
   }
@@ -559,7 +559,7 @@
     });
     if (!setting.entitled){
       if (nextEnabled !== setting.enabled){
-        throw new Error(NCVfsPolicyRuntime.errorMessage(setting.unavailableReason));
+        throw new Error(NCVfsPolicyRuntime.errorMessage(setting.unavailableReason, setting.notice));
       }
       return Object.freeze({
         backgroundRestartRequired: setting.enabled !== externalDiscoveryInitialized,

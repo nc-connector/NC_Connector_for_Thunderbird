@@ -990,10 +990,10 @@
     "message": "在後台管理授權"
   },
   "policy_license_grace_format": {
-    "message": "您的授權已到期。Pro 功能在 $1 之前仍可使用。"
+    "message": "您的授權已到期。已獲指派有效席位的使用者可以繼續使用 Pro 功能，直到 $1。"
   },
   "policy_license_grace": {
-    "message": "您的授權已到期。Pro 功能在寬限期內仍可使用。"
+    "message": "您的授權已到期。已獲指派有效席位的使用者可以在寬限期內繼續使用 Pro 功能。"
   },
   "policy_license_expired": {
     "message": "您的授權已到期。Pro 功能無法使用。您仍可使用基本功能。"
@@ -1040,9 +1040,6 @@
   "policy_warning_backend_unavailable": {
     "message": "無法取得 Nextcloud 後端狀態。請檢查連線後再試一次。"
   },
-  "policy_warning_overlicensed": {
-    "message": "已指派的席次數超過授權的可用額度。Pro 功能目前無法使用。"
-  },
   "policy_admin_controlled_tooltip": {
     "message": "由管理員控制"
   },
@@ -1055,14 +1052,8 @@
   "sharing_password_separate_backend_required_tooltip": {
     "message": "此功能需要 Nextcloud 後端。"
   },
-  "vfs_external_pro_required_tooltip": {
-    "message": "外部 VFS 提供者需要 NC Connector Pro。"
-  },
   "sharing_password_separate_no_seat_tooltip": {
     "message": "若要使用此功能，管理員必須為您的帳號指派 NC Connector 席位。"
-  },
-  "sharing_password_separate_paused_tooltip": {
-    "message": "您的 NC Connector 席位目前已暫停。請聯絡您的 Nextcloud 管理員。"
   },
   "options_tab_signature": {
     "message": "簽名"
@@ -1160,18 +1151,6 @@
   "options_vfs_external_tooltip_text": {
     "message": "只有在您明確授權後，NC Connector 才會偵測相容的 VFS 提供者。檔案不會在提供者之間直接複製。"
   },
-  "options_vfs_external_permission_label": {
-    "message": "Thunderbird 權限"
-  },
-  "options_vfs_external_permission_granted": {
-    "message": "已授予"
-  },
-  "options_vfs_external_permission_required": {
-    "message": "未授予"
-  },
-  "options_vfs_external_permission_button": {
-    "message": "授予權限"
-  },
   "options_vfs_connections_heading": {
     "message": "偵測到的連線"
   },
@@ -1210,9 +1189,6 @@
   },
   "options_vfs_action_failed": {
     "message": "無法完成 VFS 操作。"
-  },
-  "vfs_error_management_permission_missing": {
-    "message": "缺少偵測外部 VFS 提供者所需的權限。"
   },
   "vfs_error_storage_changed": {
     "message": "儲存空間連線已變更。請重新選擇檔案。"
@@ -1276,9 +1252,6 @@
   },
   "sharing_vfs_external_disabled_notice": {
     "message": "請先在 VFS 設定中設定其他來源。"
-  },
-  "sharing_vfs_external_permission_notice": {
-    "message": "缺少尋找其他儲存空間提供者的權限。請在 VFS 設定中授予該權限。"
   },
   "sharing_vfs_external_no_providers_notice": {
     "message": "未安裝相容的 VFS 提供者。"

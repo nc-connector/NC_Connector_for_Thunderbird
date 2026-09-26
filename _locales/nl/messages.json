@@ -990,10 +990,10 @@
     "message": "Licentie beheren in de backend"
   },
   "policy_license_grace_format": {
-    "message": "Uw licentie is verlopen. De Pro-functies blijven beschikbaar tot $1."
+    "message": "Uw licentie is verlopen. Gebruikers met een actief toegewezen Seat kunnen de Pro-functies tot $1 blijven gebruiken."
   },
   "policy_license_grace": {
-    "message": "Uw licentie is verlopen. De Pro-functies blijven beschikbaar tijdens de respijtperiode."
+    "message": "Uw licentie is verlopen. Gebruikers met een actief toegewezen Seat kunnen de Pro-functies tijdens de respijtperiode blijven gebruiken."
   },
   "policy_license_expired": {
     "message": "Uw licentie is verlopen. De Pro-functies zijn niet beschikbaar. U kunt de basisfuncties blijven gebruiken."
@@ -1040,9 +1040,6 @@
   "policy_warning_backend_unavailable": {
     "message": "De status van de Nextcloud-backend kon niet worden opgehaald. Controleer de verbinding en probeer het opnieuw."
   },
-  "policy_warning_overlicensed": {
-    "message": "Het aantal toegewezen licentieplaatsen overschrijdt de beschikbare licentiecapaciteit. De Pro-functies zijn momenteel niet beschikbaar."
-  },
   "policy_admin_controlled_tooltip": {
     "message": "Door beheerder beheerd"
   },
@@ -1055,14 +1052,8 @@
   "sharing_password_separate_backend_required_tooltip": {
     "message": "Deze functie vereist de Nextcloud-backend."
   },
-  "vfs_external_pro_required_tooltip": {
-    "message": "Externe VFS-providers vereisen NC Connector Pro."
-  },
   "sharing_password_separate_no_seat_tooltip": {
     "message": "Uw beheerder moet voor deze functie een NC Connector-seat aan uw account toewijzen."
-  },
-  "sharing_password_separate_paused_tooltip": {
-    "message": "Uw NC Connector-seat is momenteel gepauzeerd. Neem contact op met uw Nextcloud-beheerder."
   },
   "options_tab_signature": {
     "message": "Handtekening"
@@ -1160,18 +1151,6 @@
   "options_vfs_external_tooltip_text": {
     "message": "NC Connector detecteert compatibele VFS-providers pas na uw uitdrukkelijke toestemming. Bestanden worden niet rechtstreeks tussen providers gekopieerd."
   },
-  "options_vfs_external_permission_label": {
-    "message": "Thunderbird-machtiging"
-  },
-  "options_vfs_external_permission_granted": {
-    "message": "Verleend"
-  },
-  "options_vfs_external_permission_required": {
-    "message": "Niet verleend"
-  },
-  "options_vfs_external_permission_button": {
-    "message": "Machtiging verlenen"
-  },
   "options_vfs_connections_heading": {
     "message": "Gedetecteerde verbindingen"
   },
@@ -1210,9 +1189,6 @@
   },
   "options_vfs_action_failed": {
     "message": "De VFS-actie kon niet worden voltooid."
-  },
-  "vfs_error_management_permission_missing": {
-    "message": "De machtiging om externe VFS-providers te detecteren ontbreekt."
   },
   "vfs_error_storage_changed": {
     "message": "De opslagverbinding is gewijzigd. Selecteer de bestanden opnieuw."
@@ -1276,9 +1252,6 @@
   },
   "sharing_vfs_external_disabled_notice": {
     "message": "Stel eerst andere bronnen in via de VFS-instellingen."
-  },
-  "sharing_vfs_external_permission_notice": {
-    "message": "De toestemming om andere opslagproviders te zoeken ontbreekt. Verleen deze via de VFS-instellingen."
   },
   "sharing_vfs_external_no_providers_notice": {
     "message": "Er is geen compatibele VFS-provider geïnstalleerd."

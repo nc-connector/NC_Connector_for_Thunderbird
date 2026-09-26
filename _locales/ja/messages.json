@@ -990,10 +990,10 @@
     "message": "バックエンドでライセンスを管理"
   },
   "policy_license_grace_format": {
-    "message": "ライセンスの有効期限が切れています。Pro 機能は $1 まで引き続き利用できます。"
+    "message": "ライセンスの有効期限が切れています。有効なシートが割り当てられているユーザーは、$1までPro機能を引き続き利用できます。"
   },
   "policy_license_grace": {
-    "message": "ライセンスの有効期限が切れています。猶予期間中は Pro 機能を引き続き利用できます。"
+    "message": "ライセンスの有効期限が切れています。有効なシートが割り当てられているユーザーは、猶予期間中もPro機能を引き続き利用できます。"
   },
   "policy_license_expired": {
     "message": "ライセンスの有効期限が切れています。Pro 機能は利用できません。基本機能は引き続き利用できます。"
@@ -1040,9 +1040,6 @@
   "policy_warning_backend_unavailable": {
     "message": "Nextcloud のバックエンドの状態を取得できませんでした。接続を確認して、もう一度お試しください。"
   },
-  "policy_warning_overlicensed": {
-    "message": "割り当てられたライセンス枠の数が、ライセンスで利用できる上限を超えています。Pro 機能は現在利用できません。"
-  },
   "policy_admin_controlled_tooltip": {
     "message": "管理者により制御"
   },
@@ -1055,14 +1052,8 @@
   "sharing_password_separate_backend_required_tooltip": {
     "message": "この機能には Nextcloud バックエンドが必要です。"
   },
-  "vfs_external_pro_required_tooltip": {
-    "message": "外部 VFS プロバイダーを使用するには NC Connector Pro が必要です。"
-  },
   "sharing_password_separate_no_seat_tooltip": {
     "message": "この機能を使うには、管理者があなたのアカウントに NC Connector の seat を割り当てる必要があります。"
-  },
-  "sharing_password_separate_paused_tooltip": {
-    "message": "あなたの NC Connector seat は現在一時停止されています。Nextcloud 管理者に連絡してください。"
   },
   "options_tab_signature": {
     "message": "署名"
@@ -1160,18 +1151,6 @@
   "options_vfs_external_tooltip_text": {
     "message": "NC Connector は、明示的な許可後にのみ互換性のある VFS プロバイダーを検出します。ファイルはプロバイダー間で直接コピーされません。"
   },
-  "options_vfs_external_permission_label": {
-    "message": "Thunderbird の権限"
-  },
-  "options_vfs_external_permission_granted": {
-    "message": "許可済み"
-  },
-  "options_vfs_external_permission_required": {
-    "message": "未許可"
-  },
-  "options_vfs_external_permission_button": {
-    "message": "権限を許可"
-  },
   "options_vfs_connections_heading": {
     "message": "検出された接続"
   },
@@ -1210,9 +1189,6 @@
   },
   "options_vfs_action_failed": {
     "message": "VFS 操作を完了できませんでした。"
-  },
-  "vfs_error_management_permission_missing": {
-    "message": "外部 VFS プロバイダーの検出に必要な権限がありません。"
   },
   "vfs_error_storage_changed": {
     "message": "ストレージ接続が変更されました。ファイルを選択し直してください。"
@@ -1276,9 +1252,6 @@
   },
   "sharing_vfs_external_disabled_notice": {
     "message": "まず VFS 設定で他の取得元を設定してください。"
-  },
-  "sharing_vfs_external_permission_notice": {
-    "message": "他のストレージプロバイダーを検出する権限がありません。VFS 設定で権限を付与してください。"
   },
   "sharing_vfs_external_no_providers_notice": {
     "message": "互換性のある VFS プロバイダーがインストールされていません。"

@@ -990,10 +990,10 @@
     "message": "Manage license in backend"
   },
   "policy_license_grace_format": {
-    "message": "Your license has expired. Pro features remain available until $1."
+    "message": "Your license has expired. Users with an active assigned Seat can continue using Pro features until $1."
   },
   "policy_license_grace": {
-    "message": "Your license has expired. Pro features remain available during the grace period."
+    "message": "Your license has expired. Users with an active assigned Seat can continue using Pro features during the grace period."
   },
   "policy_license_expired": {
     "message": "Your license has expired. Pro features are unavailable. You can still use the basic features."
@@ -1040,9 +1040,6 @@
   "policy_warning_backend_unavailable": {
     "message": "The Nextcloud backend status could not be retrieved. Please check the connection and try again."
   },
-  "policy_warning_overlicensed": {
-    "message": "The assigned seats exceed the available license capacity. Pro features are currently unavailable."
-  },
   "policy_admin_controlled_tooltip": {
     "message": "Admin controlled"
   },
@@ -1055,14 +1052,8 @@
   "sharing_password_separate_backend_required_tooltip": {
     "message": "This feature requires the Nextcloud backend."
   },
-  "vfs_external_pro_required_tooltip": {
-    "message": "External VFS providers require NC Connector Pro."
-  },
   "sharing_password_separate_no_seat_tooltip": {
     "message": "Your administrator must assign an NC Connector seat to your account for this feature."
-  },
-  "sharing_password_separate_paused_tooltip": {
-    "message": "Your NC Connector seat is currently paused. Please contact your Nextcloud administrator."
   },
   "options_tab_signature": {
     "message": "Signature"
@@ -1160,18 +1151,6 @@
   "options_vfs_external_tooltip_text": {
     "message": "NC Connector detects compatible VFS providers only after your explicit permission. Files are not copied directly between providers."
   },
-  "options_vfs_external_permission_label": {
-    "message": "Thunderbird permission"
-  },
-  "options_vfs_external_permission_granted": {
-    "message": "Granted"
-  },
-  "options_vfs_external_permission_required": {
-    "message": "Not granted"
-  },
-  "options_vfs_external_permission_button": {
-    "message": "Grant permission"
-  },
   "options_vfs_connections_heading": {
     "message": "Detected connections"
   },
@@ -1210,9 +1189,6 @@
   },
   "options_vfs_action_failed": {
     "message": "The VFS action could not be completed."
-  },
-  "vfs_error_management_permission_missing": {
-    "message": "Permission to detect external VFS providers is missing."
   },
   "vfs_error_storage_changed": {
     "message": "The storage connection changed. Select the files again."
@@ -1276,9 +1252,6 @@
   },
   "sharing_vfs_external_disabled_notice": {
     "message": "Set up other sources in the VFS settings first."
-  },
-  "sharing_vfs_external_permission_notice": {
-    "message": "Permission to discover other storage providers has not been granted. Grant it in the VFS settings."
   },
   "sharing_vfs_external_no_providers_notice": {
     "message": "No compatible VFS provider is installed."

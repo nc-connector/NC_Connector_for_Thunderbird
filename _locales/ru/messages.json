@@ -990,10 +990,10 @@
     "message": "Управление лицензией в панели администрирования"
   },
   "policy_license_grace_format": {
-    "message": "Срок действия вашей лицензии истёк. Функции Pro остаются доступными до $1."
+    "message": "Срок действия лицензии истёк. Пользователи с назначенным активным местом могут продолжать использовать функции Pro до $1."
   },
   "policy_license_grace": {
-    "message": "Срок действия вашей лицензии истёк. Функции Pro остаются доступными в течение льготного периода."
+    "message": "Срок действия лицензии истёк. Пользователи с назначенным активным местом могут продолжать использовать функции Pro в течение льготного периода."
   },
   "policy_license_expired": {
     "message": "Срок действия вашей лицензии истёк. Функции Pro недоступны. Вы по-прежнему можете использовать базовые функции."
@@ -1040,9 +1040,6 @@
   "policy_warning_backend_unavailable": {
     "message": "Не удалось получить состояние серверной части Nextcloud. Проверьте подключение и повторите попытку."
   },
-  "policy_warning_overlicensed": {
-    "message": "Количество назначенных лицензионных мест превышает доступную ёмкость лицензии. Функции Pro сейчас недоступны."
-  },
   "policy_admin_controlled_tooltip": {
     "message": "Управляется администратором"
   },
@@ -1055,14 +1052,8 @@
   "sharing_password_separate_backend_required_tooltip": {
     "message": "Для этой функции требуется backend Nextcloud."
   },
-  "vfs_external_pro_required_tooltip": {
-    "message": "Для внешних поставщиков VFS требуется NC Connector Pro."
-  },
   "sharing_password_separate_no_seat_tooltip": {
     "message": "Для этой функции администратор должен назначить вашей учётной записи seat NC Connector."
-  },
-  "sharing_password_separate_paused_tooltip": {
-    "message": "Ваш seat NC Connector сейчас приостановлен. Пожалуйста, обратитесь к администратору Nextcloud."
   },
   "options_tab_signature": {
     "message": "Подпись"
@@ -1160,18 +1151,6 @@
   "options_vfs_external_tooltip_text": {
     "message": "NC Connector обнаруживает совместимые провайдеры VFS только после вашего явного разрешения. Файлы не копируются напрямую между провайдерами."
   },
-  "options_vfs_external_permission_label": {
-    "message": "Разрешение Thunderbird"
-  },
-  "options_vfs_external_permission_granted": {
-    "message": "Предоставлено"
-  },
-  "options_vfs_external_permission_required": {
-    "message": "Не предоставлено"
-  },
-  "options_vfs_external_permission_button": {
-    "message": "Предоставить разрешение"
-  },
   "options_vfs_connections_heading": {
     "message": "Обнаруженные подключения"
   },
@@ -1210,9 +1189,6 @@
   },
   "options_vfs_action_failed": {
     "message": "Не удалось выполнить операцию VFS."
-  },
-  "vfs_error_management_permission_missing": {
-    "message": "Отсутствует разрешение на обнаружение внешних провайдеров VFS."
   },
   "vfs_error_storage_changed": {
     "message": "Подключение к хранилищу изменилось. Выберите файлы заново."
@@ -1276,9 +1252,6 @@
   },
   "sharing_vfs_external_disabled_notice": {
     "message": "Сначала настройте другие источники в настройках VFS."
-  },
-  "sharing_vfs_external_permission_notice": {
-    "message": "Отсутствует разрешение на поиск других провайдеров хранилищ. Предоставьте его в настройках VFS."
   },
   "sharing_vfs_external_no_providers_notice": {
     "message": "Не установлен ни один совместимый провайдер VFS."

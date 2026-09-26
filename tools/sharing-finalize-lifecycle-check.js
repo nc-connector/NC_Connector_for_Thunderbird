@@ -153,12 +153,16 @@ function createFinalizeHarness(options = {}){
     },
     NCPolicyRuntime: {
       async getPolicyStatus(){
-        return { seat: { assigned: true } };
-      }
-    },
-    NCPolicyState: {
-      hasSeatEntitlement(){
-        return true;
+        return options.policyStatus || {
+          endpointAvailable: true,
+          fetchSucceeded: true,
+          status: {
+            mode: "pro",
+            seatAssigned: true,
+            seatState: "active",
+            isValid: true
+          }
+        };
       }
     },
     async armComposeShareCleanup(tabId, payload){
@@ -296,6 +300,9 @@ function createFinalizeHarness(options = {}){
   };
   context.globalThis = context;
   vm.createContext(context);
+  vm.runInContext(readText("modules/policyState.js"), context, {
+    filename: "modules/policyState.js"
+  });
   vm.runInContext(readText("modules/bgComposeShareInsert.js"), context, {
     filename: "modules/bgComposeShareInsert.js"
   });
@@ -700,6 +707,103 @@ function finalizePayload(overrides = {}){
   };
 }
 
+async function verifyPasswordEntitlementFinalization(){
+  for (const scenario of [
+    {
+      name: "no assigned seat",
+      status: { seatAssigned: false, seatState: "none" },
+      message: "sharing_password_separate_no_seat_tooltip"
+    },
+    {
+      name: "administrator without a seat during license synchronization failure",
+      status: {
+        seatAssigned: false,
+        seatState: "none",
+        canManageLicense: true,
+        licenseConnectionError: true
+      },
+      message: "sharing_password_separate_no_seat_tooltip"
+    },
+    {
+      name: "personally paused seat",
+      status: { seatState: "suspended_overlimit", overlicensed: true },
+      message: "policy_warning_seat_suspended"
+    },
+    {
+      name: "expired license",
+      status: { isValid: false, accessStatus: "EXPIRED" },
+      message: "policy_license_expired"
+    },
+    {
+      name: "unreachable backend without a confirmed snapshot",
+      policy: { endpointAvailable: false, fetchSucceeded: false, reason: "network_error" },
+      message: "policy_warning_backend_unavailable"
+    },
+    {
+      name: "missing backend",
+      policy: { endpointAvailable: false, fetchSucceeded: false, reason: "endpoint_missing" },
+      message: "sharing_password_separate_backend_required_tooltip"
+    }
+  ]){
+    const harness = createFinalizeHarness({
+      policyStatus: {
+        endpointAvailable: true,
+        fetchSucceeded: true,
+        status: {
+          mode: "pro",
+          seatAssigned: true,
+          seatState: "active",
+          isValid: true,
+          ...scenario.status
+        },
+        ...scenario.policy
+      }
+    });
+    const originalDetails = structuredClone(harness.composeDetails.get(25));
+    const result = await harness.context.handleSharingFinalizeTransaction(finalizePayload());
+    assert(result.ok === false, `${scenario.name} must refuse password finalization`);
+    assert(
+      result.error.startsWith(scenario.message),
+      `${scenario.name} must explain its actual entitlement refusal`
+    );
+    assert(
+      Object.values(harness.calls).every((calls) => calls.length === 0),
+      `${scenario.name} must stop before cleanup, metadata, registration, or insertion mutations`
+    );
+    assert(
+      harness.composeCleanup.size === 0
+        && harness.persistedCompose.size === 0
+        && harness.passwordDispatch.size === 0
+        && harness.timers.count() === 0
+        && harness.context.isComposeFinalizeTransactionActive(25) === false,
+      `${scenario.name} must not start a finalize transaction`
+    );
+    assert(
+      JSON.stringify(harness.composeDetails.get(25)) === JSON.stringify(originalDetails),
+      `${scenario.name} must leave the compose draft unchanged`
+    );
+    const localResult = await harness.context.handleSharingFinalizeTransaction(
+      finalizePayload({ passwordDispatch: null })
+    );
+    assert(localResult.ok === true, `${scenario.name} must not block ordinary share insertion`);
+  }
+
+  for (const mode of ["community", "pro"]){
+    const harness = createFinalizeHarness({
+      policyStatus: {
+        endpointAvailable: true,
+        fetchSucceeded: true,
+        status: { mode, seatAssigned: true, seatState: "active", isValid: true, overlicensed: true }
+      }
+    });
+    const result = await harness.context.handleSharingFinalizeTransaction(finalizePayload());
+    assert(
+      result.ok === true && harness.calls.passwordRegister.length === 1,
+      `An active ${mode} seat must allow password finalization despite global overcapacity`
+    );
+  }
+}
+
 async function verifyShareNoteFinalization(){
   const unchanged = createFinalizeHarness();
   const unchangedResult = await unchanged.context.handleSharingFinalizeTransaction(
@@ -841,6 +945,10 @@ async function verifyInsertFailureRollback(){
   );
 
   assert(result.ok === false, "Insert failure must fail finalize");
+  assert(
+    result.error === "sharing_error_insert_failed",
+    "A compose insertion failure must retain its insertion error"
+  );
   assert(result.canRetry === true, "Complete rollback must allow retry");
   assert(
     harness.composeCleanup.get(25) === previousState,
@@ -968,6 +1076,7 @@ async function verifySuccessfulCommit(){
 async function run(){
   verifyWizardDelegatesShareNoteFinalization();
   await verifyWizardFinalizeCancelLifecycle();
+  await verifyPasswordEntitlementFinalization();
   await verifyShareNoteFinalization();
   await verifyInsertFailureRollback();
   await verifyDelayedStageTimeoutRollback();

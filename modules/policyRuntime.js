@@ -228,7 +228,7 @@ const NCPolicyRuntime = (() => {
     const policyActive = POLICY_DOMAINS.some((domain) => policyDomains[domain]?.active === true);
     const reason = policyActive
       ? "policy_active"
-      : (status.overlicensed ? "overlicensed" : (seatUsable ? "policy_domains_unavailable" : "seat_not_usable"));
+      : (seatUsable ? "policy_domains_unavailable" : "seat_not_usable");
     return withStatusWarning({
       ok: true,
       fetchSucceeded: true,

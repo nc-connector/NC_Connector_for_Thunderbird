@@ -85,6 +85,7 @@ async function getVfsOptionsState(){
       locked: externalStatus.locked === true,
       entitled: externalStatus.entitled === true,
       unavailableReason: String(externalStatus.unavailableReason || ""),
+      notice: externalStatus.notice,
       initialized: externalStatus.initialized === true,
       connections: Object.freeze((externalStatus.connections || []).map((connection) => Object.freeze({
         connectionId: JSON.stringify([
