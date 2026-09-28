@@ -4,6 +4,19 @@ All notable changes to **NC Connector for Thunderbird** will be documented in th
 
 This project targets **Thunderbird ESR 140** through **ESR 153**.
 
+## 3.4.2
+
+### Changed
+- Settings, Sharing, Talk, and external-source actions now use consistent status messages and feature hints. Users without a Seat are told that Sharing and Talk remain available with local settings.
+- Updated Seat and grace-period wording across all 15 supported languages and clarified backend-policy behavior in the documentation.
+
+### Fixed
+- Active Community Seats now have the same feature access as active Pro Seats, including external VFS providers.
+- Global license overcapacity no longer blocks users whose personal Seat remains active; personally paused Seats remain restricted.
+- Administrators without a Seat retain their personal missing-Seat explanation during grace periods or license synchronization failures.
+- An explicit zero-day share expiry from an older backend is treated consistently as one day instead of seven. Valid locked policies and editable local choices remain effective.
+- Accept valid system address-book exports even with HTTP 404 or an incorrect Content-Type. Reject malformed responses without replacing cached contacts or misclassifying internal Talk participants as guests.
+
 ## 3.4.1
 
 ### Changed

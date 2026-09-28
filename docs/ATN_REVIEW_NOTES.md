@@ -1,7 +1,7 @@
 # Reviewer Notes
 NC Connector for Thunderbird (`{4a35421f-0906-439c-bff2-8eef39e2baee}`)
 
-This document summarizes the reviewer-relevant behavior of version 3.4.1;
+This document summarizes the reviewer-relevant behavior of version 3.4.2;
 release-specific differences remain in `CHANGELOG.md`.
 
 ---
@@ -21,12 +21,13 @@ release-specific differences remain in `CHANGELOG.md`.
 
 ---
 
-## License status messages in 3.4.1
+## Seat and license status messages in 3.4.2
 
 - Settings, Sharing and Talk use shared localized license status messages across all 15 supported languages. The no-seat banner explains that local Sharing and Talk remain available; disabled Pro features retain their separate seat-requirement hints.
 - Optional backend status fields distinguish grace periods, license refusals, activation issues, and synchronization failures. Active Community and Pro Seats share the same feature checks; global overcapacity does not deny a personally active Seat; the add-on does not infer access from local date comparisons.
 - License-management links are shown only to Nextcloud administrators and point to the configured Nextcloud's backend administration. The mail add-on does not contact the license server directly.
 - Older backend responses remain supported. Without the backend, normal local Sharing and Talk remain available without a license warning.
+- Legacy zero-day Share expiry is normalized once to one day at the backend-response boundary. Positive and missing values retain their meaning; locked policies and editable local choices still use the existing resolution path. The policy regression suite compares expiry and attachment thresholds across Community and Pro, including inactive personal Seats and both upload modes.
 
 ---
 
@@ -97,7 +98,7 @@ password-dispatch, header, or body mutation cannot be exposed as committed.
 
 ---
 
-## Reviewer Alignment Notes (3.4.1)
+## Reviewer Alignment Notes (3.4.2)
 
 - Core rules are explicit; fallback behavior is bounded and logged instead of relying on silent heuristics.
 - `strict_min_version` is set to `140.0`. The add-on uses Thunderbird APIs added after ESR 115, including `browser.messengerUtilities.parseMailboxString(...)`, and targets the supported ESR 140 through ESR 153 range. `strict_max_version` remains `157.*` so compatible Thunderbird releases through 157 can install it.
@@ -124,6 +125,7 @@ password-dispatch, header, or body mutation cannot be exposed as committed.
 - Talk user search, moderator selection, and participant toggles (users/guests)
   depend on runtime system-addressbook availability checks and are disabled
   with explicit user guidance when the addressbook endpoint is unavailable.
+- System-addressbook reads validate the complete vCard export before replacing cached contacts. A valid non-empty export is accepted with HTTP 404 or a wrong Content-Type; other HTTP errors remain rejected. Invalid responses stop participant classification and are not treated as an empty address book. Parser diagnostics do not expose contact data or response bodies. The existing bundled parser and all experiments remain unchanged.
 - Effective Talk setting `talk_set_password` controls password protection. New
   password-protected rooms start with a generated password that users can
   replace or generate again.
