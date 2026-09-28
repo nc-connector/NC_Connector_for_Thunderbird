@@ -135,6 +135,16 @@ Administrators should define:
 
 Manual shares always insert the share page. Attachment automation can insert either supported target. The selected target changes the link and wording, not the recipient permissions or cleanup rules.
 
+With Backend 1.4.2, central expiry defaults range from 1 to 3650 days. A locked
+expiry also applies to attachment shares. For older backends, an explicit
+zero-day default is treated as one day, not seven days or unlimited validity.
+Existing shares are not changed. Editable settings retain the user's choice.
+
+Active attachment thresholds range from 1 to 10240 MB. Turning threshold mode
+off keeps it off; use the separate **Always via NC Connector** option to route
+all attachments. A zero threshold from an older backend retains its previous
+5 MB behavior. Upgrade the backend so its settings show the effective value.
+
 When NC Connector owns the attachment workflow, disable Thunderbird's competing large-attachment prompt through enterprise policy. See [Attachment policy example](#63-attachment-policy-example).
 
 Do not use **Save as Template** for a message that contains an NC Connector share. Thunderbird templates can create independent messages without a reliable share lifecycle; NC Connector therefore blocks sending such templates and messages created from them.
@@ -151,7 +161,7 @@ Both switches can be set under **Administration settings → NC Connector Backen
 - `vfs_provider_enabled` controls whether NC Connector accepts new or existing grants from other add-ons. This switch does not require Pro.
 - `vfs_external_providers_enabled` controls the external-source function. An enabled policy does not bypass the valid active Seat check.
 
-An older backend that does not return these two keys leaves the local switches editable. Local files, **My Nextcloud**, and NC Connector's own VFS provider continue to work without the backend; only external providers are backend- and Pro-gated.
+An older backend that does not return these two keys leaves the local switches editable. Local files, **My Nextcloud**, and NC Connector's own VFS provider continue to work without the backend; only external providers require backend-confirmed access with an active assigned Seat, equally in Community and Pro.
 
 There is no second Nextcloud login for VFS. Changing the configured Nextcloud server or canonical user invalidates all existing provider grants so they cannot silently point to another account. Changing only the app password for the same account keeps the storage identity.
 

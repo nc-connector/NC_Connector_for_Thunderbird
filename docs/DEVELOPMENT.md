@@ -326,6 +326,13 @@ Backend policy precedence for every add-on-editable default:
 
 The same resolution must be used by options, wizards, and background consumers. Template and derived output fields remain backend-controlled.
 
+Backend 1.4.2 supplies share expiry defaults from 1 through 3650 days. At the
+status-response boundary, `policyRuntime` converts an explicit legacy
+`share_expire_days=0` to 1. Options, wizard defaults, and background upload
+validation consume that same normalized value. Missing values remain missing;
+the local seven-day fallback is unchanged. An active locked expiry remains
+mandatory, while an editable policy preserves the user's local choice.
+
 ### 6.2 Storage schema (key list)
 
 Managed setup:
@@ -893,6 +900,7 @@ Runtime rules:
 - The general no-seat banner uses `policy_warning_no_seat` to explain local Sharing and Talk availability. Feature hints retain `sharing_password_separate_no_seat_tooltip`; the shared formatter selects the text for its display context without changing entitlement checks.
 - License administration links require `can_manage_license === true` and use the locally constructed HTTPS `endpointUrl`, preserving the configured Nextcloud subdirectory. No URL from the backend payload is used. Missing role metadata hides the link; neither mail client activates licenses or contacts the license server directly.
 - Backend attachment-threshold policy uses `attachments_min_size_mb` as both value and enable-state: a positive integer enables threshold mode, `null` disables it.
+- Backend 1.4.2 accepts active thresholds from 1 through 10240 MB. Older backends may still return 0, which retains the existing 5 MB compatibility value. Missing keys preserve local settings; an editable policy seeds only absent local choices. The normal policy regression check runs the real status parser and compose-automation resolver for both Community and Pro, including paused and unassigned Seats.
 - Backend attachment-link policy uses `attachment_link_target` with values `zip_download` and `share_page`; `policy_editable.share.attachment_link_target=false` locks the options control. If a locked value is missing or invalid, the effective value is `zip_download`.
 - Locked backend attachment-automation policy is enforced in compose runtime, not only in the settings surface.
 - Backend email signatures are applied only when `policy.email_signature.email_signature_on_compose=true`, a rendered `email_signature_template` exists, and `policy.email_signature.user_email` matches the active Thunderbird sender identity email.

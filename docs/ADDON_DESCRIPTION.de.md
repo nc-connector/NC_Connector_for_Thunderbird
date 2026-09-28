@@ -77,7 +77,7 @@ Datenfluss:
 - Stellt die bereits eingerichtete Nextcloud nach einer ausdrücklichen, widerrufbaren Freigabe pro Add-on als vollständig schreib- und lesefähigen VFS-Anbieter bereit
 - Nutzt die bestehende Nextcloud-Anmeldung und die gemeinsame DAV-Implementierung; ein Wechsel von Server oder kanonischem Benutzer verwirft vorherige Anbieterfreigaben
 - Nutzt für Anbieter-Schreibvorgänge dieselbe Auswahl zwischen Direct und Chunked v2 sowie dieselben Wiederholungs-, Abbruch-, Fortschritts-, Cleanup- und Log-Pfade; unabhängige VFS-Schreibvorgänge werden nicht zu DAV-Bulk-Batches zusammengefasst
-- Erkennt externe VFS-Anbieter nur bei wirksamer Freigabe-Policy und wenn das Nextcloud-Backend NC Connector Pro mit aktivem zugewiesenem Seat meldet; der Zugriff auf die Add-on-Verwaltung wird bei der Installation erteilt
+- Erkennt externe VFS-Anbieter nur bei wirksamer Freigabe-Policy und wenn das Nextcloud-Backend gültigen Zugriff mit aktivem zugewiesenem Seat bestätigt, gleichermaßen in Community und Pro; der Zugriff auf die Add-on-Verwaltung wird bei der Installation erteilt
 - Unterstützt im Freigabe-Assistenten die Datei- und Ordnerauswahl aus der eingerichteten Nextcloud und externen Anbietern
 
 ### Talk
@@ -131,8 +131,8 @@ Datenfluss:
 - Nextcloud 32 oder neuer mit aktivierten OCS-Endpunkten; Talk wird für Talk- und Kalenderfunktionen benötigt
 - Dateifreigabe via DAV und OCS (remote.php und files_sharing API)
 - App-Passwort oder Login Flow v2 für Auth
-- Manifest-Berechtigungen: `storage`, `accountsRead`, `compose`, `compose.send` und `notifications`
-- Optionale Berechtigungen: `management` zur Erkennung externer VFS-Anbieter sowie HTTPS-Hostzugriff, der für die eingerichtete Nextcloud-Origin angefordert wird
+- Manifest-Berechtigungen: `storage`, `accountsRead`, `compose`, `compose.send`, `management` zur Erkennung externer VFS-Anbieter und `notifications`
+- Optionale Berechtigungen: HTTPS-Hostzugriff, der für die eingerichtete Nextcloud-Origin angefordert wird
 
 ## Konfiguration
 - Base URL, User und App-Passwort (manuell) oder Login Flow v2 (automatisch)

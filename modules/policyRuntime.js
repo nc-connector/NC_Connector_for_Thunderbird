@@ -213,7 +213,11 @@ const NCPolicyRuntime = (() => {
       expiresAtIso: rawStatus.expires_at_iso || null,
       graceUntilIso: rawStatus.grace_until_iso || null
     };
-    const policyShare = isObject(payload?.policy?.share) ? payload.policy.share : null;
+    const policyShare = isObject(payload?.policy?.share) ? { ...payload.policy.share } : null;
+    // Backends before 1.4.2 could return zero; use the same minimum as newer backends.
+    if (policyShare?.share_expire_days === 0){
+      policyShare.share_expire_days = 1;
+    }
     const policyTalk = isObject(payload?.policy?.talk) ? payload.policy.talk : null;
     const policyEmailSignature = isObject(payload?.policy?.email_signature) ? payload.policy.email_signature : null;
     const editableShare = isObject(payload?.policy_editable?.share) ? payload.policy_editable.share : null;

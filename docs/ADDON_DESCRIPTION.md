@@ -128,8 +128,8 @@ Data flow:
 - Nextcloud 32 or newer with OCS endpoints enabled; Talk is required for Talk and calendar features
 - File sharing via DAV and OCS (remote.php and files_sharing API)
 - App password or Login Flow v2 for authentication
-- Manifest permissions: `storage`, `accountsRead`, `compose`, `compose.send`, and `notifications`
-- Optional permissions: `management` for external VFS-provider discovery and HTTPS host access requested for the configured Nextcloud origin
+- Manifest permissions: `storage`, `accountsRead`, `compose`, `compose.send`, `management` for external VFS-provider discovery, and `notifications`
+- Optional permissions: HTTPS host access requested for the configured Nextcloud origin
 
 ## Configuration
 - Base URL, user, and app password (manual) or Login Flow v2 (auto)

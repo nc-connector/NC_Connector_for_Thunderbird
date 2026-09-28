@@ -1,7 +1,7 @@
 "use strict";
 
 const vm = require("node:vm");
-const { assert, loadScript } = require("./review-check-utils");
+const { assert, loadScript, readText } = require("./review-check-utils");
 
 function loadPolicyState(){
   const context = { globalThis: null };
@@ -62,7 +62,7 @@ function loadVfsPolicyRuntime(){
   return context.NCVfsPolicyRuntime;
 }
 
-function loadPolicyRuntime(payload, response = {}){
+function loadPolicyContext(payload, response = {}){
   const context = {
     console,
     globalThis: null,
@@ -107,7 +107,7 @@ function loadPolicyRuntime(payload, response = {}){
   vm.createContext(context);
   loadScript("modules/policyState.js", context, "\nglobalThis.NCPolicyState = NCPolicyState;");
   loadScript("modules/policyRuntime.js", context, "\nglobalThis.NCPolicyRuntime = NCPolicyRuntime;");
-  return context.NCPolicyRuntime;
+  return context;
 }
 
 function createOverlicensedPayload(){
@@ -220,7 +220,7 @@ async function verifyRuntimeMetadata(policy){
     license_last_sync_at_iso: "2026-09-16T12:00:00Z",
     license_offline_until_iso: "2026-09-30T12:00:00Z"
   });
-  const result = await loadPolicyRuntime(payload).getPolicyStatus();
+  const result = await loadPolicyContext(payload).NCPolicyRuntime.getPolicyStatus();
   const expected = {
     licenseStatus: "EXPIRED", accessStatus: "GRACE", canManageLicense: true,
     licenseActivationState: "activated", licenseConnectionError: true,
@@ -243,7 +243,7 @@ async function verifyRuntimeMetadata(policy){
       can_manage_license: malformed, license_connection_error: malformed,
       license_last_sync_at_iso: malformed, license_offline_until_iso: malformed
     });
-    const normalized = await loadPolicyRuntime(fixture).getPolicyStatus();
+    const normalized = await loadPolicyContext(fixture).NCPolicyRuntime.getPolicyStatus();
     assert(normalized.status.licenseStatus === "" && normalized.status.accessStatus === "" && normalized.status.licenseActivationState === "", "Malformed optional status labels must stay empty");
     assert(normalized.status.canManageLicense === false && normalized.status.licenseConnectionError === false, "Optional boolean metadata must be strict");
     assert(normalized.status.licenseLastSyncAtIso === null && normalized.status.licenseOfflineUntilIso === null, "Malformed optional dates must stay absent");
@@ -252,17 +252,17 @@ async function verifyRuntimeMetadata(policy){
   for (const value of ["true", "false", 1]){
     const fixture = createOverlicensedPayload();
     Object.assign(fixture.status, { overlicensed: false, can_manage_license: value, license_connection_error: value });
-    const normalized = await loadPolicyRuntime(fixture).getPolicyStatus();
+    const normalized = await loadPolicyContext(fixture).NCPolicyRuntime.getPolicyStatus();
     assert(normalized.status.canManageLicense === false && normalized.status.licenseConnectionError === false, "Truthy metadata must not grant admin guidance or fabricate a connection failure");
   }
-  const missing = await loadPolicyRuntime(null, { status: 404 }).getPolicyStatus();
+  const missing = await loadPolicyContext(null, { status: 404 }).NCPolicyRuntime.getPolicyStatus();
   assert(missing.warning.visible === false && policy.getStatusNotice(missing).code === "", "An optional missing backend must remain silent");
   for (const response of [{ error: new Error("Fixture network failure") }, { status: 503 }, { status: 404, fallbackError: new Error("Fixture fallback failure") }, {}]){
-    const failed = await loadPolicyRuntime(null, response).getPolicyStatus();
+    const failed = await loadPolicyContext(null, response).NCPolicyRuntime.getPolicyStatus();
     assert(failed.warning.visible === true && failed.warning.code === "backend_unavailable", "A failed backend request must remain distinct from a license refusal");
     assert(policy.getStatusNotice(failed).license === false, "Transport failure must not claim an invalid license");
   }
-  const setup = await loadPolicyRuntime(null).probePolicyStatus({});
+  const setup = await loadPolicyContext(null).NCPolicyRuntime.probePolicyStatus({});
   assert(setup.warning.visible === false && policy.getStatusNotice(setup).code === "", "Missing credentials must not fabricate a license warning");
 }
 
@@ -369,7 +369,7 @@ async function run(){
     "Community mode must support external providers with an active assigned seat"
   );
 
-  const runtime = loadPolicyRuntime(createOverlicensedPayload());
+  const runtime = loadPolicyContext(createOverlicensedPayload()).NCPolicyRuntime;
   const overlicensedStatus = await runtime.getPolicyStatus();
   assert(overlicensedStatus.policyActive === true, "An active seat must retain backend policy during overcapacity");
   assert(overlicensedStatus.mode === "policy", "An active seat must retain backend policy mode");
@@ -384,6 +384,7 @@ async function run(){
   verifyStatusNotices(policy, vfsPolicy);
   await verifyRuntimeMetadata(policy);
   await verifySeatParity(policy, vfsPolicy);
+  await verifySharePolicyNumbers();
 
   console.log("[OK] policy-contract-check passed");
 }
@@ -404,7 +405,7 @@ async function verifySeatParity(policy, vfsPolicy){
                 overlicensed, access_status: accessStatus, can_manage_license: canManageLicense,
                 license_connection_error: connectionError
               });
-              const status = await loadPolicyRuntime(payload).getPolicyStatus();
+              const status = await loadPolicyContext(payload).NCPolicyRuntime.getPolicyStatus();
               const label = `${mode}/${accessStatus}/${seatState}/over=${overlicensed}/admin=${canManageLicense}/sync=${connectionError}`;
               assert(policy.hasSeatEntitlement(status) === usable, `${label}: personal Seat controls access`);
               for (const domain of ["share", "talk", "email_signature"]){
@@ -433,6 +434,121 @@ async function verifySeatParity(policy, vfsPolicy){
       }
     }
   }
+}
+
+async function verifySharePolicyNumbers(){
+  const payload = createOverlicensedPayload();
+  const context = loadPolicyContext(payload);
+  context.Date = class extends Date {
+    constructor(...args){
+      super(...(args.length ? args : ["2026-09-28T12:00:00Z"]));
+    }
+  };
+  loadScript("modules/sharingStorage.js", context, "\nglobalThis.NCSharingStorage = NCSharingStorage;");
+  loadScript("modules/textUtils.js", context);
+  loadScript("ui/wizardPolicyUi.js", context);
+  loadScript("modules/shareRequestRules.js", context);
+  loadScript("modules/bgComposeAttachments.js", context);
+  context.SHARING_KEYS = context.NCSharingStorage.SHARING_KEYS;
+  context.SHARE_POLICY_KEYS = context.NCSharingStorage.SHARE_POLICY_KEYS;
+  context.normalizeAttachmentThresholdMb = context.NCSharingStorage.normalizeAttachmentThresholdMb;
+  context.getSelectedTalkDefaultRoomType = () => "event";
+  context.setTalkDefaultRoomType = () => {};
+  // Run the options default resolver without starting the options page or its listeners.
+  const options = readText("options.js");
+  const start = options.indexOf("function applyInitialSpecialPolicyDefaults(stored){");
+  const end = options.indexOf("\nfunction normalizeEmailAddress(", start);
+  assert(start >= 0 && end > start, "Options default resolver boundaries must exist");
+  vm.runInContext(options.slice(start, end), context, { filename: "options.js" });
+  let stored = {};
+  context.browser = { storage: { local: { get: async () => stored } } };
+  const expiryBinding = {
+    name: "expireDays", domain: "share", key: "share_expire_days", type: "int",
+    property: "value", fallback: context.NCSharingStorage.DEFAULT_EXPIRE_DAYS,
+    normalize: context.NCTalkTextUtils.normalizeExpireDays
+  };
+  let expiryCases = 0;
+  let thresholdCases = 0;
+  for (const mode of ["community", "pro"]){
+    for (const seatState of ["active", "suspended_overlimit", "none"]){
+      Object.assign(payload.status, {
+        mode, seat_state: seatState, seat_assigned: seatState !== "none"
+      });
+      for (const editable of [false, true]){
+        for (const value of [undefined, 0, 1, 19, 3650]){
+          payload.policy.share = value === undefined ? {} : { share_expire_days: value };
+          payload.policy_editable.share = { share_expire_days: editable };
+          const status = await context.NCPolicyRuntime.getPolicyStatus();
+          const normalized = value === 0 ? 1 : value;
+          assert(status.policy.share.share_expire_days === normalized, "Only explicit legacy zero expiry must become one day");
+          assert(payload.policy.share.share_expire_days === value, "Normalizing expiry must not mutate the source payload");
+          for (const hasLocal of [false, true]){
+            const localDays = hasLocal ? 23 : 7;
+            const managed = seatState === "active" && (!editable || !hasLocal);
+            const expectedDays = managed && value !== undefined ? normalized : localDays;
+            const defaults = context.NCWizardPolicyUi.readPolicyBoundDefaults(
+              context.NCWizardPolicyUi.readPolicyDomain(status, "share"),
+              [expiryBinding], { expireDays: localDays },
+              { localNames: new Set(hasLocal ? ["expireDays"] : []) }
+            );
+            assert(defaults.expireDays === expectedDays, "Expiry defaults must respect personal access and local editability");
+            const element = { value: defaults.expireDays };
+            context.NCWizardPolicyUi.applyPolicyBinding(status, { ...expiryBinding, element });
+            const locked = seatState === "active" && !editable;
+            assert(element.value === expectedDays && element.disabled === locked, "Options expiry and wizard defaults must agree");
+            const expectedDate = new context.Date();
+            expectedDate.setDate(expectedDate.getDate() + (locked ? (normalized ?? 7) : expectedDays));
+            for (const attachmentMode of [false, true]){
+              const request = context.NCShareRequestRules.resolveUploadRequest({
+                expireEnabled: !locked, expireDate: expectedDate.toISOString().slice(0, 10)
+              }, { policyStatus: status, attachmentMode });
+              assert(request.expireEnabled && request.expireDate === expectedDate.toISOString().slice(0, 10), "Manual and attachment uploads must use the resolved expiry");
+              const disabled = context.NCShareRequestRules.resolveUploadRequest({ expireEnabled: false }, { policyStatus: status, attachmentMode });
+              assert(disabled.expireEnabled === locked, "Only an active locked policy may force expiry");
+            }
+            expiryCases++;
+          }
+        }
+        for (const value of [undefined, null, 0, 1, 19, 10240]){
+          for (const always of [false, true]){
+            payload.policy.share = { attachments_always_via_ncconnector: always };
+            if (value !== undefined){
+              payload.policy.share.attachments_min_size_mb = value;
+            }
+            payload.policy_editable.share = {
+              attachments_always_via_ncconnector: editable, attachments_min_size_mb: editable
+            };
+            for (const local of [null, { enabled: false, always: false }, { enabled: true, always: false }, { enabled: true, always: true }]){
+              stored = local ? {
+                sharingAttachmentsAlwaysConnector: local.always,
+                sharingAttachmentsOfferAboveEnabled: local.enabled,
+                sharingAttachmentsOfferAboveMb: 23
+              } : {};
+              const managed = seatState === "active" && (!editable || !local);
+              const expectedAlways = managed ? always : local?.always === true;
+              const useThreshold = managed && value !== undefined;
+              const expectedEnabled = !expectedAlways && (useThreshold ? value !== null : (local?.enabled ?? true));
+              const expectedMb = useThreshold && value !== null ? (value === 0 ? 5 : value) : (local ? 23 : 5);
+              const actual = await context.getComposeAttachmentAutomationSettings();
+              assert(actual.alwaysConnector === expectedAlways && actual.offerAboveEnabled === expectedEnabled, "Attachment automation must preserve off/null and respect editable local choices");
+              assert(actual.thresholdMb === expectedMb && actual.thresholdBytes === expectedMb * 1024 * 1024, "Attachment automation must preserve positive thresholds and the legacy zero-to-five rule");
+              context.runtimePolicyStatus = await context.NCPolicyRuntime.getPolicyStatus();
+              context.sharingAttachmentsAlwaysNcInput = { checked: local?.always === true };
+              context.sharingAttachmentsOfferAboveEnabledInput = { checked: local?.enabled ?? true };
+              context.sharingAttachmentsOfferAboveMbInput = { value: String(local ? 23 : 5) };
+              context.applyInitialSpecialPolicyDefaults(stored);
+              const optionsAlways = context.sharingAttachmentsAlwaysNcInput.checked;
+              const optionsThreshold = !optionsAlways && context.sharingAttachmentsOfferAboveEnabledInput.checked;
+              assert(optionsAlways === actual.alwaysConnector && optionsThreshold === actual.offerAboveEnabled, "Options and compose runtime must resolve the same automation mode");
+              assert(Number(context.sharingAttachmentsOfferAboveMbInput.value) === actual.thresholdMb, "Options and compose runtime must use the same threshold");
+              thresholdCases++;
+            }
+          }
+        }
+      }
+    }
+  }
+  console.log(`[OK] share policy numbers: ${expiryCases} expiry cases, ${thresholdCases} attachment cases`);
 }
 
 run().catch((error) => {
