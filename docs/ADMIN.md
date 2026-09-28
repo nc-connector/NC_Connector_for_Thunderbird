@@ -193,7 +193,9 @@ Then open the following URL in an authenticated browser session:
 https://cloud.example.com/remote.php/dav/addressbooks/users/<user>/z-server-generated--system/?export
 ```
 
-Expected result: the request returns the system address book instead of `404` or `403`.
+Expected result: the request returns a vCard export, not a login page or error document. NC Connector also accepts HTTP 404 if the response contains a valid, non-empty system address book, even when its Content-Type is incorrect. This compatibility behavior does not bypass HTTP 401/403 or other HTTP errors; correct the server's status handling when possible.
+
+A successful, explicitly identified empty vCard export is a valid empty address book. Empty HTTP 404 responses and damaged exports are not. If a refresh fails, the last successfully read contacts are retained, but the address book is reported as unavailable and participant classification waits for a successful read. Internal users are not silently invited as external guests. After correcting server access or the response, reopen the settings or Talk wizard to retry.
 
 ### 4.4 Optional backend policies
 

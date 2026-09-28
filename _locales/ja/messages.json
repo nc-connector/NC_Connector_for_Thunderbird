@@ -272,6 +272,9 @@
   "error_host_permission_missing": {
     "message": "設定された Nextcloud インスタンスへのアクセスが許可されていません。"
   },
+  "error_system_addressbook_invalid_response": {
+    "message": "サーバーから有効なシステムアドレス帳が返されませんでした。再試行するか、Nextcloud 管理者にお問い合わせください。"
+  },
   "error_system_addressbook_failed": {
     "message": "システムアドレス帳を読み込めませんでした: $1"
   },

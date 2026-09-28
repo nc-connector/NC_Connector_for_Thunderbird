@@ -596,6 +596,13 @@ Guest e-mail behavior note:
 - Whether guests receive a separate invitation e-mail and/or a “personal access link” can depend on
   Nextcloud server configuration and Talk version.
 
+System address-book responses:
+- `talkAddressbook.js` validates the complete export with the bundled `ical.js` parser through `icalContract.js`. Only top-level vCards with a user UID are accepted; malformed, mixed, or nested components fail the whole read. A contact without an e-mail address remains valid for user and moderator selection.
+- A valid non-empty export is accepted even with HTTP 404 or an incorrect/missing Content-Type. This accommodates servers that return the actual CardDAV body with an incorrect status. Other non-success statuses, including 401/403, remain errors regardless of their body.
+- An empty export is accepted only with a successful HTTP status and a vCard media type (`text/directory`, `text/vcard`, or `text/x-vcard`). Empty HTTP 404 responses are never successful reads.
+- Invalid responses preserve the last good contacts and successful-read timestamp, but mark the refresh as failed. Subsequent lookups retry instead of silently returning that cache. Participant classification stops on read failure rather than treating internal users as guests.
+- Confirmed empty exports use the same five-minute cache and ten-second forced-refresh throttle as populated exports. Diagnostics contain status, media type, and size, not response bodies or parser messages containing contact data.
+
 ### 8.5 Room types
 
 We expose two room types:

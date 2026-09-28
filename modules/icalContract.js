@@ -601,12 +601,33 @@
    * @returns {object[]}
    */
   function parseVcardComponents(data){
-    try{
-      return parseComponents(data).filter((component) => component?.name === "vcard");
-    }catch(error){
-      console.error(ICAL_LOG_PREFIX, "parseVcardComponents failed", error);
-      return [];
+    if (typeof data !== "string"){
+      throw new Error("Invalid vCard export");
     }
+    const cards = parseComponents(data);
+    if (cards.some((card) => card.name !== "vcard" || card.getAllSubcomponents().length)){
+      throw new Error("Unexpected component in vCard export");
+    }
+    // ical.js accepts mismatched or extra END markers. Check unfolded boundaries as well.
+    let cardOpen = false;
+    for (const line of data.replace(/\r?\n[ \t]/g, "").split("\n")){
+      const boundary = line.trimEnd().toUpperCase();
+      if (boundary.startsWith("BEGIN:")){
+        if (boundary !== "BEGIN:VCARD" || cardOpen){
+          throw new Error("Unexpected component start in vCard export");
+        }
+        cardOpen = true;
+      }else if (boundary.startsWith("END:")){
+        if (boundary !== "END:VCARD" || !cardOpen){
+          throw new Error("Unexpected component end in vCard export");
+        }
+        cardOpen = false;
+      }
+    }
+    if (cardOpen){
+      throw new Error("Unclosed vCard component");
+    }
+    return cards;
   }
 
   const api = {

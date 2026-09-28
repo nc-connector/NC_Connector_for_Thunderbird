@@ -16,6 +16,7 @@
  *   contacts: Array<Contact>,
  *   fetchedAt: number,
  *   forceFetchedAt: number,
+ *   refreshFailed: boolean,
  *   baseUrl: string,
  *   userId: string
  * }
@@ -24,6 +25,7 @@ const SYSTEM_ADDRESSBOOK_CACHE = {
   contacts: [],
   fetchedAt: 0,
   forceFetchedAt: 0,
+  refreshFailed: false,
   baseUrl: "",
   userId: ""
 };
@@ -35,7 +37,7 @@ const resolveTalkAddressbookLogPrefix = () =>
 
 /**
  * Resolve shared iCal/vCard parser API for the Talk module.
- * @returns {object|null}
+ * @returns {object}
  */
 function getTalkIcalContractApi(){
   if (
@@ -44,8 +46,7 @@ function getTalkIcalContractApi(){
     typeof NCIcalContract.parseVcardComponents !== "function" ||
     typeof NCIcalContract.stringifyValue !== "function"
   ){
-    console.error(resolveTalkAddressbookLogPrefix(), "NCIcalContract API missing");
-    return null;
+    throw new Error("Talk vCard parser unavailable");
   }
   return NCIcalContract;
 }
@@ -99,15 +100,12 @@ function buildLabelFromVcardName(value){
  */
 function parseSystemAddressbook(data){
   const contract = getTalkIcalContractApi();
-  if (!contract){
-    return [];
-  }
   const cards = contract.parseVcardComponents(data);
   const contacts = [];
   for (const card of cards){
     const uid = readVcardTextProperty(card, "uid", contract);
     if (!uid){
-      continue;
+      throw new Error("System address book contact has no UID");
     }
     let fn = readVcardTextProperty(card, "fn", contract);
     if (!fn){
@@ -215,7 +213,8 @@ async function getSystemAddressbookContacts(force = false){
     SYSTEM_ADDRESSBOOK_CACHE.userId === userId &&
     SYSTEM_ADDRESSBOOK_CACHE.baseUrl === baseUrl;
   if (!force &&
-      SYSTEM_ADDRESSBOOK_CACHE.contacts.length &&
+      SYSTEM_ADDRESSBOOK_CACHE.fetchedAt > 0 &&
+      !SYSTEM_ADDRESSBOOK_CACHE.refreshFailed &&
       cacheMatchesIdentity &&
       now - SYSTEM_ADDRESSBOOK_CACHE.fetchedAt < SYSTEM_ADDRESSBOOK_TTL){
     L("system addressbook cache hit", {
@@ -225,7 +224,8 @@ async function getSystemAddressbookContacts(force = false){
     return SYSTEM_ADDRESSBOOK_CACHE.contacts;
   }
   if (force &&
-      SYSTEM_ADDRESSBOOK_CACHE.contacts.length &&
+      SYSTEM_ADDRESSBOOK_CACHE.fetchedAt > 0 &&
+      !SYSTEM_ADDRESSBOOK_CACHE.refreshFailed &&
       cacheMatchesIdentity &&
       now - SYSTEM_ADDRESSBOOK_CACHE.forceFetchedAt < SYSTEM_ADDRESSBOOK_FORCE_MIN_INTERVAL_MS){
     L("system addressbook force refresh throttled", {
@@ -239,35 +239,63 @@ async function getSystemAddressbookContacts(force = false){
   L("system addressbook fetch", { base, userId, force: !!force });
   // Access to the server-side system addressbook (CardDAV) requires remote.php permission.
   const addressUrl = base + "/remote.php/dav/addressbooks/users/" + encodeURIComponent(userId) + "/z-server-generated--system/?export";
-  const { response, raw } = await NCOcs.runWithTimeout(async (signal) => {
-    const response = await fetch(addressUrl, {
-      method: "GET",
-      headers: {
-        "Authorization": auth,
-        "Accept": "text/directory",
-        "Cache-Control": "no-cache"
-      },
-      signal
+  try{
+    const { response, raw } = await NCOcs.runWithTimeout(async (signal) => {
+      const response = await fetch(addressUrl, {
+        method: "GET",
+        headers: {
+          "Authorization": auth,
+          "Accept": "text/directory",
+          "Cache-Control": "no-cache"
+        },
+        signal
+      });
+      const raw = await response.text();
+      return { response, raw };
     });
-    const raw = await response.text();
-    return { response, raw };
-  });
-  if (!response.ok){
-    throw localizedError(
-      "error_system_addressbook_failed",
-      [raw || (response.status + " " + response.statusText)]
-    );
+    if (!response.ok && response.status !== 404){
+      throw localizedError("error_system_addressbook_failed", ["HTTP " + response.status]);
+    }
+    const contentType = String(response.headers.get("content-type") || "").split(";")[0].trim().toLowerCase();
+    let contacts;
+    try{
+      // An empty export has no vCards to identify its format; require its DAV media type.
+      if (!raw.trim() && !["text/directory", "text/vcard", "text/x-vcard"].includes(contentType)){
+        throw new Error("Unidentified empty address book response");
+      }
+      contacts = parseSystemAddressbook(raw);
+      if (response.status === 404 && !contacts.length){
+        throw new Error("HTTP 404 requires a non-empty vCard export");
+      }
+    }catch(error){
+      // Parser error messages can contain contact data or an HTML response body.
+      globalThis.NCLogContext.safeConsoleError(resolveTalkAddressbookLogPrefix(), "invalid system addressbook response", {
+        status: response.status,
+        contentType,
+        rawLength: raw.length
+      });
+      throw localizedError("error_system_addressbook_invalid_response");
+    }
+    if (response.status === 404){
+      // Some server rewrites return a valid export with an incorrect HTTP status.
+      L("system addressbook accepted valid export with http 404", { count: contacts.length });
+    }
+    L("system addressbook fetched", { count: contacts.length, force: !!force });
+    SYSTEM_ADDRESSBOOK_CACHE.contacts = contacts;
+    SYSTEM_ADDRESSBOOK_CACHE.fetchedAt = now;
+    SYSTEM_ADDRESSBOOK_CACHE.forceFetchedAt = force ? now : 0;
+    SYSTEM_ADDRESSBOOK_CACHE.refreshFailed = false;
+    SYSTEM_ADDRESSBOOK_CACHE.userId = userId;
+    SYSTEM_ADDRESSBOOK_CACHE.baseUrl = baseUrl;
+    return contacts;
+  }catch(error){
+    if (SYSTEM_ADDRESSBOOK_CACHE.userId === userId && SYSTEM_ADDRESSBOOK_CACHE.baseUrl === baseUrl){
+      // Retain the last good data without reporting a failed refresh as available.
+      SYSTEM_ADDRESSBOOK_CACHE.refreshFailed = true;
+    }
+    L("system addressbook refresh failed", { cachedEntries: cacheMatchesIdentity ? SYSTEM_ADDRESSBOOK_CACHE.contacts.length : 0 });
+    throw error;
   }
-  const contacts = parseSystemAddressbook(raw);
-  L("system addressbook fetched", { count: contacts.length, force: !!force });
-  SYSTEM_ADDRESSBOOK_CACHE.contacts = contacts;
-  SYSTEM_ADDRESSBOOK_CACHE.fetchedAt = now;
-  if (force){
-    SYSTEM_ADDRESSBOOK_CACHE.forceFetchedAt = now;
-  }
-  SYSTEM_ADDRESSBOOK_CACHE.userId = userId;
-  SYSTEM_ADDRESSBOOK_CACHE.baseUrl = baseUrl;
-  return contacts;
 }
 
 async function searchSystemAddressbook({ searchTerm = "", limit = 200, forceRefresh = false } = {}){

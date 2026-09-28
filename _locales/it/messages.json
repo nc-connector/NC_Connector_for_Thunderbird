@@ -272,6 +272,9 @@
   "error_host_permission_missing": {
     "message": "L'accesso all'istanza Nextcloud configurata non è stato concesso."
   },
+  "error_system_addressbook_invalid_response": {
+    "message": "Il server non ha restituito una rubrica di sistema valida. Riprova o contatta il tuo amministratore Nextcloud."
+  },
   "error_system_addressbook_failed": {
     "message": "Impossibile caricare la rubrica di sistema: $1"
   },

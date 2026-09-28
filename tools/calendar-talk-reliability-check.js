@@ -1173,6 +1173,174 @@ function testUidOnlyAddressbookContact(){
   assert(contacts[0].email === "", "The UID-only contact must expose an empty email value");
 }
 
+function createAddressbookHarness(){
+  let now = 1800000000000;
+  let reply = { status: 200, body: readText("tests/fixtures/system-addressbook.vcf"), contentType: "text/directory" };
+  const account = { baseUrl: "https://cloud.example.test", user: "login", appPass: "test-password", userId: "owner" };
+  const logs = [];
+  const requests = [];
+  const context = {
+    ICAL: require(path.resolve(__dirname, "../vendor/ical.js")),
+    Date: { now: () => now },
+    console: { error: (...args) => logs.push(args) },
+    NCLogContext: { safeConsoleError: (...args) => logs.push(args) },
+    L: (...args) => logs.push(args),
+    logTalkCoreError: (...args) => logs.push(args),
+    getOpts: async () => ({ ...account }),
+    ensureHostPermission: async () => {},
+    localizedError: (key, substitutions = []) => new Error([key, ...substitutions].join(": ")),
+    NCCore: { getCurrentUserId: async () => account.userId },
+    NCOcs: { buildAuthHeader: () => "test-auth", runWithTimeout: async (operation) => operation(undefined) },
+    fetch: async (url) => {
+      requests.push(url);
+      if (reply.networkError) throw new Error("Network unavailable");
+      return {
+        ok: reply.status >= 200 && reply.status < 300,
+        status: reply.status,
+        headers: { get: () => reply.contentType },
+        text: async () => {
+          if (reply.bodyError) throw new Error("Body read failed");
+          return reply.body;
+        }
+      };
+    }
+  };
+  vm.createContext(context);
+  loadScript("modules/icalContract.js", context);
+  loadScript("modules/talkAddressbook.js", context, `
+globalThis.addressbookTest = { getSystemAddressbookContacts, getSystemAddressbookStatus, searchSystemAddressbook, cache: SYSTEM_ADDRESSBOOK_CACHE };`);
+  return {
+    context, api: context.addressbookTest, account, logs, requests,
+    advance: (milliseconds = 20000) => { now += milliseconds; },
+    setReply: (changes) => { reply = { ...reply, ...changes }; }
+  };
+}
+
+async function testAddressbookResponseValidation(){
+  const validCards = readText("tests/fixtures/system-addressbook.vcf");
+  const brokenResponses = [
+    { body: "<html>private-response-marker</html>", contentType: "text/html" },
+    { body: '{"error":"private-response-marker"}', contentType: "application/json" },
+    { body: "<html>private-response-marker</html>" + validCards, contentType: "text/directory" },
+    { body: validCards + "private-response-marker", contentType: "text/directory" },
+    { body: validCards + "END:VCARD\n", contentType: "text/directory" },
+    { body: "END:VCARD\n", contentType: "text/directory" },
+    { body: "END:VCARD\n" + validCards, contentType: "text/directory" },
+    { body: validCards.replaceAll("END:VCARD", "END:VCALENDAR"), contentType: "text/directory" },
+    { body: validCards.replaceAll("END:VCARD", "EN\n D:VCALENDAR"), contentType: "text/directory" },
+    { body: validCards.replaceAll("END:VCARD", ""), contentType: "text/directory" },
+    { body: "BEGIN:VCALENDAR\r\nVERSION:2.0\r\nEND:VCALENDAR", contentType: "text/directory" },
+    { body: validCards + "BEGIN:VCALENDAR\r\nVERSION:2.0\r\nEND:VCALENDAR", contentType: "text/directory" },
+    { body: "BEGIN:VCARD\r\nUID:outer\r\nBEGIN:VCARD\r\nUID:inner\r\nEND:VCARD\r\nEND:VCARD", contentType: "text/directory" },
+    { body: validCards.replace("UID:user-1", "UID:"), contentType: "text/directory" },
+    { body: "", contentType: "text/html" },
+    { body: "", contentType: "" }
+  ];
+  for (const reply of brokenResponses.flatMap((entry) => [entry, { ...entry, status: 404 }])){
+    const harness = createAddressbookHarness();
+    const original = await harness.api.getSystemAddressbookContacts(true);
+    const fetchedAt = harness.api.cache.fetchedAt;
+    harness.advance();
+    harness.setReply(reply);
+    const status = await harness.api.getSystemAddressbookStatus({ forceRefresh: true });
+    assert(status.available === false, "Invalid exports must not appear as available empty address books");
+    assert(status.error === "error_system_addressbook_invalid_response", "Invalid exports need the localized response error");
+    assert(harness.api.cache.contacts === original, "Invalid exports must preserve the last good contacts");
+    assert(harness.api.cache.fetchedAt === fetchedAt, "A failed read must not refresh the successful cache timestamp");
+    await expectRejected(() => harness.api.searchSystemAddressbook(), "Search must not mask a failed refresh with the old cache");
+    assert(harness.requests.length === 3, "A failed refresh must bypass both cache shortcuts on the next lookup");
+    assert(!JSON.stringify(harness.logs).includes("private-response-marker"), "Logs must not expose parser input or server response bodies");
+    harness.setReply({ status: 200, body: validCards, contentType: "text/directory" });
+    const restored = await harness.api.getSystemAddressbookStatus();
+    assert(restored.available && restored.count === 2, "A valid later response must restore availability");
+    assert(harness.api.cache.refreshFailed === false, "A successful read must clear the failed-refresh marker");
+  }
+  for (const reply of [200, 404].flatMap((status) =>
+    ["text/directory", "application/json", "text/html", "", "text/vcard; charset=utf-8"].map((contentType) => ({ status, contentType })))){
+    const harness = createAddressbookHarness();
+    harness.setReply(reply);
+    const status = await harness.api.getSystemAddressbookStatus();
+    assert(status.available && status.count === 2, "Valid vCards remain usable with HTTP 200 or 404 regardless of their Content-Type");
+    const contacts = await harness.api.searchSystemAddressbook({ searchTerm: "alpha" });
+    assert(contacts.length === 1 && contacts[0].id === "user-1", "Accepted exports must populate the searchable cache");
+    assert(harness.requests.length === 1, "Accepted HTTP 404 exports use the normal success cache");
+  }
+  for (const status of [200, 404]){
+    for (const body of [
+      validCards.replaceAll("BEGIN:VCARD", "BEGIN\r\n :VCARD").replaceAll("END:VCARD", "END:VC\r\n\tARD"),
+      validCards.replaceAll("BEGIN:VCARD", "BEGIN:\n VCARD").replaceAll("END:VCARD", "END\n\t:VCARD")
+    ]){
+      const harness = createAddressbookHarness();
+      harness.setReply({ status, body });
+      const result = await harness.api.getSystemAddressbookStatus();
+      assert(result.available && result.count === 2, "Legal line folding must remain accepted, including component boundaries");
+    }
+  }
+  for (const contentType of ["text/directory", "text/vcard; charset=utf-8", "text/x-vcard"]){
+    const harness = createAddressbookHarness();
+    await harness.api.getSystemAddressbookContacts(true);
+    harness.advance();
+    harness.setReply({ body: "", contentType });
+    const status = await harness.api.getSystemAddressbookStatus({ forceRefresh: true });
+    assert(status.available && status.count === 0, "A declared empty vCard export remains a valid empty address book");
+    await harness.api.getSystemAddressbookStatus();
+    await harness.api.getSystemAddressbookStatus({ forceRefresh: true });
+    assert(harness.requests.length === 2 && harness.api.cache.contacts.length === 0, "Confirmed empty exports replace old contacts and use the same cache rules as populated exports");
+    harness.advance();
+    harness.setReply({ status: 404 });
+    const missingStatus = await harness.api.getSystemAddressbookStatus({ forceRefresh: true });
+    assert(!missingStatus.available, "An empty HTTP 404 must not qualify as a valid export even with a vCard Content-Type");
+  }
+  for (const changes of [
+    ...[401, 403, 404, 500, 503].map((status) => ({ status, body: "private-response-marker" })),
+    ...[400, 401, 403, 410, 429, 500, 503].map((status) => ({ status, body: validCards })),
+    { networkError: true }, { bodyError: true }
+  ]){
+    const harness = createAddressbookHarness();
+    const original = await harness.api.getSystemAddressbookContacts(true);
+    harness.advance();
+    harness.setReply(changes);
+    const status = await harness.api.getSystemAddressbookStatus({ forceRefresh: true });
+    assert(!status.available, "HTTP and transport failures must report unavailability");
+    assert(harness.api.cache.contacts === original, "HTTP and transport failures must retain cached contacts");
+    assert(!status.error.includes("private-response-marker"), "User errors must not expose HTTP response bodies");
+    assert(!JSON.stringify(harness.logs).includes("private-response-marker"), "HTTP response bodies must not enter logs");
+  }
+  const missingParser = createAddressbookHarness();
+  vm.runInContext("NCIcalContract = undefined;", missingParser.context);
+  const missingStatus = await missingParser.api.getSystemAddressbookStatus();
+  assert(!missingStatus.available, "An unavailable parser must never masquerade as an empty export");
+  const changedAccount = createAddressbookHarness();
+  await changedAccount.api.getSystemAddressbookContacts(true);
+  changedAccount.account.userId = "other-user";
+  changedAccount.setReply({ body: "<html>Login required</html>", contentType: "text/html" });
+  const changedStatus = await changedAccount.api.getSystemAddressbookStatus();
+  assert(!changedStatus.available && changedAccount.requests.length === 2, "Cached contacts must never cross account identities");
+}
+
+async function testInvalidAddressbookStopsRealClassification(){
+  const harness = createAddressbookHarness();
+  const additions = [];
+  Object.assign(harness.context, {
+    shortToken: (token) => token,
+    extractIcalAttendees: async () => ["alpha@example.com"],
+    NCTalkCore: {
+      getSystemAddressbookContacts: harness.api.getSystemAddressbookContacts,
+      addTalkParticipant: async (payload) => { additions.push(payload); }
+    }
+  });
+  vm.runInContext(sourceSection("modules/bgCalendar.js", "function isRetryableTalkCalendarError", "function parseBooleanProp")
+    + "\nglobalThis.addInviteesTest = addInviteesToTalkRoom;", harness.context);
+  harness.setReply({ body: "<html>Login required</html>", contentType: "text/html" });
+  await expectRejected(() => harness.context.addInviteesTest({ token: "room", ical: "event" }),
+    "A real parser failure must stop Talk participant classification");
+  assert(additions.length === 0, "No attendee may be added as a guest after a malformed address book response");
+  harness.setReply({ status: 404, body: readText("tests/fixtures/system-addressbook.vcf"), contentType: "text/html" });
+  await harness.context.addInviteesTest({ token: "room", ical: "event" });
+  assert(additions.length === 1 && additions[0].source === "users" && additions[0].actorId === "user-1",
+    "A valid HTTP 404 export must recover and add the attendee once as the matching Nextcloud user");
+}
+
 function createToolbarHarness(){
   const cacheTopics = [];
   let unregistered = 0;
@@ -1457,6 +1625,8 @@ async function run(){
   await testAddressbookFailureStopsClassification();
   await testTalkOcsValidationAndDelegation();
   testUidOnlyAddressbookContact();
+  await testAddressbookResponseValidation();
+  await testInvalidAddressbookStopsRealClassification();
   testPropertyRollbackProgress();
   await testPropertySnapshotPrecedesFieldMutation();
   testExperimentShutdownLifecycle();

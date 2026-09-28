@@ -272,6 +272,9 @@
   "error_host_permission_missing": {
     "message": "Toegang tot de geconfigureerde Nextcloud-instantie is niet verleend."
   },
+  "error_system_addressbook_invalid_response": {
+    "message": "De server heeft geen geldig systeemadresboek teruggestuurd. Probeer het opnieuw of neem contact op met uw Nextcloud-beheerder."
+  },
   "error_system_addressbook_failed": {
     "message": "Systeemadresboek kon niet worden geladen: $1"
   },

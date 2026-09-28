@@ -272,6 +272,9 @@
   "error_host_permission_missing": {
     "message": "Access to the configured Nextcloud instance was not granted."
   },
+  "error_system_addressbook_invalid_response": {
+    "message": "The server did not return a valid system address book. Please try again or contact your Nextcloud administrator."
+  },
   "error_system_addressbook_failed": {
     "message": "System address book could not be loaded: $1"
   },

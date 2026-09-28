@@ -272,6 +272,9 @@
   "error_host_permission_missing": {
     "message": "Accès à l’instance Nextcloud configurée non accordé."
   },
+  "error_system_addressbook_invalid_response": {
+    "message": "Le serveur n’a pas renvoyé de carnet d’adresses système valide. Réessayez ou contactez votre administrateur Nextcloud."
+  },
   "error_system_addressbook_failed": {
     "message": "Impossible de charger le carnet d’adresses systeme : $1"
   },

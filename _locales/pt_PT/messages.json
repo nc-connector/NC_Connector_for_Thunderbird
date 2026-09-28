@@ -272,6 +272,9 @@
   "error_host_permission_missing": {
     "message": "O acesso à instância Nextcloud configurada não foi concedido."
   },
+  "error_system_addressbook_invalid_response": {
+    "message": "O servidor não devolveu um livro de endereços do sistema válido. Tente novamente ou contacte o administrador do Nextcloud."
+  },
   "error_system_addressbook_failed": {
     "message": "Não foi possível carregar o livro de endereços do sistema: $1"
   },
