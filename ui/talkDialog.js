@@ -555,6 +555,7 @@
       }
       Object.assign(defaults, NCWizardPolicyUi.readPolicyBoundDefaults(
         {
+          status: state.policy.status,
           active: state.policy.active,
           policy: state.policy.talk,
           editable: state.policy.editable
@@ -1203,11 +1204,7 @@
     if (!buildStandard){
       return { text:"", html:"" };
     }
-    if (policyLang && policyLang !== "default" && policyLang !== "custom"){
-      const text = await buildStandard(url, password, policyLang);
-      return { text, html:"" };
-    }
-    const text = await buildStandard(url, password);
+    const text = await buildStandard(url, password, policyLang === "custom" ? "default" : (policyLang || "default"));
     return { text, html:"" };
   }
 

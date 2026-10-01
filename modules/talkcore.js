@@ -341,7 +341,16 @@ async function getEventDescriptionLang(){
   }
   try{
     const stored = await browser.storage.local.get(["eventDescriptionLang"]);
-    return stored.eventDescriptionLang || "default";
+    const localLanguage = String(stored.eventDescriptionLang || "").trim();
+    const status = await NCPolicyRuntime.getPolicyStatus();
+    return NCPolicyState.resolveDefaultValue(
+      status,
+      "talk",
+      "language_talk_description",
+      localLanguage || "default",
+      !!localLanguage,
+      NCPolicyState.coerceString
+    );
   }catch(error){
     logTalkCoreError("event description language read failed", error);
     return "default";
@@ -386,9 +395,11 @@ async function buildStandardTalkDescription(url, password, languageOverride = ""
   const override = typeof NCI18nOverride !== "undefined" && typeof NCI18nOverride.normalizeLanguageOverride === "function"
     ? NCI18nOverride.normalizeLanguageOverride(languageOverride, { allowCustom: true })
     : String(languageOverride || "").trim().toLowerCase();
-  const lang = (override && override !== "default" && override !== "custom")
+  // An explicit UI-default choice must not re-read a different stored language.
+  const selectedLanguage = String(languageOverride || "").trim()
     ? override
     : await getEventDescriptionLang();
+  const lang = selectedLanguage === "custom" ? "default" : selectedLanguage;
   const heading = await descriptionI18n(lang, "ui_description_heading");
   const joinLabel = await descriptionI18n(lang, "ui_description_join_label");
   const passwordLine = password

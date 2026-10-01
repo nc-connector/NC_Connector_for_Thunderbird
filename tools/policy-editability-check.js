@@ -413,6 +413,10 @@ function verifyPolicyTable(policyState, policyUi){
     const editableStatus = createStatus(entry, true);
     const lockedStatus = createStatus(entry, false);
     const inactiveStatus = createStatus(entry, false, false);
+    const backendSourceStatus = {
+      ...editableStatus, fetchSucceeded: true, defaultsSource: "backend",
+      status: { seatAssigned: true, seatState: "active", isValid: true }
+    };
     const coerce = getCoerce(policyState, entry.type);
     const label = `${entry.domain}.${entry.key}`;
 
@@ -443,6 +447,22 @@ function verifyPolicyTable(policyState, policyUi){
       key: entry.key,
       type: entry.type
     };
+    assertEqual(
+      policyState.resolveDefaultValue(backendSourceStatus, entry.domain, entry.key, entry.localValue, true, coerce),
+      entry.backendValue,
+      `${label}: backend source must seed an editable field from backend despite stored local values`
+    );
+    assertEqual(
+      policyUi.readPolicyBoundDefaults(policyUi.readPolicyDomain(backendSourceStatus, entry.domain), [binding],
+        { value: entry.localValue }, { localNames: new Set(["value"]) }).value,
+      entry.backendValue,
+      `${label}: wizard initialization must follow the same source selection`
+    );
+    assertEqual(
+      policyUi.resolvePolicyBoundValues(backendSourceStatus, [binding], { value: entry.localValue }).value,
+      entry.localValue,
+      `${label}: backend defaults must not forbid an editable per-action change`
+    );
     const editableDomain = policyUi.readPolicyDomain(editableStatus, entry.domain);
     const lockedDomain = policyUi.readPolicyDomain(lockedStatus, entry.domain);
     const inactiveDomain = policyUi.readPolicyDomain(inactiveStatus, entry.domain);
@@ -690,8 +710,8 @@ function verifyConsumerGuards(){
   );
   assertCode(
     composeAttachments,
-    "(!hasLocalThreshold || NCPolicyState.isLocked( policyStatus, \"share\", NCSharingStorage.SHARE_POLICY_KEYS.attachmentsMinSizeMb ))",
-    "Compose attachment threshold must preserve editable local values"
+    "(!hasLocalThreshold || NCPolicyState.getDefaultsSourceState(policyStatus).value === \"backend\" || NCPolicyState.isLocked( policyStatus, \"share\", NCSharingStorage.SHARE_POLICY_KEYS.attachmentsMinSizeMb ))",
+    "Compose attachment threshold must use the selected defaults source and preserve forced policies"
   );
   assertCode(
     calendar,
@@ -706,11 +726,11 @@ function verifyConsumerGuards(){
   const initialSpecialDefaults = functionBody(options, "applyInitialSpecialPolicyDefaults");
   assertCode(initialSpecialDefaults, "\"talk_room_type\"", "Initial options policy resolution must include the Talk room type");
   assertCode(initialSpecialDefaults, "SHARE_POLICY_KEYS.attachmentsAlwaysConnector", "Initial options policy resolution must include attachment automation");
-  assertCode(initialSpecialDefaults, "!hasLocalThreshold || NCPolicyState.isLocked", "Initial attachment threshold must use backend only when local is absent or locked");
+  assertCode(initialSpecialDefaults, "getDefaultsSourceState().value === \"backend\" || !hasLocalThreshold || NCPolicyState.isLocked", "Initial attachment threshold must use the backend source as well as absent or locked defaults");
   assertCode(
     options,
-    "applyInitialPolicyDefaults(OPTION_SHARE_POLICY_BINDINGS.concat(OPTION_TALK_POLICY_BINDINGS), stored); applyInitialSpecialPolicyDefaults(stored);",
-    "Options loading must apply backend defaults after local-value presence is known"
+    "restoreLocalDefaultControls(); applyInitialPolicyDefaults(OPTION_SHARE_POLICY_BINDINGS.concat(OPTION_TALK_POLICY_BINDINGS), localDefaultDraft); applyInitialSpecialPolicyDefaults(localDefaultDraft);",
+    "Options must restore raw local values before displaying backend defaults"
   );
   assertCode(options, "allowCustom: isCustomLanguageModeAvailable(\"share\")", "Share custom-language normalization must use the Share domain");
   assertCode(options, "allowCustom: isCustomLanguageModeAvailable(\"talk\")", "Talk custom-language normalization must use the Talk domain");
@@ -747,6 +767,159 @@ function verifyConsumerGuards(){
   );
 }
 
+async function verifyOptionsDefaultsSourceUi(policyState, policyUi){
+  const source = readText("options.js");
+  const element = (value = "") => {
+    const classes = new Set();
+    const attributes = {};
+    return {
+      value, checked: false, disabled: false, title: "", textContent: "", dataset: {}, style: {},
+      classList: {
+        contains: (name) => classes.has(name),
+        toggle: (name, enabled) => enabled ? classes.add(name) : classes.delete(name)
+      },
+      setAttribute: (name, content) => { attributes[name] = content; },
+      getAttribute: (name) => attributes[name],
+      addEventListener(){}
+    };
+  };
+  const tabs = ["general", "sharing", "vfs", "talklink", "signature", "advanced"].map((id) => {
+    const button = element();
+    button.dataset.tab = id;
+    button.classList.toggle("active", id === "sharing");
+    return button;
+  });
+  const nameInput = element("Local name");
+  const titleInput = element("Meeting");
+  const nameBinding = {
+    name: "name", storageKey: "sharingDefaultShareName", domain: "share", key: "share_name_template",
+    type: "string", property: "value", element: nameInput
+  };
+  const titleBinding = {
+    name: "title", storageKey: "talkDefaultTitle", domain: "talk", key: "talk_title",
+    type: "string", property: "value", element: titleInput
+  };
+  const stored = { sharingDefaultShareName: "Local name", emailSignatureOnCompose: false };
+  const saveOrder = [];
+  const confirmedStatus = () => ({
+    fetchSucceeded: true, endpointAvailable: true, policyActive: true,
+    status: { isValid: true, seatAssigned: true, seatState: "active" },
+    defaultsSource: "backend", defaultsSourceEditable: true,
+    policy: { share: { share_name_template: "Backend name" }, talk: { talk_title: "Backend meeting" } },
+    policyEditable: { share: { share_name_template: true }, talk: { talk_title: true } }
+  });
+  const context = {
+    console, URLSearchParams, NCPolicyState: policyState, NCWizardPolicyUi: policyUi,
+    i18n: (key) => key,
+    localDefaultDraft: { ...stored }, localDefaultsReady: true,
+    localDefaultsBaseline: { sharingDefaultShareName: "Share name", talkDefaultTitle: "Meeting" },
+    dirtyLocalDefaultKeys: new Set(), defaultsSourceDirty: false,
+    OPTION_DEFAULT_BINDINGS: [nameBinding, titleBinding],
+    EMAIL_SIGNATURE_KEYS: { onCompose: "emailSignatureOnCompose", onReply: "emailSignatureOnReply", onForward: "emailSignatureOnForward" },
+    emailSignatureStoredState: {},
+    talkDefaultRoomTypeValueInput: element("event"),
+    setTalkDefaultRoomType(){},
+    runtimePolicyStatus: confirmedStatus(), managedSetupPolicy: {}, managedSetupPolicyReady: true,
+    defaultsSourceSelect: element(), defaultsSourceRow: element(), defaultsSourceHint: element(),
+    baseUrlInput: element("https://cloud.example.test"), userInput: element("user"), appPassInput: element("example"),
+    getEffectiveBaseUrl: (value) => value, isManagedBaseUrlLocked: () => false,
+    ensureOriginPermissionInteractive: async () => true, getSelectedAuthMode: () => "manual",
+    refreshTalkSystemAddressbookState: async () => {}, showStatus(){},
+    NCVfsOptions: {
+      setDefaultsSourceState(){},
+      save: async (options) => { saveOrder.push(options?.beforeSourceChange ? "vfs:before" : "vfs:after"); return false; }
+    },
+    browser: { storage: { local: { set: async (updates) => { saveOrder.push("storage"); Object.assign(stored, updates); } } } },
+    window: { location: { search: "" }, addEventListener(){}, requestAnimationFrame(){} },
+    document: {
+      getElementById: () => element(),
+      querySelector: (selector) => tabs.find((button) => selector === `.tab-btn[data-tab="${button.dataset.tab}"]`) || null,
+      querySelectorAll: (selector) => selector === ".tab-btn" ? tabs : []
+    }
+  };
+  vm.createContext(context);
+  for (const [from, to] of [
+    ["function getDefaultsSourceState(){", "async function refreshManagedSetupPolicy(){"],
+    ["function hasValidStoredBindingValue(", "function applyInitialSpecialPolicyDefaults("],
+    ["async function save(){", "async function restartBackgroundForVfsDiscovery(){"],
+    ["function initTabs(){", "function initAbout(){"]
+  ]){
+    const start = source.indexOf(from);
+    const end = source.indexOf(to, start + from.length);
+    assert(start >= 0 && end > start, `Options section ${from} must exist`);
+    vm.runInContext(source.slice(start, end), context, { filename: "options.js" });
+  }
+  context.activateOptionsTab = context.initTabs();
+  const render = () => {
+    context.runtimePolicyStatus.localDefaultsSource = context.localDefaultDraft.defaultsSource;
+    context.restoreLocalDefaultControls();
+    context.applyInitialPolicyDefaults([nameBinding, titleBinding], context.localDefaultDraft);
+    context.updateDefaultsSourceUi();
+  };
+  context.refreshBackendPolicyStatus = async () => render();
+  render();
+  assertEqual(nameInput.value, "Backend name", "Backend preview must replace the displayed local name");
+  assertEqual(titleInput.value, "Backend meeting", "Backend preview must seed an absent local value");
+  assertEqual(context.localDefaultDraft.sharingDefaultShareName, "Local name", "Preview must preserve the raw local name");
+  assert(!Object.hasOwn(context.localDefaultDraft, "talkDefaultTitle"), "Preview must preserve an unset local key");
+  assertEqual(context.localDefaultDraft.emailSignatureOnCompose, false, "Preview must retain a false signature preference");
+  for (const tab of tabs){
+    const blocked = ["sharing", "talklink", "signature"].includes(tab.dataset.tab);
+    assertEqual(tab.getAttribute("aria-disabled") === "true", blocked, `${tab.dataset.tab}: only default-setting tabs may be blocked`);
+    if (blocked){
+      assertEqual(tab.title, "options_defaults_source_tabs_tooltip", `${tab.dataset.tab}: blocked tabs must explain the backend source`);
+      assert(!tab.disabled, "Blocked tabs must remain focusable for their tooltips");
+    }
+  }
+  const activeTab = () => tabs.find((tab) => tab.classList.contains("active"))?.dataset.tab;
+  assertEqual(activeTab(), "advanced", "Selecting backend defaults must move away from a blocked tab");
+  context.activateOptionsTab("sharing");
+  assertEqual(activeTab(), "advanced", "Blocked tabs must reject subsequent navigation");
+  await context.save();
+  assertEqual(stored.sharingDefaultShareName, "Local name", "Saving a preview must not persist backend overlays");
+  assert(!Object.hasOwn(stored, "talkDefaultTitle") && !Object.hasOwn(stored, "defaultsSource"), "Unedited seeded defaults and source must remain unset after saving");
+  assertEqual(saveOrder.join(","), "vfs:before,storage,vfs:after", "VFS edits must be flushed before the source and refreshed afterwards");
+
+  context.localDefaultDraft.defaultsSource = "local";
+  context.defaultsSourceDirty = true;
+  render();
+  assertEqual(nameInput.value, "Local name", "Returning to local defaults must restore the user's value");
+  context.activateOptionsTab("sharing");
+  assertEqual(activeTab(), "sharing", "Local defaults must restore settings-tab navigation");
+  nameInput.value = "Edited locally";
+  context.updateLocalDefaultDraft(nameBinding);
+  context.localDefaultDraft.defaultsSource = "backend";
+  render();
+  assertEqual(nameInput.value, "Backend name", "A source switch must display the backend without losing the pending edit");
+  await context.save();
+  assertEqual(stored.sharingDefaultShareName, "Edited locally", "An explicit local edit must survive switching to backend before saving");
+  assertEqual(stored.defaultsSource, "backend", "An explicit permitted source choice must be stored");
+  assert(!Object.hasOwn(stored, "talkDefaultTitle"), "Editing one preference must not pin unrelated seeded values");
+  context.localDefaultDraft.defaultsSource = "local";
+  render();
+  assertEqual(nameInput.value, "Edited locally", "The saved local edit must return when switching back");
+  context.runtimePolicyStatus.policyEditable.share.share_name_template = false;
+  render();
+  assertEqual(nameInput.value, "Backend name", "Forced policies must still win in local mode");
+  nameInput.value = "Ignored locked edit";
+  context.updateLocalDefaultDraft(nameBinding);
+  assertEqual(context.localDefaultDraft.sharingDefaultShareName, "Edited locally", "A locked control must not modify the raw draft");
+
+  for (const [statusChanges, managed, key, disabled] of [
+    [{ status: { isValid: true, seatAssigned: false } }, {}, "options_defaults_source_seat_required_tooltip", true],
+    [{ defaultsSource: null }, { hasDefaultsSource: true, defaultsSourceValid: false }, "managed_defaults_source_invalid", true],
+    [{ defaultsSource: "local", defaultsSourceEditable: false }, { hasDefaultsSource: true, defaultsSourceValid: false }, "options_defaults_source_managed_tooltip", true],
+    [{ defaultsSource: "local", defaultsSourceEditable: true }, {}, "options_defaults_source_help", false]
+  ]){
+    context.runtimePolicyStatus = { ...confirmedStatus(), ...statusChanges };
+    context.managedSetupPolicy = managed;
+    context.updateDefaultsSourceUi();
+    assertEqual(context.defaultsSourceHint.textContent, key, "Source hint must follow Outlook's priority");
+    assertEqual(context.defaultsSourceSelect.title, key, "Source control must expose the same tooltip as its hint");
+    assertEqual(context.defaultsSourceSelect.disabled, disabled, "Source editability must follow the central resolver");
+  }
+}
+
 function verifyOptionsLanguagePlacement(){
   const html = readText("options.html");
   assert(html.includes('data-tab="advanced"'), "Options must retain the Advanced tab");
@@ -767,7 +940,7 @@ function verifyOptionsLanguagePlacement(){
   }
 }
 
-function run(){
+async function run(){
   const { policyState, policyUi } = loadPolicyApis();
   const sharingStorage = loadSharingStorage();
   verifyAttachmentLinkTargetValues(sharingStorage);
@@ -776,8 +949,12 @@ function run(){
   verifyPolicyTable(policyState, policyUi);
   verifyPolicyNoticeUi(policyState, policyUi);
   verifyOptionsLanguagePlacement();
+  await verifyOptionsDefaultsSourceUi(policyState, policyUi);
   verifyConsumerGuards();
   console.log("[OK] policy-editability-check passed (25 editable keys, 4 policy states, consumer guards)");
 }
 
-run();
+run().catch((error) => {
+  console.error("[FAIL] policy-editability-check", error);
+  process.exitCode = 1;
+});

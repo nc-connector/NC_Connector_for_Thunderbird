@@ -1447,7 +1447,11 @@ function checkManifestAndReviewSurface(){
   const optionsRuntime = readText("options.js");
   const optionsSaveStart = optionsRuntime.indexOf("async function save(){");
   const credentialPersistIndex = optionsRuntime.indexOf(
-    "await browser.storage.local.set({",
+    "await browser.storage.local.set(updates);",
+    optionsSaveStart
+  );
+  const vfsDraftSaveIndex = optionsRuntime.indexOf(
+    "NCVfsOptions?.save?.({ beforeSourceChange: true })",
     optionsSaveStart
   );
   const vfsSaveIndex = optionsRuntime.indexOf(
@@ -1466,11 +1470,12 @@ function checkManifestAndReviewSurface(){
   );
   assert(
     optionsSaveStart >= 0
-      && credentialPersistIndex > optionsSaveStart
+      && vfsDraftSaveIndex > optionsSaveStart
+      && credentialPersistIndex > vfsDraftSaveIndex
       && vfsSaveIndex > credentialPersistIndex
       && vfsTabActivationIndex >= 0
       && vfsTabActivationBlock.includes("NCVfsOptions?.refresh?.()"),
-    "Credential saves and VFS tab activation must request a current VFS status"
+    "VFS drafts must save before a source change; persisted credentials and VFS tab activation must refresh VFS status"
   );
   assert(
     updateSettingsStart >= 0

@@ -26,7 +26,7 @@ NC Connector integrates the following Nextcloud functions into Thunderbird:
 - optional central policies, templates, and email signatures from NC Connector Backend
 - optional one-time Secret links for separate password delivery
 
-Sharing and Talk work without the optional backend. Backend-dependent controls remain unavailable until the backend endpoint is reachable and the current user has a usable assigned seat.
+In an unmanaged installation, Sharing and Talk work without the optional backend. Backend-dependent controls require the backend and a valid assigned Seat. Centrally managed installations require both for NC Connector operations; see [Enterprise rollout](#6-enterprise-rollout).
 
 ## 2. Requirements
 
@@ -156,14 +156,14 @@ Do not use **Save as Template** for a message that contains an NC Connector shar
 The **VFS** options tab controls two independent functions:
 
 - **NC Connector as provider** exposes the already configured Nextcloud account to another compatible Thunderbird add-on. It is enabled by default. Each connection still requires an explicit user grant and provides full read/write file access for that Nextcloud user; grants can be revoked in the same tab.
-- **External VFS providers** let users add files and folders from compatible storage add-ons to the Sharing wizard. This function requires the NC Connector Backend and valid access with an active seat assigned to the current account, including the free Community Seat. Without the backend, the disabled setting and **Other source** action explain that the backend is required. NC Connector receives Thunderbird's add-on-management permission during installation so administrators do not have to manage a second runtime permission. Provider discovery remains disabled until the effective VFS setting enables it. Established storage connections can be removed with **Disconnect** and are retained when the entitlement or policy later closes the gate.
+- **External VFS providers** let users add files and folders from compatible storage add-ons to the Sharing wizard. This function requires NC Connector Backend and a valid assigned Seat. Without the backend, the disabled setting and **Other source** action explain that the backend is required. NC Connector receives Thunderbird's add-on-management permission during installation so administrators do not have to manage a second runtime permission. Provider discovery remains disabled until the effective VFS setting enables it. Established storage connections can be removed with **Disconnect** and are retained when access or policy later blocks the function.
 
 Both switches can be set under **Administration settings → NC Connector Backend → Group Settings → Default Settings → Shares → Thunderbird only – Virtual File System (VFS)**. They support the same editable, forced, group, and user layers as the other Share policies:
 
-- `vfs_provider_enabled` controls whether NC Connector accepts new or existing grants from other add-ons. This switch does not require Pro.
+- `vfs_provider_enabled` controls whether NC Connector accepts new or existing grants from other add-ons. Managed installations additionally require a valid assigned Seat.
 - `vfs_external_providers_enabled` controls the external-source function. An enabled policy does not bypass the valid active Seat check.
 
-An older backend that does not return these two keys leaves the local switches editable. Local files, **My Nextcloud**, and NC Connector's own VFS provider continue to work without the backend; only external providers require backend-confirmed access with an active assigned Seat, equally in Community and Pro.
+An older backend that does not return these two keys leaves the local switches editable. In unmanaged installations, local files, **My Nextcloud**, and NC Connector's own VFS provider continue to work without the backend. External providers always require a valid assigned Seat.
 
 There is no second Nextcloud login for VFS. Changing the configured Nextcloud server or canonical user invalidates all existing provider grants so they cannot silently point to another account. Changing only the app password for the same account keeps the storage identity.
 
@@ -218,7 +218,7 @@ Settings, Sharing and Talk show the license status reported by the backend. A ye
 
 Users without an assigned seat see a notice explaining that Sharing and Talk remain available with local settings; Pro features require a seat assigned by their administrator. Disabled Pro features retain their short seat-requirement tooltips. Full Nextcloud administrators see license notices together with their missing-seat explanation even without a seat and can open **Manage license in backend**, which links to their own Nextcloud administration. Other users are directed to their administrator. A paused-seat message is shown only for an actually suspended seat.
 
-Older backends that do not supply detailed license status retain a generic access warning; the add-on does not guess a cause from expiry dates. With no backend installed, normal local Sharing and Talk remain available without a license warning. If the backend status cannot be retrieved, check the connection and reopen the settings or wizard after resolving the problem.
+Older backends that do not supply detailed license status retain a generic access warning; the add-on does not guess a cause from expiry dates. With no backend installed, normal local Sharing and Talk remain available in unmanaged installations without a license warning. If the backend status cannot be retrieved, check the connection and reopen the settings or wizard after resolving the problem.
 
 Separate password delivery is available only with a reachable backend and usable assigned seat. After **Send now**, the password follow-up is sent only after Thunderbird confirms that the primary message was sent. After **Send later**, NC Connector opens a clearly marked password draft instead of sending it automatically; the user sends that draft manually only after the main message has actually left the Outbox. If automatic follow-up delivery fails, NC Connector keeps or opens a prepared draft for manual sending. A follow-up failure after primary-message delivery does not delete the committed share.
 
@@ -289,6 +289,10 @@ Before upload, the wizard groups entries by source in an expandable folder tree 
 The VFS Toolkit currently supplies each external file as a complete `File`, not as a streaming cloud-to-cloud transfer. Large external files can therefore require corresponding Thunderbird memory while that one file is being transferred. Queue collection finishes before the upload starts, and a failure or cancellation removes only the generated share root, never a selected source.
 
 ## 6. Enterprise rollout
+
+An installation is centrally managed when any supported NC Connector setting is present in Thunderbird's managed extension policy. Before deploying these settings, install and configure NC Connector Backend and assign a valid Seat to each affected user. This also applies to existing deployments that already supply a Nextcloud URL.
+
+The presence of a setting activates this requirement, even when its value is `false`, empty, or invalid. Force-installing the add-on alone does not activate it. Settings and initial login remain accessible. Without confirmed access, new Share, Talk, attachment-automation, and VFS operations are unavailable. Users can still remove VFS connections and revoke grants; pending cleanup is not blocked.
 
 ### 6.1 Add-on ID and policy locations
 
@@ -373,6 +377,18 @@ Thunderbird's `3rdparty.Extensions` policy can prefill and lock the public Nextc
 
 Credentials remain in each Thunderbird profile. The managed policy does not distribute usernames or app passwords.
 
+Supported settings under the add-on ID:
+
+| Setting | Value | Effect | When absent |
+|---|---|---|---|
+| `NextcloudUrl` | Nextcloud base URL | Prefills the connection URL | Use the saved local URL |
+| `NextcloudUrlLocked` | `true` or `false` | Locks the URL when `true`; its presence also activates managed installation requirements | URL remains editable |
+| `DefaultsSource` | `local` or `backend` | Selects and locks the default values source unless the backend overrides it | Use the saved user selection, otherwise local defaults |
+
+Existing aliases `nextcloudUrl`, `baseUrl`, `nextcloudUrlLocked`, and `baseUrlLocked` remain supported, including inside `adminSettings`. New deployments should use the names in the table. An invalid `DefaultsSource` selects local defaults and displays a configuration warning; it does not make the installation unmanaged.
+
+See [Default values source](#66-default-values-source) for backend precedence and user choices.
+
 No `3rdparty.Extensions` entry is required for an unmanaged installation.
 Thunderbird's documented “Managed storage manifest not found” result is treated
 as the normal absence of an enterprise policy; the add-on then loads the local
@@ -394,6 +410,32 @@ cannot be used or overwritten from that failed settings session. Check
 6. Open a compose window and test a small FileLink share.
 7. Repeat with a file larger than 20 MiB and a folder containing many small files.
 8. Close an unsent test draft and confirm that its share folder is removed.
+
+### 6.6 Default values source
+
+Choose **Advanced → Default values source** in the add-on, or set it centrally under **NC Connector Backend → Group Settings → Default Settings → General**. The choice requires the backend and a valid assigned Seat.
+
+| Source | Starting values for new actions |
+|---|---|
+| Local settings | Use the user's saved defaults. Where none exist, use an available backend default. |
+| NC Connector Backend | Use backend defaults. Where the backend supplies no value, retain the local or built-in default. |
+
+Forced policies always apply, regardless of this choice. Users can still adjust fields marked editable when creating a particular share or Talk room.
+
+The backend's explicit **Local settings** or **NC Connector Backend** selection takes precedence over `DefaultsSource`. If the administrator also enables **Editable in add-on**, the user's saved selection can override that backend default. **No preference**, or an older backend without this setting, leaves the managed policy in charge. Without a managed value, the user can choose; the initial selection is local.
+
+When the effective source is the backend, the **Sharing**, **Talk Link**, and **Signature** settings tabs are unavailable. Their saved local defaults are retained for a later switch back. On the **VFS** tab, only the two default switches follow this restriction. Adding connections, disconnecting, and revoking grants keep their own access rules.
+
+### 6.7 Managed installation cannot start an action
+
+| Message | Administrator action |
+|---|---|
+| Backend must be installed and configured | Enable NC Connector Backend on the configured Nextcloud and complete its setup. |
+| An assigned, valid Seat is required | Check the affected user's Seat assignment and access in the backend. |
+| Access could not be verified | Check the connection, credentials, and backend endpoint, then retry the action. This message alone does not mean the Seat is invalid. |
+| Default values source is invalid | Set `DefaultsSource` to `local` or `backend`, then restart Thunderbird. |
+
+If the installation should no longer be managed, remove all supported NC Connector managed settings and restart Thunderbird. Removing only `DefaultsSource` is not sufficient if a managed URL or URL-lock setting remains.
 
 ## 7. Operational checks
 

@@ -1003,7 +1003,7 @@ function makeOcsResponse(status, statusName, data){
   };
 }
 
-function createTalkCoreHarness(){
+function createTalkCoreHarness(options = {}){
   const responses = [];
   const requests = [];
   let canonicalUserId = "owner-uid";
@@ -1013,7 +1013,7 @@ function createTalkCoreHarness(){
       storage: {
         local: {
           async get(){
-            return {};
+            return options.localLanguage ? { eventDescriptionLang: options.localLanguage } : {};
           }
         }
       }
@@ -1028,6 +1028,19 @@ function createTalkCoreHarness(){
     },
     NCTalkTextUtils: {
       shortId: (value) => value
+    },
+    NCI18nOverride: {
+      normalizeLanguageOverride(value){
+        return String(value || "default").trim().toLowerCase();
+      },
+      async tInLang(language, key){
+        return `${language}:${key}`;
+      }
+    },
+    NCPolicyRuntime: {
+      async getPolicyStatus(){
+        return options.policyStatus || null;
+      }
     },
     NCLogContext: {
       resolveAddonLogPrefix(){
@@ -1067,8 +1080,11 @@ function createTalkCoreHarness(){
   };
   context.globalThis = context;
   vm.createContext(context);
+  loadScript("modules/policyState.js", context);
+  loadScript("ui/wizardPolicyUi.js", context);
   loadScript("modules/talkcore.js", context);
   return {
+    context,
     api: context.NCTalkCore,
     requests,
     responses,
@@ -1076,6 +1092,41 @@ function createTalkCoreHarness(){
       canonicalUserId = value;
     }
   };
+}
+
+async function testTalkDefaultsLanguageAndActionEdits(){
+  const policyStatus = {
+    endpointAvailable: true,
+    fetchSucceeded: true,
+    policyActive: true,
+    defaultsSource: "backend",
+    status: { seatAssigned: true, seatState: "active", isValid: true },
+    policy: { talk: { language_talk_description: "default", talk_lobby_active: true } },
+    policyEditable: { talk: { language_talk_description: true, talk_lobby_active: true } }
+  };
+  const harness = createTalkCoreHarness({ policyStatus, localLanguage: "de" });
+  const build = (language) => harness.api.buildStandardTalkDescription("https://cloud.example/call/test", "", language);
+  assert((await build()).startsWith("default:ui_description_heading"), "Room descriptions must prefer the backend UI-default language over a stored language");
+  assert((await build("default")).startsWith("default:ui_description_heading"), "An explicit default language must not fall back to a stored override");
+  assert((await build("custom")).startsWith("default:ui_description_heading"), "Custom mode without a template must fall back to the UI language");
+  assert((await build("fr")).startsWith("fr:ui_description_heading"), "An explicit resolved language must reach the description renderer");
+
+  const binding = { name: "lobby", domain: "talk", key: "talk_lobby_active", type: "boolean" };
+  const domain = harness.context.NCWizardPolicyUi.readPolicyDomain(policyStatus, "talk");
+  const defaults = harness.context.NCWizardPolicyUi.readPolicyBoundDefaults(domain, [binding], { lobby: false }, { localNames: new Set(["lobby"]) });
+  assert(defaults.lobby === true, "A new Talk wizard must start from the backend default");
+  const edited = harness.context.NCWizardPolicyUi.resolvePolicyBoundValues(policyStatus, [binding], { lobby: false });
+  assert(edited.lobby === false, "An editable per-meeting choice must remain usable with backend defaults");
+  policyStatus.policyEditable.talk.talk_lobby_active = false;
+  assert(harness.context.NCWizardPolicyUi.resolvePolicyBoundValues(policyStatus, [binding], { lobby: false }).lobby === true, "A forced policy must still override a per-meeting edit");
+
+  policyStatus.defaultsSource = "local";
+  assert((await build()).startsWith("de:ui_description_heading"), "Local defaults must restore the stored language");
+  policyStatus.policyEditable.talk.language_talk_description = false;
+  assert((await build()).startsWith("default:ui_description_heading"), "A forced language must win over local defaults");
+  policyStatus.policyActive = false;
+  policyStatus.status.seatAssigned = false;
+  assert((await build()).startsWith("de:ui_description_heading"), "An inactive policy domain must preserve the local description language");
 }
 
 async function testTalkOcsValidationAndDelegation(){
@@ -1624,6 +1675,7 @@ async function run(){
   await testCalendarMoveProtection();
   await testAddressbookFailureStopsClassification();
   await testTalkOcsValidationAndDelegation();
+  await testTalkDefaultsLanguageAndActionEdits();
   testUidOnlyAddressbookContact();
   await testAddressbookResponseValidation();
   await testInvalidAddressbookStopsRealClassification();

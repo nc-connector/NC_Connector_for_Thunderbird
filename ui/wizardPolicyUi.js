@@ -130,7 +130,8 @@
         return;
       }
       if (localNames?.has(binding.name)
-        && !NCPolicyState.isEditableLocked(domainState.active, domainState.editable, binding.key)){
+        && !NCPolicyState.isEditableLocked(domainState.active, domainState.editable, binding.key)
+        && NCPolicyState.getDefaultsSourceState(domainState.status).value !== "backend"){
         return;
       }
       const current = Object.prototype.hasOwnProperty.call(next, binding.name)

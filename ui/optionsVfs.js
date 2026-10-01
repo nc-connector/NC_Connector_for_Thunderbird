@@ -38,6 +38,9 @@
   let runtimeAvailable = false;
   let currentState = null;
   let settingsDirty = false;
+  const localSettingsDraft = new Map();
+  let defaultsSourceState = null;
+  let defaultsPolicyStatus = null;
   let actionPending = false;
   let stateRequestRevision = 0;
   let pendingRefreshTask = null;
@@ -102,9 +105,11 @@
       : [];
 
     return {
+      defaultsSourceState: value.defaultsSourceState || null,
       provider: {
         enabled: provider.enabled === true,
         localEnabled: provider.localEnabled === true,
+        configured: provider.configured === true,
         locked: provider.locked === true,
         connectionReady: provider.connectionReady === true,
         status: PROVIDER_STATUSES.has(provider.status) ? provider.status : "error",
@@ -113,6 +118,7 @@
       external: {
         enabled: external.enabled === true,
         localEnabled: external.localEnabled === true,
+        configured: external.configured === true,
         locked: external.locked === true,
         entitled: external.entitled === true,
         unavailableReason: normalizeText(external.unavailableReason),
@@ -257,6 +263,7 @@
       const disconnectButton = document.createElement("button");
       disconnectButton.type = "button";
       disconnectButton.className = "vfs-action-button";
+      disconnectButton.dataset.action = "disconnect";
       disconnectButton.textContent = i18n("options_vfs_disconnect_button");
       disconnectButton.disabled = actionPending;
       disconnectButton.addEventListener("click", () => {
@@ -269,6 +276,8 @@
   }
 
   function updateControls(){
+    const backendDefaults = (defaultsSourceState || currentState?.defaultsSourceState)?.value === "backend";
+    const sourceHint = backendDefaults ? i18n("options_defaults_source_tabs_tooltip") : "";
     const providerConnectionReady = currentState?.provider?.connectionReady === true;
     const externalEntitled = currentState?.external?.entitled === true;
     const providerLocked = currentState?.provider?.locked === true;
@@ -288,21 +297,23 @@
       providerEnabledInput.disabled = !runtimeAvailable
         || !providerConnectionReady
         || providerLocked
+        || backendDefaults
         || actionPending;
     }
     if (providerEnabledRow){
-      providerEnabledRow.classList.toggle("is-disabled", providerLocked);
-      providerEnabledRow.title = providerLocked ? adminHint : "";
+      providerEnabledRow.classList.toggle("is-disabled", providerLocked || backendDefaults);
+      providerEnabledRow.title = sourceHint || (providerLocked ? adminHint : "");
     }
     if (externalEnabledInput){
       externalEnabledInput.disabled = !runtimeAvailable
         || actionPending
         || !externalEntitled
+        || backendDefaults
         || externalLocked;
     }
     if (externalEnabledRow){
-      externalEnabledRow.classList.toggle("is-disabled", externalLocked);
-      externalEnabledRow.title = externalLocked ? adminHint : externalHint;
+      externalEnabledRow.classList.toggle("is-disabled", externalLocked || backendDefaults);
+      externalEnabledRow.title = sourceHint || (externalLocked ? adminHint : externalHint);
     }
     if (externalSection){
       externalSection.classList.toggle("is-disabled", runtimeAvailable && externalBlocked);
@@ -324,8 +335,38 @@
       button.disabled = actionPending;
     });
     connectionList?.querySelectorAll("button").forEach((button) => {
-      button.disabled = actionPending || !externalEntitled || currentState?.external?.enabled !== true;
+      button.disabled = actionPending || (button.dataset.action !== "disconnect"
+        && (!externalEntitled || currentState?.external?.enabled !== true));
     });
+  }
+
+  function applyDefaultsSourcePreview(){
+    if (!currentState){
+      return;
+    }
+    for (const [name, input, key, setting] of [
+      ["providerEnabled", providerEnabledInput, NCSharingStorage.SHARE_POLICY_KEYS.vfsProviderEnabled, currentState.provider],
+      ["externalProvidersEnabled", externalEnabledInput, NCSharingStorage.SHARE_POLICY_KEYS.vfsExternalProvidersEnabled, currentState.external]
+    ]){
+      if (!input){
+        continue;
+      }
+      const localValue = localSettingsDraft.has(name) ? localSettingsDraft.get(name) : setting.localEnabled;
+      input.checked = defaultsPolicyStatus
+        ? NCPolicyState.resolveDefaultValue(defaultsPolicyStatus, "share", key, localValue,
+          localSettingsDraft.has(name) || setting.configured, NCPolicyState.coerceBoolean)
+        : (localSettingsDraft.has(name) ? localValue : setting.enabled);
+      if (name === "externalProvidersEnabled" && !currentState.external.entitled){
+        input.checked = false;
+      }
+    }
+  }
+
+  function setDefaultsSourceState(state, policyStatus){
+    defaultsSourceState = state;
+    defaultsPolicyStatus = policyStatus || null;
+    applyDefaultsSourcePreview();
+    updateControls();
   }
 
   function renderState(state, options = {}){
@@ -340,7 +381,9 @@
         externalEnabledInput.checked = state.external.enabled;
       }
       settingsDirty = false;
+      localSettingsDraft.clear();
     }
+    applyDefaultsSourcePreview();
 
     const providerPresentation = providerStatusPresentation(state.provider.status);
     if (providerStatus){
@@ -358,6 +401,7 @@
     runtimeAvailable = false;
     currentState = null;
     settingsDirty = false;
+    localSettingsDraft.clear();
     if (providerEnabledInput){
       providerEnabledInput.checked = false;
     }
@@ -480,8 +524,11 @@
     }
   }
 
-  async function save(){
+  async function save(options = {}){
     if (actionPending){
+      return false;
+    }
+    if (options.beforeSourceChange === true && !settingsDirty){
       return false;
     }
     const refreshBeforeSave = pendingRefreshTask;
@@ -492,10 +539,15 @@
       if (refreshBeforeSave){
         await refreshBeforeSave;
       }
+      // A backend-to-local switch must be stored before its new local edits.
+      if (options.beforeSourceChange === true && currentState?.defaultsSourceState?.value === "backend"){
+        return false;
+      }
       if (!settingsDirty){
         try{
           const state = await requestState(MESSAGE_TYPES.getState);
           renderState(state);
+          return state.external.enabled !== state.external.initialized;
         }catch(error){
           global.NCLogContext.safeConsoleError(LOG_PREFIX, "VFS options state refresh after save failed", error);
           if (runtimeAvailable){
@@ -509,10 +561,7 @@
       if (!runtimeAvailable){
         throw new Error(i18n("options_vfs_runtime_unavailable"));
       }
-      const response = await request(MESSAGE_TYPES.updateSettings, {
-        providerEnabled: providerEnabledInput?.checked === true,
-        externalProvidersEnabled: externalEnabledInput?.checked === true
-      });
+      const response = await request(MESSAGE_TYPES.updateSettings, Object.fromEntries(localSettingsDraft));
       const state = normalizeState(response.state);
       renderState(state);
       return response.backgroundRestartRequired === true;
@@ -526,13 +575,17 @@
     }
   }
 
-  function markSettingsDirty(){
+  function markSettingsDirty(name, input){
+    if (input?.disabled){
+      return;
+    }
+    localSettingsDraft.set(name, input?.checked === true);
     settingsDirty = true;
     updateControls();
   }
 
-  providerEnabledInput?.addEventListener("change", markSettingsDirty);
-  externalEnabledInput?.addEventListener("change", markSettingsDirty);
+  providerEnabledInput?.addEventListener("change", () => markSettingsDirty("providerEnabled", providerEnabledInput));
+  externalEnabledInput?.addEventListener("change", () => markSettingsDirty("externalProvidersEnabled", externalEnabledInput));
   refreshConnectionsButton?.addEventListener("click", () => {
     void runAction(refreshConnectionsButton, MESSAGE_TYPES.refreshConnections);
   });
@@ -560,6 +613,7 @@
 
   global.NCVfsOptions = Object.freeze({
     MESSAGE_TYPES,
+    setDefaultsSourceState,
     refresh,
     save
   });

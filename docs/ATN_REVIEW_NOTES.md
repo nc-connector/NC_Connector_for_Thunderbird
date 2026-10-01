@@ -23,10 +23,12 @@ release-specific differences remain in `CHANGELOG.md`.
 
 ## Seat and license status messages in 3.4.2
 
-- Settings, Sharing and Talk use shared localized license status messages across all 15 supported languages. The no-seat banner explains that local Sharing and Talk remain available; disabled Pro features retain their separate seat-requirement hints.
+- Settings, Sharing and Talk use shared localized license status messages across all 15 supported languages. In unmanaged installations, the no-seat banner explains that local Sharing and Talk remain available; Seat-dependent features retain their separate requirement hints.
 - Optional backend status fields distinguish grace periods, license refusals, activation issues, and synchronization failures. Active Community and Pro Seats share the same feature checks; global overcapacity does not deny a personally active Seat; the add-on does not infer access from local date comparisons.
 - License-management links are shown only to Nextcloud administrators and point to the configured Nextcloud's backend administration. The mail add-on does not contact the license server directly.
-- Older backend responses remain supported. Without the backend, normal local Sharing and Talk remain available without a license warning.
+- Older backend responses remain supported. Without the backend, normal local Sharing and Talk remain available in unmanaged installations without a license warning.
+- Presence of a supported URL, URL-lock, or defaults-source managed setting requires backend-confirmed access with a valid assigned Seat. Missing backend, missing access, and failed verification have distinct messages. Initial login, cleanup, revocation, and disconnect remain accessible. No native registry access or new permission is added.
+- Advanced settings can select local or backend defaults. The backend can override managed storage and optionally allow a user selection. Missing source metadata preserves the managed/local path. Local preferences are retained separately from policy overlays; per-action editability is unchanged. See [default resolution](DEVELOPMENT.md#61-where-options-live) and [rollout instructions](ADMIN.md#6-enterprise-rollout).
 - Legacy zero-day Share expiry is normalized once to one day at the backend-response boundary. Positive and missing values retain their meaning; locked policies and editable local choices still use the existing resolution path. The policy regression suite compares expiry and attachment thresholds across Community and Pro, including inactive personal Seats and both upload modes.
 
 ---

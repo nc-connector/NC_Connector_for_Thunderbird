@@ -148,7 +148,7 @@ Key files you’ll touch most:
 - `modules/policyState.js` — shared helpers for normalized backend policy status objects
 - `modules/policyRuntime.js` — centralized backend seat/policy status fetch + normalization (`/apps/ncc_backend_4mc/api/v1/status`)
 - `modules/hostPermissions.js` — single host-permission gate used by core/talk/sharing runtime modules
-- `modules/managedSetup.js` — reads managed Nextcloud URL values from Thunderbird Enterprise Policy (`storage.managed`)
+- `modules/managedSetup.js` — reads managed URL and defaults-source settings from Thunderbird Enterprise Policy (`storage.managed`)
 - `modules/shareTemplateContract.js` — shared share-template marker rules used by render + insert modules
 - `modules/nccore.js` — Nextcloud auth/login-flow helpers and shared DAV account data
 - `modules/talkAddressbook.js` — system-addressbook CardDAV fetch/cache/search/status helpers
@@ -323,10 +323,14 @@ in the Sharing wizard.
 
 Backend policy precedence for every add-on-editable default:
 1. Inactive/unavailable policy domain: use the stored local value or the add-on fallback.
-2. Active policy with `policy_editable=true`: use a valid stored local value; if none exists, seed the UI/runtime from the backend value.
+2. Active policy with `policy_editable=true`: with source `local`, prefer an explicit local value; with source `backend`, prefer the backend value. A missing backend value falls back to the local or built-in value.
 3. Active policy with `policy_editable=false`: use the backend value and lock the corresponding control.
 
 The same resolution must be used by options, wizards, and background consumers. Template and derived output fields remain backend-controlled.
+
+`NCPolicyState.getDefaultsSourceState()` resolves source selection only after a successful backend response confirms valid access and an active assigned Seat. An explicit backend `defaults_source=local|backend` overrides managed storage; a saved user choice overrides it only when `defaults_source_editable` is the JSON boolean `true`. Missing, `inherit`, or invalid metadata leaves managed `DefaultsSource` in charge, followed by a saved local choice and finally `local`. A present invalid managed value locks selection to `local` and reports a configuration warning unless an explicit backend source overrides it. No confirmed entitlement means effective `local` with selection unavailable.
+
+`policyRuntime` keeps raw backend metadata separate from the local `defaultsSource` preference and `managedSetup`. Options retain a raw local draft and save only explicit edits, never policy overlays. Backend-source tabs remain focusable for their explanatory tooltip but cannot be activated. Per-action wizard fields still use individual policy editability. VFS switches follow source selection separately from management permissions; source saves refresh the short-lived VFS policy cache. Pending VFS edits are saved before switching away from local defaults, or after switching to local defaults.
 
 Backend 1.4.2 supplies share expiry defaults from 1 through 3650 days. At the
 status-response boundary, `policyRuntime` converts an explicit legacy
@@ -340,6 +344,7 @@ mandatory, while an editable policy preserves the user's local choice.
 Managed setup:
 - `NextcloudUrl` — optional administrator-provided Nextcloud base URL via Enterprise Policy
 - `NextcloudUrlLocked` — locks the URL field and forces the managed URL
+- `DefaultsSource` — `local|backend`; present values lock selection unless explicit backend metadata overrides them
 - aliases: `nextcloudUrl`, `nextcloudUrlLocked`, `baseUrl`, `baseUrlLocked`
 
 Core:
@@ -347,6 +352,7 @@ Core:
 - `user` — Nextcloud username
 - `appPass` — app password (or generated via Login Flow)
 - `debugEnabled` — enable verbose logging
+- `defaultsSource` — explicit local `local|backend` selection; absence is preserved, with no install-time migration
 
 Talk defaults:
 - `talkDefaultTitle`
@@ -1109,7 +1115,7 @@ The wizard exposes exactly three source menus: **+ Local**, **+ My Nextcloud**, 
 
 The VFS options state is refreshed after credential saves, whenever the VFS tab is opened, when the options document becomes visible again, and when the Toolkit reports a provider change. Revision checks prevent an older asynchronous response from overwriting a checkbox edit made while that request was running. **Refresh connections** always requests the latest background state, so a provider discovered after returning from the Thunderbird Add-ons tab appears without reopening the options page.
 
-`modules/vfsPolicyRuntime.js` resolves `vfs_provider_enabled` and `vfs_external_providers_enabled` against the Share policy with a short-lived backend-status cache. Missing keys from an older backend preserve an existing local value. Provider grants use only the provider switch. External discovery, setup, selection, reads, and the pre-upload boundary additionally require valid access with an active assigned Seat, including Community. The pre-upload check runs before root reservation, so a queued external item cannot begin a Nextcloud mutation after its entitlement has changed. A missing backend leaves all non-external source paths in local mode.
+`modules/vfsPolicyRuntime.js` resolves `vfs_provider_enabled` and `vfs_external_providers_enabled` against the Share policy and defaults source with a short-lived backend-status cache. Missing keys from an older backend preserve an existing local value. Provider requests check the provider switch and managed-installation access, including the self-storage path. External discovery, setup, selection, reads, and the pre-upload boundary always require valid access with an active assigned Seat. The pre-upload check runs before root reservation, so a queued external item cannot begin a Nextcloud mutation after its entitlement has changed. Without managed setup, a missing backend leaves non-external source paths in local mode. Status reads do not delete grants or saved connections; revocation, disconnect, explicit local provider disable, and account changes retain their existing cleanup behavior.
 
 The queue step shows the planned relative target folder from `NCSharing.buildShareFolderInfo()`. After upload it uses the folder returned by root reservation, including an attachment suffix such as `_1`. Finite quota displays free and total space. Nextcloud's unlimited-quota marker displays current usage instead of claiming unlimited physical capacity; missing quota data remains visible as unavailable and does not invent a limit.
 
@@ -1295,7 +1301,7 @@ authorization values, cookies, tokens, password-like fields, recipient/email
 identifiers, and user-scoped DAV/Talk paths before output. Background debug
 logging has no raw fallback when the redactor is unavailable.
 
-Managed Nextcloud URL reads distinguish absence from failure. Firefox and
+Managed setup reads distinguish absence from failure. Firefox and
 Thunderbird reject `storage.managed.get()` with `Managed storage manifest not
 found` when no native manifest or `3rdparty` policy exists; this documented
 unmanaged state resolves to an empty policy. Other read failures remain
@@ -1303,6 +1309,10 @@ fail-closed: options hydrate existing local credentials for visibility but block
 Save, Test, and Login Flow for that run, while background routing refuses to
 fall back to a local URL. A successful managed-policy result already obtained in
 the same run is not overwritten by a later failure.
+
+Presence of any supported URL, URL-lock alias, or `DefaultsSource` key activates managed installation checks, including false or invalid values. The `adminSettings` wrapper alone and unrelated managed keys do not. `NCPolicyRuntime.assertManagedAccess()` uses the common `getManagedAccessState()` result for Share preparation/upload, Talk creation and updates, attachment automation, and VFS access. Missing backend, missing/invalid Seat, and failed verification have separate localized messages. Unmanaged actions do not gain an extra policy request from this guard. Missing credentials still lead to connection setup before operational checks.
+
+Cleanup, grant revocation, disconnect, and already prepared Talk delegation departure remain possible when access closes. Ordinary message sending is not blocked solely because attachment automation loses managed access, and already inserted content is not retroactively removed. Signatures retain their existing confirmed-Seat requirement. These changes add no browser permissions, vendor patches, or Experiment APIs; the existing persistent MV2 background and Toolkit restart dependency remain.
 
 ---
 

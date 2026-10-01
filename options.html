@@ -47,6 +47,7 @@ body{
 .tab-list{display:flex; flex-wrap:wrap; border-bottom:1px solid var(--tb-border); background:var(--tb-surface-2);}
 .tab-list button{flex:1 1 120px; padding:10px; border:none; background:none; cursor:pointer; font-weight:600;}
 .tab-list button.active{background:var(--tb-surface); border-bottom:3px solid var(--brand-blue);}
+.tab-list button[aria-disabled="true"]{opacity:.5; cursor:not-allowed;}
 .tab-panel{display:none; padding:20px; min-height:var(--tab-panel-min-height); will-change:transform,opacity;}
 .tab-panel.active{display:block; animation:tabEnterForward .22s ease-out;}
 .tabs[data-nav="back"] .tab-panel.active{animation-name:tabEnterBack;}
@@ -965,6 +966,20 @@ footer{
     </fieldset>
   </section>
   <section id="tab-advanced" class="tab-panel">
+    <div class="row" id="defaultsSourceRow">
+      <label for="defaultsSource" class="option-tooltip-wrap" tabindex="0">
+        <span data-i18n="options_defaults_source_label"></span>
+        <span aria-hidden="true">?</span>
+        <span class="option-tooltip" role="tooltip" data-i18n="options_defaults_source_help"></span>
+      </label>
+      <div>
+        <select id="defaultsSource" aria-describedby="defaultsSourceHint" disabled>
+          <option value="local" data-i18n="options_defaults_source_local"></option>
+          <option value="backend" data-i18n="options_defaults_source_backend"></option>
+        </select>
+        <p id="defaultsSourceHint" class="hint" data-i18n="options_defaults_source_seat_required_tooltip"></p>
+      </div>
+    </div>
   </section>
   <section id="tab-debug" class="tab-panel">
     <div class="row">

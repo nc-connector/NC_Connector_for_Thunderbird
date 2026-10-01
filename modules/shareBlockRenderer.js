@@ -93,6 +93,7 @@
       const editableShare = request?.policyEditableShare;
       const hasEditableMetadata = !!editableShare && typeof editableShare === "object";
       const localMayOverride = hasEditableMetadata
+        && request?.preferBackendDefaults !== true
         && editableShare[languageKey] !== false
         && localSetting.hasLocalValue;
       const selectedLang = localMayOverride

@@ -686,6 +686,7 @@
     }
     state.defaults = NCWizardPolicyUi.readPolicyBoundDefaults(
       {
+        status: state.policy.status,
         active: state.policy.active,
         policy: state.policy.share,
         editable: state.policy.editable
@@ -2400,6 +2401,7 @@
     try{
       setMessage(i18n('sharing_status_inserting'), 'info');
       const renderOptions = {
+        preferBackendDefaults: NCPolicyState.getDefaultsSourceState(state.policy.status).value === "backend",
         policyShare: state.policy.active ? state.policy.share : null,
         policyEditableShare: state.policy.active ? state.policy.editable : null,
         noteEnabled,
@@ -2415,6 +2417,7 @@
       let passwordMailPlainText = "";
       if (separatePasswordMail){
         const passwordRenderOptions = {
+          preferBackendDefaults: renderOptions.preferBackendDefaults,
           policyShare: state.policy.active ? state.policy.share : null,
           policyEditableShare: state.policy.active ? state.policy.editable : null,
           passwordOnly: true
@@ -2452,6 +2455,7 @@
             deliveryMode: getSelectedPasswordDeliveryMode(),
             secretsExpireDays: NCSharePasswordDelivery.resolveSecretsExpireDays(state.policy.status),
             renderShareInfo: state.uploadResult.shareInfo,
+            preferBackendDefaults: renderOptions.preferBackendDefaults,
             policyShare: state.policy.active ? state.policy.share : null,
             policyEditableShare: state.policy.active ? state.policy.editable : null,
             html: passwordMailHtml,

@@ -110,6 +110,7 @@ async function registerSeparatePasswordMailDispatch(tabId, payload = {}, options
     renderShareInfo: payload?.renderShareInfo && typeof payload.renderShareInfo === "object"
       ? payload.renderShareInfo
       : null,
+    preferBackendDefaults: payload?.preferBackendDefaults === true,
     policyShare: payload?.policyShare && typeof payload.policyShare === "object"
       ? payload.policyShare
       : null,

@@ -29,6 +29,7 @@ const ALLOWED_IDENTICAL_KEYS_GLOBAL = new Set([
   "options_about_license_value",
   "options_sharing_attachments_offer_suffix",
   "options_about_homepage_link",
+  "options_defaults_source_backend", // Product name, identical to Outlook in every locale.
   "sharing_status_speed_kbps"
 ]);
 

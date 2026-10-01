@@ -28,7 +28,7 @@ const EMAIL_SIGNATURE_KEYS = {
 };
 
 NCTalkDomI18n.translatePage(i18n, { titleKey: "options_title" });
-initTabs();
+const activateOptionsTab = initTabs();
 initAbout();
 
 const statusEl = document.getElementById("status");
@@ -106,6 +106,9 @@ const emailSignatureOnReplyRow = document.getElementById("emailSignatureOnReplyR
 const emailSignatureOnReplyInput = document.getElementById("emailSignatureOnReply");
 const emailSignatureOnForwardRow = document.getElementById("emailSignatureOnForwardRow");
 const emailSignatureOnForwardInput = document.getElementById("emailSignatureOnForward");
+const defaultsSourceSelect = document.getElementById("defaultsSource");
+const defaultsSourceRow = document.getElementById("defaultsSourceRow");
+const defaultsSourceHint = document.getElementById("defaultsSourceHint");
 const DEFAULT_SHARING_BASE = NCSharingStorage.DEFAULT_BASE_PATH;
 const OPTION_SHARE_POLICY_BINDINGS = [
   {
@@ -309,6 +312,21 @@ const OPTION_TALK_POLICY_BINDINGS = [
     normalize: (value) => normalizeLangChoice(value, { allowCustom: isCustomLanguageModeAvailable("talk") })
   }
 ];
+const OPTION_SPECIAL_DEFAULT_BINDINGS = [
+  { storageKey: SHARING_KEYS.attachmentsAlwaysConnector, domain: "share", key: SHARE_POLICY_KEYS.attachmentsAlwaysConnector, element: sharingAttachmentsAlwaysNcInput, property: "checked", type: "boolean" },
+  { storageKey: SHARING_KEYS.attachmentsOfferAboveEnabled, domain: "share", key: SHARE_POLICY_KEYS.attachmentsMinSizeMb, element: sharingAttachmentsOfferAboveEnabledInput, property: "checked", type: "boolean" },
+  { storageKey: SHARING_KEYS.attachmentsOfferAboveMb, domain: "share", key: SHARE_POLICY_KEYS.attachmentsMinSizeMb, element: sharingAttachmentsOfferAboveMbInput, property: "value", type: "int", normalize: normalizeAttachmentThresholdMb },
+  { storageKey: "talkDefaultRoomType", domain: "talk", key: "talk_room_type", element: talkDefaultRoomTypeValueInput, property: "value", type: "string" },
+  { storageKey: EMAIL_SIGNATURE_KEYS.onCompose, domain: "email_signature", key: "email_signature_on_compose", element: emailSignatureOnComposeInput, property: "checked", type: "boolean" },
+  { storageKey: EMAIL_SIGNATURE_KEYS.onReply, domain: "email_signature", key: "email_signature_on_reply", element: emailSignatureOnReplyInput, property: "checked", type: "boolean" },
+  { storageKey: EMAIL_SIGNATURE_KEYS.onForward, domain: "email_signature", key: "email_signature_on_forward", element: emailSignatureOnForwardInput, property: "checked", type: "boolean" }
+];
+const OPTION_DEFAULT_BINDINGS = OPTION_SHARE_POLICY_BINDINGS.concat(OPTION_TALK_POLICY_BINDINGS, OPTION_SPECIAL_DEFAULT_BINDINGS);
+let localDefaultDraft = {};
+const localDefaultsBaseline = {};
+let localDefaultsReady = false;
+const dirtyLocalDefaultKeys = new Set();
+let defaultsSourceDirty = false;
 let statusTimer = null;
 let composeAttachmentSettingsLocked = false;
 let runtimePolicyStatus = null;
@@ -550,6 +568,77 @@ function getAdminControlledHint(){
   return NCWizardPolicyUi.getAdminControlledHint(i18n);
 }
 
+function getDefaultsSourceState(){
+  return NCPolicyState.getDefaultsSourceState(runtimePolicyStatus, localDefaultDraft.defaultsSource, managedSetupPolicy);
+}
+
+function updateDefaultsSourceUi(){
+  const state = getDefaultsSourceState();
+  const hint = i18n(!state.available ? "options_defaults_source_seat_required_tooltip"
+    : state.managedInvalid ? "managed_defaults_source_invalid"
+      : !state.editable ? "options_defaults_source_managed_tooltip" : "options_defaults_source_help");
+  if (defaultsSourceSelect){
+    defaultsSourceSelect.value = state.value;
+    defaultsSourceSelect.disabled = !state.editable;
+    defaultsSourceSelect.title = hint;
+  }
+  if (defaultsSourceRow){
+    defaultsSourceRow.title = hint;
+  }
+  if (defaultsSourceHint){
+    defaultsSourceHint.textContent = hint;
+  }
+  const backendDefaults = state.value === "backend";
+  for (const tab of ["sharing", "talklink", "signature"]){
+    const button = document.querySelector(`.tab-btn[data-tab="${tab}"]`);
+    if (!button){
+      continue;
+    }
+    button.setAttribute("aria-disabled", String(backendDefaults));
+    button.title = backendDefaults ? i18n("options_defaults_source_tabs_tooltip") : "";
+    if (backendDefaults && button.classList.contains("active")){
+      activateOptionsTab("advanced");
+    }
+  }
+  globalThis.NCVfsOptions?.setDefaultsSourceState(state, runtimePolicyStatus);
+}
+
+function updateLocalDefaultDraft(binding){
+  if (!localDefaultsReady || !binding.element || binding.element.disabled
+    || getDefaultsSourceState().value === "backend"
+    || NCPolicyState.isLocked(runtimePolicyStatus, binding.domain, binding.key)){
+    return;
+  }
+  const value = binding.element[binding.property];
+  const fallback = binding.fallback ?? localDefaultsBaseline[binding.storageKey];
+  const normalized = binding.type === "boolean" ? value === true
+    : binding.type === "int" ? NCPolicyState.coerceInt(value, fallback)
+      : NCPolicyState.coerceString(value, fallback);
+  localDefaultDraft[binding.storageKey] = typeof binding.normalize === "function"
+    ? binding.normalize(normalized, fallback) : normalized;
+  dirtyLocalDefaultKeys.add(binding.storageKey);
+}
+
+function restoreLocalDefaultControls(){
+  OPTION_DEFAULT_BINDINGS.forEach((binding) => {
+    if (!binding.element){
+      return;
+    }
+    const key = localDefaultDraft[binding.storageKey] === undefined && binding.legacyStorageKey
+      ? binding.legacyStorageKey : binding.storageKey;
+    const value = hasValidStoredBindingValue(localDefaultDraft, binding)
+      ? localDefaultDraft[key] : localDefaultsBaseline[binding.storageKey];
+    binding.element[binding.property] = typeof binding.normalize === "function"
+      ? binding.normalize(value, localDefaultsBaseline[binding.storageKey]) : value;
+  });
+  setTalkDefaultRoomType(talkDefaultRoomTypeValueInput?.value);
+  emailSignatureStoredState = {
+    hasOnCompose: typeof localDefaultDraft[EMAIL_SIGNATURE_KEYS.onCompose] === "boolean",
+    hasOnReply: typeof localDefaultDraft[EMAIL_SIGNATURE_KEYS.onReply] === "boolean",
+    hasOnForward: typeof localDefaultDraft[EMAIL_SIGNATURE_KEYS.onForward] === "boolean"
+  };
+}
+
 async function refreshManagedSetupPolicy(){
   if (typeof NCManagedSetup === "undefined" || !NCManagedSetup?.read){
     managedSetupPolicy = null;
@@ -613,12 +702,6 @@ function hasValidStoredBindingValue(stored, binding){
   return value !== undefined;
 }
 
-/**
- * Apply backend defaults once during initial options loading. Editable values
- * keep valid local storage values; locked values always use the backend.
- * @param {Array<object>} bindings
- * @param {object} stored
- */
 function applyInitialPolicyDefaults(bindings, stored){
   const domains = new Set(bindings.map((binding) => binding.domain).filter(Boolean));
   domains.forEach((domain) => {
@@ -627,7 +710,7 @@ function applyInitialPolicyDefaults(bindings, stored){
     const localNames = new Set();
     domainBindings.forEach((binding) => {
       currentValues[binding.name] = binding.element[binding.property];
-      if (hasValidStoredBindingValue(stored, binding)){
+      if (getDefaultsSourceState().value !== "backend" && hasValidStoredBindingValue(stored, binding)){
         localNames.add(binding.name);
       }
     });
@@ -670,7 +753,7 @@ function applyInitialSpecialPolicyDefaults(stored){
   const hasLocalThreshold = typeof stored?.[SHARING_KEYS.attachmentsOfferAboveEnabled] === "boolean"
     || stored?.[SHARING_KEYS.attachmentsOfferAboveMb] !== undefined;
   const usePolicyThreshold = NCPolicyState.isDomainActive(runtimePolicyStatus, "share")
-    && (!hasLocalThreshold || NCPolicyState.isLocked(
+    && (getDefaultsSourceState().value === "backend" || !hasLocalThreshold || NCPolicyState.isLocked(
       runtimePolicyStatus,
       "share",
       SHARE_POLICY_KEYS.attachmentsMinSizeMb
@@ -735,6 +818,7 @@ function applyEmailSignatureRowState(row, input, disabled, title){
 
 function applyEmailSignatureSettingsOverlay(){
   const runtimeAvailable = isEmailSignatureRuntimeAvailable();
+  const backendDefaults = getDefaultsSourceState().value === "backend";
   const backendOnCompose = NCPolicyState.readPolicyValue(runtimePolicyStatus, "email_signature", "email_signature_on_compose") === true;
   const backendOnReply = NCPolicyState.readPolicyValue(runtimePolicyStatus, "email_signature", "email_signature_on_reply") === true;
   const backendOnForward = NCPolicyState.readPolicyValue(runtimePolicyStatus, "email_signature", "email_signature_on_forward") === true;
@@ -752,7 +836,7 @@ function applyEmailSignatureSettingsOverlay(){
   if (emailSignatureOnComposeInput){
     if (!runtimeAvailable){
       emailSignatureOnComposeInput.checked = false;
-    }else if (lockOnCompose || !emailSignatureStoredState.hasOnCompose){
+    }else if (lockOnCompose || backendDefaults || !emailSignatureStoredState.hasOnCompose){
       emailSignatureOnComposeInput.checked = backendOnCompose;
     }
     applyEmailSignatureRowState(
@@ -767,7 +851,7 @@ function applyEmailSignatureSettingsOverlay(){
   if (emailSignatureOnReplyInput){
     if (!composeEnabled){
       emailSignatureOnReplyInput.checked = false;
-    }else if (lockOnReply || !emailSignatureStoredState.hasOnReply){
+    }else if (lockOnReply || backendDefaults || !emailSignatureStoredState.hasOnReply){
       emailSignatureOnReplyInput.checked = backendOnReply;
     }
     applyEmailSignatureRowState(
@@ -780,7 +864,7 @@ function applyEmailSignatureSettingsOverlay(){
   if (emailSignatureOnForwardInput){
     if (!composeEnabled){
       emailSignatureOnForwardInput.checked = false;
-    }else if (lockOnForward || !emailSignatureStoredState.hasOnForward){
+    }else if (lockOnForward || backendDefaults || !emailSignatureStoredState.hasOnForward){
       emailSignatureOnForwardInput.checked = backendOnForward;
     }
     applyEmailSignatureRowState(
@@ -823,6 +907,10 @@ async function refreshBackendPolicyStatus(credentials = null){
     runtimePolicyStatus = null;
     globalThis.NCLogContext.safeConsoleError(OPTIONS_LOG_PREFIX, "policy status check failed", error);
   }
+  if (runtimePolicyStatus){
+    runtimePolicyStatus.localDefaultsSource = localDefaultDraft.defaultsSource;
+    runtimePolicyStatus.managedSetup = managedSetupPolicy;
+  }
   refreshLanguageOverrideSelects();
   applyPolicyWarningUi();
   applyPolicySettingsOverlay();
@@ -833,6 +921,11 @@ async function refreshBackendPolicyStatus(credentials = null){
  * Locked controls always show the policy value.
  */
 function applyPolicySettingsOverlay(){
+  if (localDefaultsReady){
+    restoreLocalDefaultControls();
+    applyInitialPolicyDefaults(OPTION_SHARE_POLICY_BINDINGS.concat(OPTION_TALK_POLICY_BINDINGS), localDefaultDraft);
+    applyInitialSpecialPolicyDefaults(localDefaultDraft);
+  }
   const shareLocks = applyOptionPolicyBindings(OPTION_SHARE_POLICY_BINDINGS);
   const talkLocks = applyOptionPolicyBindings(OPTION_TALK_POLICY_BINDINGS);
   const lockPermUpload = !!shareLocks.sharingDefaultPermCreate;
@@ -912,6 +1005,7 @@ function applyPolicySettingsOverlay(){
   updateSharingPasswordState();
   updateAttachmentThresholdState();
   applyTalkSystemAddressbookLockState(talkAddressbookLockActive, talkAddressbookLockDetail);
+  updateDefaultsSourceUi();
 }
 
 async function load(){
@@ -924,6 +1018,7 @@ async function load(){
     "appPass",
     "debugEnabled",
     "authMode",
+    "defaultsSource",
     SHARING_KEYS.basePath,
     SHARING_KEYS.defaultShareName,
     SHARING_KEYS.defaultPermCreate,
@@ -952,6 +1047,9 @@ async function load(){
     EMAIL_SIGNATURE_KEYS.onReply,
     EMAIL_SIGNATURE_KEYS.onForward
   ]);
+  localDefaultDraft = { ...stored };
+  dirtyLocalDefaultKeys.clear();
+  defaultsSourceDirty = false;
   // Hydrate local credentials before the managed-policy read. A genuine
   // policy backend failure still keeps all actions fail-closed, but must not
   // make existing local settings look as if they had been deleted.
@@ -1078,23 +1176,14 @@ async function load(){
       ? !!stored[EMAIL_SIGNATURE_KEYS.onForward]
       : false;
   }
-  const storedShareBlockLang = stored.shareBlockLang;
-  const storedEventDescriptionLang = stored.eventDescriptionLang;
   setTalkDefaultRoomType(stored.talkDefaultRoomType);
+  OPTION_DEFAULT_BINDINGS.forEach((binding) => {
+    localDefaultsBaseline[binding.storageKey] = binding.element?.[binding.property];
+  });
+  localDefaultsBaseline.shareBlockLang = "default";
+  localDefaultsBaseline.eventDescriptionLang = "default";
+  localDefaultsReady = true;
   await refreshBackendPolicyStatus();
-  if (shareBlockLangSelect){
-    shareBlockLangSelect.value = normalizeLangChoice(storedShareBlockLang, {
-      allowCustom: isCustomLanguageModeAvailable("share")
-    });
-  }
-  if (eventDescriptionLangSelect){
-    eventDescriptionLangSelect.value = normalizeLangChoice(storedEventDescriptionLang, {
-      allowCustom: isCustomLanguageModeAvailable("talk")
-    });
-  }
-  applyInitialPolicyDefaults(OPTION_SHARE_POLICY_BINDINGS.concat(OPTION_TALK_POLICY_BINDINGS), stored);
-  applyInitialSpecialPolicyDefaults(stored);
-  applyPolicySettingsOverlay();
   await refreshTalkSystemAddressbookState({ forceRefresh: true });
   setAuthMode(stored.authMode || "manual");
   updateAuthModeUI();
@@ -1284,202 +1373,40 @@ async function save(){
   }
   const user = userInput.value.trim();
   const appPass = appPassInput.value;
-  const debugEnabled = document.getElementById("debugEnabled").checked;
-  const authMode = getSelectedAuthMode();
-  let sharingBasePath = (sharingBaseInput?.value?.trim()) || DEFAULT_SHARING_BASE;
-  let sharingDefaultShareName = (sharingDefaultShareNameInput?.value || "").trim() || DEFAULT_SHARING_SHARE_NAME;
-  let sharingDefaultPermCreate = !!sharingDefaultPermCreateInput?.checked;
-  let sharingDefaultPermWrite = !!sharingDefaultPermWriteInput?.checked;
-  let sharingDefaultPermDelete = !!sharingDefaultPermDeleteInput?.checked;
-  let sharingDefaultPassword = sharingDefaultPasswordInput
-    ? !!sharingDefaultPasswordInput.checked
-    : true;
-  let sharingDefaultPasswordSeparate = sharingDefaultPassword
-    ? !!sharingDefaultPasswordSeparateInput?.checked
-    : false;
-  let sharingDefaultPasswordDeliveryMode = NCSharePasswordDelivery.coerceMode(
-    sharingDefaultPasswordDeliveryModeSelect?.value,
-    NCSharePasswordDelivery.MODE_PLAIN
-  );
-  let sharingDefaultExpireDays = NCTalkTextUtils.normalizeExpireDays(sharingDefaultExpireDaysInput?.value, DEFAULT_SHARING_EXPIRE_DAYS);
-  let sharingAttachmentsLinkTarget = normalizeAttachmentLinkTarget(
-    sharingAttachmentsLinkTargetSelect?.value,
-    DEFAULT_SHARING_ATTACHMENT_LINK_TARGET
-  );
-  let sharingAttachmentsAlwaysConnector = !!sharingAttachmentsAlwaysNcInput?.checked;
-  let sharingAttachmentsOfferAboveEnabled = !!sharingAttachmentsOfferAboveEnabledInput?.checked;
-  let sharingAttachmentsOfferAboveMb = normalizeAttachmentThresholdMb(sharingAttachmentsOfferAboveMbInput?.value);
-  let talkDefaultTitle = (talkDefaultTitleInput?.value || "").trim() || DEFAULT_TALK_TITLE;
-  let talkDefaultLobby = talkDefaultLobbyInput ? !!talkDefaultLobbyInput.checked : true;
-  let talkDefaultListable = talkDefaultListableInput ? !!talkDefaultListableInput.checked : true;
-  let talkAddUsersDefaultEnabled = talkDefaultAddUsersInput ? !!talkDefaultAddUsersInput.checked : false;
-  let talkAddGuestsDefaultEnabled = talkDefaultAddGuestsInput ? !!talkDefaultAddGuestsInput.checked : false;
-  let talkAddParticipantsDefaultEnabled = talkAddUsersDefaultEnabled || talkAddGuestsDefaultEnabled;
-  let talkPasswordDefaultEnabled = talkDefaultPasswordInput ? !!talkDefaultPasswordInput.checked : true;
-  let talkDeleteRoomOnEventDelete = talkDeleteRoomOnEventDeleteInput ? !!talkDeleteRoomOnEventDeleteInput.checked : false;
-  let talkDefaultRoomType = getSelectedTalkDefaultRoomType();
-  let shareBlockLang = normalizeLangChoice(shareBlockLangSelect?.value, {
-    allowCustom: isCustomLanguageModeAvailable("share")
-  });
-  let eventDescriptionLang = normalizeLangChoice(eventDescriptionLangSelect?.value, {
-    allowCustom: isCustomLanguageModeAvailable("talk")
-  });
-  let emailSignatureOnCompose = emailSignatureOnComposeInput ? !!emailSignatureOnComposeInput.checked : false;
-  let emailSignatureOnReply = emailSignatureOnReplyInput ? !!emailSignatureOnReplyInput.checked : false;
-  let emailSignatureOnForward = emailSignatureOnForwardInput ? !!emailSignatureOnForwardInput.checked : false;
   const permissionOk = await ensureOriginPermissionInteractive();
   if (!permissionOk){
     return;
   }
   await refreshBackendPolicyStatus({ baseUrl, user, appPass });
-  const policyValues = NCWizardPolicyUi.resolvePolicyBoundValues(
-    runtimePolicyStatus,
-    OPTION_SHARE_POLICY_BINDINGS.concat(OPTION_TALK_POLICY_BINDINGS),
-    {
-      sharingBasePath,
-      sharingDefaultShareName,
-      sharingDefaultPermCreate,
-      sharingDefaultPermWrite,
-      sharingDefaultPermDelete,
-      sharingDefaultPassword,
-      sharingDefaultPasswordSeparate,
-      sharingDefaultPasswordDeliveryMode,
-      sharingDefaultExpireDays,
-      sharingAttachmentsLinkTarget,
-      shareBlockLang,
-      talkDefaultTitle,
-      talkDefaultLobby,
-      talkDefaultListable,
-      talkAddUsersDefaultEnabled,
-      talkAddGuestsDefaultEnabled,
-      talkPasswordDefaultEnabled,
-      talkDeleteRoomOnEventDelete,
-      eventDescriptionLang
-    }
-  );
-  ({
-    sharingBasePath,
-    sharingDefaultShareName,
-    sharingDefaultPermCreate,
-    sharingDefaultPermWrite,
-    sharingDefaultPermDelete,
-    sharingDefaultPassword,
-    sharingDefaultPasswordSeparate,
-    sharingDefaultPasswordDeliveryMode,
-    sharingDefaultExpireDays,
-    sharingAttachmentsLinkTarget,
-    shareBlockLang,
-    talkDefaultTitle,
-    talkDefaultLobby,
-    talkDefaultListable,
-    talkAddUsersDefaultEnabled,
-    talkAddGuestsDefaultEnabled,
-    talkPasswordDefaultEnabled,
-    talkDeleteRoomOnEventDelete,
-    eventDescriptionLang
-  } = policyValues);
-  sharingAttachmentsAlwaysConnector = NCPolicyState.resolveValue(
-    runtimePolicyStatus,
-    "share",
-    SHARE_POLICY_KEYS.attachmentsAlwaysConnector,
-    sharingAttachmentsAlwaysConnector,
-    NCPolicyState.coerceBoolean
-  );
-  sharingAttachmentsOfferAboveMb = normalizeAttachmentThresholdMb(
-    NCPolicyState.resolveValue(
-      runtimePolicyStatus,
-      "share",
-      SHARE_POLICY_KEYS.attachmentsMinSizeMb,
-      sharingAttachmentsOfferAboveMb,
-      NCPolicyState.coerceInt
-    )
-  );
-  if (NCPolicyState.isLocked(runtimePolicyStatus, "share", SHARE_POLICY_KEYS.attachmentsMinSizeMb)){
-    sharingAttachmentsOfferAboveEnabled = !NCPolicyState.isExplicitNull(
-      runtimePolicyStatus,
-      "share",
-      SHARE_POLICY_KEYS.attachmentsMinSizeMb
-    );
-  }
-  talkAddParticipantsDefaultEnabled = talkAddUsersDefaultEnabled || talkAddGuestsDefaultEnabled;
-  talkDefaultRoomType = NCPolicyState.resolveValue(runtimePolicyStatus, "talk", "talk_room_type", talkDefaultRoomType, NCPolicyState.coerceString);
-  talkDefaultRoomType = talkDefaultRoomType === "event" ? "event" : "normal";
-  if (!isEmailSignatureRuntimeAvailable()){
-    emailSignatureOnCompose = false;
-    emailSignatureOnReply = false;
-    emailSignatureOnForward = false;
-  }else{
-    emailSignatureOnCompose = NCPolicyState.resolveValue(runtimePolicyStatus,
-      "email_signature",
-      "email_signature_on_compose",
-      emailSignatureOnCompose,
-      NCPolicyState.coerceBoolean
-    );
-    if (!emailSignatureOnCompose){
-      emailSignatureOnReply = false;
-      emailSignatureOnForward = false;
-    }else{
-      emailSignatureOnReply = NCPolicyState.resolveValue(runtimePolicyStatus,
-        "email_signature",
-        "email_signature_on_reply",
-        emailSignatureOnReply,
-        NCPolicyState.coerceBoolean
-      );
-      emailSignatureOnForward = NCPolicyState.resolveValue(runtimePolicyStatus,
-        "email_signature",
-        "email_signature_on_forward",
-        emailSignatureOnForward,
-        NCPolicyState.coerceBoolean
-      );
-    }
-  }
-  if (!isSeparatePasswordMailFeatureAvailable()){
-    sharingDefaultPasswordSeparate = false;
-  }
-  if (!sharingDefaultPasswordSeparate || NCSharePasswordDelivery.isSecretsUnavailable(runtimePolicyStatus)){
-    sharingDefaultPasswordDeliveryMode = NCSharePasswordDelivery.MODE_PLAIN;
-  }
-  await browser.storage.local.set({
+  const updates = {
     baseUrl,
     user,
     appPass,
-    debugEnabled,
-    authMode,
-    [SHARING_KEYS.basePath]: sharingBasePath,
-    [SHARING_KEYS.defaultShareName]: sharingDefaultShareName,
-    [SHARING_KEYS.defaultPermCreate]: sharingDefaultPermCreate,
-    [SHARING_KEYS.defaultPermWrite]: sharingDefaultPermWrite,
-    [SHARING_KEYS.defaultPermDelete]: sharingDefaultPermDelete,
-    [SHARING_KEYS.defaultPassword]: sharingDefaultPassword,
-    [SHARING_KEYS.defaultPasswordSeparate]: sharingDefaultPasswordSeparate,
-    [SHARING_KEYS.defaultPasswordDeliveryMode]: sharingDefaultPasswordDeliveryMode,
-    [SHARING_KEYS.defaultExpireDays]: sharingDefaultExpireDays,
-    [SHARING_KEYS.attachmentsLinkTarget]: sharingAttachmentsLinkTarget,
-    [SHARING_KEYS.attachmentsAlwaysConnector]: sharingAttachmentsAlwaysConnector,
-    [SHARING_KEYS.attachmentsOfferAboveEnabled]: sharingAttachmentsOfferAboveEnabled,
-    [SHARING_KEYS.attachmentsOfferAboveMb]: sharingAttachmentsOfferAboveMb,
-    talkDefaultTitle,
-    talkDefaultLobby,
-    talkDefaultListable,
-    talkAddUsersDefaultEnabled,
-    talkAddGuestsDefaultEnabled,
-    talkAddParticipantsDefaultEnabled,
-    talkPasswordDefaultEnabled,
-    talkDeleteRoomOnEventDelete,
-    talkDefaultRoomType,
-    shareBlockLang,
-    eventDescriptionLang,
-    [EMAIL_SIGNATURE_KEYS.onCompose]: emailSignatureOnCompose,
-    [EMAIL_SIGNATURE_KEYS.onReply]: emailSignatureOnReply,
-    [EMAIL_SIGNATURE_KEYS.onForward]: emailSignatureOnForward
-  });
-  const vfsBackgroundRestartRequired = (await globalThis.NCVfsOptions?.save?.()) === true;
-  emailSignatureStoredState = {
-    hasOnCompose: true,
-    hasOnReply: true,
-    hasOnForward: true
+    debugEnabled: document.getElementById("debugEnabled").checked,
+    authMode: getSelectedAuthMode()
   };
-  // First setup stores credentials only here; reload policy so backend locks/defaults show immediately.
+  // Only explicit local edits are persisted; displayed backend values stay overlays.
+  dirtyLocalDefaultKeys.forEach((key) => {
+    updates[key] = localDefaultDraft[key];
+  });
+  if (dirtyLocalDefaultKeys.has("talkAddUsersDefaultEnabled")
+    || dirtyLocalDefaultKeys.has("talkAddGuestsDefaultEnabled")){
+    updates.talkAddParticipantsDefaultEnabled =
+      (localDefaultDraft.talkAddUsersDefaultEnabled ?? localDefaultDraft.talkAddParticipantsDefaultEnabled) === true
+      || (localDefaultDraft.talkAddGuestsDefaultEnabled ?? localDefaultDraft.talkAddParticipantsDefaultEnabled) === true;
+  }
+  if (defaultsSourceDirty && getDefaultsSourceState().editable){
+    updates.defaultsSource = localDefaultDraft.defaultsSource;
+  }
+  // Flush edits made under local defaults before the new source can lock them.
+  await globalThis.NCVfsOptions?.save?.({ beforeSourceChange: true });
+  await browser.storage.local.set(updates);
+  dirtyLocalDefaultKeys.clear();
+  if (Object.prototype.hasOwnProperty.call(updates, "defaultsSource")){
+    defaultsSourceDirty = false;
+  }
+  const vfsBackgroundRestartRequired = (await globalThis.NCVfsOptions?.save?.()) === true;
+  // First setup stores credentials only here; reload policy so locks show immediately.
   await refreshBackendPolicyStatus();
   await refreshTalkSystemAddressbookState({ forceRefresh: true });
   showStatus(i18n("options_status_saved"));
@@ -1511,6 +1438,25 @@ if (saveButton){
     }
   });
 }
+
+OPTION_DEFAULT_BINDINGS.forEach((binding) => {
+  binding.element?.addEventListener(binding.type === "boolean" ? "change" : "input", () => {
+    updateLocalDefaultDraft(binding);
+  });
+  if (binding.element?.tagName === "SELECT"){
+    binding.element.addEventListener("change", () => updateLocalDefaultDraft(binding));
+  }
+});
+defaultsSourceSelect?.addEventListener("change", () => {
+  if (!getDefaultsSourceState().editable){
+    updateDefaultsSourceUi();
+    return;
+  }
+  localDefaultDraft.defaultsSource = defaultsSourceSelect.value === "backend" ? "backend" : "local";
+  defaultsSourceDirty = true;
+  runtimePolicyStatus.localDefaultsSource = localDefaultDraft.defaultsSource;
+  applyPolicySettingsOverlay();
+});
 
 if (sharingAttachmentsOfferAboveEnabledInput){
   sharingAttachmentsOfferAboveEnabledInput.addEventListener("change", () => {
@@ -1644,6 +1590,9 @@ function initTabs(){
     }
   };
   const activate = (id, { initial = false } = {}) => {
+    if (buttons.find((button) => button.dataset.tab === id)?.getAttribute("aria-disabled") === "true"){
+      return;
+    }
     if (tabContainer && !initial && activeId && id){
       const currentIndex = order.indexOf(activeId);
       const nextIndex = order.indexOf(id);
@@ -1693,6 +1642,7 @@ function initTabs(){
       window.setTimeout(measurePanels, 0);
     }
   });
+  return activate;
 }
 
 function initAbout(){
@@ -1806,6 +1756,7 @@ function initTalkDefaultRoomTypePicker(){
     button.addEventListener("click", (event) => {
       event.preventDefault();
       setTalkDefaultRoomType(button.dataset.value || "normal");
+      updateLocalDefaultDraft(OPTION_SPECIAL_DEFAULT_BINDINGS.find((binding) => binding.storageKey === "talkDefaultRoomType"));
       closeTalkDefaultRoomTypeDropdown();
       talkDefaultRoomTypeButton.focus();
     });

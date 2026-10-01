@@ -798,6 +798,39 @@ async function testEditableShareLanguageWithoutLocalUsesBackendDefault(){
   assert(plainText.includes("BACKEND-MARKER"), "Editable Share language without a local value must use the backend default");
 }
 
+async function testBackendSourceShareLanguage(){
+  const { context, storageState } = createHarness();
+  storageState.shareBlockLang = "de";
+  const shareInfo = {
+    shareUrl: "https://cloud.example/s/abc123",
+    password: "",
+    expireDate: "",
+    permissions: { read: true, create: false, write: false, delete: false }
+  };
+  const request = {
+    preferBackendDefaults: true,
+    hidePermissions: true,
+    policyShare: {
+      language_share_html_block: "custom",
+      share_html_block_template_v2: "<p>BACKEND-MARKER {URL}</p>"
+    },
+    policyEditableShare: { language_share_html_block: true }
+  };
+  for (const render of [context.NCSharing.buildHtmlBlock, context.NCSharing.buildPlainTextBlock]){
+    assert((await render(shareInfo, request)).includes("BACKEND-MARKER"), "Backend defaults must select the editable backend template over a stored language");
+    const defaultLanguage = await render(shareInfo, {
+      ...request,
+      policyShare: { language_share_html_block: "default" }
+    });
+    assert(defaultLanguage.includes("Open the Nextcloud link below"), "Backend UI-default language must not restore the stored German override");
+    const missingLanguage = await render(shareInfo, { ...request, policyShare: {} });
+    assert(missingLanguage.includes("Öffnen Sie den untenstehenden Nextcloud-Link"), "An older backend without a language value must retain the stored language");
+    const localSource = await render(shareInfo, { ...request, preferBackendDefaults: false });
+    assert(localSource.includes("Öffnen Sie den untenstehenden Nextcloud-Link"), "Returning to local defaults must restore the untouched local language");
+  }
+  assert(storageState.shareBlockLang === "de", "Rendering backend defaults must not overwrite the stored language");
+}
+
 async function testLockedShareLanguageOverridesLocalValue(){
   const { context, storageState } = createHarness();
   storageState.shareBlockLang = "de";
@@ -943,6 +976,7 @@ async function run(){
   await testBackendEffectiveLanguageLocalizesCustomTemplateCopy();
   await testEditableShareLanguageUsesLocalOverride();
   await testEditableShareLanguageWithoutLocalUsesBackendDefault();
+  await testBackendSourceShareLanguage();
   await testLockedShareLanguageOverridesLocalValue();
   await testCustomTemplateResolvesModeAwareLinkVariables();
   await testOlderBackendModeAwareTemplateStillRenders();

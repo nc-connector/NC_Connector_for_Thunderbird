@@ -227,6 +227,7 @@ function buildPasswordDeliveryShareInfo(dispatch, deliveryValue){
 async function renderPasswordDispatchBodies(dispatch, deliveryValue, secretLink){
   const shareInfo = buildPasswordDeliveryShareInfo(dispatch, deliveryValue);
   const renderOptions = {
+    preferBackendDefaults: dispatch?.preferBackendDefaults === true,
     policyShare: dispatch?.policyShare || null,
     policyEditableShare: dispatch?.policyEditableShare || null,
     passwordOnly: true,

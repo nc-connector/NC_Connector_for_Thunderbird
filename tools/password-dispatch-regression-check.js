@@ -26,6 +26,7 @@ function createHarness(options = {}){
   const sendCalls = [];
   const notifications = [];
   const removedTabs = [];
+  const renderCalls = [];
   let beginNewFails = false;
   let beginNewFailureSequence = [];
   let nextSendPromise = Promise.resolve();
@@ -151,10 +152,12 @@ function createHarness(options = {}){
       }
     },
     NCSharing: {
-      async buildHtmlBlock(){
+      async buildHtmlBlock(shareInfo, renderOptions){
+        renderCalls.push({ format: "html", shareInfo, options: renderOptions });
         return "<p>Prepared Secrets link</p>";
       },
-      async buildPlainTextBlock(){
+      async buildPlainTextBlock(shareInfo, renderOptions){
+        renderCalls.push({ format: "plain", shareInfo, options: renderOptions });
         return "Prepared Secrets link";
       }
     },
@@ -190,6 +193,7 @@ function createHarness(options = {}){
     sendCalls,
     notifications,
     removedTabs,
+    renderCalls,
     setBeginNewFails(value){
       beginNewFails = value;
     },
@@ -319,8 +323,36 @@ async function verifyPasswordRegistrationDenials(){
   }
 }
 
+async function verifyPasswordDefaultsSourceSurvivesRerender(){
+  for (const preferBackendDefaults of [false, true]){
+    const harness = createHarness();
+    await harness.context.registerSeparatePasswordMailDispatch(20, createDispatch({
+      deliveryMode: "secrets",
+      preferBackendDefaults,
+      policyShare: { language_share_html_block: "default" },
+      policyEditableShare: { language_share_html_block: true }
+    }));
+    const registered = harness.context.PASSWORD_MAIL_DISPATCH_BY_TAB.get(20)[0];
+    assert(registered.preferBackendDefaults === preferBackendDefaults, "Registration must retain the selected defaults source");
+    const copied = harness.context.clonePasswordDispatch(registered);
+    assert(copied.preferBackendDefaults === preferBackendDefaults, "Dispatch recovery copies must retain the selected defaults source");
+    for (const isPlainText of [false, true]){
+      const prepared = await harness.context.prepareSecretsPasswordDispatch({ ...copied, isPlainText }, 20);
+      assert(prepared.fellBack === false, "Secrets preparation must succeed for both rendering modes");
+      assert(prepared.dispatch.preferBackendDefaults === preferBackendDefaults, "Prepared Secrets dispatch must retain the selected defaults source");
+    }
+    assert(harness.renderCalls.length === 2, "Secrets preparation must render HTML and plain text in their respective compose modes");
+    for (const call of harness.renderCalls){
+      assert(call.options.preferBackendDefaults === preferBackendDefaults, "Secrets rerender must use the source selected for the original share");
+      assert(call.options.policyShare.language_share_html_block === "default", "Secrets rerender must retain the original language policy");
+      assert(call.options.policyEditableShare.language_share_html_block === true, "Defaults source must not turn an editable language into a forced policy");
+    }
+  }
+}
+
 async function run(){
   await verifyPasswordRegistrationDenials();
+  await verifyPasswordDefaultsSourceSurvivesRerender();
   const harness = createHarness();
   const duplicateSecrets = createDispatch({
     deliveryMode: "secrets",
