@@ -407,9 +407,6 @@
   "options_tab_about": {
     "message": "À propos"
   },
-  "options_advanced_language_heading": {
-    "message": "Remplacements de langue"
-  },
   "options_share_block_lang_label": {
     "message": "Langue du bloc HTML de partage"
   },

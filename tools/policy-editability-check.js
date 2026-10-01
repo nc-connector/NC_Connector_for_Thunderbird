@@ -749,7 +749,12 @@ function verifyConsumerGuards(){
 
 function verifyOptionsLanguagePlacement(){
   const html = readText("options.html");
-  for (const [tab, control] of [["sharing", "shareBlockLang"]]){
+  assert(html.includes('data-tab="advanced"'), "Options must retain the Advanced tab");
+  assert(html.includes('id="tab-advanced"'), "Options must retain the Advanced panel");
+  for (const [tab, control] of [
+    ["sharing", "shareBlockLang"],
+    ["talklink", "eventDescriptionLang"]
+  ]){
     const panelStart = html.indexOf(`<section id="tab-${tab}"`);
     const panelEnd = html.indexOf("</section>", panelStart);
     assert(panelStart >= 0 && panelEnd > panelStart, `Options panel ${tab} must exist`);

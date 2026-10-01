@@ -21,7 +21,7 @@ It complements:
 - [5. Internationalization (i18n)](#5-internationalization-i18n)
   - [5.1 How i18n works in this add-on](#51-how-i18n-works-in-this-add-on)
   - [5.2 Adding a new language](#52-adding-a-new-language)
-  - [5.3 Language overrides (advanced settings)](#53-language-overrides-advanced-settings)
+  - [5.3 Language overrides](#53-language-overrides)
 - [6. Options & storage keys](#6-options--storage-keys)
   - [6.1 Where options live](#61-where-options-live)
   - [6.2 Storage schema (key list)](#62-storage-schema-key-list)
@@ -277,11 +277,13 @@ Checklist:
    - Add mapping to `SUPPORTED_BY_LOWER` if needed (for region/script normalization)
 5. Verify JSON validity (no trailing commas).
 
-### 5.3 Language overrides (advanced settings)
+<a id="53-language-overrides-advanced-settings"></a>
+
+### 5.3 Language overrides
 
 The options UI provides **language override selects** for generated text blocks:
 - Sharing HTML block language (`shareBlockLang`) on the **Sharing** tab
-- Talk event description language (`eventDescriptionLang`)
+- Talk event description language (`eventDescriptionLang`) on the **Talk Link** tab
 
 Implementation pieces:
 - `options.html` + `options.js` populate selects from `NCI18nOverride.supportedLocales`.
@@ -380,7 +382,7 @@ VFS:
 
 These records contain no Nextcloud password, authorization header, file content, or rendered message data. The configured `baseUrl`, `user`, and `appPass` remain the only Nextcloud credential source.
 
-Advanced language overrides:
+Generated-text language overrides:
 - `shareBlockLang` (`"default"` or a supported locale folder name like `de`, `pt_BR`, `zh_TW`, …)
 - `eventDescriptionLang` (`"default"` or supported locale)
 

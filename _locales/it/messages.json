@@ -407,9 +407,6 @@
   "options_tab_about": {
     "message": "Info"
   },
-  "options_advanced_language_heading": {
-    "message": "Override lingua"
-  },
   "options_share_block_lang_label": {
     "message": "Lingua per il blocco HTML di condivisione"
   },

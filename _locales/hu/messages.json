@@ -407,9 +407,6 @@
   "options_tab_about": {
     "message": "Névjegy"
   },
-  "options_advanced_language_heading": {
-    "message": "Nyelvi felülbírálások"
-  },
   "options_share_block_lang_label": {
     "message": "A megosztási HTML-blokk nyelve"
   },

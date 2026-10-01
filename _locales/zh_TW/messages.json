@@ -407,9 +407,6 @@
   "options_tab_about": {
     "message": "關於"
   },
-  "options_advanced_language_heading": {
-    "message": "語言覆寫"
-  },
   "options_share_block_lang_label": {
     "message": "分享 HTML 區塊語言"
   },

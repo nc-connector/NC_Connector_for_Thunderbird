@@ -171,6 +171,8 @@ Uploads requested by a granted add-on use the normal NC Connector Direct or chun
 
 ### 4.3 Talk and system address book
 
+Set the language of the text inserted into calendar events on the **Talk Link** tab. This does not change the add-on's interface language.
+
 Talk user search, moderator selection, and participant controls require the Nextcloud system address book.
 
 On Nextcloud 32 or newer:

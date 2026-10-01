@@ -407,9 +407,6 @@
   "options_tab_about": {
     "message": "情報"
   },
-  "options_advanced_language_heading": {
-    "message": "言語の上書き"
-  },
   "options_share_block_lang_label": {
     "message": "共有 HTML ブロックの言語"
   },
