@@ -7,7 +7,59 @@ const { assert, readText } = require("./review-check-utils");
 const ROOT = path.resolve(__dirname, "..");
 const TEXT_EXTENSIONS = new Set([".css", ".html", ".js", ".json", ".md", ".yml", ".yaml"]);
 const EXCLUDED_DIRECTORIES = new Set([".git", "build", "dist", "node_modules", "vendor"]);
-const ADMIN_LINK_PATTERN = /(?:https:\/\/github\.com\/nc-connector\/NC_Connector_for_Thunderbird\/blob\/main\/)?docs\/ADMIN\.md#([A-Za-z0-9%._~-]+)/g;
+const ADMIN_LINK_PATTERN = /(?:https:\/\/github\.com\/nc-connector\/NC_Connector_for_Thunderbird\/blob\/main\/)?(?:docs\/)?ADMIN\.md#([A-Za-z0-9%._~-]+)/g;
+// Published bookmarks and homepage links must survive changes to the guide's structure.
+const LEGACY_ADMIN_ANCHORS = [
+  "administration-guide-nc-connector-for-thunderbird",
+  "administration-guide--nc-connector-for-thunderbird",
+  "contents",
+  "1-service-scope",
+  "2-requirements",
+  "21-supported-products",
+  "22-network-access",
+  "23-nextcloud-administration",
+  "3-install-update-and-roll-back",
+  "31-individual-installation",
+  "32-managed-update",
+  "33-rollback",
+  "4-initial-configuration",
+  "41-nextcloud-connection",
+  "42-sharing-and-attachment-automation",
+  "vfs-sources-and-provider-access",
+  "43-talk-and-system-address-book",
+  "44-optional-backend-policies",
+  "45-debug-logging",
+  "5-filelink-upload-operation",
+  "51-user-visible-flow",
+  "52-cancellation-and-cleanup",
+  "53-saved-drafts",
+  "54-retries-and-server-throttling",
+  "55-mixed-local-nextcloud-and-vfs-sources",
+  "6-enterprise-rollout",
+  "61-add-on-id-and-policy-locations",
+  "62-force-install-example",
+  "63-attachment-policy-example",
+  "64-managed-nextcloud-url",
+  "65-rollout-verification",
+  "66-default-values-source",
+  "67-managed-installation-cannot-start-an-action",
+  "7-operational-checks",
+  "8-troubleshooting",
+  "81-upload-is-rejected-before-it-starts",
+  "82-progress-remains-at-zero",
+  "83-upload-stalls-or-repeatedly-fails",
+  "84-insufficient-storage-507",
+  "85-folder-name-collision",
+  "86-cleanup-did-not-complete",
+  "87-a-saved-share-draft-cannot-be-sent",
+  "88-public-talk-links-work-only-with-indexphp",
+  "9-logging-and-support-data",
+  "10-backup-and-recovery",
+  "11-nextcloud-pretty-urls",
+  "111-quick-check",
+  "112-nginx",
+  "113-apache"
+];
 
 function githubHeadingSlug(heading){
   return String(heading || "")
@@ -19,10 +71,13 @@ function githubHeadingSlug(heading){
     .replace(/\s+/g, "-");
 }
 
-function collectAdminAnchors(){
+function collectAdminAnchors(content){
   const anchors = new Set();
   const counts = new Map();
-  for (const line of readText("docs/ADMIN.md").split(/\r?\n/)){
+  for (const match of content.matchAll(/<a\b[^>]*\bid=(["'])([^"']+)\1[^>]*>/gi)){
+    anchors.add(match[2]);
+  }
+  for (const line of content.split(/\r?\n/)){
     const match = /^(#{1,6})\s+(.+?)\s*$/.exec(line);
     if (!match){
       continue;
@@ -55,9 +110,15 @@ function listTextFiles(directory){
 }
 
 function run(){
-  const anchors = collectAdminAnchors();
+  const anchors = collectAdminAnchors(readText("docs/ADMIN.md"));
   const failures = [];
   let linkCount = 0;
+
+  for (const anchor of LEGACY_ADMIN_ANCHORS){
+    if (!anchors.has(anchor)){
+      failures.push(`docs/ADMIN.md: missing published anchor #${anchor}`);
+    }
+  }
 
   for (const file of ["options.html", "ui/talkDialog.html", "ui/nextcloudSharingWizard.html"]){
     const content = readText(file);
@@ -73,17 +134,23 @@ function run(){
 
   for (const filePath of listTextFiles(ROOT)){
     const content = fs.readFileSync(filePath, "utf8");
-    for (const match of content.matchAll(ADMIN_LINK_PATTERN)){
-      linkCount++;
-      let anchor = "";
-      try{
-        anchor = decodeURIComponent(match[1]).toLowerCase();
-      }catch(error){
-        failures.push(`${path.relative(ROOT, filePath)}: invalid encoded anchor ${match[1]}`);
-        continue;
-      }
-      if (!anchors.has(anchor)){
-        failures.push(`${path.relative(ROOT, filePath)}: missing ADMIN anchor #${anchor}`);
+    const patterns = [ADMIN_LINK_PATTERN];
+    if (filePath === path.join(ROOT, "docs", "ADMIN.md")){
+      patterns.push(/\]\(#([^\s)]+)\)/g);
+    }
+    for (const pattern of patterns){
+      for (const match of content.matchAll(pattern)){
+        linkCount++;
+        let anchor = "";
+        try{
+          anchor = decodeURIComponent(match[1]).toLowerCase();
+        }catch(error){
+          failures.push(`${path.relative(ROOT, filePath)}: invalid encoded anchor ${match[1]}`);
+          continue;
+        }
+        if (!anchors.has(anchor)){
+          failures.push(`${path.relative(ROOT, filePath)}: missing ADMIN anchor #${anchor}`);
+        }
       }
     }
   }

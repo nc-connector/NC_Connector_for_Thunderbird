@@ -1,7 +1,7 @@
 # Reviewer Notes
 NC Connector for Thunderbird (`{4a35421f-0906-439c-bff2-8eef39e2baee}`)
 
-This document summarizes the reviewer-relevant behavior of version 3.4.2;
+This document summarizes the reviewer-relevant behavior of version 3.4.3;
 release-specific differences remain in `CHANGELOG.md`.
 
 ---
@@ -21,7 +21,7 @@ release-specific differences remain in `CHANGELOG.md`.
 
 ---
 
-## Seat and license status messages in 3.4.2
+## Managed settings, Seat access, and status messages in 3.4.3
 
 - Settings, Sharing and Talk use shared localized license status messages across all 15 supported languages. In unmanaged installations, the no-seat banner explains that local Sharing and Talk remain available; Seat-dependent features retain their separate requirement hints.
 - Optional backend status fields distinguish grace periods, license refusals, activation issues, and synchronization failures. Active Community and Pro Seats share the same feature checks; global overcapacity does not deny a personally active Seat; the add-on does not infer access from local date comparisons.
@@ -101,7 +101,7 @@ password-dispatch, header, or body mutation cannot be exposed as committed.
 
 ---
 
-## Reviewer Alignment Notes (3.4.2)
+## Reviewer Alignment Notes (3.4.3)
 
 - Core rules are explicit; fallback behavior is bounded and logged instead of relying on silent heuristics.
 - `strict_min_version` is set to `140.0`. The add-on uses Thunderbird APIs added after ESR 115, including `browser.messengerUtilities.parseMailboxString(...)`, and targets the supported ESR 140 through ESR 153 range. `strict_max_version` remains `157.*` so compatible Thunderbird releases through 157 can install it.

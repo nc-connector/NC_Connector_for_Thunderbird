@@ -1,326 +1,117 @@
-# Administration Guide — NC Connector for Thunderbird
+<a id="administration-guide-nc-connector-for-thunderbird"></a>
+<a id="administration-guide--nc-connector-for-thunderbird"></a>
+<a id="1-service-scope"></a>
 
-This guide is for administrators and operations teams that deploy and run NC Connector for Thunderbird. Source layout, protocol implementation, and developer tests are documented in `docs/DEVELOPMENT.md`.
+# NC Connector for Thunderbird – Administration
+
+Installation, managed configuration, and troubleshooting for NC Connector's Sharing, Talk, VFS, and backend features.
 
 ## Contents
 
-- [1. Service scope](#1-service-scope)
-- [2. Requirements](#2-requirements)
-- [3. Install, update, and roll back](#3-install-update-and-roll-back)
-- [4. Initial configuration](#4-initial-configuration)
-- [5. FileLink upload operation](#5-filelink-upload-operation)
-- [6. Enterprise rollout](#6-enterprise-rollout)
-- [7. Operational checks](#7-operational-checks)
-- [8. Troubleshooting](#8-troubleshooting)
-- [9. Logging and support data](#9-logging-and-support-data)
-- [10. Backup and recovery](#10-backup-and-recovery)
-- [11. Nextcloud Pretty URLs](#11-nextcloud-pretty-urls)
+- [Requirements](#requirements)
+- [Installation and sign-in](#installation-and-sign-in)
+- [Enterprise Rollout](#enterprise-rollout)
+- [Managed settings reference](#managed-settings-reference)
+- [Backend defaults and signatures](#backend-defaults-and-signatures)
+- [Operating notes](#operating-notes)
+- [Update, backup, and uninstall](#update-backup-and-uninstall)
+- [Troubleshooting](#troubleshooting)
+- [Logs and support](#logs-and-support)
 
-## 1. Service scope
+<a id="2-requirements"></a>
+<a id="21-supported-products"></a>
+<a id="23-nextcloud-administration"></a>
 
-NC Connector integrates the following Nextcloud functions into Thunderbird:
+## Requirements
 
-- Files Sharing and WebDAV uploads from new messages, replies, and forwards
-- optional VFS access to the configured Nextcloud and compatible Thunderbird storage providers
-- Nextcloud Talk rooms from calendar events
-- optional central policies, templates, and email signatures from NC Connector Backend
-- optional one-time Secret links for separate password delivery
+| Area | Requirement |
+| --- | --- |
+| Thunderbird | Version 140 or newer, within the compatibility range listed for the selected add-on release |
+| Nextcloud | Version 32 or newer, reachable through HTTPS |
+| Sharing | Files Sharing and WebDAV, permission to create public links, write access to the target folder, and enough storage |
+| Meetings | Nextcloud Talk and a calendar configured in Thunderbird |
+| User search and moderator selection | An exposed [Nextcloud system address book](#system-address-book) |
+| Central policies, signatures, separate password delivery, external VFS providers, and Enterprise Rollout | NC Connector Backend and a valid assigned NC Connector Seat for each user |
+| One-time password links | The Nextcloud Secrets app in addition |
 
-In an unmanaged installation, Sharing and Talk work without the optional backend. Backend-dependent controls require the backend and a valid assigned Seat. Centrally managed installations require both for NC Connector operations; see [Enterprise rollout](#6-enterprise-rollout).
+Without central management, Sharing, Talk, and NC Connector's own VFS provider can use local settings without the backend. Administrator rights do not replace a Seat assignment.
 
-## 2. Requirements
+<a id="22-network-access"></a>
 
-### 2.1 Supported products
+### Network access
 
-- Thunderbird ESR 140 through ESR 153
-- Nextcloud 32 or newer
-- Nextcloud Files Sharing and WebDAV
-- Nextcloud Talk for calendar meeting functions
-- Nextcloud Secrets plus NC Connector Backend for Secret-link password delivery
+Use the public Nextcloud URL, such as `https://cloud.example.com` or `https://cloud.example.com/nextcloud`. Do not append `/index.php`, credentials, or query parameters. The workstation must trust the certificate.
 
-NC Connector checks the Nextcloud capabilities before starting a FileLink upload. A server older than Nextcloud 32, an unreadable capability response, or a response without a valid server version stops the operation before the share upload folder is created.
+The firewall and reverse proxy must allow these paths below that URL:
 
-### 2.2 Network access
+| Path | Used for |
+| --- | --- |
+| `/index.php/login/v2` and its subpaths | Browser sign-in and app-password retrieval |
+| `/ocs/v2.php/` | Nextcloud account, capabilities, sharing, and Talk requests |
+| `/remote.php/dav/` | File access and the system address book |
+| `/apps/ncc_backend_4mc/` and `/index.php/apps/ncc_backend_4mc/` | Backend settings and templates; the second path is used as a fallback |
 
-Thunderbird clients need HTTPS access to the configured Nextcloud origin. Firewalls, proxies, and application gateways must allow:
+Allow WebDAV methods, including `PROPFIND`, `MKCOL`, `COPY`, `MOVE`, and `DELETE`, as well as `GET`, `PUT`, and `POST`. Preserve `Authorization`, `Destination`, `Depth`, `Overwrite`, `OCS-APIRequest`, `X-NC-WebDAV-Auto-Mkcol`, `OC-Total-Length`, and multipart upload headers. Set request-size limits and timeouts for the files your organization permits.
 
-- OCS requests below `/ocs/v2.php/`
-- Login Flow v2 below `/index.php/login/v2/`
-- WebDAV below `/remote.php/dav/`
-- the optional backend below `/apps/ncc_backend_4mc/`
+Browser sign-in must also be able to reach your organization's identity provider if Nextcloud uses single sign-on.
 
-FileLink and VFS storage access use `GET`, `PROPFIND`, `MKCOL`, `PUT`, `POST`, `COPY`, `MOVE`, and `DELETE`. A proxy that permits only `GET` and `POST` breaks browsing, upload, server-side copy, collision handling, or cleanup.
+<a id="4-initial-configuration"></a>
+<a id="31-individual-installation"></a>
+<a id="41-nextcloud-connection"></a>
 
-Keep these request properties intact:
+## Installation and sign-in
 
-- `Authorization`
-- `Destination`
-- `Depth`
-- `Overwrite`
-- `OCS-APIRequest`
-- `X-NC-WebDAV-Auto-Mkcol` (including the hyphen before `Mkcol`)
-- `OC-Total-Length`
-- multipart part headers used by Nextcloud DAV bulk upload
+1. Install NC Connector from [Thunderbird Add-ons](https://addons.thunderbird.net/en-US/thunderbird/addon/nc4tb/), or download an XPI from [GitHub Releases](https://github.com/nc-connector/NC_Connector_for_Thunderbird/releases) and choose **Install Add-on From File** in Thunderbird's Add-ons Manager.
+2. Open **Add-ons Manager → NC Connector for Thunderbird → Preferences / Options**.
+3. Under **General**, enter the public Nextcloud URL and choose **Login with Nextcloud**, or enter a username and app password manually. Allow access to the server when Thunderbird asks.
+4. Run **Test connection** and save the settings.
+5. Create a small share from a message or a Talk link from a calendar event with the intended user account.
 
-Set proxy upload limits and timeouts for the largest file size permitted by your organization. Review request buffering on reverse proxies when large uploads consume excessive temporary disk space.
+Use an app password, not the user's main Nextcloud password. Each user signs in separately; do not distribute credentials with the add-on.
 
-### 2.3 Nextcloud administration
+For centrally prepared first sign-in, use [Enterprise Rollout](#enterprise-rollout). The settings remain accessible in Thunderbird.
 
-The configured user needs permission to:
+<a id="6-enterprise-rollout"></a>
 
-- create folders and upload files below the selected FileLink base directory
-- create and remove public shares
-- create Talk rooms when Talk is used
+## Enterprise Rollout
 
-Public-link creation can also be restricted by Nextcloud sharing policy. Test with the same account and group membership as an affected user.
+Managed settings prepare the server address, sign-in method, and source of default values.
 
-## 3. Install, update, and roll back
+**As soon as any supported NC Connector managed key is present, the user needs the backend and a valid assigned Seat.** This includes `false`, empty, and invalid values, and existing deployments that already provide a Nextcloud URL. Force-installing the add-on alone does not activate this requirement.
 
-### 3.1 Individual installation
+1. Install and configure NC Connector Backend, then assign Seats to the intended users.
+2. Deploy the required managed settings and the add-on.
+3. Restart Thunderbird and check `about:policies` for active policies and errors.
+4. Check first sign-in with an intended user account before broad deployment.
 
-1. Download the signed XPI from [ATN](https://addons.thunderbird.net/de/thunderbird/addon/nc4tb/) or [GitHub Releases](https://github.com/nc-connector/NC_Connector_for_Thunderbird/releases).
-2. Open Thunderbird's Add-ons Manager.
-3. Select **Install Add-on From File** and choose the XPI.
-4. Restart Thunderbird when requested.
-5. Open the NC Connector options and complete the connection test.
+When backend access cannot be confirmed, new NC Connector operations are unavailable. Initial setup, removing VFS connections, revoking grants, and pending cleanup remain possible. See [backend notices](#backend-notices-and-locked-settings) for corrective steps.
 
-Expected result: the options page reports a successful Nextcloud connection and the Share action is available in a compose window.
+<a id="61-add-on-id-and-policy-locations"></a>
 
-### 3.2 Managed update
+### Policy file and add-on ID
 
-For ATN-managed installations, keep add-on updates enabled in Thunderbird policy. For staged rollouts:
+Use Thunderbird's `policies.json`. It applies to the installation and its profiles, not to an individual profile folder.
 
-1. Test the new XPI with the supported Thunderbird and Nextcloud versions.
-2. Test one small file, one large file, a folder tree, cancellation, and an unsent-draft cleanup.
-3. Deploy to a pilot group.
-4. Review debug logs and Nextcloud WebDAV logs.
-5. Expand the rollout.
+| Platform | Location |
+| --- | --- |
+| Windows | `distribution\policies.json` beside `thunderbird.exe`, usually under `C:\Program Files\Mozilla Thunderbird\` |
+| macOS | `/Applications/Thunderbird.app/Contents/Resources/distribution/policies.json` |
+| Linux | The package's `thunderbird/distribution/policies.json`; system-wide deployment can also use `/etc/thunderbird/policies/policies.json` |
 
-### 3.3 Rollback
+Back up any existing policy file and merge the needed sections instead of replacing unrelated policies. See the [Thunderbird enterprise policy guide](https://thunderbird.github.io/policy-templates/templates/esr140/) for platform deployment.
 
-Keep the previously approved signed XPI before deployment.
+NC Connector's add-on ID is `{4a35421f-0906-439c-bff2-8eef39e2baee}`.
 
-1. Stop the rollout of the newer package.
-2. Install or publish the previous XPI through the same deployment channel.
-3. Restart Thunderbird.
-4. Run the checks in [Operational checks](#7-operational-checks).
+<a id="62-force-install-example"></a>
 
-Rollback does not remove Nextcloud shares that users already sent. Unsent shares still follow the normal draft and wizard cleanup rules while the active add-on version is running.
+### Automatic installation
 
-## 4. Initial configuration
-
-### 4.1 Nextcloud connection
-
-In Thunderbird, open **Add-ons Manager → NC Connector for Thunderbird → Preferences / Options**.
-
-1. Enter the public Nextcloud base URL, including an installation path such as `/nextcloud` when present.
-2. Select **Login with Nextcloud** or enter a Nextcloud app password.
-3. Run **Test connection**.
-4. Save the options.
-
-For centrally selected sign-in and first-use setup, see [Managed Nextcloud URL](#64-managed-nextcloud-url).
-
-Use an app password instead of the user's main password. Revoke the app password in Nextcloud when a device is lost or retired.
-
-Do not add `/index.php` to the configured base URL to work around broken public routing. Correct the Pretty URL configuration as described in [Nextcloud Pretty URLs](#11-nextcloud-pretty-urls).
-
-### 4.2 Sharing and attachment automation
-
-Set the language of inserted share blocks on the **Sharing** tab. This does not change the add-on's interface language.
-
-Administrators should define:
-
-- the FileLink base directory
-- default share permissions and expiry
-- whether a share password is preselected
-- whether password delivery uses the main message or a separate follow-up
-- whether attachment automation always routes attachments through NC Connector or offers it above a size threshold
-- whether attachment shares insert a ZIP download or the Nextcloud share page
-
-Manual shares always insert the share page. Attachment automation can insert either supported target. The selected target changes the link and wording, not the recipient permissions or cleanup rules.
-
-With Backend 1.4.2, central expiry defaults range from 1 to 3650 days. A locked
-expiry also applies to attachment shares. For older backends, an explicit
-zero-day default is treated as one day, not seven days or unlimited validity.
-Existing shares are not changed. Editable settings retain the user's choice.
-
-Active attachment thresholds range from 1 to 10240 MB. Turning threshold mode
-off keeps it off; use the separate **Always via NC Connector** option to route
-all attachments. A zero threshold from an older backend retains its previous
-5 MB behavior. Upgrade the backend so its settings show the effective value.
-
-When NC Connector owns the attachment workflow, disable Thunderbird's competing large-attachment prompt through enterprise policy. See [Attachment policy example](#63-attachment-policy-example).
-
-Do not use **Save as Template** for a message that contains an NC Connector share. Thunderbird templates can create independent messages without a reliable share lifecycle; NC Connector therefore blocks sending such templates and messages created from them.
-
-#### VFS sources and provider access
-
-The **VFS** options tab controls two independent functions:
-
-- **NC Connector as provider** exposes the already configured Nextcloud account to another compatible Thunderbird add-on. It is enabled by default. Each connection still requires an explicit user grant and provides full read/write file access for that Nextcloud user; grants can be revoked in the same tab.
-- **External VFS providers** let users add files and folders from compatible storage add-ons to the Sharing wizard. This function requires NC Connector Backend and a valid assigned Seat. Without the backend, the disabled setting and **Other source** action explain that the backend is required. NC Connector receives Thunderbird's add-on-management permission during installation so administrators do not have to manage a second runtime permission. Provider discovery remains disabled until the effective VFS setting enables it. Established storage connections can be removed with **Disconnect** and are retained when access or policy later blocks the function.
-
-Both switches can be set under **Administration settings → NC Connector Backend → Group Settings → Default Settings → Shares → Thunderbird only – Virtual File System (VFS)**. They support the same editable, forced, group, and user layers as the other Share policies:
-
-- `vfs_provider_enabled` controls whether NC Connector accepts new or existing grants from other add-ons. Managed installations additionally require a valid assigned Seat.
-- `vfs_external_providers_enabled` controls the external-source function. An enabled policy does not bypass the valid active Seat check.
-
-An older backend that does not return these two keys leaves the local switches editable. In unmanaged installations, local files, **My Nextcloud**, and NC Connector's own VFS provider continue to work without the backend. External providers always require a valid assigned Seat.
-
-There is no second Nextcloud login for VFS. Changing the configured Nextcloud server or canonical user invalidates all existing provider grants so they cannot silently point to another account. Changing only the app password for the same account keeps the storage identity.
-
-Uploads requested by a granted add-on use the normal NC Connector Direct or chunked transfer and appear under the existing upload log messages with `origin=vfs_provider`.
-
-### 4.3 Talk and system address book
-
-Set the language of the text inserted into calendar events on the **Talk Link** tab. This does not change the add-on's interface language.
-
-Talk user search, moderator selection, and participant controls require the Nextcloud system address book.
-
-On Nextcloud 32 or newer:
-
-1. Open **Administration settings → Groupware**.
-2. Enable **System Address Book**.
-3. Open **Administration settings → Sharing**.
-4. Check that username autocompletion and system-address-book access are permitted.
-5. Reopen the NC Connector settings or Talk wizard.
-
-If the administration UI reports the address book as enabled but clients still cannot use it:
-
-```bash
-sudo -E -u www-data php occ config:app:delete dav system_addressbook_exposed
-sudo -E -u www-data php occ config:app:set dav system_addressbook_exposed --value="yes"
-sudo -E -u www-data php occ dav:sync-system-addressbook
-```
-
-Then open the following URL in an authenticated browser session:
-
-```text
-https://cloud.example.com/remote.php/dav/addressbooks/users/<user>/z-server-generated--system/?export
-```
-
-Expected result: the request returns a vCard export, not a login page or error document. NC Connector also accepts HTTP 404 if the response contains a valid, non-empty system address book, even when its Content-Type is incorrect. This compatibility behavior does not bypass HTTP 401/403 or other HTTP errors; correct the server's status handling when possible.
-
-A successful, explicitly identified empty vCard export is a valid empty address book. Empty HTTP 404 responses and damaged exports are not. If a refresh fails, the last successfully read contacts are retained, but the address book is reported as unavailable and participant classification waits for a successful read. Internal users are not silently invited as external guests. After correcting server access or the response, reopen the settings or Talk wizard to retry.
-
-### 4.4 Optional backend policies
-
-When `ncc_backend_4mc` is installed, the add-on reads central policies when the Talk wizard, Sharing wizard, or options page opens.
-
-Operational rules:
-
-- valid access with an active assigned seat activates the corresponding policy domains, equally in Community and Pro; global overcapacity does not suspend the remaining active seats
-- editable values allow a local user choice
-- locked values remain controlled by the backend
-- an unavailable backend leaves normal local Share and Talk defaults active
-- an unavailable or unusable seat disables backend-only functions
-- each policy domain is evaluated separately; a missing signature policy does not disable Share or Talk policies
-
-Settings, Sharing and Talk show the license status reported by the backend. A yellow grace-period notice includes the deadline when available; it does not disable otherwise usable Pro features. Expired, inactive or invalid licenses, activation problems and an exceeded offline verification deadline have distinct messages. A failed license synchronization is reported separately from a license refusal, with the last successful synchronization and offline deadline when supplied by the backend.
-
-Users without an assigned seat see a notice explaining that Sharing and Talk remain available with local settings; Pro features require a seat assigned by their administrator. Disabled Pro features retain their short seat-requirement tooltips. Full Nextcloud administrators see license notices together with their missing-seat explanation even without a seat and can open **Manage license in backend**, which links to their own Nextcloud administration. Other users are directed to their administrator. A paused-seat message is shown only for an actually suspended seat.
-
-Older backends that do not supply detailed license status retain a generic access warning; the add-on does not guess a cause from expiry dates. With no backend installed, normal local Sharing and Talk remain available in unmanaged installations without a license warning. If the backend status cannot be retrieved, check the connection and reopen the settings or wizard after resolving the problem.
-
-Separate password delivery is available only with a reachable backend and usable assigned seat. After **Send now**, the password follow-up is sent only after Thunderbird confirms that the primary message was sent. After **Send later**, NC Connector opens a clearly marked password draft instead of sending it automatically; the user sends that draft manually only after the main message has actually left the Outbox. If automatic follow-up delivery fails, NC Connector keeps or opens a prepared draft for manual sending. A follow-up failure after primary-message delivery does not delete the committed share.
-
-### 4.5 Debug logging
-
-Keep debug logging disabled during normal operation unless your support policy requires it. Enable it temporarily while reproducing a fault, then disable it after collecting the required lines.
-
-## 5. FileLink upload operation
-
-### 5.1 User-visible flow
-
-After the normal Nextcloud connection and FileLink options are configured, high-speed method selection requires no additional setting. For every upload, NC Connector:
-
-1. reads the Nextcloud 32 capabilities
-2. scans the selected files and folders
-3. prepares the remote folder structure
-4. uploads the files through the applicable Nextcloud DAV upload methods
-5. creates the public share
-6. inserts the share block into the message
-
-The progress view reports folder preparation, completed files, transferred bytes, percentage, and current transfer rate. Status and debug output are aggregated, so a large folder should not produce one console entry for every low-level progress event.
-
-The client automatically chooses among direct upload, chunked upload v2, and DAV bulk upload. DAV bulk is used only when Nextcloud advertises the required capability and the selected file set benefits from fewer requests. There is no administrator or user toggle for the upload method.
-
-### 5.2 Cancellation and cleanup
-
-Closing the Sharing wizard or canceling an active upload stops pending transfer work. NC Connector then removes the reserved FileLink share folder when it owns that folder.
-
-After a share is inserted into a compose window:
-
-- every share inserted into the same draft is tracked
-- closing an unsaved draft without a confirmed send removes all of its tracked share folders
-- closing a successfully saved draft retains its shares so the draft can be reopened
-- a successful **Send now** or **Send later** keeps all shares from that message
-- a close event while Thunderbird is still finalizing send uses a short grace period before cleanup
-- password-follow-up errors after successful primary send do not remove the share
-
-Chunked transfer also uses a temporary collection below `/remote.php/dav/uploads/<user-id>/`. NC Connector deletes this collection after a failed or canceled transfer when the server remains reachable. Nextcloud removes a chunk collection after 24 hours without activity. This server-side expiry does not apply to completed FileLink share folders.
-
-Pending cleanup survives a Thunderbird or device restart and resumes when the same Nextcloud account is configured and reachable. NC Connector never applies an old cleanup record to a different Nextcloud URL or user. After the bounded retries are exhausted, administrators can identify and remove stale folders below the configured FileLink base directory after confirming that no sent or saved message still depends on the share.
-
-If Thunderbird terminates while the final send result is still uncertain, NC Connector keeps the share. Retaining a possibly unused folder is safer than deleting a link from a message that may already have been sent.
-
-### 5.3 Saved drafts
-
-An NC Connector share draft must be reopened and sent from the same Thunderbird profile that created it. The profile stores the local ownership record required to distinguish a valid saved draft from copied or incomplete content. If that record or the draft marker is missing or inconsistent, sending is blocked; create a new message and share the files again.
-
-When a user adds another share to an already saved draft and then discards those unsaved changes, NC Connector conservatively retains both the original and the new share. This prevents deletion of the link still stored in the earlier draft version, but the newly created folder may require manual orphan cleanup.
-
-For a share with separate password delivery, saving the main draft opens prepared password drafts for manual delivery. NC Connector does not persist the password payload in its cleanup record. If Thunderbird cannot create all required password drafts, the main draft remains blocked until saving is retried successfully or the share is recreated.
-
-Deleting a saved message directly from the Drafts folder is not exposed to NC Connector as a compose-close event. Its remote share can therefore remain in Nextcloud. Include the configured FileLink base directory in periodic orphan review and remove a folder only after confirming that no saved or sent message uses it.
-
-### 5.4 Retries and server throttling
-
-Short-lived lock, rate-limit, gateway, and service-unavailable responses are retried for requests that can be repeated safely. A valid `Retry-After` value is honored up to 30 seconds.
-
-DAV and OCS control requests stop after 60 seconds per attempt, active upload requests after five minutes, and cleanup requests after 10 seconds per attempt. These limits prevent a stalled proxy or server connection from leaving one request open without a bound.
-
-NC Connector does not silently change to another upload mode after a protocol failure. This keeps server and proxy faults visible instead of masking them through a second transfer path.
-
-### 5.5 Mixed local, Nextcloud, and VFS sources
-
-The Sharing wizard can fill one queue from local files, the configured Nextcloud, and established external VFS connections. Files and folders already on that Nextcloud are copied into the generated share folder with server-side WebDAV `COPY`; their originals are never moved or deleted. External files are read one at a time through the selected provider and then sent through the normal NC Connector upload engine. No temporary disk folder is created.
-
-Before upload, the wizard groups entries by source in an expandable folder tree and shows known file sizes, the queue total, and destination storage. Upload is blocked when the known queued bytes exceed the finite available space reported by Nextcloud. An unavailable quota result remains visible but does not by itself block the upload.
-
-The VFS Toolkit currently supplies each external file as a complete `File`, not as a streaming cloud-to-cloud transfer. Large external files can therefore require corresponding Thunderbird memory while that one file is being transferred. Queue collection finishes before the upload starts, and a failure or cancellation removes only the generated share root, never a selected source.
-
-## 6. Enterprise rollout
-
-An installation is centrally managed when any supported NC Connector setting is present in Thunderbird's managed extension policy. Before deploying these settings, install and configure NC Connector Backend and assign a valid Seat to each affected user. This also applies to existing deployments that already supply a Nextcloud URL.
-
-The presence of a setting activates this requirement, even when its value is `false`, empty, or invalid. Force-installing the add-on alone does not activate it. Settings and initial login remain accessible. Without confirmed access, new Share, Talk, attachment-automation, and VFS operations are unavailable. Users can still remove VFS connections and revoke grants; pending cleanup is not blocked.
-
-### 6.1 Add-on ID and policy locations
-
-Add-on ID:
-
-```text
-{4a35421f-0906-439c-bff2-8eef39e2baee}
-```
-
-Common `policies.json` locations:
-
-- Windows: `C:\Program Files\Mozilla Thunderbird\distribution\policies.json`
-- macOS: `/Applications/Thunderbird.app/Contents/Resources/distribution/policies.json`
-- Linux: `/usr/lib/thunderbird/distribution/policies.json` or the distribution path used by the package
-
-Use `about:policies` in Thunderbird to check discovery and parse results.
-
-### 6.2 Force-install example
+This example installs NC Connector from Thunderbird Add-ons and allows its updates. For a staged deployment, use the approved XPI location from your software-distribution system instead of the latest-version URL.
 
 ```json
 {
   "policies": {
     "ExtensionSettings": {
-      "*": {
-        "installation_mode": "allowed"
-      },
       "{4a35421f-0906-439c-bff2-8eef39e2baee}": {
         "installation_mode": "force_installed",
         "install_url": "https://services.addons.thunderbird.net/thunderbird/downloads/latest/nc4tb/addon-989342-latest.xpi",
@@ -331,36 +122,20 @@ Use `about:policies` in Thunderbird to check discovery and parse results.
 }
 ```
 
-### 6.3 Attachment policy example
+<a id="64-managed-nextcloud-url"></a>
 
-When NC Connector should own the attachment workflow, lock Thunderbird's native attachment prompts:
+## Managed settings reference
 
-```json
-{
-  "policies": {
-    "Preferences": {
-      "mail.compose.attachment_reminder": {
-        "Value": false,
-        "Status": "locked"
-      },
-      "mail.compose.big_attachments.notify": {
-        "Value": false,
-        "Status": "locked"
-      },
-      "mail.compose.big_attachments.threshold_kb": {
-        "Value": 5120,
-        "Status": "locked"
-      }
-    }
-  }
-}
-```
+Place the following keys under `policies → 3rdparty → Extensions → <add-on ID>`. These are the four supported NC Connector settings for Thunderbird.
 
-Merge this block into the existing policy file.
+| Key | Values | Effect | When absent |
+| --- | --- | --- | --- |
+| `NextcloudUrl` | HTTPS URL | Fills an empty server address. Replaces a saved address only with the URL lock. | Saved address; empty in a new profile |
+| `NextcloudUrlLocked` | `true` / `false` | Locks the address from a valid `NextcloudUrl` when `true`. | URL remains editable |
+| `AuthMode` | `LoginFlow` / `Manual` | Selects and locks the sign-in method. | Saved selection; `Manual` in a new profile |
+| `DefaultsSource` | `local` / `backend` | Selects and locks the source of defaults unless the backend overrides it. | Backend choice, then user choice, otherwise `local` |
 
-### 6.4 Managed Nextcloud URL
-
-Thunderbird's `3rdparty.Extensions` policy can prefill and lock the public Nextcloud URL and select the sign-in method:
+Example with a locked URL, browser sign-in, and backend defaults:
 
 ```json
 {
@@ -370,7 +145,8 @@ Thunderbird's `3rdparty.Extensions` policy can prefill and lock the public Nextc
         "{4a35421f-0906-439c-bff2-8eef39e2baee}": {
           "NextcloudUrl": "https://cloud.example.com",
           "NextcloudUrlLocked": true,
-          "AuthMode": "LoginFlow"
+          "AuthMode": "LoginFlow",
+          "DefaultsSource": "backend"
         }
       }
     }
@@ -378,323 +154,330 @@ Thunderbird's `3rdparty.Extensions` policy can prefill and lock the public Nextc
 }
 ```
 
-Credentials remain in each Thunderbird profile. The managed policy does not distribute usernames or app passwords.
+`AuthMode` and `DefaultsSource` accept strings without regard to letter case or surrounding spaces. Use JSON booleans for the URL lock. Existing aliases `nextcloudUrl`, `baseUrl`, `nextcloudUrlLocked`, and `baseUrlLocked`, including settings inside `adminSettings`, remain supported; use the names above for new deployments.
 
-Supported settings under the add-on ID:
+### First sign-in
 
-| Setting | Value | Effect | When absent |
-|---|---|---|---|
-| `NextcloudUrl` | Nextcloud base URL | Prefills the connection URL | Use the saved local URL |
-| `NextcloudUrlLocked` | `true` or `false` | Locks the URL when `true`; its presence also activates managed installation requirements | URL remains editable |
-| `DefaultsSource` | `local` or `backend` | Selects and locks the default values source unless the backend overrides it | Use the saved user selection, otherwise local defaults |
-| `AuthMode` | `LoginFlow` or `Manual` | Selects and locks the sign-in method | Use the saved user selection, otherwise Manual |
+With managed `AuthMode` and missing credentials, clicking **Insert Nextcloud share** or **Insert Talk link** opens setup with the chosen method locked.
 
-Existing aliases `nextcloudUrl`, `baseUrl`, `nextcloudUrlLocked`, and `baseUrlLocked` remain supported, including inside `adminSettings`. New deployments should use the names in the table. An invalid `DefaultsSource` selects local defaults and displays a configuration warning; it does not make the installation unmanaged.
+- **LoginFlow:** Browser sign-in starts automatically when the active URL matches the managed URL and Thunderbird has already granted server access. Otherwise, the user clicks **Login with Nextcloud** and grants access if asked. Successful sign-in and connection verification save the credentials and close the setup tab, including after a manual retry.
+- **Manual:** The user enters a username and app password, tests the connection, and saves.
 
-`AuthMode` accepts strings with surrounding whitespace and ignores letter case. An invalid value selects a locked **Login with Nextcloud**, displays a configuration warning, and never starts sign-in automatically. The user's previous local sign-in selection is retained and returns when `AuthMode` is removed.
+After setup, click Share or Talk again in the original message or appointment. Opening Settings normally does not start LoginFlow or close the tab automatically. Complete saved credentials do not trigger a new automatic sign-in.
 
-With a managed sign-in method and incomplete credentials, clicking Sharing or Talk opens the General settings tab for setup. Valid `AuthMode=LoginFlow` starts browser sign-in once when the effective URL matches the valid managed `NextcloudUrl` and Thunderbird has already granted access to that server. Otherwise, use **Login with Nextcloud**; if server access has not yet been granted, this click requests the one-time permission. `AuthMode=Manual` leaves username and app-password entry to the user. Opening Settings normally never starts sign-in automatically.
+### Change or remove managed values
 
-After successful browser sign-in and connection verification, valid managed `LoginFlow` saves the credentials and closes the setup tab, including after an explicit login-button retry. Normal Settings stays open. A failed login or save leaves setup available for correction; there is no automatic retry loop. After setup, click Sharing or Talk again in the original message or appointment. The original action does not resume automatically. The backend and valid assigned Seat requirements above still apply.
+Restart Thunderbird after editing the policy. Remove a key to release that setting; do not replace it with an empty value. Removing `AuthMode` restores the saved local method. Removing a URL setting does not undo an address the user has already saved.
 
-See [Default values source](#66-default-values-source) for backend precedence and user choices.
+To end Enterprise Rollout, remove every supported managed key, including any aliases or values inside `adminSettings`. Keep unrelated Thunderbird policies. Backend rules still apply to users with a valid assigned Seat.
 
-No `3rdparty.Extensions` entry is required for an unmanaged installation.
-Thunderbird's documented “Managed storage manifest not found” result is treated
-as the normal absence of an enterprise policy; the add-on then loads the local
-profile settings.
+## Backend defaults and signatures
 
-If Thunderbird cannot read managed extension policy, NC Connector blocks
-connection changes and connection tests for that run instead of silently using
-a locally stored URL. Existing local credentials remain stored and visible but
-cannot be used or overwritten from that failed settings session. Check
-`about:policies`, correct the policy error, and restart Thunderbird.
+Configure central defaults and templates in **Nextcloud Administration settings → NC Connector Backend**. Policies apply to users with a valid assigned Seat.
 
-### 6.5 Rollout verification
+Leave **Editable in add-on** enabled when users may change a default. Disable it when a value must be mandatory. Set share expiration to at least one day. Disable the attachment threshold with its switch, not by entering zero; an enabled threshold accepts 1–10240 MB.
 
-1. Open `about:policies`.
-2. Check that no policy parse error is shown.
-3. Restart Thunderbird.
-4. Check that the add-on is installed and enabled.
-5. Check that the managed URL is visible and locked when configured.
-6. With a new profile, click Sharing or Talk and complete sign-in. If configured, check that the sign-in method is locked. For managed LoginFlow, grant server access through the login button if needed and confirm that successful setup closes its settings tab.
-7. Click Sharing again in a compose window and test a small FileLink share.
-8. Repeat with a file larger than 20 MiB and a folder containing many small files.
-9. Close an unsent test draft and confirm that its share folder is removed.
+<a id="66-default-values-source"></a>
 
-### 6.6 Default values source
+### Default values source
 
-Choose **Advanced → Default values source** in the add-on, or set it centrally under **NC Connector Backend → Group Settings → Default Settings → General**. The choice requires the backend and a valid assigned Seat.
+Under **Group Settings → Default Settings → General**, a Nextcloud administrator chooses the source of starting values. This setting is not delegated to group administrators.
 
-| Source | Starting values for new actions |
-|---|---|
-| Local settings | Use the user's saved defaults. Where none exist, use an available backend default. |
-| NC Connector Backend | Use backend defaults. Where the backend supplies no value, retain the local or built-in default. |
+| Backend choice | Result in Thunderbird |
+| --- | --- |
+| **Local** or **Backend**, not editable in the add-on | The backend choice applies, even if managed `DefaultsSource` says something else. |
+| **Local** or **Backend**, editable in the add-on | Users can choose under **Advanced → Default values source**. Until they choose, the backend value applies. |
+| **No preference**, including an older backend without this setting | Managed `DefaultsSource` applies. If absent, use the user's selection, otherwise **Local**. |
 
-Forced policies always apply, regardless of this choice. Users can still adjust fields marked editable when creating a particular share or Talk room.
+With **Local**, saved local defaults take priority; unset values can come from the backend, then the add-on defaults. With **Backend**, backend values take priority, followed by local and add-on defaults. This applies to Sharing, Talk, attachment automation, text languages, signature switches, and the two VFS switches. Signature templates themselves always come from the backend.
 
-The backend's explicit **Local settings** or **NC Connector Backend** selection takes precedence over `DefaultsSource`. If the administrator also enables **Editable in add-on**, the user's saved selection can override that backend default. **No preference**, or an older backend without this setting, leaves the managed policy in charge. Without a managed value, the user can choose; the initial selection is local.
+Individually enforced policies always apply. Editable wizard fields can still be changed for the current action.
 
-When the effective source is the backend, the **Sharing**, **Talk Link**, and **Signature** settings tabs are unavailable. Their saved local defaults are retained for a later switch back. On the **VFS** tab, only the two default switches follow this restriction. Adding connections, disconnecting, and revoking grants keep their own access rules.
+With **Backend** as the source, the **Sharing**, **Talk Link**, and **Signature** settings tabs are disabled; their saved local values remain. Only the default switches are locked on **VFS**, not connection management. The source selector requires a valid assigned Seat. Reopen settings or the wizard after backend changes.
 
-### 6.7 Managed installation cannot start an action
+### Signatures
 
-| Message | Administrator action |
-|---|---|
-| Backend must be installed and configured | Enable NC Connector Backend on the configured Nextcloud and complete its setup. |
-| An assigned, valid Seat is required | Check the affected user's Seat assignment and access in the backend. |
-| Access could not be verified | Check the connection, credentials, and backend endpoint, then retry the action. This message alone does not mean the Seat is invalid. |
-| Default values source is invalid | Set `DefaultsSource` to `local` or `backend`, then restart Thunderbird. |
-| Sign-in method is invalid | Set `AuthMode` to `LoginFlow` or `Manual`, then restart Thunderbird. |
+1. Configure the user's signature template in the backend and assign a valid Seat.
+2. Check that the user's email address supplied by the backend matches the Thunderbird sender identity being used.
+3. Enable central signatures for new messages and, as required, replies and forwards.
+4. Create a message with that sender identity and check the result. Repeat for replies or forwards when used.
 
-If the installation should no longer be managed, remove `NextcloudUrl`, `NextcloudUrlLocked`, `DefaultsSource`, and `AuthMode`, including any supported aliases or values inside `adminSettings`, then restart Thunderbird. Removing only one setting is not sufficient while another remains.
+For a matching identity, an active central signature replaces the Thunderbird or Signature Switch signature. If replies or forwards are excluded, the central policy does not fall back to another signature for those messages. Other sender identities remain unaffected.
 
-## 7. Operational checks
+Existing drafts without an NC Connector signature are not automatically given one. Use simple HTML for templates and check the result in the clients your recipients use.
 
-Run these checks after installation, update, rollback, proxy change, or Nextcloud upgrade:
+<a id="5-filelink-upload-operation"></a>
+<a id="51-user-visible-flow"></a>
 
-| Check | Expected result |
-|---|---|
-| Connection test | Credentials, origin access, and Nextcloud 32 capabilities are accepted |
-| Small file share | Upload finishes, the share block is inserted, and its link opens the public share page |
-| File larger than 20 MiB | Chunked upload finishes and the final file size matches |
-| Folder with many small files | Progress advances without repeated `0%` status or console flooding |
-| Manual cancel | Upload stops and the temporary share folder is removed |
-| Unsent draft close | Inserted share is removed |
-| Send later | Primary message enters Outbox and the share remains |
-| Server quota exhausted | User sees the localized insufficient-storage message |
-| Talk room | Public `/call/<token>` link opens from an external client |
+## Operating notes
 
-For load-sensitive environments, also review:
+<a id="42-sharing-and-attachment-automation"></a>
 
-- Nextcloud web-server request duration and status codes
-- PHP worker saturation
-- reverse-proxy body buffering and temporary-disk usage
-- user quota and server free space
-- HTTP `423`, `429`, `502`, `503`, `504`, and `507` rates
+### Files and attachment automation
 
-## 8. Troubleshooting
+Under **Sharing**, set the base directory, share defaults, and language of the inserted block. Attachment automation can always route attachments through NC Connector or offer it above a size threshold. Automatic attachment shares can link to a ZIP download or the share page; manual shares always link to the share page.
 
-### 8.1 Upload is rejected before it starts
+Uploads choose the appropriate transfer method automatically. No server-specific upload-mode tuning is needed in the add-on. If an upload fails, diagnose the connection, permissions, and storage rather than switching transfer methods.
 
-Symptoms:
+<a id="63-attachment-policy-example"></a>
 
-- the minimum-version message is shown
-- no new share folder appears
+### Thunderbird's large-attachment prompt
 
-Checks:
+NC Connector's attachment automation controls are unavailable while Thunderbird's native large-attachment notification is enabled. To use NC Connector for this workflow, disable **Offer to share for files larger than** in Thunderbird's attachment settings, or deploy:
 
-1. Confirm that the server is Nextcloud 32 or newer.
-2. Open the capabilities endpoint with an authenticated test client.
-3. Check proxy rules for `/ocs/v2.php/cloud/capabilities`.
-4. Check whether a login portal, WAF, or proxy returns HTML instead of OCS JSON.
-
-### 8.2 Progress remains at zero
-
-The first phases can remain at zero bytes while the client scans a large local folder, hashes files selected for DAV bulk upload, checks capabilities, or prepares remote folders.
-
-Checks:
-
-1. Read the phase shown below the progress bar.
-2. Check the latest `[NCBG]` and `[NCUI][Sharing]` debug entries.
-3. Check Nextcloud access logs for capabilities, `PROPFIND`, `MKCOL`, or upload requests.
-4. Check client CPU and disk activity when many small files are being scanned or hashed.
-5. Check reverse-proxy buffering and request-size limits.
-
-The console should show periodic summaries, not a line for every byte-progress event. A renewed log flood is a defect worth reporting with the add-on version and a redacted log excerpt.
-
-### 8.3 Upload stalls or repeatedly fails
-
-Checks:
-
-1. Identify the HTTP status in the client and server logs.
-2. Confirm that the proxy permits DAV `MOVE` and `DELETE`.
-3. Confirm that the proxy forwards `Destination`, `Overwrite`, and `X-NC-WebDAV-Auto-Mkcol`. Keep the hyphen before `Mkcol`; Nextcloud uses this header to create a selected single-file directory during normal FileLink Direct upload.
-4. Compare the proxy timeout with the duration of the failing request.
-5. Check Nextcloud background load, PHP workers, database locks, and storage latency.
-
-`423` usually indicates a temporary lock. `429` indicates rate limiting. `502`, `503`, and `504` point to the proxy or an unavailable upstream service.
-
-### 8.4 Insufficient storage (`507`)
-
-NC Connector shows a specific localized insufficient-storage message for HTTP `507`, including a failed item inside a DAV bulk response.
-
-Check:
-
-- the user's Nextcloud quota
-- group-folder quota where applicable
-- free space and inode availability on the primary storage
-- object-storage capacity and credentials
-- temporary storage used by the web server, PHP, and reverse proxy
-
-Free or extend storage, then start the upload again. Do not instruct users to keep retrying while the quota condition remains.
-
-### 8.5 Folder name collision
-
-When a user selects **Next** in the first step of manual sharing, NC Connector checks the exact target folder. If it already exists, the wizard stays on the first step and asks for another share name. Attachment automation may use the next numbered name.
-
-The upload repeats the collision decision with an atomic server-side folder reservation. This protects against a folder being created after the first-step check. Avoid deleting an existing folder solely because its name matches; it may belong to an earlier sent message.
-
-### 8.6 Cleanup did not complete
-
-1. Confirm that the affected message was not sent.
-2. Check the Nextcloud activity and WebDAV logs for `DELETE`.
-3. Check whether the proxy allows `DELETE`.
-4. Check whether the user's app password was revoked during the upload.
-5. Wait for the bounded cleanup retries after 2, 5, 10, 30, and 60 seconds.
-6. Remove the stale share and folder in Nextcloud after verifying ownership and message state.
-
-### 8.7 A saved share draft cannot be sent
-
-1. Confirm that the draft was opened in the Thunderbird profile that created the share.
-2. Save it again and check whether required manual password drafts open.
-3. Do not use a Thunderbird template containing an NC Connector share.
-4. If NC Connector still blocks sending, create a new message and create the share again. Do not copy only the visible share block into another message.
-
-### 8.8 Public Talk links work only with `/index.php/`
-
-This is a Pretty URL fault. Follow [Nextcloud Pretty URLs](#11-nextcloud-pretty-urls). Do not change the NC Connector base URL to include `/index.php`.
-
-## 9. Logging and support data
-
-Enable **Debug logging** in the add-on options and reproduce the issue once.
-
-Relevant prefixes:
-
-- `[NCBG]` — background, upload, cleanup, and calendar processing
-- `[NCUI][Sharing]` — Sharing wizard
-- `[NCUI][Talk]` — Talk wizard
-- `[NCUI][Options]` — settings
-- `[ncCalToolbar]` — calendar editor bridge
-
-Collect:
-
-- Thunderbird version
-- NC Connector version
-- Nextcloud version
-- operation and approximate time
-- first relevant error and the preceding phase summary
-- matching HTTP status from proxy or Nextcloud logs
-
-Remove app passwords, authorization headers, share tokens, private links, file names, recipients, and customer data before forwarding logs.
-
-## 10. Backup and recovery
-
-NC Connector does not maintain an independent server-side database. Nextcloud remains the system that stores uploaded files, shares, Talk rooms, policies, and templates.
-
-For client recovery:
-
-- retain the enterprise policy source and the previously approved XPI
-- follow your normal Thunderbird profile backup policy
-- treat profile backups as sensitive because they may contain the Nextcloud app password
-- after restoring a profile to another device, consider revoking the old app password and running Login with Nextcloud again
-
-For Nextcloud recovery, use the normal Nextcloud backup and restore procedure for configuration, database, and storage. After a restore, run the operational checks in this guide.
-
-## 11. Nextcloud Pretty URLs
-
-NC Connector builds public Talk links as:
-
-```text
-https://cloud.example.com/call/<TOKEN>
-```
-
-For a subpath installation:
-
-```text
-https://cloud.example.com/nextcloud/call/<TOKEN>
-```
-
-### 11.1 Quick check
-
-At the web root, open:
-
-```text
-https://cloud.example.com/index.php/login
-https://cloud.example.com/login
-```
-
-Below `/nextcloud`, open:
-
-```text
-https://cloud.example.com/nextcloud/index.php/login
-https://cloud.example.com/nextcloud/login
-```
-
-Both forms must reach Nextcloud or redirect to its login page. If only the `index.php` form works, fix the web-server rewrite.
-
-### 11.2 Nginx
-
-Use Nextcloud's full Nginx example as the baseline. The relevant web-root fallback is:
-
-```nginx
-location / {
-    try_files $uri $uri/ /index.php$request_uri;
+```json
+{
+  "policies": {
+    "Preferences": {
+      "mail.compose.big_attachments.notify": {
+        "Value": false,
+        "Status": "locked"
+      }
+    }
+  }
 }
 ```
 
-The PHP/FastCGI location also needs:
+Merge this into the existing policy, restart Thunderbird, and reopen NC Connector settings. This does not disable Thunderbird's forgotten-attachment reminder. NC Connector's own threshold is configured under **Sharing** or in the backend, not through Thunderbird's `threshold_kb` preference.
 
-```nginx
-fastcgi_param front_controller_active true;
-```
+<a id="52-cancellation-and-cleanup"></a>
+<a id="53-saved-drafts"></a>
 
-For a `/nextcloud` installation, the fallback must include the subpath:
+### Saved drafts and unused shares
 
-```nginx
-location /nextcloud {
-    try_files $uri $uri/ /nextcloud/index.php$request_uri;
-}
-```
+Canceling an upload or discarding an unsaved message removes its newly created share folder when Nextcloud is reachable. Sent messages and saved drafts retain their shares. Temporary cleanup failures are retried, including after a restart with the same Nextcloud account.
 
-Validate and reload:
+Reopen a saved share draft in the Thunderbird profile that created it. The visible share block alone is not enough to transfer it to another profile. If local tracking is lost, create a new message and share the files again.
+
+Do not use **Save as Template** for messages containing NC Connector shares; sending such templates or messages created from them is blocked. Deleting a saved draft does not automatically remove its Nextcloud share. Review unused folders manually, but delete only after confirming that no sent message or saved draft still needs them. Shares may also remain after a crash or when discarding additions to an already saved draft.
+
+<a id="44-optional-backend-policies"></a>
+
+### Separate password delivery
+
+This requires NC Connector Backend and a valid assigned Seat; one-time links also require Nextcloud Secrets. Configure it with the share password options under **Sharing** or in the backend.
+
+- **Send now:** The password message is sent after Thunderbird confirms the main message was sent.
+- **Send later:** A prepared password draft opens. Send it manually only after the main message has actually left the Outbox.
+- **Save draft:** Keep the prepared password drafts for later manual sending. If they cannot be created, saving or sending the main draft remains blocked until the problem is resolved.
+- **Delivery fails:** A prepared message remains available for manual sending. A failure after the main message was sent does not remove its share.
+- **Secrets is unavailable or link creation fails:** A warning is shown and delivery falls back to plain text in the separate password message. Each recipient otherwise receives an individual one-time link.
+
+Explain the manual steps for delayed sending and saved drafts when introducing this function. Central configuration is described under [Backend defaults and signatures](#backend-defaults-and-signatures).
+
+### Talk rooms and appointments
+
+Set defaults and the language of inserted meeting text under **Talk Link**. User search, moderator selection, and automatic user/guest assignment need the [system address book](#system-address-book).
+
+Save the appointment after inserting the Talk link. Participant assignment and moderator delegation are processed after saving. Moving and saving an appointment also updates the start time of an enabled lobby.
+
+A room created for an unsaved event is cleaned up if the event is discarded. Deleting the room for an already saved event is a separate, disabled-by-default option under **Talk Link**. Enable it only if deleting the event should also remove the room for all participants. NC Connector leaves the room intact if the user no longer has the necessary authority or another known appointment still references it. A pasted Talk URL alone does not enable automatic room deletion.
+
+<a id="55-mixed-local-nextcloud-and-vfs-sources"></a>
+<a id="vfs-sources-and-provider-access"></a>
+
+### My Nextcloud and other storage providers
+
+The Sharing wizard accepts local files, **My Nextcloud**, and connected external providers. My Nextcloud copies files and folders to the new share folder without changing their originals. External files pass through Thunderbird to Nextcloud; they are not transferred directly between the two clouds. Large external files can require substantial Thunderbird memory.
+
+Configure VFS under the **VFS** settings tab:
+
+| Function | Starting value | Access |
+| --- | --- | --- |
+| NC Connector as a provider | On | Each other add-on needs an explicit grant. The grant gives full read/write access to the configured Nextcloud account; revoke it in the same tab. |
+| External VFS providers | Off | Requires a compatible provider add-on, backend access, and a valid assigned Seat. Enable the function, then add the connection. |
+
+The backend can set both switches under **Group Settings → Default Settings → Shares → Thunderbird only – Virtual File System (VFS)**. For centrally managed installations, the Seat requirement also applies to NC Connector's own provider.
+
+There is no second Nextcloud login for VFS. Changing the server or user invalidates existing grants; replacing only the app password for the same account does not. **Disconnect** removes an external connection, not its remote files. Disabling access retains connection records. Save or finish ongoing work before enabling external providers from an already populated sharing queue; follow the displayed restart warning.
+
+<a id="3-install-update-and-roll-back"></a>
+<a id="32-managed-update"></a>
+
+## Update, backup, and uninstall
+
+### Update or return to the previous version
+
+1. Save open work, close Thunderbird, and back up the profile before a rollout.
+2. Keep the previous approved XPI and policy file. Update through Thunderbird or deploy the approved XPI without uninstalling first.
+3. Restart Thunderbird and check the connection and the functions in use on a pilot workstation before expanding deployment.
+
+<a id="33-rollback"></a>
+
+For rollback, stop distributing the new package and deploy the previous compatible XPI. Adjust your update policy so it is not immediately replaced again. Restore a matching profile backup if necessary; this also restores mail and calendar state from that backup. Test with one workstation first. Downgrading does not undo files, shares, or rooms already created in Nextcloud.
+
+<a id="10-backup-and-recovery"></a>
+
+### Back up and restore
+
+Find the active profile through **Help → Troubleshooting Information → Profile Folder**. Close Thunderbird before copying or restoring it. Keep the policy source separately; it is not stored in the profile. See [Thunderbird profile backup and recovery](https://support.mozilla.org/en-US/kb/profiles-where-thunderbird-stores-user-data).
+
+Profile backups contain credentials, preferences, and the records needed for saved-share drafts and pending cleanup. Protect them accordingly and do not distribute a signed-in profile to other users. After restoration, test sign-in; revoke the old app password and sign in again when retiring or replacing a device.
+
+Back up Nextcloud's configuration, database, and storage using your normal server procedure. Restoring a Thunderbird profile does not restore deleted Nextcloud files or rooms.
+
+### Uninstall
+
+Finish or cancel pending uploads, save needed work, and back up the profile. Remove NC Connector through the Add-ons Manager. For a force-installed add-on, change the installation policy first.
+
+Uninstalling normally clears the add-on's local data, including settings and saved-share tracking. Plan to sign in again after reinstalling. This does not delete already stored files, shares, or rooms in Nextcloud; review anything no longer needed separately. Do not uninstall as a routine update or rollback step.
+
+<a id="8-troubleshooting"></a>
+
+## Troubleshooting
+
+### Sign-in or connection fails
+
+1. Open the configured Nextcloud URL in a browser on the workstation. Check the URL, certificate, system time, DNS, and proxy.
+2. In NC Connector settings, allow access to that server and run **Test connection**.
+3. For HTTP `401`, sign in again. For `403`, check user permissions and gateway restrictions.
+4. If only one workstation is affected, compare its certificate, proxy, and endpoint-security settings with a working machine. Do not disable certificate validation.
+
+### Managed settings are missing or invalid
+
+Check `about:policies`, the add-on ID, key spelling, JSON types, and the installed add-on version. Older versions may not support newer keys. Restart Thunderbird after correcting the policy.
+
+| Problem | Action |
+| --- | --- |
+| Managed URL did not replace a saved URL | Set `NextcloudUrlLocked=true` with a valid managed URL if replacement is intended. |
+| Sign-in method is invalid | Set `AuthMode` to `LoginFlow` or `Manual`. Invalid values lock LoginFlow but do not start or save it automatically. |
+| Default-values source is invalid | Set `DefaultsSource` to `local` or `backend`. Without an explicit backend override, invalid input locks the source to `local`. |
+| Settings cannot be loaded | Correct managed-policy errors first. NC Connector does not silently ignore unreadable policy; connection changes, tests, and login remain blocked in that session. |
+| LoginFlow did not start automatically | Check for incomplete credentials, a matching managed URL, and granted server access. Use the login button if permission is still needed. |
+
+<a id="67-managed-installation-cannot-start-an-action"></a>
+
+### Backend notices and locked settings
+
+| Notice or problem | Administrator action |
+| --- | --- |
+| Backend required | Install or enable `ncc_backend_4mc`, complete setup, and check access to `/apps/ncc_backend_4mc/api/v1/status`. |
+| Seat missing, paused, or invalid | Check the affected user's assignment and the license overview in the backend. For paused assignments, adjust capacity or assignments. |
+| Access could not be verified | Check the client-to-Nextcloud connection and credentials, then retry. This is not by itself a Seat rejection. |
+| License synchronization failed | Check the backend-to-license-server connection and the last successful synchronization. |
+| Grace period or activation problem | Follow the action shown in the backend license overview. |
+| A value or settings tab is locked | Check managed settings, the default-values source, and **Editable in add-on** in the backend. |
+| Unexpected starting values | Check [Default values source](#default-values-source), then reopen settings or the affected wizard. |
+
+Without Enterprise Rollout, users without a valid assigned Seat can still use Sharing and Talk with local settings. Backend-dependent functions are unavailable. Enterprise Rollout requires confirmed backend access; a temporary connection failure may use the most recently confirmed state, but does not grant access for a new user.
+
+<a id="43-talk-and-system-address-book"></a>
+
+### System address book
+
+If user search or moderator selection is disabled, or users are missing:
+
+1. Enable **Administration settings → Groupware → System Address Book** in Nextcloud. Check the user's access and autocompletion rules under **Sharing** as well.
+2. Rebuild the address book from the Nextcloud directory. Adapt the HTTP user and command for your container or server:
 
 ```bash
-sudo nginx -t
-sudo systemctl reload nginx
+sudo -E -u www-data php occ dav:sync-system-addressbook
 ```
 
-### 11.3 Apache
+3. Test the export with the affected user's credentials. Replace `<user-id>` with the Nextcloud user ID, which may differ from the email address used for sign-in:
 
-Apache must load `mod_rewrite` and `mod_env`, and the Nextcloud `<Directory>` block must permit `.htaccess` processing with `AllowOverride All`.
+```text
+https://cloud.example.com/remote.php/dav/addressbooks/users/<user-id>/z-server-generated--system/?export
+```
+
+4. Reopen NC Connector settings or the Talk wizard and repeat the search.
+
+Expect a vCard address book, not an HTML login or error page. NC Connector also accepts a valid, non-empty export returned with HTTP `404`; an empty or damaged response is not accepted. For `401`, check credentials; for `403`, check access rights. A failed refresh stops participant classification rather than treating internal users as guests.
+
+If Nextcloud reports the address book as enabled but the export remains unavailable, check the saved setting:
 
 ```bash
-sudo a2enmod rewrite env
-sudo systemctl reload apache2
+sudo -E -u www-data php occ config:app:get dav system_addressbook_exposed
 ```
 
-For Nextcloud at the web root:
-
-```php
-'overwrite.cli.url' => 'https://cloud.example.com/',
-'htaccess.RewriteBase' => '/',
-```
-
-For Nextcloud below `/nextcloud`:
-
-```php
-'overwrite.cli.url' => 'https://cloud.example.com/nextcloud',
-'htaccess.RewriteBase' => '/nextcloud',
-```
-
-Regenerate `.htaccess`:
+If exposure is intended and the value is not `yes`, correct it and rebuild:
 
 ```bash
-cd /var/www/nextcloud
-sudo -E -u www-data php occ maintenance:update:htaccess
-sudo systemctl reload apache2
+sudo -E -u www-data php occ config:app:set dav system_addressbook_exposed --value="yes"
+sudo -E -u www-data php occ dav:sync-system-addressbook
 ```
 
-If rewriting still fails after checking the modules, `AllowOverride`, rewrite base, and regenerated `.htaccess`, add:
+See the [Nextcloud system address book guide](https://docs.nextcloud.com/server/32/admin_manual/groupware/contacts.html#system-address-book).
 
-```php
-'htaccess.IgnoreFrontController' => true,
-```
+<a id="81-upload-is-rejected-before-it-starts"></a>
+<a id="82-progress-remains-at-zero"></a>
+<a id="83-upload-stalls-or-repeatedly-fails"></a>
+<a id="54-retries-and-server-throttling"></a>
 
-Run `maintenance:update:htaccess` again and reload Apache.
+### Upload does not start or repeatedly fails
 
-Official references:
+1. Check the phase shown in the wizard. Large folders take time to scan before uploaded bytes increase.
+2. Confirm Nextcloud 32 or newer, readable source files, destination write access, and public-sharing permission.
+3. If connection testing reports an unreadable server response, check whether a proxy returned HTML instead of Nextcloud data, especially for `/ocs/v2.php/cloud/capabilities`.
+4. Match the failure time with the client and server logs. Check DAV methods and headers against [Network access](#network-access); a blocked `MOVE` or `DELETE` can break upload completion or cleanup.
+5. If only large files fail, check proxy size limits, timeouts, buffering, and server storage performance.
 
-- [Nextcloud Nginx configuration](https://docs.nextcloud.com/server/stable/admin_manual/installation/nginx.html)
-- [Nextcloud Apache and Pretty URLs](https://docs.nextcloud.com/server/stable/admin_manual/installation/source_installation.html#pretty-urls)
-- [Nextcloud `maintenance:update:htaccess`](https://docs.nextcloud.com/server/stable/admin_manual/occ_system.html#maintenance-commands)
+HTTP `423` indicates a lock, `429` rate limiting, and `502`–`504` an upstream or gateway failure. Temporary errors are retried automatically within limits; repeated failures need server-side diagnosis.
+
+<a id="84-insufficient-storage-507"></a>
+
+### Insufficient storage (`507`)
+
+Check the user's quota, applicable group-folder quota, primary storage, and temporary space used by the web server or proxy. Free or extend storage before retrying. The wizard also blocks uploads when the selected files exceed the available quota it can determine.
+
+<a id="85-folder-name-collision"></a>
+
+### Share folder already exists
+
+Choose a different share name in the manual wizard. Attachment automation can choose a numbered name. Do not delete an existing folder just because its name matches; an earlier message may still link to it.
+
+<a id="86-cleanup-did-not-complete"></a>
+
+### An unused share remains
+
+Confirm that no sent message or saved draft needs the share. Check the connection, account credentials, and whether the proxy permits `DELETE`; pending cleanup retries when the same account is available. Deleting a saved draft can leave its share behind. Remove a confirmed orphan in Nextcloud, not by clearing the Thunderbird profile's tracking data.
+
+<a id="87-a-saved-share-draft-cannot-be-sent"></a>
+
+### A saved share draft cannot be sent
+
+Use the Thunderbird profile that created it, not another profile or a template. If separate password delivery is enabled, save again and check that the prepared password drafts open. If the original tracking data is missing or the error persists, create a new message and share again; copying only the visible block does not repair it.
+
+### A signature is missing or duplicated
+
+Check the Seat assignment, template, backend email address, selected Thunderbird sender identity, and signature switches. Test a new message with that identity. For a duplicate, check when the other signature tool inserts its content; provide a reproducible example rather than disabling signatures for unrelated accounts. See [Signatures](#signatures).
+
+<a id="88-public-talk-links-work-only-with-indexphp"></a>
+<a id="11-nextcloud-pretty-urls"></a>
+<a id="111-quick-check"></a>
+
+### Talk link returns 404 in the browser
+
+Compare `https://cloud.example.com/login` with `https://cloud.example.com/index.php/login`. If only the latter works, correct the web-server rewrite using the official Nextcloud configuration. For subpath installations, retain `/nextcloud` in both addresses. Do not add `/index.php` to the add-on's server address as a workaround.
+
+Back up server configuration before changing it, validate it before reloading, and then test both the login page and a newly created Talk link from a client.
+
+<a id="112-nginx"></a>
+
+For **Nginx**, use the [complete Nextcloud configuration](https://docs.nextcloud.com/server/32/admin_manual/installation/nginx.html), including the correct web-root or subpath variant. Do not replace it with isolated rewrite snippets.
+
+<a id="113-apache"></a>
+
+For **Apache**, check rewrite modules, `AllowOverride`, and the rewrite base, then regenerate `.htaccess` after changes. Follow the [Nextcloud Pretty URL instructions](https://docs.nextcloud.com/server/32/admin_manual/installation/source_installation.html#pretty-urls).
+
+<a id="65-rollout-verification"></a>
+<a id="7-operational-checks"></a>
+
+### Check operation after a change
+
+After an add-on, server, proxy, or policy change, test the connection and the affected feature with an intended user account. For a rollout, also confirm active policies in `about:policies`, first sign-in, a small share, a Talk link, and a signature if used. Exercise a large upload or a folder only when those workflows are in use. Use a test message and remove any test shares afterward.
+
+<a id="45-debug-logging"></a>
+<a id="9-logging-and-support-data"></a>
+
+## Logs and support
+
+1. Enable **Debug logging** on the add-on's **Debug** tab.
+2. Open Thunderbird's **Error Console** and reproduce the issue once.
+3. Record the time, Thunderbird and add-on versions, Nextcloud and relevant app versions, action, error message, and matching log lines. Include the HTTP status from the server or proxy where relevant.
+4. Review the excerpt for credentials, private share or Secret links, filenames, recipients, and customer data before forwarding it.
+5. Turn debug logging off again after diagnosis.
+
+`[NCBG]` covers background work, uploads, and calendar processing. `[NCUI][Sharing]`, `[NCUI][Talk]`, and `[NCUI][Options]` identify the corresponding interfaces; `[ncCalToolbar]` concerns the calendar button and editor.
+
+Use the [support form](https://nc-connector.de/support/) with the relevant excerpt rather than sending a complete Thunderbird profile. Developer implementation and test details are documented separately in [DEVELOPMENT.md](DEVELOPMENT.md).

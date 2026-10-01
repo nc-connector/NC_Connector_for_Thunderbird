@@ -4,6 +4,21 @@ All notable changes to **NC Connector for Thunderbird** will be documented in th
 
 This project targets **Thunderbird ESR 140** through **ESR 153**.
 
+## 3.4.3
+
+### Added
+- Add Enterprise Rollout through Thunderbird policies, with a managed sign-in method and guided first sign-in. Successful setup saves the verified connection and closes the setup tab. See the [Enterprise Rollout guide](docs/ADMIN.md#enterprise-rollout).
+- Add a choice of local or backend defaults for Sharing, Talk, attachment automation, signature settings, and VFS switches, subject to administrator permissions.
+
+### Changed
+- Setting any supported managed key now requires the NC Connector Backend and a valid assigned NC Connector Seat. This also applies to existing managed URL deployments, regardless of the configured value.
+- Move sharing-block and Talk-description language settings from Advanced to the Sharing and Talk Link tabs.
+- Reorganize the administration guide around setup, managed deployment, operation, and troubleshooting while preserving existing section links.
+
+### Fixed
+- Prevent saving settings from overwriting local preferences with backend values or turning untouched defaults into explicit local choices.
+- Respect the selected Talk-description language, including the default interface language, instead of falling back to a different stored choice.
+
 ## 3.4.2
 
 ### Changed
