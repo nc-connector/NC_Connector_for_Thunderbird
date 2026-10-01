@@ -661,6 +661,13 @@ footer{
         <label for="sharingDefaultExpireDays" data-i18n="options_sharing_default_expire_days_label">Expiration (days)</label>
         <input id="sharingDefaultExpireDays" type="number" min="1" step="1">
       </div>
+      <div class="row" id="shareBlockLangRow">
+        <label for="shareBlockLang" data-i18n="options_share_block_lang_label">Language for sharing HTML block</label>
+        <div>
+          <select id="shareBlockLang"></select>
+          <p class="hint" data-i18n="options_share_block_lang_hint">Controls the language of the inserted sharing HTML block.</p>
+        </div>
+      </div>
     </fieldset>
     <fieldset class="auth-block">
       <legend data-i18n="options_sharing_attachments_heading">Attachments</legend>
@@ -953,13 +960,6 @@ footer{
   <section id="tab-advanced" class="tab-panel">
     <fieldset class="auth-block">
       <legend data-i18n="options_advanced_language_heading">Language overrides</legend>
-      <div class="row" id="shareBlockLangRow">
-        <label for="shareBlockLang" data-i18n="options_share_block_lang_label">Language for sharing HTML block</label>
-        <div>
-          <select id="shareBlockLang"></select>
-          <p class="hint" data-i18n="options_share_block_lang_hint">Controls the language of the inserted sharing HTML block.</p>
-        </div>
-      </div>
       <div class="row" id="eventDescriptionLangRow">
         <label for="eventDescriptionLang" data-i18n="options_event_description_lang_label">Language for Talk description text</label>
         <div>

@@ -280,7 +280,7 @@ Checklist:
 ### 5.3 Language overrides (advanced settings)
 
 The options UI provides **language override selects** for generated text blocks:
-- Sharing HTML block language (`shareBlockLang`)
+- Sharing HTML block language (`shareBlockLang`) on the **Sharing** tab
 - Talk event description language (`eventDescriptionLang`)
 
 Implementation pieces:
@@ -882,7 +882,7 @@ with explicit imports while keeping the same presentation/network boundary.
 ### 10.3 Share block language override
 
 The language for the generated sharing block can be overridden via:
-- options → advanced → `shareBlockLang`
+- options → Sharing → `shareBlockLang`
 
 Implementation uses:
 - `modules/i18nOverride.js` to translate in a forced locale.

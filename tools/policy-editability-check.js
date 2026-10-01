@@ -747,6 +747,21 @@ function verifyConsumerGuards(){
   );
 }
 
+function verifyOptionsLanguagePlacement(){
+  const html = readText("options.html");
+  for (const [tab, control] of [["sharing", "shareBlockLang"]]){
+    const panelStart = html.indexOf(`<section id="tab-${tab}"`);
+    const panelEnd = html.indexOf("</section>", panelStart);
+    assert(panelStart >= 0 && panelEnd > panelStart, `Options panel ${tab} must exist`);
+    const panel = html.slice(panelStart, panelEnd);
+    for (const id of [control, `${control}Row`]){
+      assert(count(html, `id="${id}"`) === 1, `Options must contain exactly one ${id}`);
+      assert(panel.includes(`id="${id}"`), `${id} must be inside the ${tab} panel`);
+    }
+    assert(panel.includes(`<label for="${control}"`), `${control} must retain its associated label`);
+  }
+}
+
 function run(){
   const { policyState, policyUi } = loadPolicyApis();
   const sharingStorage = loadSharingStorage();
@@ -755,6 +770,7 @@ function run(){
   verifyAttachmentLinkTargetLockedFallback(sharingStorage, policyUi);
   verifyPolicyTable(policyState, policyUi);
   verifyPolicyNoticeUi(policyState, policyUi);
+  verifyOptionsLanguagePlacement();
   verifyConsumerGuards();
   console.log("[OK] policy-editability-check passed (25 editable keys, 4 policy states, consumer guards)");
 }

@@ -124,6 +124,8 @@ Do not add `/index.php` to the configured base URL to work around broken public 
 
 ### 4.2 Sharing and attachment automation
 
+Set the language of inserted share blocks on the **Sharing** tab. This does not change the add-on's interface language.
+
 Administrators should define:
 
 - the FileLink base directory
