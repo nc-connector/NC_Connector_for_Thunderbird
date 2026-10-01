@@ -87,7 +87,8 @@ function loadPolicyContext(payload, response = {}){
       getOpts: async () => ({
         baseUrl: "https://cloud.example.test",
         user: "alice",
-        appPass: "app-password"
+        appPass: "app-password",
+        ...response.account
       })
     },
     NCHostPermissions: {
@@ -266,6 +267,89 @@ async function verifyRuntimeMetadata(policy){
   assert(setup.warning.visible === false && policy.getStatusNotice(setup).code === "", "Missing credentials must not fabricate a license warning");
 }
 
+function verifyDefaultsSourceSelection(policy){
+  for (const mode of ["community", "pro"]){
+    for (const backend of [null, "inherit", "local", "backend", "invalid"]){
+      for (const editable of [false, true, "true"]){
+        for (const local of [null, "local", "backend"]){
+          for (const managed of [null, "local", "backend", "invalid"]){
+            const status = {
+              ...createActiveStatus(), fetchSucceeded: true,
+              defaultsSource: backend, defaultsSourceEditable: editable,
+              localDefaultsSource: local,
+              managedSetup: {
+                isEnterpriseRollout: managed !== null,
+                hasDefaultsSource: managed !== null,
+                defaultsSource: managed === "invalid" ? "local" : managed,
+                defaultsSourceValid: managed !== "invalid"
+              }
+            };
+            status.status.mode = mode;
+            const explicit = backend === "local" || backend === "backend";
+            const expected = explicit
+              ? (editable === true && local ? local : backend)
+              : (managed !== null ? (managed === "invalid" ? "local" : managed) : local || "local");
+            const result = policy.getDefaultsSourceState(status);
+            assert(result.value === expected, "Source priority must match Outlook for every backend/managed/user combination");
+            assert(result.available && result.editable === (explicit ? editable === true : managed === null), "Only backend editability can override a managed source lock");
+            assert(result.managedInvalid === (!explicit && managed === "invalid"), "An explicit backend source supersedes invalid managed source metadata");
+            for (const denied of [
+              { fetchSucceeded: false }, { endpointAvailable: false },
+              { status: { ...status.status, seatAssigned: false } },
+              { status: { ...status.status, seatState: "suspended_overlimit" } },
+              { status: { ...status.status, isValid: false } }
+            ]){
+              const blocked = policy.getDefaultsSourceState({ ...status, ...denied });
+              assert(blocked.value === "local" && !blocked.available && !blocked.editable, "Unconfirmed or invalid access must not enable source selection or backend defaults");
+            }
+            status.status.overlicensed = true;
+            assert(policy.getDefaultsSourceState(status).value === expected, "Global overcapacity must not deny a personally active Seat");
+          }
+        }
+      }
+    }
+  }
+}
+
+async function verifyManagedAccessAndSourceMetadata(){
+  const payload = createOverlicensedPayload();
+  payload.defaults_source = " BACKEND ";
+  payload.defaults_source_editable = "true";
+  const account = {
+    defaultsSource: "local",
+    managedSetup: { isEnterpriseRollout: true, hasDefaultsSource: true, defaultsSource: "local", defaultsSourceValid: true }
+  };
+  const context = loadPolicyContext(payload, { account, status: 404 });
+  const status = await context.NCPolicyRuntime.getPolicyStatus();
+  assert(status.defaultsSource === "backend" && status.defaultsSourceEditable === false, "Source metadata must be normalized and editability must require a JSON boolean");
+  assert(status.localDefaultsSource === "local" && status.managedSetup.isEnterpriseRollout, "Runtime source resolution must retain raw user and managed preferences separately");
+  assert(context.NCPolicyState.getDefaultsSourceState(status).value === "backend", "A confirmed HTTP 404 backend body must support source selection");
+  assert(await context.NCPolicyRuntime.assertManagedAccess(status) === status, "A valid assigned Seat permits managed use");
+  for (const entry of [
+    { payload: null, response: { status: 404 }, key: "enterprise_rollout_backend_required" },
+    { payload: null, response: { status: 503 }, key: "enterprise_rollout_status_unavailable" },
+    { payload: { ...payload, status: { ...payload.status, seat_assigned: false, seat_state: "none" } }, response: {}, key: "enterprise_rollout_seat_required" },
+    { payload: { ...payload, status: { ...payload.status, seat_state: "suspended_overlimit" } }, response: {}, key: "enterprise_rollout_seat_required" }
+  ]){
+    const fixture = loadPolicyContext(entry.payload, { ...entry.response, account });
+    const denied = await fixture.NCPolicyRuntime.getPolicyStatus();
+    const access = fixture.NCPolicyState.getManagedAccessState(denied);
+    assert(!access.allowed && access.messageKey === entry.key, "Managed refusals must distinguish missing backend, missing access, and failed verification");
+    let thrown = null;
+    try{
+      await fixture.NCPolicyRuntime.assertManagedAccess(denied);
+    }catch(error){
+      thrown = error;
+    }
+    assert(thrown?.name === "ManagedAccessError" && thrown.message === entry.key, "Managed execution must enforce the same reason shown in its banner");
+    assert(fixture.NCPolicyState.getStatusNotice(denied).code === access.reason, "Managed status must not promise a local feature fallback");
+  }
+  const unmanaged = loadPolicyContext(null);
+  let requests = 0;
+  unmanaged.fetch = async () => { requests++; throw new Error("Unexpected backend request"); };
+  assert(await unmanaged.NCPolicyRuntime.assertManagedAccess() === null && requests === 0, "Unmanaged actions must not acquire a new backend dependency");
+}
+
 async function run(){
   const policy = loadPolicyState();
   const activeStatus = createActiveStatus();
@@ -382,6 +466,8 @@ async function run(){
   }
 
   verifyStatusNotices(policy, vfsPolicy);
+  verifyDefaultsSourceSelection(policy);
+  await verifyManagedAccessAndSourceMetadata();
   await verifyRuntimeMetadata(policy);
   await verifySeatParity(policy, vfsPolicy);
   await verifySharePolicyNumbers();
@@ -454,6 +540,7 @@ async function verifySharePolicyNumbers(){
   context.normalizeAttachmentThresholdMb = context.NCSharingStorage.normalizeAttachmentThresholdMb;
   context.getSelectedTalkDefaultRoomType = () => "event";
   context.setTalkDefaultRoomType = () => {};
+  context.getDefaultsSourceState = () => context.NCPolicyState.getDefaultsSourceState(context.runtimePolicyStatus);
   // Run the options default resolver without starting the options page or its listeners.
   const options = readText("options.js");
   const start = options.indexOf("function applyInitialSpecialPolicyDefaults(stored){");

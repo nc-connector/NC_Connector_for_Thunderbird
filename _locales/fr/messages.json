@@ -1,4 +1,37 @@
 {
+  "options_defaults_source_label": {
+    "message": "Source des valeurs par défaut"
+  },
+  "options_defaults_source_local": {
+    "message": "Paramètres locaux"
+  },
+  "options_defaults_source_backend": {
+    "message": "NC Connector Backend"
+  },
+  "options_defaults_source_help": {
+    "message": "Choisissez la source des valeurs par défaut modifiables. Les règles verrouillées restent applicables."
+  },
+  "options_defaults_source_managed_tooltip": {
+    "message": "Votre administrateur définit la source des valeurs par défaut."
+  },
+  "options_defaults_source_tabs_tooltip": {
+    "message": "Le backend fournit ces valeurs par défaut. Les paramètres locaux enregistrés sont conservés."
+  },
+  "options_defaults_source_seat_required_tooltip": {
+    "message": "Le choix de la source des valeurs par défaut nécessite le backend et une licence utilisateur NC Connector valide, active et attribuée."
+  },
+  "managed_defaults_source_invalid": {
+    "message": "La source des valeurs par défaut configurée de manière centralisée est invalide. Les valeurs locales s’appliquent. Contactez votre administrateur."
+  },
+  "enterprise_rollout_seat_required": {
+    "message": "Cette installation est gérée de manière centralisée et nécessite une licence utilisateur NC Connector valide et attribuée."
+  },
+  "enterprise_rollout_backend_required": {
+    "message": "Cette installation est gérée de manière centralisée. NC Connector Backend doit être installé et configuré dans Nextcloud avant de pouvoir utiliser NC Connector. Veuillez contacter votre administrateur."
+  },
+  "enterprise_rollout_status_unavailable": {
+    "message": "Cette installation est gérée de manière centralisée. L’accès à NC Connector n’a pas pu être vérifié. Veuillez vérifier votre connexion et réessayer."
+  },
   "extName": {
     "message": "NC Connector for Thunderbird"
   },

@@ -615,6 +615,7 @@ function createPort(){
 async function createBackgroundHarness({
   deleteRemotePath = async () => true,
   createFileLink,
+  assertManagedAccess = async (status) => status,
   prepareFileLinkRequest = (request) => ({ request, sourcePlan: {} })
 } = {}){
   let connectListener = null;
@@ -629,7 +630,8 @@ async function createBackgroundHarness({
     },
     clearSharingWizardRequestContext: (windowId) => requestContexts.delete(windowId),
     NCPolicyRuntime: {
-      getPolicyStatus: async () => null
+      getPolicyStatus: async () => null,
+      assertManagedAccess
     },
     NCPolicyState: {
       isDomainActive: () => false
@@ -672,6 +674,25 @@ async function createBackgroundHarness({
 }
 
 async function checkBackgroundAbort(){
+  let managedCreateCalls = 0;
+  const managed = await createBackgroundHarness({
+    assertManagedAccess: async () => {
+      const error = new Error("enterprise_seat_required");
+      error.ncUserMessage = error.message;
+      throw error;
+    },
+    createFileLink: async () => {
+      managedCreateCalls++;
+      return {};
+    }
+  });
+  const managedPort = createPort();
+  managed.connect(managedPort);
+  managedPort.emitMessage({ type: "start", windowId: 20, tabId: 30, request: { files: [] } });
+  await flushMicrotasks();
+  assert(managedCreateCalls === 0, "Managed refusal must stop upload before any server mutation");
+  assert(managedPort.posted.some((message) => message.type === "error" && message.error.message === "enterprise_seat_required"), "Managed upload refusal must retain its actionable message");
+
   let invalidCleanupCalls = 0;
   let invalidCreateCalls = 0;
   const invalid = await createBackgroundHarness({

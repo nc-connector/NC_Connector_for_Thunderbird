@@ -336,10 +336,12 @@ async function createHarness({ tabId, wizardWindowId }){
       }
     },
     NCPolicyRuntime: {
-      getPolicyStatus: async () => ({})
+      getPolicyStatus: async () => ({}),
+      assertManagedAccess: async (status) => status
     },
     NCPolicyState: {
       isDomainActive: () => false,
+      getManagedAccessState: () => ({ managed: false, allowed: true }),
       hasSeatEntitlement: () => true
     },
     NCShareRequestRules: {

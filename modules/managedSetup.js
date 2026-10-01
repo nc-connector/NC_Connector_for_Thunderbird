@@ -17,6 +17,7 @@ const NCManagedSetup = (() => {
     "nextcloudUrlLocked",
     "baseUrl",
     "baseUrlLocked",
+    "DefaultsSource",
     "adminSettings"
   ];
 
@@ -25,6 +26,10 @@ const NCManagedSetup = (() => {
       hasNextcloudUrl: false,
       nextcloudUrl: "",
       nextcloudUrlLocked: false,
+      isEnterpriseRollout: false,
+      hasDefaultsSource: false,
+      defaultsSource: "local",
+      defaultsSourceValid: true,
       source: ""
     };
   }
@@ -108,14 +113,22 @@ const NCManagedSetup = (() => {
     }
     const policyValues = unwrapValues(values);
     const nextcloudUrl = normalizeNextcloudUrl(firstValue(policyValues, ["NextcloudUrl", "nextcloudUrl", "baseUrl"]));
-    if (!nextcloudUrl){
-      return emptyPolicy();
-    }
+    const isEnterpriseRollout = MANAGED_KEYS.some((key) =>
+      key !== "adminSettings" && Object.prototype.hasOwnProperty.call(policyValues, key)
+    );
+    const hasDefaultsSource = Object.prototype.hasOwnProperty.call(policyValues, "DefaultsSource");
+    const defaultsSource = typeof policyValues.DefaultsSource === "string"
+      ? policyValues.DefaultsSource.trim().toLowerCase()
+      : "";
     return {
-      hasNextcloudUrl: true,
+      hasNextcloudUrl: !!nextcloudUrl,
       nextcloudUrl,
       nextcloudUrlLocked: readBoolean(firstValue(policyValues, ["NextcloudUrlLocked", "nextcloudUrlLocked", "baseUrlLocked"])),
-      source: "storage.managed"
+      isEnterpriseRollout,
+      hasDefaultsSource,
+      defaultsSource: defaultsSource === "backend" ? "backend" : "local",
+      defaultsSourceValid: !hasDefaultsSource || defaultsSource === "local" || defaultsSource === "backend",
+      source: isEnterpriseRollout ? "storage.managed" : ""
     };
   }
 

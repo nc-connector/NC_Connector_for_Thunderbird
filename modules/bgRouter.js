@@ -65,9 +65,11 @@ async function getVfsOptionsState(){
     NCVfsClientRuntime.getStatus(policyStatus)
   ]);
   return Object.freeze({
+    defaultsSourceState: NCPolicyState.getDefaultsSourceState(policyStatus),
     provider: Object.freeze({
       enabled: providerStatus.enabled === true,
       localEnabled: providerStatus.localEnabled === true,
+      configured: providerStatus.configured === true,
       locked: providerStatus.locked === true,
       connectionReady: providerStatus.accountConfigured === true,
       status: providerStatus.accountConfigured
@@ -82,6 +84,7 @@ async function getVfsOptionsState(){
     external: Object.freeze({
       enabled: externalStatus.enabled === true,
       localEnabled: externalStatus.localEnabled === true,
+      configured: externalStatus.configured === true,
       locked: externalStatus.locked === true,
       entitled: externalStatus.entitled === true,
       unavailableReason: String(externalStatus.unavailableReason || ""),
@@ -234,19 +237,17 @@ browser.runtime.onMessage.addListener((msg, sender) => {
     if (msg.type === "vfs:options:updateSettings"){
       try{
         const policyStatus = await NCVfsPolicyRuntime.getPolicyStatus({ refresh: true });
-        const external = await NCVfsClientRuntime.setExternalEnabled(
-          msg.payload?.externalProvidersEnabled === true,
-          policyStatus
-        );
-        await NCVfsProviderRuntime.setEnabled(
-          msg.payload?.providerEnabled === true,
-          policyStatus
-        );
+        const external = typeof msg.payload?.externalProvidersEnabled === "boolean"
+          ? await NCVfsClientRuntime.setExternalEnabled(msg.payload.externalProvidersEnabled, policyStatus)
+          : null;
+        if (typeof msg.payload?.providerEnabled === "boolean"){
+          await NCVfsProviderRuntime.setEnabled(msg.payload.providerEnabled, policyStatus);
+        }
         const state = await getVfsOptionsState();
         return {
           ok:true,
           state,
-          backgroundRestartRequired: external.backgroundRestartRequired === true
+          backgroundRestartRequired: external?.backgroundRestartRequired === true
         };
       }catch(error){
         return messageError("vfs:options:updateSettings", error);
@@ -308,6 +309,11 @@ browser.runtime.onMessage.addListener((msg, sender) => {
     return { ok:true, contextId };
   }
   if (msg.type === "talk:initDialog"){
+    try{
+      await NCPolicyRuntime.assertManagedAccess();
+    }catch(error){
+      return messageError("talk:initDialog", error);
+    }
     const contextId = readMessageContextId(msg);
     if (!contextId){
       return { ok:false, error: bgI18n("talk_error_context_id_missing") };
@@ -414,6 +420,7 @@ browser.runtime.onMessage.addListener((msg, sender) => {
     }
     context.roomCreateInProgress = true;
     try{
+      await NCPolicyRuntime.assertManagedAccess();
       const hydrated = await hydrateTalkWizardContextFromEditor(context.editorId, contextId);
       if (!hydrated){
         return { ok:false, error: bgI18n("talk_error_snapshot_failed") };
@@ -715,6 +722,7 @@ browser.runtime.onMessage.addListener((msg, sender) => {
   }
   if (msg.type === "sharing:checkFolderExists"){
     try{
+      await NCPolicyRuntime.assertManagedAccess();
       const shareName = typeof msg.payload?.shareName === "string"
         ? msg.payload.shareName.trim()
         : "";

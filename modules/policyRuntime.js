@@ -59,6 +59,8 @@ const NCPolicyRuntime = (() => {
       endpointAvailable: !!details?.endpointAvailable,
       endpointChecked: !!details?.endpointChecked,
       endpointUrl: String(details?.endpointUrl || ""),
+      defaultsSource: null,
+      defaultsSourceEditable: false,
       status: {
         userId: String(details?.userId || ""),
         seatAssigned,
@@ -242,6 +244,8 @@ const NCPolicyRuntime = (() => {
       endpointAvailable: true,
       endpointChecked: true,
       endpointUrl: "",
+      defaultsSource: NCPolicyState.normalizeDefaultsSource(payload?.defaults_source),
+      defaultsSourceEditable: payload?.defaults_source_editable === true,
       status,
       policyActive,
       policyDomains,
@@ -423,31 +427,62 @@ const NCPolicyRuntime = (() => {
    * Read backend status live from the backend endpoint.
    * @returns {Promise<object>}
    */
-  async function getPolicyStatus(){
-    const opts = await NCCore.getOpts();
-    return readPolicyStatusFromCredentials({
-      baseUrl: opts?.baseUrl,
-      user: opts?.user,
-      appPass: opts?.appPass,
-      source: "runtime",
-      optionalProbe: false
+  function withLocalPreferences(status, opts){
+    return withStatusWarning({
+      ...status,
+      managedSetup: opts?.managedSetup || null,
+      localDefaultsSource: NCPolicyState.normalizeDefaultsSource(opts?.defaultsSource)
     });
   }
 
+  async function getPolicyStatus(opts = null){
+    const account = opts || await NCCore.getOpts();
+    const status = await readPolicyStatusFromCredentials({
+      baseUrl: account?.baseUrl,
+      user: account?.user,
+      appPass: account?.appPass,
+      source: "runtime",
+      optionalProbe: false
+    });
+    return withLocalPreferences(status, account);
+  }
+
+  async function assertManagedAccess(policyStatus = null){
+    let status = policyStatus;
+    if (!status){
+      const opts = await NCCore.getOpts();
+      if (opts?.managedSetup?.isEnterpriseRollout !== true){
+        return null;
+      }
+      status = await getPolicyStatus(opts);
+    }
+    const access = NCPolicyState.getManagedAccessState(status);
+    if (!access.allowed){
+      const error = new Error(bgI18n(access.messageKey));
+      error.name = "ManagedAccessError";
+      error.code = access.reason;
+      error.ncUserMessage = error.message;
+      throw error;
+    }
+    return status;
+  }
+
   async function probePolicyStatus(params = {}){
-    const result = await readPolicyStatusFromCredentials({
+    const opts = await NCCore.getOpts();
+    const result = withLocalPreferences(await readPolicyStatusFromCredentials({
       baseUrl: params?.baseUrl,
       user: params?.user,
       appPass: params?.appPass,
       source: params?.source || "options_test",
       optionalProbe: true
-    });
+    }), opts);
     L("policy status probe result", buildPolicyStatusDebug(result, params?.source || "options_test"));
     return result;
   }
 
   return {
     getPolicyStatus,
-    probePolicyStatus
+    probePolicyStatus,
+    assertManagedAccess
   };
 })();

@@ -1,4 +1,37 @@
 {
+  "options_defaults_source_label": {
+    "message": "Источник значений по умолчанию"
+  },
+  "options_defaults_source_local": {
+    "message": "Локальные настройки"
+  },
+  "options_defaults_source_backend": {
+    "message": "NC Connector Backend"
+  },
+  "options_defaults_source_help": {
+    "message": "Выберите источник изменяемых значений по умолчанию. Заблокированные политики продолжают действовать."
+  },
+  "options_defaults_source_managed_tooltip": {
+    "message": "Источник значений по умолчанию задаётся администратором."
+  },
+  "options_defaults_source_tabs_tooltip": {
+    "message": "Эти значения по умолчанию предоставляет серверная часть. Сохранённые локальные настройки не удаляются."
+  },
+  "options_defaults_source_seat_required_tooltip": {
+    "message": "Выбор источника значений по умолчанию требует серверной части и назначенной, действующей и активной пользовательской лицензии NC Connector."
+  },
+  "managed_defaults_source_invalid": {
+    "message": "Централизованно настроенный источник значений по умолчанию недопустим. Применяются локальные значения. Обратитесь к администратору."
+  },
+  "enterprise_rollout_seat_required": {
+    "message": "Эта установка управляется централизованно и требует назначенной действующей пользовательской лицензии NC Connector."
+  },
+  "enterprise_rollout_backend_required": {
+    "message": "Эта установка управляется централизованно. Для использования NC Connector необходимо установить и настроить NC Connector Backend в Nextcloud. Обратитесь к администратору."
+  },
+  "enterprise_rollout_status_unavailable": {
+    "message": "Эта установка управляется централизованно. Не удалось проверить право доступа к NC Connector. Проверьте подключение и повторите попытку."
+  },
   "extName": {
     "message": "NC Connector for Thunderbird"
   },

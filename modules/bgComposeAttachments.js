@@ -623,6 +623,16 @@ async function getComposeAttachmentAutomationSettings(){
 
   try{
     const policyStatus = await NCPolicyRuntime.getPolicyStatus();
+    const access = NCPolicyState.getManagedAccessState(policyStatus);
+    if (!access.allowed){
+      L("compose attachment automation disabled by managed rollout", { reason: access.reason });
+      return {
+        alwaysConnector: false,
+        offerAboveEnabled: false,
+        thresholdMb,
+        thresholdBytes: thresholdMb * 1024 * 1024
+      };
+    }
     if (NCPolicyState.isDomainActive(policyStatus, "share")){
       alwaysConnector = NCPolicyState.resolveDefaultValue(
         policyStatus,
@@ -633,7 +643,7 @@ async function getComposeAttachmentAutomationSettings(){
         NCPolicyState.coerceBoolean
       );
       if (
-        (!hasLocalThreshold || NCPolicyState.isLocked(
+        (!hasLocalThreshold || NCPolicyState.getDefaultsSourceState(policyStatus).value === "backend" || NCPolicyState.isLocked(
           policyStatus,
           "share",
           NCSharingStorage.SHARE_POLICY_KEYS.attachmentsMinSizeMb
@@ -658,6 +668,9 @@ async function getComposeAttachmentAutomationSettings(){
       }
     }
   }catch(error){
+    if (error?.code === "managed_setup_read_failed"){
+      throw error;
+    }
     L("compose attachment automation policy status fallback", {
       reason: "policy_runtime_failed",
       error: error?.message || String(error)
@@ -941,6 +954,7 @@ async function startComposeAttachmentShareFlow(tabId, context = {}){
     if (!guard.ok){
       return;
     }
+    await NCPolicyRuntime.assertManagedAccess();
     const attachments = await listComposeAttachments(tabId);
     if (!attachments.length){
       L("compose attachment flow skipped (no attachments)", { tabId });

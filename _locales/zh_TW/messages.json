@@ -1,4 +1,37 @@
 {
+  "options_defaults_source_label": {
+    "message": "預設值來源"
+  },
+  "options_defaults_source_local": {
+    "message": "本機設定"
+  },
+  "options_defaults_source_backend": {
+    "message": "NC Connector Backend"
+  },
+  "options_defaults_source_help": {
+    "message": "選擇可編輯預設值的來源。鎖定的原則仍然適用。"
+  },
+  "options_defaults_source_managed_tooltip": {
+    "message": "預設值來源由管理員指定。"
+  },
+  "options_defaults_source_tabs_tooltip": {
+    "message": "這些預設值由後端提供。已儲存的本機設定將保留。"
+  },
+  "options_defaults_source_seat_required_tooltip": {
+    "message": "選擇預設值來源需要後端以及已指派且有效、處於作用中狀態的 NC Connector 席位。"
+  },
+  "managed_defaults_source_invalid": {
+    "message": "集中設定的預設值來源無效。將使用本機預設值。請聯絡管理員。"
+  },
+  "enterprise_rollout_seat_required": {
+    "message": "此安裝由組織集中管理，需要指派有效的 NC Connector 席位。"
+  },
+  "enterprise_rollout_backend_required": {
+    "message": "此安裝由組織集中管理。使用 NC Connector 前，必須在 Nextcloud 中安裝並設定 NC Connector Backend。請聯絡您的管理員。"
+  },
+  "enterprise_rollout_status_unavailable": {
+    "message": "此安裝由組織集中管理。無法驗證您使用 NC Connector 的權限。請檢查連線後再試一次。"
+  },
   "extName": {
     "message": "NC Connector for Thunderbird"
   },

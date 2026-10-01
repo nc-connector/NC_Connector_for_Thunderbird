@@ -652,7 +652,8 @@ const NCCore = (() => {
       "user",
       "appPass",
       "debugEnabled",
-      "authMode"
+      "authMode",
+      "defaultsSource"
     ]);
     let managedSetup = typeof NCManagedSetup !== "undefined" && NCManagedSetup?.emptyPolicy
       ? NCManagedSetup.emptyPolicy()
@@ -669,6 +670,7 @@ const NCCore = (() => {
       appPass: typeof stored.appPass === "string" ? stored.appPass : "",
       debugEnabled: !!stored.debugEnabled,
       authMode: stored.authMode || "manual",
+      defaultsSource: stored.defaultsSource,
       managedSetup
     };
   }

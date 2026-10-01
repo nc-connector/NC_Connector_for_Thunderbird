@@ -254,13 +254,12 @@
   }
 
   async function disconnectExternalConnection(storageRef){
-    await assertExternalAccess({ refresh: true });
     const normalized = normalizeStorageRef(storageRef);
     if (!normalized || normalized.providerId === SELF_ADDON_ID){
       throw new Error(bgI18n('vfs_error_external_connection_missing'));
     }
     const toolkit = await readyPromise;
-    const existing = (await listExternalConnections()).some((connection) =>
+    const existing = flattenConnections(await listConnections()).some((connection) =>
       sameStorageRef(connection.storageRef, normalized)
     );
     if (!existing){
@@ -532,15 +531,16 @@
   async function getStatus(policyStatus = null){
     await readyPromise;
     const setting = await resolveExternalSetting({ policyStatus });
-    const connections = setting.enabled
-      ? await listExternalConnections()
-      : [];
+    const connections = flattenConnections((await listConnections()).filter(
+      (providerInfo) => providerInfo.providerId !== SELF_ADDON_ID
+    ));
     const providers = setting.enabled
       ? await listExternalProviders()
       : [];
     return Object.freeze({
       enabled: setting.enabled,
       localEnabled: setting.localEnabled,
+      configured: setting.configured,
       locked: setting.locked,
       entitled: setting.entitled,
       unavailableReason: setting.unavailableReason,
@@ -553,10 +553,16 @@
 
   async function setExternalEnabled(enabled, policyStatus = null){
     const nextEnabled = enabled === true;
+    const resolvedPolicyStatus = policyStatus || await NCVfsPolicyRuntime.getPolicyStatus({ refresh: true });
     const setting = await resolveExternalSetting({
-      policyStatus,
-      refresh: !policyStatus
+      policyStatus: resolvedPolicyStatus
     });
+    if (NCPolicyState.getDefaultsSourceState(resolvedPolicyStatus).value === 'backend'){
+      return Object.freeze({
+        backgroundRestartRequired: setting.enabled !== externalDiscoveryInitialized,
+        ...setting
+      });
+    }
     if (!setting.entitled){
       if (nextEnabled !== setting.enabled){
         throw new Error(NCVfsPolicyRuntime.errorMessage(setting.unavailableReason, setting.notice));

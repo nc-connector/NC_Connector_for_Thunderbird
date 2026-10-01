@@ -704,6 +704,19 @@ async function handleCalendarItemUpsert(item){
     if (meta.delegated == null && typeof persistedMeta.delegated === "boolean"){
       meta.delegated = persistedMeta.delegated;
     }
+    // Finish an already accepted handoff even when managed access was withdrawn.
+    if (meta.delegated === true && meta.delegateId){
+      if (persistedMeta.departurePending === true){
+        ensureCalendarDepartureRetry(meta.token);
+      }else if (persistedMeta.departurePrepared === true){
+        await activatePreparedCalendarDeparture({
+          token: meta.token,
+          generation: Math.max(0, Number(persistedMeta.departureRetryGeneration) || 0),
+          shouldLeaveSelf: persistedMeta.departureShouldLeaveSelf === true
+        });
+      }
+    }
+    await NCPolicyRuntime.assertManagedAccess();
     const startFromEvent = parseEventStartUnixSeconds(icalPayload);
     if (typeof startFromEvent === "number" && Number.isFinite(startFromEvent)){
       if (meta.startTimestamp !== startFromEvent){
@@ -878,19 +891,6 @@ async function handleCalendarItemUpsert(item){
         L("calendar delegation pending (delegate-ready missing/false)", {
           token: shortToken(meta.token),
           delegate: meta.delegateId || ""
-        });
-      }
-    }else if (meta.delegated === true && meta.delegateId){
-      if (persistedMeta.departurePending === true){
-        ensureCalendarDepartureRetry(meta.token);
-      }else if (persistedMeta.departurePrepared === true){
-        await activatePreparedCalendarDeparture({
-          token: meta.token,
-          generation: Math.max(
-            0,
-            Number(persistedMeta.departureRetryGeneration) || 0
-          ),
-          shouldLeaveSelf: persistedMeta.departureShouldLeaveSelf === true
         });
       }
     }

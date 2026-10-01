@@ -1,4 +1,37 @@
 {
+  "options_defaults_source_label": {
+    "message": "Alapértékek forrása"
+  },
+  "options_defaults_source_local": {
+    "message": "Helyi beállítások"
+  },
+  "options_defaults_source_backend": {
+    "message": "NC Connector Backend"
+  },
+  "options_defaults_source_help": {
+    "message": "Válassza ki a módosítható alapértékek forrását. A zárolt házirendek továbbra is érvényesek."
+  },
+  "options_defaults_source_managed_tooltip": {
+    "message": "Az alapértékek forrását a rendszergazda határozza meg."
+  },
+  "options_defaults_source_tabs_tooltip": {
+    "message": "Ezeket az alapértékeket a háttérrendszer adja meg. A mentett helyi beállítások megmaradnak."
+  },
+  "options_defaults_source_seat_required_tooltip": {
+    "message": "Az alapértékek forrásának kiválasztásához háttérrendszer és érvényes, aktív, hozzárendelt NC Connector felhasználói licenc szükséges."
+  },
+  "managed_defaults_source_invalid": {
+    "message": "Az alapértékek központilag beállított forrása érvénytelen. A helyi alapértékek érvényesek. Forduljon a rendszergazdához."
+  },
+  "enterprise_rollout_seat_required": {
+    "message": "Ez a telepítés központilag felügyelt, és hozzárendelt, érvényes NC Connector felhasználói licencet igényel."
+  },
+  "enterprise_rollout_backend_required": {
+    "message": "Ez a telepítés központilag felügyelt. Az NC Connector használatához előbb telepíteni és konfigurálni kell az NC Connector Backend alkalmazást a Nextcloudban. Kérjük, forduljon a rendszergazdához."
+  },
+  "enterprise_rollout_status_unavailable": {
+    "message": "Ez a telepítés központilag felügyelt. Az NC Connector használatára vonatkozó jogosultságot nem sikerült ellenőrizni. Kérjük, ellenőrizze a kapcsolatot, és próbálja újra."
+  },
   "extName": {
     "message": "NC Connector for Thunderbird"
   },

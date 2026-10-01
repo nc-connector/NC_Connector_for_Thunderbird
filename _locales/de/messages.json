@@ -1,4 +1,37 @@
 {
+  "options_defaults_source_label": {
+    "message": "Quelle der Standardwerte"
+  },
+  "options_defaults_source_local": {
+    "message": "Lokale Einstellungen"
+  },
+  "options_defaults_source_backend": {
+    "message": "NC Connector Backend"
+  },
+  "options_defaults_source_help": {
+    "message": "Wählen Sie die Quelle für editierbare Standardwerte. Gesperrte Richtlinien gelten weiterhin."
+  },
+  "options_defaults_source_managed_tooltip": {
+    "message": "Die Quelle der Standardwerte wird von Ihrem Administrator vorgegeben."
+  },
+  "options_defaults_source_tabs_tooltip": {
+    "message": "Das Backend liefert diese Standardwerte. Gespeicherte lokale Einstellungen bleiben erhalten."
+  },
+  "options_defaults_source_seat_required_tooltip": {
+    "message": "Die Auswahl der Standardwertequelle erfordert das Backend und einen gültigen, aktiv zugewiesenen NC Connector Seat."
+  },
+  "managed_defaults_source_invalid": {
+    "message": "Die zentral konfigurierte Quelle der Standardwerte ist ungültig. Lokale Standardwerte gelten. Bitte wenden Sie sich an Ihren Administrator."
+  },
+  "enterprise_rollout_seat_required": {
+    "message": "Diese Installation wird zentral verwaltet und erfordert einen zugewiesenen, gültigen NC Connector Seat."
+  },
+  "enterprise_rollout_backend_required": {
+    "message": "Diese Installation wird zentral verwaltet. Bevor Sie NC Connector verwenden können, muss das NC Connector Backend in Nextcloud installiert und eingerichtet werden. Bitte wenden Sie sich an Ihren Administrator."
+  },
+  "enterprise_rollout_status_unavailable": {
+    "message": "Diese Installation wird zentral verwaltet. Die Berechtigung zur Nutzung von NC Connector konnte nicht überprüft werden. Bitte prüfen Sie Ihre Verbindung und versuchen Sie es erneut."
+  },
   "extName": {
     "message": "NC Connector for Thunderbird"
   },

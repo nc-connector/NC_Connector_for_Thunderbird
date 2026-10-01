@@ -106,6 +106,7 @@ async function prepareBackgroundFileLinkRequest(session, request){
     session.tabId
   );
   const policyStatus = await NCPolicyRuntime.getPolicyStatus();
+  await NCPolicyRuntime.assertManagedAccess(policyStatus);
   const effectiveRequest = NCShareRequestRules.resolveUploadRequest(request, {
     policyStatus,
     attachmentMode: wizardContext.attachmentMode

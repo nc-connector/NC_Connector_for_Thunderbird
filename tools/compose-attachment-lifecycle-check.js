@@ -92,6 +92,7 @@ function createHarness(){
     SHARING_POPUP_WIDTH: 660,
     SHARING_POPUP_HEIGHT: 760,
     SHARING_KEYS: {},
+    NCPolicyRuntime: { assertManagedAccess: async () => null },
     L(){},
     bgShortId(value){
       return String(value || "");
@@ -285,6 +286,23 @@ async function checkPartialRemovalRollback(){
   assert(harness.calls.attachmentsAdded[0].attachment.file === collected[0].file, "Restore must reuse the original File");
   assert(harness.calls.attachmentsAdded[0].attachment.name === "one.txt", "Restore must preserve the attachment name");
   assert(harness.context.SHARING_LAUNCH_CONTEXTS.size === 0, "Failed handoff context must be discarded");
+}
+
+async function checkManagedRefusalRetainsAttachments(){
+  const harness = createHarness();
+  installCollectedFlow(harness, createCollectedAttachments(harness, ["one.txt", "two.txt"]));
+  harness.context.NCPolicyRuntime.assertManagedAccess = async () => {
+    throw new Error("managed_seat_required");
+  };
+  let rejected = false;
+  try{
+    await harness.context.startComposeAttachmentShareFlow(18, { trigger: "always" });
+  }catch(error){
+    rejected = error.message === "managed_seat_required";
+  }
+  assert(rejected, "Managed refusal must stop a new automated sharing action");
+  assert(harness.calls.attachmentsRemoved.length === 0, "Managed refusal must leave original attachments in the message");
+  assert(harness.calls.windowsCreate === 0, "Managed refusal must not launch an attachment wizard");
 }
 
 async function checkPopupFailureRollback(){
@@ -516,6 +534,7 @@ async function run(){
   checkPromptBatchSettlement();
   await checkWizardOwnership();
   await checkPartialRemovalRollback();
+  await checkManagedRefusalRetainsAttachments();
   await checkPopupFailureRollback();
   await checkLaunchContextAdoption();
   await checkCloseBeforeAdoptionRollback();

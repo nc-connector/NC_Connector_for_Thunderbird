@@ -1,4 +1,37 @@
 {
+  "options_defaults_source_label": {
+    "message": "既定値の取得元"
+  },
+  "options_defaults_source_local": {
+    "message": "ローカル設定"
+  },
+  "options_defaults_source_backend": {
+    "message": "NC Connector Backend"
+  },
+  "options_defaults_source_help": {
+    "message": "変更可能な既定値の取得元を選択します。ロックされたポリシーは引き続き適用されます。"
+  },
+  "options_defaults_source_managed_tooltip": {
+    "message": "既定値の取得元は管理者が指定しています。"
+  },
+  "options_defaults_source_tabs_tooltip": {
+    "message": "これらの既定値はバックエンドから取得します。保存済みのローカル設定は保持されます。"
+  },
+  "options_defaults_source_seat_required_tooltip": {
+    "message": "既定値の取得元を選択するには、バックエンドと、割り当て済みで有効かつアクティブな NC Connector シートが必要です。"
+  },
+  "managed_defaults_source_invalid": {
+    "message": "一元設定された既定値の取得元が無効です。ローカルの既定値が適用されます。管理者にお問い合わせください。"
+  },
+  "enterprise_rollout_seat_required": {
+    "message": "このインストールは一元管理されており、有効な NC Connector シートの割り当てが必要です。"
+  },
+  "enterprise_rollout_backend_required": {
+    "message": "このインストールは一元管理されています。NC Connector を使用するには、Nextcloud に NC Connector Backend をインストールして設定する必要があります。管理者にお問い合わせください。"
+  },
+  "enterprise_rollout_status_unavailable": {
+    "message": "このインストールは一元管理されています。NC Connector の利用権限を確認できませんでした。接続を確認して、もう一度お試しください。"
+  },
   "extName": {
     "message": "NC Connector for Thunderbird"
   },

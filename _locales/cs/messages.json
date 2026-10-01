@@ -1,4 +1,37 @@
 {
+  "options_defaults_source_label": {
+    "message": "Zdroj výchozích hodnot"
+  },
+  "options_defaults_source_local": {
+    "message": "Místní nastavení"
+  },
+  "options_defaults_source_backend": {
+    "message": "NC Connector Backend"
+  },
+  "options_defaults_source_help": {
+    "message": "Vyberte zdroj upravitelných výchozích hodnot. Uzamčené zásady zůstávají v platnosti."
+  },
+  "options_defaults_source_managed_tooltip": {
+    "message": "Zdroj výchozích hodnot určuje správce."
+  },
+  "options_defaults_source_tabs_tooltip": {
+    "message": "Tyto výchozí hodnoty poskytuje backend. Uložená místní nastavení zůstanou zachována."
+  },
+  "options_defaults_source_seat_required_tooltip": {
+    "message": "Výběr zdroje výchozích hodnot vyžaduje backend a platné, aktivní a přidělené licenční místo NC Connector."
+  },
+  "managed_defaults_source_invalid": {
+    "message": "Centrálně nastavený zdroj výchozích hodnot je neplatný. Použijí se místní výchozí hodnoty. Obraťte se na správce."
+  },
+  "enterprise_rollout_seat_required": {
+    "message": "Tato instalace je centrálně spravována a vyžaduje přidělené platné licenční místo NC Connector."
+  },
+  "enterprise_rollout_backend_required": {
+    "message": "Tato instalace je centrálně spravována. Před použitím NC Connector je nutné v Nextcloudu nainstalovat a nastavit NC Connector Backend. Obraťte se prosím na svého správce."
+  },
+  "enterprise_rollout_status_unavailable": {
+    "message": "Tato instalace je centrálně spravována. Oprávnění k používání NC Connector se nepodařilo ověřit. Zkontrolujte připojení a zkuste to znovu."
+  },
   "extName": {
     "message": "NC Connector for Thunderbird"
   },

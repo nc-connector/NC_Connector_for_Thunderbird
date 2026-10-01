@@ -1,4 +1,37 @@
 {
+  "options_defaults_source_label": {
+    "message": "Bron van standaardwaarden"
+  },
+  "options_defaults_source_local": {
+    "message": "Lokale instellingen"
+  },
+  "options_defaults_source_backend": {
+    "message": "NC Connector Backend"
+  },
+  "options_defaults_source_help": {
+    "message": "Kies de bron voor bewerkbare standaardwaarden. Vergrendeld beleid blijft van toepassing."
+  },
+  "options_defaults_source_managed_tooltip": {
+    "message": "Uw beheerder bepaalt de bron van standaardwaarden."
+  },
+  "options_defaults_source_tabs_tooltip": {
+    "message": "De backend levert deze standaardwaarden. Opgeslagen lokale instellingen blijven behouden."
+  },
+  "options_defaults_source_seat_required_tooltip": {
+    "message": "Het kiezen van de bron van standaardwaarden vereist de backend en een geldige, actieve, toegewezen NC Connector-seat."
+  },
+  "managed_defaults_source_invalid": {
+    "message": "De centraal ingestelde bron van standaardwaarden is ongeldig. Lokale standaardwaarden worden gebruikt. Neem contact op met uw beheerder."
+  },
+  "enterprise_rollout_seat_required": {
+    "message": "Deze installatie wordt centraal beheerd en vereist een toegewezen, geldige NC Connector-seat."
+  },
+  "enterprise_rollout_backend_required": {
+    "message": "Deze installatie wordt centraal beheerd. Voordat u NC Connector kunt gebruiken, moet NC Connector Backend in Nextcloud worden geïnstalleerd en geconfigureerd. Neem contact op met uw beheerder."
+  },
+  "enterprise_rollout_status_unavailable": {
+    "message": "Deze installatie wordt centraal beheerd. De toegang tot NC Connector kon niet worden geverifieerd. Controleer uw verbinding en probeer het opnieuw."
+  },
   "extName": {
     "message": "NC Connector for Thunderbird"
   },

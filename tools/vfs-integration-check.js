@@ -94,7 +94,8 @@ async function checkRouterLeavesToolkitMessagesUnclaimed(){
     NCPolicyRuntime: {
       async getPolicyStatus(){
         return policyStatus;
-      }
+      },
+      assertManagedAccess: async (status) => status
     },
     NCVfsProviderRuntime: {
       async getStatus(){
@@ -303,8 +304,9 @@ function createOptionsElement(){
         listener({ currentTarget: this, target: this, type });
       }
     },
-    querySelectorAll(){
-      return [];
+    querySelectorAll(selector){
+      const descendants = this.children.flatMap((child) => [child, ...child.querySelectorAll("*")]);
+      return selector === "button" ? descendants.filter((child) => child.type === "button") : descendants;
     },
     replaceChildren(...children){
       this.children = children;
@@ -411,8 +413,8 @@ async function checkOptionsVfsRefreshAndSaveRaces(){
             updateSettingsCalls++;
             lastUpdatePayload = message.payload;
             state = createOptionsVfsState({
-              providerEnabled: message.payload?.providerEnabled === true,
-              externalEnabled: message.payload?.externalProvidersEnabled === true
+              providerEnabled: message.payload?.providerEnabled ?? state.provider.enabled,
+              externalEnabled: message.payload?.externalProvidersEnabled ?? state.external.enabled
             });
             return {
               ok: true,
@@ -439,6 +441,8 @@ async function checkOptionsVfsRefreshAndSaveRaces(){
   context.globalThis = context;
   context.window = context;
   vm.createContext(context);
+  loadScript("modules/policyState.js", context, "\nglobalThis.NCPolicyState = NCPolicyState;");
+  loadScript("modules/sharingStorage.js", context, "\nglobalThis.NCSharingStorage = NCSharingStorage;");
   loadScript("ui/optionsVfs.js", context);
 
   await waitFor(
@@ -478,6 +482,7 @@ async function checkOptionsVfsRefreshAndSaveRaces(){
   assert(
     updateSettingsCalls === 1
       && lastUpdatePayload?.externalProvidersEnabled === true
+      && !Object.prototype.hasOwnProperty.call(lastUpdatePayload, "providerEnabled")
       && backgroundRestartRequired === true,
     "The first save attempt after a checkbox change must persist the selected VFS setting"
   );
@@ -563,6 +568,20 @@ async function checkOptionsVfsRefreshAndSaveRaces(){
     providerEnabledInput.checked === false,
     "An explicit provider refresh must preserve an unsaved VFS checkbox change"
   );
+
+  state = createOptionsVfsState({ externalEnabled: true });
+  state.provider.grants = [{ grantId: "grant", addonId: "consumer@test", addonName: "Consumer" }];
+  state.external.connections = [{ connectionId: "connection", providerId: "provider@test", storageId: "storage", providerName: "Provider", status: "connected" }];
+  await context.NCVfsOptions.refresh();
+  context.NCVfsOptions.setDefaultsSourceState({ value: "backend", available: true, editable: true }, null);
+  assert(providerEnabledInput.disabled && externalEnabledInput.disabled, "Backend defaults must lock only the VFS defaults switches");
+  assert(elements.get("vfsGrantList").querySelectorAll("button").every((button) => !button.disabled), "Selecting backend defaults must not prevent revoking a grant");
+  assert(elements.get("vfsConnectionList").querySelectorAll("button").every((button) => !button.disabled), "Selecting backend defaults must not prevent connection management");
+  state.external.enabled = false;
+  state.external.entitled = false;
+  await context.NCVfsOptions.refresh();
+  const disconnect = elements.get("vfsConnectionList").querySelectorAll("button").find((button) => button.dataset.action === "disconnect");
+  assert(disconnect && !disconnect.disabled, "An existing connection must remain removable after Seat loss");
 }
 
 async function checkProviderSenderBinding(){

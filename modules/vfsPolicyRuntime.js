@@ -69,7 +69,8 @@ const NCVfsPolicyRuntime = (() => {
       localEnabled,
       configured
     );
-    const unavailableReason = NCPolicyState.getSeatUnavailableReason(policyStatus);
+    const unavailableReason = NCPolicyState.getManagedAccessState(policyStatus).reason
+      || NCPolicyState.getSeatUnavailableReason(policyStatus);
     const entitled = unavailableReason === "";
     return Object.freeze({
       ...setting,

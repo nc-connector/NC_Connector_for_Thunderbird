@@ -1,4 +1,37 @@
 {
+  "options_defaults_source_label": {
+    "message": "默认值来源"
+  },
+  "options_defaults_source_local": {
+    "message": "本地设置"
+  },
+  "options_defaults_source_backend": {
+    "message": "NC Connector Backend"
+  },
+  "options_defaults_source_help": {
+    "message": "选择可编辑默认值的来源。锁定的策略仍然适用。"
+  },
+  "options_defaults_source_managed_tooltip": {
+    "message": "默认值来源由管理员指定。"
+  },
+  "options_defaults_source_tabs_tooltip": {
+    "message": "这些默认值由后端提供。已保存的本地设置将保留。"
+  },
+  "options_defaults_source_seat_required_tooltip": {
+    "message": "选择默认值来源需要后端以及已分配且有效、处于活跃状态的 NC Connector 席位。"
+  },
+  "managed_defaults_source_invalid": {
+    "message": "集中配置的默认值来源无效。将使用本地默认值。请联系管理员。"
+  },
+  "enterprise_rollout_seat_required": {
+    "message": "此安装由组织集中管理，需要分配有效的 NC Connector 席位。"
+  },
+  "enterprise_rollout_backend_required": {
+    "message": "此安装由组织集中管理。使用 NC Connector 前，必须在 Nextcloud 中安装并配置 NC Connector Backend。请联系您的管理员。"
+  },
+  "enterprise_rollout_status_unavailable": {
+    "message": "此安装由组织集中管理。无法验证您使用 NC Connector 的权限。请检查连接后重试。"
+  },
   "extName": {
     "message": "NC Connector for Thunderbird"
   },

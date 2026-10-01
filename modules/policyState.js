@@ -11,6 +11,9 @@ const NCPolicyState = (() => {
   const NOTICE_KEYS = Object.freeze({
     backend_required: "sharing_password_separate_backend_required_tooltip",
     backend_unavailable: "policy_warning_backend_unavailable",
+    enterprise_backend_required: "enterprise_rollout_backend_required",
+    enterprise_seat_required: "enterprise_rollout_seat_required",
+    enterprise_status_unavailable: "enterprise_rollout_status_unavailable",
     no_seat: "policy_warning_no_seat",
     license_expired: "policy_license_expired",
     license_inactive: "policy_license_inactive",
@@ -86,6 +89,10 @@ const NCPolicyState = (() => {
   }
 
   function getStatusNoticeCode(policyStatus, forFeature = false){
+    const managedAccess = getManagedAccessState(policyStatus);
+    if (!forFeature && !managedAccess.allowed && policyStatus?.reason !== "credentials_missing"){
+      return managedAccess.reason;
+    }
     if (policyStatus?.fetchSucceeded === false){
       return ["credentials_missing", "endpoint_missing", "permission_missing", "local_defaults"].includes(policyStatus.reason)
         ? ""
@@ -222,6 +229,49 @@ const NCPolicyState = (() => {
     return isObject(status?.policy?.[domain]) && isObject(status?.policyEditable?.[domain]);
   }
 
+  function normalizeDefaultsSource(value){
+    const source = typeof value === "string" ? value.trim().toLowerCase() : "";
+    return source === "local" || source === "backend" ? source : null;
+  }
+
+  function getDefaultsSourceState(status, localSource = status?.localDefaultsSource, managedPolicy = status?.managedSetup){
+    const available = status?.fetchSucceeded === true && hasSeatEntitlement(status);
+    const backendSource = normalizeDefaultsSource(status?.defaultsSource);
+    const userSource = normalizeDefaultsSource(localSource);
+    const hasManagedSource = managedPolicy?.hasDefaultsSource === true;
+    const managedInvalid = !backendSource && hasManagedSource && managedPolicy.defaultsSourceValid !== true;
+    if (!available){
+      return { value: "local", available: false, editable: false, managedInvalid };
+    }
+    if (backendSource){
+      const editable = status.defaultsSourceEditable === true;
+      return { value: editable && userSource ? userSource : backendSource, available, editable, managedInvalid: false };
+    }
+    return {
+      value: hasManagedSource ? normalizeDefaultsSource(managedPolicy.defaultsSource) || "local" : userSource || "local",
+      available,
+      editable: !hasManagedSource,
+      managedInvalid
+    };
+  }
+
+  function getManagedAccessState(status){
+    const managed = status?.managedSetup?.isEnterpriseRollout === true;
+    let reason = "";
+    if (managed){
+      if (status.endpointChecked === true && status.reason === "endpoint_missing"){
+        reason = "enterprise_backend_required";
+      }else if (status.fetchSucceeded !== true){
+        reason = "enterprise_status_unavailable";
+      }else if (!isEndpointAvailable(status)){
+        reason = "enterprise_backend_required";
+      }else if (!hasSeatEntitlement(status)){
+        reason = "enterprise_seat_required";
+      }
+    }
+    return { managed, allowed: !reason, reason, messageKey: NOTICE_KEYS[reason] || "" };
+  }
+
   function isDomainActive(status, domain){
     const domainState = status?.policyDomains?.[domain];
     if (isObject(domainState) && Object.prototype.hasOwnProperty.call(domainState, "active")){
@@ -273,19 +323,11 @@ const NCPolicyState = (() => {
   }
 
   /**
-   * Resolve a persisted default against the active backend policy.
-   * An editable policy value seeds the add-on until a valid local value exists;
-   * a locked policy value always wins.
-   * @param {object|null} status
-   * @param {string} domain
-   * @param {string} key
-   * @param {*} localValue
-   * @param {boolean} hasLocalValue
-   * @param {Function} coerce
-   * @returns {*}
+   * Resolve initial defaults without changing per-action editability
    */
   function resolveDefaultValue(status, domain, key, localValue, hasLocalValue, coerce){
-    if (!isDomainActive(status, domain) || (hasLocalValue && !isLocked(status, domain, key))){
+    const preferBackend = getDefaultsSourceState(status).value === "backend";
+    if (!isDomainActive(status, domain) || (hasLocalValue && !isLocked(status, domain, key) && !preferBackend)){
       return localValue;
     }
     const policyValue = readPolicyValue(status, domain, key);
@@ -308,6 +350,9 @@ const NCPolicyState = (() => {
     getStatusNoticeMessage,
     getSeatUnavailableMessage,
     buildDomainState,
+    normalizeDefaultsSource,
+    getDefaultsSourceState,
+    getManagedAccessState,
     isDomainAvailable,
     isDomainActive,
     isLocked,

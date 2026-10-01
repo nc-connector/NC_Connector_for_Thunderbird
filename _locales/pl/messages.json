@@ -1,4 +1,37 @@
 {
+  "options_defaults_source_label": {
+    "message": "Źródło wartości domyślnych"
+  },
+  "options_defaults_source_local": {
+    "message": "Ustawienia lokalne"
+  },
+  "options_defaults_source_backend": {
+    "message": "NC Connector Backend"
+  },
+  "options_defaults_source_help": {
+    "message": "Wybierz źródło edytowalnych wartości domyślnych. Zablokowane zasady nadal obowiązują."
+  },
+  "options_defaults_source_managed_tooltip": {
+    "message": "Źródło wartości domyślnych określa administrator."
+  },
+  "options_defaults_source_tabs_tooltip": {
+    "message": "Te wartości domyślne dostarcza backend. Zapisane ustawienia lokalne pozostają zachowane."
+  },
+  "options_defaults_source_seat_required_tooltip": {
+    "message": "Wybór źródła wartości domyślnych wymaga backendu oraz ważnej, aktywnej i przydzielonej licencji użytkownika NC Connector."
+  },
+  "managed_defaults_source_invalid": {
+    "message": "Centralnie skonfigurowane źródło wartości domyślnych jest nieprawidłowe. Obowiązują lokalne wartości domyślne. Skontaktuj się z administratorem."
+  },
+  "enterprise_rollout_seat_required": {
+    "message": "Ta instalacja jest zarządzana centralnie i wymaga przydzielonej, ważnej licencji użytkownika NC Connector."
+  },
+  "enterprise_rollout_backend_required": {
+    "message": "Ta instalacja jest zarządzana centralnie. Przed rozpoczęciem korzystania z NC Connector należy zainstalować i skonfigurować NC Connector Backend w Nextcloud. Skontaktuj się z administratorem."
+  },
+  "enterprise_rollout_status_unavailable": {
+    "message": "Ta instalacja jest zarządzana centralnie. Nie udało się zweryfikować uprawnień do korzystania z NC Connector. Sprawdź połączenie i spróbuj ponownie."
+  },
   "extName": {
     "message": "NC Connector for Thunderbird"
   },

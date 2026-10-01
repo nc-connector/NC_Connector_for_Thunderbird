@@ -178,10 +178,11 @@
       throw global.NCNextcloudVfsStorage.createVfsError('E:AUTH', 'Storage access is missing');
     }
     const { state } = await reconcileAccount();
+    const policyStatus = await NCVfsPolicyRuntime.getPolicyStatus();
+    await NCPolicyRuntime.assertManagedAccess(policyStatus);
     if (normalizedStorageId === state.selfStorageId){
       return state;
     }
-    const policyStatus = await NCVfsPolicyRuntime.getPolicyStatus();
     const setting = NCVfsPolicyRuntime.resolveProviderSetting(
       policyStatus,
       state.enabled,
@@ -371,9 +372,6 @@
       state.enabled,
       state.enabledConfigured
     );
-    if (!setting.enabled){
-      await removeConnections((entry) => entry.addonId !== SELF_ADDON_ID);
-    }
     const connections = await readConnections();
     const grants = connections
       .filter((entry) => entry.addonId !== SELF_ADDON_ID)
@@ -386,6 +384,7 @@
     return Object.freeze({
       enabled: setting.enabled,
       localEnabled: setting.localEnabled,
+      configured: setting.configured,
       locked: setting.locked,
       accountConfigured: !!account,
       accountLabel: account ? getConnectionLabel(account.identity) : '',
@@ -405,6 +404,9 @@
       current.enabled,
       current.enabledConfigured
     );
+    if (NCPolicyState.getDefaultsSourceState(resolvedPolicyStatus).value === 'backend'){
+      return getStatus(resolvedPolicyStatus);
+    }
     if (currentSetting.locked){
       if ((enabled === true) !== currentSetting.enabled){
         throw new Error(bgI18n('policy_admin_controlled_tooltip'));
@@ -504,6 +506,7 @@
   async function getDestinationStorageUsage(){
     await readyPromise;
     const { state } = await reconcileAccount();
+    await NCPolicyRuntime.assertManagedAccess(await NCVfsPolicyRuntime.getPolicyStatus());
     return storage.storageUsage({ expectedAccountKey: state.accountKey });
   }
 

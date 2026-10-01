@@ -1,4 +1,37 @@
 {
+  "options_defaults_source_label": {
+    "message": "Origem dos valores predefinidos"
+  },
+  "options_defaults_source_local": {
+    "message": "Definições locais"
+  },
+  "options_defaults_source_backend": {
+    "message": "NC Connector Backend"
+  },
+  "options_defaults_source_help": {
+    "message": "Escolha a origem dos valores predefinidos editáveis. As políticas bloqueadas continuam em vigor."
+  },
+  "options_defaults_source_managed_tooltip": {
+    "message": "O administrador define a origem dos valores predefinidos."
+  },
+  "options_defaults_source_tabs_tooltip": {
+    "message": "O backend fornece estes valores predefinidos. As definições locais guardadas são preservadas."
+  },
+  "options_defaults_source_seat_required_tooltip": {
+    "message": "Selecionar a origem dos valores predefinidos requer o backend e uma licença de utilizador do NC Connector válida, ativa e atribuída."
+  },
+  "managed_defaults_source_invalid": {
+    "message": "A origem dos valores predefinidos configurada centralmente é inválida. Aplicam-se os valores locais. Contacte o administrador."
+  },
+  "enterprise_rollout_seat_required": {
+    "message": "Esta instalação é gerida centralmente e requer uma licença de utilizador do NC Connector válida e atribuída."
+  },
+  "enterprise_rollout_backend_required": {
+    "message": "Esta instalação é gerida centralmente. Antes de utilizar o NC Connector, é necessário instalar e configurar o NC Connector Backend no Nextcloud. Contacte o administrador."
+  },
+  "enterprise_rollout_status_unavailable": {
+    "message": "Esta instalação é gerida centralmente. Não foi possível verificar o acesso ao NC Connector. Verifique a sua ligação e tente novamente."
+  },
   "extName": {
     "message": "NC Connector for Thunderbird"
   },
