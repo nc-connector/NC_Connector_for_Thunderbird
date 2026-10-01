@@ -841,7 +841,7 @@ async function verifyOptionsDefaultsSourceUi(policyState, policyUi){
   for (const [from, to] of [
     ["function getDefaultsSourceState(){", "async function refreshManagedSetupPolicy(){"],
     ["function hasValidStoredBindingValue(", "function applyInitialSpecialPolicyDefaults("],
-    ["async function save(){", "async function restartBackgroundForVfsDiscovery(){"],
+    ["async function save(", "async function restartBackgroundForVfsDiscovery(){"],
     ["function initTabs(){", "function initAbout(){"]
   ]){
     const start = source.indexOf(from);

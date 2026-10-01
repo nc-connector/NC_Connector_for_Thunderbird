@@ -1,4 +1,7 @@
 {
+  "managed_auth_mode_invalid": {
+    "message": "De centraal ingestelde aanmeldmethode is ongeldig. Aanmelden met Nextcloud is geselecteerd, maar wordt niet automatisch gestart. Neem contact op met uw beheerder."
+  },
   "options_defaults_source_label": {
     "message": "Bron van standaardwaarden"
   },

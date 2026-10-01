@@ -1,4 +1,7 @@
 {
+  "managed_auth_mode_invalid": {
+    "message": "一元設定されたログイン方法が無効です。Nextcloud でのログインが選択されますが、自動では開始されません。管理者にお問い合わせください。"
+  },
   "options_defaults_source_label": {
     "message": "既定値の取得元"
   },

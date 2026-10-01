@@ -118,6 +118,8 @@ In Thunderbird, open **Add-ons Manager → NC Connector for Thunderbird → Pref
 3. Run **Test connection**.
 4. Save the options.
 
+For centrally selected sign-in and first-use setup, see [Managed Nextcloud URL](#64-managed-nextcloud-url).
+
 Use an app password instead of the user's main password. Revoke the app password in Nextcloud when a device is lost or retired.
 
 Do not add `/index.php` to the configured base URL to work around broken public routing. Correct the Pretty URL configuration as described in [Nextcloud Pretty URLs](#11-nextcloud-pretty-urls).
@@ -358,7 +360,7 @@ Merge this block into the existing policy file.
 
 ### 6.4 Managed Nextcloud URL
 
-Thunderbird's `3rdparty.Extensions` policy can prefill and lock the public Nextcloud URL:
+Thunderbird's `3rdparty.Extensions` policy can prefill and lock the public Nextcloud URL and select the sign-in method:
 
 ```json
 {
@@ -367,7 +369,8 @@ Thunderbird's `3rdparty.Extensions` policy can prefill and lock the public Nextc
       "Extensions": {
         "{4a35421f-0906-439c-bff2-8eef39e2baee}": {
           "NextcloudUrl": "https://cloud.example.com",
-          "NextcloudUrlLocked": true
+          "NextcloudUrlLocked": true,
+          "AuthMode": "LoginFlow"
         }
       }
     }
@@ -384,8 +387,15 @@ Supported settings under the add-on ID:
 | `NextcloudUrl` | Nextcloud base URL | Prefills the connection URL | Use the saved local URL |
 | `NextcloudUrlLocked` | `true` or `false` | Locks the URL when `true`; its presence also activates managed installation requirements | URL remains editable |
 | `DefaultsSource` | `local` or `backend` | Selects and locks the default values source unless the backend overrides it | Use the saved user selection, otherwise local defaults |
+| `AuthMode` | `LoginFlow` or `Manual` | Selects and locks the sign-in method | Use the saved user selection, otherwise Manual |
 
 Existing aliases `nextcloudUrl`, `baseUrl`, `nextcloudUrlLocked`, and `baseUrlLocked` remain supported, including inside `adminSettings`. New deployments should use the names in the table. An invalid `DefaultsSource` selects local defaults and displays a configuration warning; it does not make the installation unmanaged.
+
+`AuthMode` accepts strings with surrounding whitespace and ignores letter case. An invalid value selects a locked **Login with Nextcloud**, displays a configuration warning, and never starts sign-in automatically. The user's previous local sign-in selection is retained and returns when `AuthMode` is removed.
+
+With a managed sign-in method and incomplete credentials, clicking Sharing or Talk opens the General settings tab for setup. Valid `AuthMode=LoginFlow` starts browser sign-in once when the effective URL matches the valid managed `NextcloudUrl` and Thunderbird has already granted access to that server. Otherwise, use **Login with Nextcloud**; if server access has not yet been granted, this click requests the one-time permission. `AuthMode=Manual` leaves username and app-password entry to the user. Opening Settings normally never starts sign-in automatically.
+
+After successful browser sign-in and connection verification, valid managed `LoginFlow` saves the credentials and closes the setup tab, including after an explicit login-button retry. Normal Settings stays open. A failed login or save leaves setup available for correction; there is no automatic retry loop. After setup, click Sharing or Talk again in the original message or appointment. The original action does not resume automatically. The backend and valid assigned Seat requirements above still apply.
 
 See [Default values source](#66-default-values-source) for backend precedence and user choices.
 
@@ -407,9 +417,10 @@ cannot be used or overwritten from that failed settings session. Check
 3. Restart Thunderbird.
 4. Check that the add-on is installed and enabled.
 5. Check that the managed URL is visible and locked when configured.
-6. Open a compose window and test a small FileLink share.
-7. Repeat with a file larger than 20 MiB and a folder containing many small files.
-8. Close an unsent test draft and confirm that its share folder is removed.
+6. With a new profile, click Sharing or Talk and complete sign-in. If configured, check that the sign-in method is locked. For managed LoginFlow, grant server access through the login button if needed and confirm that successful setup closes its settings tab.
+7. Click Sharing again in a compose window and test a small FileLink share.
+8. Repeat with a file larger than 20 MiB and a folder containing many small files.
+9. Close an unsent test draft and confirm that its share folder is removed.
 
 ### 6.6 Default values source
 
@@ -434,8 +445,9 @@ When the effective source is the backend, the **Sharing**, **Talk Link**, and **
 | An assigned, valid Seat is required | Check the affected user's Seat assignment and access in the backend. |
 | Access could not be verified | Check the connection, credentials, and backend endpoint, then retry the action. This message alone does not mean the Seat is invalid. |
 | Default values source is invalid | Set `DefaultsSource` to `local` or `backend`, then restart Thunderbird. |
+| Sign-in method is invalid | Set `AuthMode` to `LoginFlow` or `Manual`, then restart Thunderbird. |
 
-If the installation should no longer be managed, remove all supported NC Connector managed settings and restart Thunderbird. Removing only `DefaultsSource` is not sufficient if a managed URL or URL-lock setting remains.
+If the installation should no longer be managed, remove `NextcloudUrl`, `NextcloudUrlLocked`, `DefaultsSource`, and `AuthMode`, including any supported aliases or values inside `adminSettings`, then restart Thunderbird. Removing only one setting is not sufficient while another remains.
 
 ## 7. Operational checks
 

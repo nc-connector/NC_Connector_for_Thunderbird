@@ -1,4 +1,7 @@
 {
+  "managed_auth_mode_invalid": {
+    "message": "The centrally configured sign-in method is invalid. Login with Nextcloud is selected without starting automatically. Please contact your administrator."
+  },
   "options_defaults_source_label": {
     "message": "Default values source"
   },

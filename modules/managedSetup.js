@@ -18,6 +18,7 @@ const NCManagedSetup = (() => {
     "baseUrl",
     "baseUrlLocked",
     "DefaultsSource",
+    "AuthMode",
     "adminSettings"
   ];
 
@@ -30,6 +31,9 @@ const NCManagedSetup = (() => {
       hasDefaultsSource: false,
       defaultsSource: "local",
       defaultsSourceValid: true,
+      hasAuthMode: false,
+      authMode: "manual",
+      authModeValid: true,
       source: ""
     };
   }
@@ -120,6 +124,10 @@ const NCManagedSetup = (() => {
     const defaultsSource = typeof policyValues.DefaultsSource === "string"
       ? policyValues.DefaultsSource.trim().toLowerCase()
       : "";
+    const hasAuthMode = Object.prototype.hasOwnProperty.call(policyValues, "AuthMode");
+    const authMode = typeof policyValues.AuthMode === "string"
+      ? policyValues.AuthMode.trim().toLowerCase()
+      : "";
     return {
       hasNextcloudUrl: !!nextcloudUrl,
       nextcloudUrl,
@@ -128,6 +136,9 @@ const NCManagedSetup = (() => {
       hasDefaultsSource,
       defaultsSource: defaultsSource === "backend" ? "backend" : "local",
       defaultsSourceValid: !hasDefaultsSource || defaultsSource === "local" || defaultsSource === "backend",
+      hasAuthMode,
+      authMode: !hasAuthMode || authMode === "manual" ? "manual" : "loginFlow",
+      authModeValid: !hasAuthMode || authMode === "manual" || authMode === "loginflow",
       source: isEnterpriseRollout ? "storage.managed" : ""
     };
   }
@@ -141,10 +152,32 @@ const NCManagedSetup = (() => {
     return local;
   }
 
+  function resolveAuthMode(localMode, policy){
+    if (policy?.hasAuthMode){
+      return policy.authMode === "manual" && policy.authModeValid ? "manual" : "loginFlow";
+    }
+    return localMode || "manual";
+  }
+
+  function shouldStartManagedLoginFlow(options){
+    const managed = options?.managedSetup;
+    if (!managed?.hasAuthMode || !managed.authModeValid || managed.authMode !== "loginFlow" || !managed.hasNextcloudUrl){
+      return false;
+    }
+    const managedBaseUrl = normalizeNextcloudUrl(managed.nextcloudUrl);
+    const effectiveBaseUrl = normalizeNextcloudUrl(options.baseUrl);
+    if (!managedBaseUrl || managedBaseUrl !== effectiveBaseUrl){
+      return false;
+    }
+    return !String(options.user || "").trim() || !String(options.appPass || "").trim();
+  }
+
   return {
     emptyPolicy,
     normalizeNextcloudUrl,
     read,
-    resolveBaseUrl
+    resolveBaseUrl,
+    resolveAuthMode,
+    shouldStartManagedLoginFlow
   };
 })();

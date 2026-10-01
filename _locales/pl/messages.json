@@ -1,4 +1,7 @@
 {
+  "managed_auth_mode_invalid": {
+    "message": "Centralnie skonfigurowana metoda logowania jest nieprawidłowa. Wybrano logowanie przez Nextcloud, ale nie uruchamia się ono automatycznie. Skontaktuj się z administratorem."
+  },
   "options_defaults_source_label": {
     "message": "Źródło wartości domyślnych"
   },

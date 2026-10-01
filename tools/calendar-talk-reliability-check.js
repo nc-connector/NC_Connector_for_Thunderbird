@@ -1605,6 +1605,106 @@ function testExperimentShutdownLifecycle(){
   );
 }
 
+async function testConnectionRequiredSetupNavigation(){
+  function createNotice(source){
+    const requests = [];
+    const pendingResponses = [];
+    const errors = [];
+    const elements = Object.fromEntries([
+      "connectionRequiredMessage", "connectionRequiredStatus", "openSettingsBtn", "closeBtn"
+    ].map((id) => [id, {
+      textContent: "",
+      disabled: false,
+      listeners: {},
+      addEventListener(type, listener){
+        this.listeners[type] = listener;
+      }
+    }]));
+    let closeCount = 0;
+    const context = {
+      URLSearchParams,
+      window: {
+        location: { search: `?source=${source}` },
+        close(){ closeCount++; }
+      },
+      document: { getElementById: (id) => elements[id] },
+      NCLogContext: { safeConsoleError: (...args) => errors.push(args) },
+      NCTalkDomI18n: { translatePage(){} },
+      browser: {
+        i18n: { getMessage: (key) => key },
+        runtime: {
+          sendMessage(request){
+            requests.push(request);
+            return new Promise((resolve, reject) => pendingResponses.push({ resolve, reject }));
+          }
+        }
+      }
+    };
+    vm.createContext(context);
+    loadScript("ui/connectionRequired.js", context);
+    return { elements, errors, requests, pendingResponses, get closeCount(){ return closeCount; } };
+  }
+
+  for (const source of ["sharing", "talk"]){
+    const automatic = createNotice(source);
+    assert(
+      automatic.elements.connectionRequiredMessage.textContent === `connection_required_${source}_message`
+        && automatic.requests.length === 1
+        && automatic.requests[0].type === "connection:openOptions"
+        && automatic.requests[0].payload.managedOnly === true,
+      `${source}: loading the missing-account notice must request managed-only setup with its localized explanation`
+    );
+    await automatic.elements.openSettingsBtn.listeners.click();
+    assert(automatic.requests.length === 1, `${source}: a pending automatic handoff must block duplicate clicks`);
+    automatic.pendingResponses[0].resolve({ ok: true, opened: true });
+    await flushPromises();
+    await automatic.elements.openSettingsBtn.listeners.click();
+    assert(
+      automatic.closeCount === 1 && automatic.requests.length === 1 && automatic.elements.openSettingsBtn.disabled,
+      `${source}: successful setup navigation must close once and reject later duplicate clicks`
+    );
+
+    const manual = createNotice(source);
+    manual.pendingResponses[0].resolve({ ok: true, opened: false });
+    await flushPromises();
+    assert(
+      manual.closeCount === 0 && !manual.elements.openSettingsBtn.disabled
+        && manual.elements.connectionRequiredStatus.textContent === "",
+      `${source}: an unmanaged account must retain the existing notice and explicit setup button`
+    );
+    const explicitOpen = manual.elements.openSettingsBtn.listeners.click();
+    await manual.elements.openSettingsBtn.listeners.click();
+    assert(
+      manual.requests.length === 2 && manual.requests[1].payload.managedOnly === false,
+      `${source}: the explicit setup button must bypass managed-only routing without duplicate requests`
+    );
+    manual.pendingResponses[1].resolve({ ok: true, opened: true });
+    await explicitOpen;
+    assert(manual.closeCount === 1, `${source}: explicit setup must close after confirmed tab creation`);
+  }
+
+  for (const failure of ["response", "transport"]){
+    const notice = createNotice("talk");
+    if (failure === "transport"){
+      notice.pendingResponses[0].reject(new Error("runtime unavailable"));
+    }else{
+      notice.pendingResponses[0].resolve({ ok: false, error: "navigation unavailable" });
+    }
+    await flushPromises();
+    assert(
+      notice.closeCount === 0 && !notice.elements.openSettingsBtn.disabled
+        && notice.elements.connectionRequiredStatus.textContent === "sharing_vfs_navigation_failed"
+        && notice.errors.length === 1,
+      `${failure}: failed automatic setup must remain visible, localized, logged, and retryable`
+    );
+    const retry = notice.elements.openSettingsBtn.listeners.click();
+    assert(notice.elements.connectionRequiredStatus.textContent === "", "Retry must clear the preceding navigation error");
+    notice.pendingResponses[1].resolve({ ok: true });
+    await retry;
+    assert(notice.closeCount === 0, "A successful response without opened=true must not close the notice");
+  }
+}
+
 function testStaticLifecycleRules(){
   const stateSource = readText("modules/bgState.js");
   const composeSource = readText("modules/bgCompose.js");
@@ -1682,6 +1782,7 @@ async function run(){
   testPropertyRollbackProgress();
   await testPropertySnapshotPrecedesFieldMutation();
   testExperimentShutdownLifecycle();
+  await testConnectionRequiredSetupNavigation();
   testStaticLifecycleRules();
   console.log("[OK] calendar-talk-reliability-check passed");
 }

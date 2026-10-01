@@ -80,6 +80,10 @@ async function checkRouterLeavesToolkitMessagesUnclaimed(){
   let listener = null;
   let usageCalls = 0;
   let externalStatusCalls = 0;
+  let accountOptions = {};
+  let accountOptionsError = null;
+  let accountOptionsCalls = 0;
+  const loggedErrors = [];
   let policyStatus = {
     endpointAvailable: true,
     fetchSucceeded: true,
@@ -88,9 +92,18 @@ async function checkRouterLeavesToolkitMessagesUnclaimed(){
   const openedTabs = [];
   const focusedWindows = [];
   const context = {
-    console,
+    console: { ...console, error: (...args) => loggedErrors.push(args) },
     URL,
     L: () => {},
+    NCCore: {
+      async getOpts(){
+        accountOptionsCalls++;
+        if (accountOptionsError){
+          throw accountOptionsError;
+        }
+        return accountOptions;
+      }
+    },
     NCPolicyRuntime: {
       async getPolicyStatus(){
         return policyStatus;
@@ -224,18 +237,68 @@ async function checkRouterLeavesToolkitMessagesUnclaimed(){
       );
     }
   }
-  assert((await listener({ type: "connection:openOptions" }, {}))?.ok === true, "Connection setup options must open");
+  const connectionResponse = await listener({ type: "connection:openOptions" }, {});
+  assert(connectionResponse?.ok === true && connectionResponse.opened === true, "Connection setup options must report its opened tab");
   assert((await listener({ type: "vfs:openOptions" }, {}))?.ok === true, "VFS options must open");
   assert((await listener({ type: "vfs:findProviderAddons" }, {}))?.ok === true, "VFS provider search must open");
   assert(
     openedTabs.length === 3
       && openedTabs[0].windowId === 73
-      && openedTabs[0].url === "moz-extension://connector/options.html?tab=general"
+      && openedTabs[0].url === "moz-extension://connector/options.html?tab=general&authenticationRequired=1"
       && openedTabs[1].url === "moz-extension://connector/options.html?tab=vfs"
       && openedTabs[2].url === "https://addons.thunderbird.net/search/?q=VFS"
       && focusedWindows.length === 3
       && focusedWindows.every((entry) => entry.windowId === 73 && entry.options.focused === true),
     "Connection and VFS setup pages must open and focus in a normal Thunderbird window"
+  );
+
+  for (const options of [
+    {},
+    { managedSetup: { hasAuthMode: false, isEnterpriseRollout: true } },
+    { baseUrl: "https://cloud.example.test", user: "account", appPass: "secret", managedSetup: { hasAuthMode: true } }
+  ]){
+    accountOptions = options;
+    const response = await listener({ type: "connection:openOptions", payload: { managedOnly: true } }, {});
+    assert(
+      response?.ok === true && response.opened === false && openedTabs.length === 3,
+      "Automatic connection setup must leave unmanaged or already complete accounts in the existing notice"
+    );
+  }
+  for (const authMode of ["loginflow", "manual", "invalid"]){
+    for (const missingField of ["baseUrl", "user", "appPass"]){
+      accountOptions = {
+        baseUrl: "https://cloud.example.test",
+        user: "account",
+        appPass: "secret",
+        managedSetup: { hasAuthMode: true, authMode, authModeValid: authMode !== "invalid" },
+        [missingField]: ""
+      };
+      const openedBefore = openedTabs.length;
+      const response = await listener({ type: "connection:openOptions", payload: { managedOnly: true } }, {});
+      const openedTab = openedTabs.at(-1);
+      assert(
+        response?.ok === true && response.opened === true
+          && openedTabs.length === openedBefore + 1
+          && openedTab.windowId === 73
+          && openedTab.url === "moz-extension://connector/options.html?tab=general&authenticationRequired=1",
+        `${authMode}/${missingField}: any AuthMode policy must guide incomplete accounts to the normal settings tab without account data in its URL`
+      );
+    }
+  }
+  accountOptionsError = new Error("managed setup unavailable");
+  const openedBeforeFailure = openedTabs.length;
+  const failedResponse = await listener({ type: "connection:openOptions", payload: { managedOnly: true } }, {});
+  assert(
+    failedResponse?.ok === false && openedTabs.length === openedBeforeFailure && loggedErrors.length === 1,
+    "Failed managed account reads must report and log the failure without opening settings automatically"
+  );
+  const accountReadsBeforeExplicit = accountOptionsCalls;
+  const explicitResponse = await listener({ type: "connection:openOptions", payload: { managedOnly: false } }, {});
+  assert(
+    explicitResponse?.ok === true && explicitResponse.opened === true
+      && openedTabs.length === openedBeforeFailure + 1
+      && accountOptionsCalls === accountReadsBeforeExplicit,
+    "Explicit connection setup must open settings without requiring a successful managed account read"
   );
 }
 
@@ -1445,7 +1508,7 @@ function checkManifestAndReviewSurface(){
   const optionsVfsRuntime = readText("ui/optionsVfs.js");
   const optionsHtml = readText("options.html");
   const optionsRuntime = readText("options.js");
-  const optionsSaveStart = optionsRuntime.indexOf("async function save(){");
+  const optionsSaveStart = optionsRuntime.indexOf("async function save(");
   const credentialPersistIndex = optionsRuntime.indexOf(
     "await browser.storage.local.set(updates);",
     optionsSaveStart

@@ -1,4 +1,7 @@
 {
+  "managed_auth_mode_invalid": {
+    "message": "La méthode de connexion configurée de manière centralisée est invalide. La connexion avec Nextcloud est sélectionnée, mais ne démarre pas automatiquement. Contactez votre administrateur."
+  },
   "options_defaults_source_label": {
     "message": "Source des valeurs par défaut"
   },

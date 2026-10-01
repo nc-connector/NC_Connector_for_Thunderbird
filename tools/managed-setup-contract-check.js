@@ -22,12 +22,6 @@ function createManagedSetupHarness(
     URL,
     globalThis: null,
     window: null,
-    NCTalkTextUtils: {
-      normalizeBaseUrl: (value) => {
-        const normalized = String(value || "").trim().replace(/\/+$/, "");
-        return normalized.startsWith("https://") ? normalized : "";
-      }
-    },
     browser: {
       i18n: {
         getMessage: (key) => key === "options_status_load_failed"
@@ -50,6 +44,7 @@ function createManagedSetupHarness(
   context.globalThis = context;
   context.window = context;
   vm.createContext(context);
+  loadScript("modules/textUtils.js", context);
   loadScript("modules/managedSetup.js", context, ";globalThis.__NCManagedSetup = NCManagedSetup;");
   return {
     managedSetup: context.__NCManagedSetup,
@@ -92,7 +87,7 @@ async function checkManagedStorageStates(){
   );
   assert(validPolicy.isEnterpriseRollout, "An existing managed URL deployment must require a Seat");
 
-  for (const key of ["NextcloudUrl", "NextcloudUrlLocked", "nextcloudUrl", "nextcloudUrlLocked", "baseUrl", "baseUrlLocked", "DefaultsSource"]){
+  for (const key of ["NextcloudUrl", "NextcloudUrlLocked", "nextcloudUrl", "nextcloudUrlLocked", "baseUrl", "baseUrlLocked", "DefaultsSource", "AuthMode"]){
     for (const value of [false, "", null, "invalid"]){
       for (const values of [{ [key]: value }, { adminSettings: { [key]: value } }]){
         const harness = createManagedSetupHarness(async () => values);
@@ -115,6 +110,96 @@ async function checkManagedStorageStates(){
   const invalid = createManagedSetupHarness(async () => ({ DefaultsSource: true }));
   const invalidPolicy = await invalid.managedSetup.read();
   assert(invalidPolicy.isEnterpriseRollout && !invalidPolicy.defaultsSourceValid && invalidPolicy.defaultsSource === "local", "Invalid defaults sources remain managed and use the local fallback");
+}
+
+async function checkManagedAuthMode(){
+  const cases = [
+    ["LoginFlow", "loginFlow", true],
+    [" loginFLOW ", "loginFlow", true],
+    ["Manual", "manual", true],
+    [" MANUAL ", "manual", true],
+    ["", "loginFlow", false],
+    ["unsupported", "loginFlow", false],
+    [null, "loginFlow", false],
+    [undefined, "loginFlow", false],
+    [false, "loginFlow", false],
+    [1, "loginFlow", false],
+    [["Manual"], "loginFlow", false],
+    [{ value: "Manual" }, "loginFlow", false]
+  ];
+  for (const [value, expectedMode, expectedValid] of cases){
+    for (const values of [{ AuthMode: value }, { adminSettings: { AuthMode: value } }]){
+      const harness = createManagedSetupHarness(async (keys) => {
+        assert(keys.includes("AuthMode"), "Managed reads must request AuthMode");
+        return values;
+      });
+      const policy = await harness.managedSetup.read();
+      assert(policy.hasAuthMode && policy.isEnterpriseRollout, "Every present AuthMode activates managed setup");
+      assert(policy.authMode === expectedMode && policy.authModeValid === expectedValid, "Managed AuthMode must normalize valid strings and reject all other values");
+      assert(harness.managedSetup.resolveAuthMode("manual", policy) === expectedMode, "Managed AuthMode must override the local selection");
+    }
+  }
+  const precedence = createManagedSetupHarness(async () => ({
+    AuthMode: null,
+    adminSettings: { AuthMode: "Manual" }
+  }));
+  const precedencePolicy = await precedence.managedSetup.read();
+  assert(!precedencePolicy.authModeValid && precedencePolicy.authMode === "loginFlow", "A present top-level AuthMode must override the wrapped value even when invalid");
+
+  const unmanaged = createManagedSetupHarness(async () => ({}));
+  const emptyPolicy = await unmanaged.managedSetup.read();
+  assert(!emptyPolicy.hasAuthMode && emptyPolicy.authModeValid, "Absent AuthMode must remain unmanaged and valid");
+  for (const localMode of [undefined, "manual", "loginFlow"]){
+    assert(unmanaged.managedSetup.resolveAuthMode(localMode, emptyPolicy) === (localMode || "manual"), "Absent managed AuthMode must preserve Thunderbird's local or manual selection");
+  }
+
+  let values = { AuthMode: "LoginFlow" };
+  const managed = createManagedSetupHarness(async () => values);
+  const localStorage = Object.freeze({
+    baseUrl: "https://local.example.test/nextcloud",
+    user: "alice",
+    appPass: "saved-app-password",
+    authMode: "manual"
+  });
+  const coreHarness = createCoreHarness({ localStorage, managedSetup: managed.managedSetup });
+  const managedOptions = await coreHarness.core.getOpts();
+  assert(managedOptions.authMode === "loginFlow" && managedOptions.managedSetup.hasAuthMode, "Core options must expose the managed authentication overlay");
+  assert(managedOptions.user === localStorage.user && managedOptions.appPass === localStorage.appPass, "Managed authentication must not clear stored credentials");
+  values = {};
+  assert((await coreHarness.core.getOpts()).authMode === "manual", "Removing AuthMode must restore the unchanged local selection");
+  values = { AuthMode: "invalid" };
+  const invalidOptions = await coreHarness.core.getOpts();
+  assert(invalidOptions.authMode === "loginFlow" && !invalidOptions.managedSetup.authModeValid, "Core options must expose invalid AuthMode as Login Flow without treating it as valid");
+  assert(localStorage.authMode === "manual", "Reading managed authentication must not mutate the local preference");
+}
+
+async function checkManagedLoginFlowEligibility(){
+  const cases = [
+    [{}, {}, false],
+    [{ AuthMode: "LoginFlow" }, {}, false],
+    [{ NextcloudUrl: "https://managed.example.test/nc" }, {}, false],
+    [{ AuthMode: "Manual", NextcloudUrl: "https://managed.example.test/nc" }, {}, false],
+    [{ AuthMode: "invalid", NextcloudUrl: "https://managed.example.test/nc" }, {}, false],
+    [{ AuthMode: null, NextcloudUrl: "https://managed.example.test/nc" }, {}, false],
+    [{ AuthMode: "LoginFlow", NextcloudUrl: "http://managed.example.test/nc" }, {}, false],
+    [{ AuthMode: "LoginFlow", NextcloudUrl: "invalid" }, {}, false],
+    [{ AuthMode: "LoginFlow", NextcloudUrl: "https://managed.example.test/nc" }, { baseUrl: "https://other.example.test/nc" }, false],
+    [{ AuthMode: "LoginFlow", NextcloudUrl: "https://managed.example.test/nc" }, { baseUrl: "https://managed.example.test/other" }, false],
+    [{ AuthMode: "LoginFlow", NextcloudUrl: "https://managed.example.test/nc" }, { baseUrl: "" }, false],
+    [{ AuthMode: "LoginFlow", NextcloudUrl: "https://managed.example.test/nc" }, { user: "alice", appPass: "saved-app-password" }, false],
+    [{ AuthMode: "LoginFlow", NextcloudUrl: "https://managed.example.test/nc" }, { user: "alice" }, true],
+    [{ AuthMode: "LoginFlow", NextcloudUrl: "https://managed.example.test/nc" }, { appPass: "saved-app-password" }, true],
+    [{ AuthMode: "LoginFlow", NextcloudUrl: "https://managed.example.test/nc" }, { user: " ", appPass: " " }, true],
+    [{ AuthMode: " LoginFLOW ", NextcloudUrl: "https://MANAGED.example.test:443/nc/", NextcloudUrlLocked: false }, { baseUrl: " https://managed.example.test/nc/ " }, true]
+  ];
+  for (const [values, localOptions, expected] of cases){
+    const harness = createManagedSetupHarness(async () => values);
+    const managedSetup = await harness.managedSetup.read();
+    const options = { baseUrl: "https://managed.example.test/nc", user: "", appPass: "", ...localOptions, managedSetup };
+    assert(harness.managedSetup.shouldStartManagedLoginFlow(options) === expected, "Automatic Login Flow requires a valid managed method, matching valid managed URL, and incomplete credentials");
+  }
+  const unmanaged = createManagedSetupHarness(async () => ({}));
+  assert(!unmanaged.managedSetup.shouldStartManagedLoginFlow(), "Missing setup cannot start Login Flow automatically");
 }
 
 async function checkRejectedManagedStorage(){
@@ -267,7 +352,7 @@ async function checkCoreAndOptionsFailClosed(){
     "Login Flow must stay disabled while the managed-policy state is unavailable"
   );
   assert(
-    optionsSource.includes("if (!managedSetupPolicyReady){\n      showStatus(i18n(\"options_status_load_failed\"), true, true);"),
+    optionsSource.includes("if (!managedSetupPolicyReady){\n    showStatus(i18n(\"options_status_load_failed\"), true, true);"),
     "The Login Flow click path must fail closed if the managed-policy state is unavailable"
   );
   assert(
@@ -275,7 +360,7 @@ async function checkCoreAndOptionsFailClosed(){
     "A failed initial options load must refresh the disabled control state"
   );
   const loadStart = optionsSource.indexOf("async function load(){");
-  const loadEnd = optionsSource.indexOf("async function save()", loadStart);
+  const loadEnd = optionsSource.indexOf("async function save(", loadStart);
   const loadSource = optionsSource.slice(loadStart, loadEnd);
   const hydrateCredentials = loadSource.indexOf("if (stored.user) userInput.value = stored.user;");
   const readManagedPolicy = loadSource.indexOf("await refreshManagedSetupPolicy();");
@@ -289,6 +374,8 @@ async function checkCoreAndOptionsFailClosed(){
 
 async function run(){
   await checkManagedStorageStates();
+  await checkManagedAuthMode();
+  await checkManagedLoginFlowEligibility();
   await checkRejectedManagedStorage();
   await checkManagedVfsAndCalendarBoundaries();
   await checkCoreAndOptionsFailClosed();

@@ -1,4 +1,7 @@
 {
+  "managed_auth_mode_invalid": {
+    "message": "集中設定的登入方式無效。已選擇透過 Nextcloud 登入，但不會自動啟動。請聯絡管理員。"
+  },
   "options_defaults_source_label": {
     "message": "預設值來源"
   },

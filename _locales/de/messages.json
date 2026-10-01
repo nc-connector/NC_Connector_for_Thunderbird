@@ -1,4 +1,7 @@
 {
+  "managed_auth_mode_invalid": {
+    "message": "Die zentral konfigurierte Anmeldeart ist ungültig. Login mit Nextcloud ist ausgewählt, startet aber nicht automatisch. Bitte wenden Sie sich an Ihren Administrator."
+  },
   "options_defaults_source_label": {
     "message": "Quelle der Standardwerte"
   },

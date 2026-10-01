@@ -148,7 +148,7 @@ Key files you’ll touch most:
 - `modules/policyState.js` — shared helpers for normalized backend policy status objects
 - `modules/policyRuntime.js` — centralized backend seat/policy status fetch + normalization (`/apps/ncc_backend_4mc/api/v1/status`)
 - `modules/hostPermissions.js` — single host-permission gate used by core/talk/sharing runtime modules
-- `modules/managedSetup.js` — reads managed URL and defaults-source settings from Thunderbird Enterprise Policy (`storage.managed`)
+- `modules/managedSetup.js` — reads managed URL, defaults-source, and sign-in settings from Thunderbird Enterprise Policy (`storage.managed`)
 - `modules/shareTemplateContract.js` — shared share-template marker rules used by render + insert modules
 - `modules/nccore.js` — Nextcloud auth/login-flow helpers and shared DAV account data
 - `modules/talkAddressbook.js` — system-addressbook CardDAV fetch/cache/search/status helpers
@@ -311,9 +311,40 @@ Storage backend:
 
 The manual compose Sharing action and the calendar Talk action check the same
 effective account returned by `NCCore.getOpts()` before preparing a wizard.
-When URL, user, or app password is missing, `ui/connectionRequired.html` shows
-a compact, action-specific explanation and opens the General options tab through
-`connection:openOptions`; no Sharing or Talk wizard context is created.
+When URL, user, or app password is missing, a managed `AuthMode` opens General
+options for setup through `connection:openOptions`. Without that setting,
+`ui/connectionRequired.html` retains its action-specific notice and navigation
+button. Neither path creates a Sharing or Talk wizard context or a pending action;
+the user invokes the original action again after setup.
+
+`NCManagedSetup` tracks `AuthMode` presence and validity separately. Strings are
+trimmed and compared case-insensitively against `LoginFlow` and `Manual`. Any
+present value locks both authentication choices and activates managed-installation
+checks. Invalid input resolves to locked `loginFlow`, uses
+`managed_auth_mode_invalid`, and grants neither automatic login nor automatic
+save. Valid locks reuse `policy_admin_controlled_tooltip`. `NCCore.getOpts()`
+exposes the effective mode while the stored `authMode` remains the raw local
+choice. Options do not persist a managed overlay as a local preference; removing
+the override restores the saved choice, with `manual` as the existing default.
+
+The authentication-required options entry may start the existing Login Flow once
+when credentials are incomplete, managed `AuthMode=LoginFlow` is valid, the valid
+managed URL matches the normalized effective URL, and host permission already
+exists. An ordinary Settings opening, a local URL alone, a URL-lock-only policy,
+an effective URL mismatch, or complete credentials cannot trigger it. Automatic
+setup checks permission without requesting it: a new host grant needs user
+activation, so the existing login button remains the permission-request entry.
+Manual and invalid managed modes do not start browser login automatically.
+
+Successful Login Flow plus connection verification uses the existing credential
+save path and closes only an authentication-required setup tab under valid managed
+`LoginFlow`, including an explicit login-button start or retry. Ordinary Settings
+stays open. Login, verification, or persistence failure does not close setup or
+launch Share/Talk; cancellation does not re-arm an automatic retry. The setup
+marker, initial-load attempt, and in-flight UI state are transient and carry no pending
+Share/Talk operation across page teardown or background restart. This adds no
+Experiment API or manifest permission. The existing ordered MV2 scripts remain
+the loading dependency for a later MV3 migration.
 
 The General tab explains directly below the Nextcloud URL that credentials stay
 in the Thunderbird profile and are sent only to the configured server. The VFS
@@ -345,12 +376,14 @@ Managed setup:
 - `NextcloudUrl` — optional administrator-provided Nextcloud base URL via Enterprise Policy
 - `NextcloudUrlLocked` — locks the URL field and forces the managed URL
 - `DefaultsSource` — `local|backend`; present values lock selection unless explicit backend metadata overrides them
+- `AuthMode` — `LoginFlow|Manual`; present values lock authentication selection independently of backend defaults
 - aliases: `nextcloudUrl`, `nextcloudUrlLocked`, `baseUrl`, `baseUrlLocked`
 
 Core:
 - `baseUrl` — Nextcloud base URL
 - `user` — Nextcloud username
 - `appPass` — app password (or generated via Login Flow)
+- `authMode` — raw local `manual|loginFlow` choice; managed values apply only at runtime
 - `debugEnabled` — enable verbose logging
 - `defaultsSource` — explicit local `local|backend` selection; absence is preserved, with no install-time migration
 
@@ -1196,7 +1229,7 @@ Share cleanup groups:
 
 Common utility:
 - `debug:log` — structured log forwarding (debug-controlled)
-- `connection:openOptions` — opens the General options tab from the missing-account action notice
+- `connection:openOptions` — opens the authentication-required General options tab from a missing-account action or its notice
 - `policy:getStatus` — backend seat/policy status for options and wizards
 - `passwordPolicy:fetch` — returns active password policy endpoints + min length
 - `passwordPolicy:generate` — server-side password generation
@@ -1310,7 +1343,7 @@ Save, Test, and Login Flow for that run, while background routing refuses to
 fall back to a local URL. A successful managed-policy result already obtained in
 the same run is not overwritten by a later failure.
 
-Presence of any supported URL, URL-lock alias, or `DefaultsSource` key activates managed installation checks, including false or invalid values. The `adminSettings` wrapper alone and unrelated managed keys do not. `NCPolicyRuntime.assertManagedAccess()` uses the common `getManagedAccessState()` result for Share preparation/upload, Talk creation and updates, attachment automation, and VFS access. Missing backend, missing/invalid Seat, and failed verification have separate localized messages. Unmanaged actions do not gain an extra policy request from this guard. Missing credentials still lead to connection setup before operational checks.
+Presence of any supported URL, URL-lock alias, `DefaultsSource`, or `AuthMode` key activates managed installation checks, including false or invalid values. The `adminSettings` wrapper alone and unrelated managed keys do not. `NCPolicyRuntime.assertManagedAccess()` uses the common `getManagedAccessState()` result for Share preparation/upload, Talk creation and updates, attachment automation, and VFS access. Missing backend, missing/invalid Seat, and failed verification have separate localized messages. Community and Pro use the same valid assigned Seat rules. Unmanaged actions do not gain an extra policy request from this guard. Missing credentials still lead to connection setup before operational checks.
 
 Cleanup, grant revocation, disconnect, and already prepared Talk delegation departure remain possible when access closes. Ordinary message sending is not blocked solely because attachment automation loses managed access, and already inserted content is not retroactively removed. Signatures retain their existing confirmed-Seat requirement. These changes add no browser permissions, vendor patches, or Experiment APIs; the existing persistent MV2 background and Toolkit restart dependency remain.
 

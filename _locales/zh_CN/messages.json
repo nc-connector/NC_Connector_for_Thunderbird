@@ -1,4 +1,7 @@
 {
+  "managed_auth_mode_invalid": {
+    "message": "集中配置的登录方式无效。已选择通过 Nextcloud 登录，但不会自动启动。请联系管理员。"
+  },
   "options_defaults_source_label": {
     "message": "默认值来源"
   },

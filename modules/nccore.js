@@ -664,12 +664,15 @@ const NCCore = (() => {
     const baseUrl = typeof NCManagedSetup !== "undefined" && NCManagedSetup?.resolveBaseUrl
       ? NCManagedSetup.resolveBaseUrl(stored.baseUrl || "", managedSetup)
       : (stored.baseUrl || "");
+    const authMode = typeof NCManagedSetup !== "undefined" && NCManagedSetup?.resolveAuthMode
+      ? NCManagedSetup.resolveAuthMode(stored.authMode, managedSetup)
+      : (stored.authMode || "manual");
     return {
       baseUrl: normalizeBaseUrl(baseUrl),
       user: typeof stored.user === "string" ? stored.user.trim() : "",
       appPass: typeof stored.appPass === "string" ? stored.appPass : "",
       debugEnabled: !!stored.debugEnabled,
-      authMode: stored.authMode || "manual",
+      authMode,
       defaultsSource: stored.defaultsSource,
       managedSetup
     };

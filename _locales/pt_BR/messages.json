@@ -1,4 +1,7 @@
 {
+  "managed_auth_mode_invalid": {
+    "message": "O método de login configurado centralmente é inválido. O login com Nextcloud está selecionado, mas não é iniciado automaticamente. Entre em contato com seu administrador."
+  },
   "options_defaults_source_label": {
     "message": "Origem dos valores padrão"
   },

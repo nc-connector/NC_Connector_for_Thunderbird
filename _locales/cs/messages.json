@@ -1,4 +1,7 @@
 {
+  "managed_auth_mode_invalid": {
+    "message": "Centrálně nastavený způsob přihlášení je neplatný. Je vybráno přihlášení přes Nextcloud, ale nespustí se automaticky. Obraťte se na správce."
+  },
   "options_defaults_source_label": {
     "message": "Zdroj výchozích hodnot"
   },

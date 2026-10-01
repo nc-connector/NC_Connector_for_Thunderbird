@@ -1,4 +1,7 @@
 {
+  "managed_auth_mode_invalid": {
+    "message": "A központilag beállított bejelentkezési mód érvénytelen. A Nextcloud-bejelentkezés van kiválasztva, de nem indul el automatikusan. Forduljon a rendszergazdához."
+  },
   "options_defaults_source_label": {
     "message": "Alapértékek forrása"
   },

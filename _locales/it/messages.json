@@ -1,4 +1,7 @@
 {
+  "managed_auth_mode_invalid": {
+    "message": "Il metodo di accesso configurato centralmente non è valido. È selezionato l’accesso con Nextcloud, ma non viene avviato automaticamente. Contatta l’amministratore."
+  },
   "options_defaults_source_label": {
     "message": "Origine dei valori predefiniti"
   },

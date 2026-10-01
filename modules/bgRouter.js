@@ -199,10 +199,18 @@ browser.runtime.onMessage.addListener((msg, sender) => {
     }
     if (msg.type === "connection:openOptions"){
       try{
+        if (msg.payload?.managedOnly === true){
+          const options = await NCCore.getOpts();
+          if (!options?.managedSetup?.hasAuthMode
+            || (options.baseUrl && options.user && options.appPass)){
+            return { ok:true, opened:false };
+          }
+        }
         const optionsUrl = new URL(browser.runtime.getURL("options.html"));
         optionsUrl.searchParams.set("tab", "general");
+        optionsUrl.searchParams.set("authenticationRequired", "1");
         await openInNormalThunderbirdTab(optionsUrl.href);
-        return { ok:true };
+        return { ok:true, opened:true };
       }catch(error){
         return messageError("connection:openOptions", error);
       }

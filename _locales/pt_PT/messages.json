@@ -1,4 +1,7 @@
 {
+  "managed_auth_mode_invalid": {
+    "message": "O método de início de sessão configurado centralmente é inválido. O início de sessão com Nextcloud está selecionado, mas não é iniciado automaticamente. Contacte o administrador."
+  },
   "options_defaults_source_label": {
     "message": "Origem dos valores predefinidos"
   },

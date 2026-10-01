@@ -13,6 +13,8 @@
   const status = document.getElementById("connectionRequiredStatus");
   const openSettingsButton = document.getElementById("openSettingsBtn");
   const closeButton = document.getElementById("closeBtn");
+  let settingsOpening = false;
+  let settingsOpened = false;
 
   function translate(key){
     try{
@@ -35,27 +37,43 @@
       : "connection_required_sharing_message");
   }
 
-  openSettingsButton?.addEventListener("click", async () => {
-    openSettingsButton.disabled = true;
+  async function openSettings(managedOnly){
+    if (settingsOpening || settingsOpened){
+      return;
+    }
+    settingsOpening = true;
+    if (openSettingsButton){
+      openSettingsButton.disabled = true;
+    }
     if (status){
       status.textContent = "";
     }
     try{
       const response = await browser.runtime.sendMessage({
-        type: "connection:openOptions"
+        type: "connection:openOptions",
+        payload: { managedOnly }
       });
       if (!response?.ok){
         throw new Error(response?.error || "connection_options_open_failed");
       }
-      window.close();
+      if (response.opened === true){
+        settingsOpened = true;
+        window.close();
+      }
     }catch(error){
       globalThis.NCLogContext.safeConsoleError(LOG_PREFIX, "open settings failed", error);
       if (status){
         status.textContent = translate("sharing_vfs_navigation_failed");
       }
-      openSettingsButton.disabled = false;
+    }finally{
+      settingsOpening = false;
+      if (openSettingsButton){
+        openSettingsButton.disabled = settingsOpened;
+      }
     }
-  });
+  }
 
+  openSettingsButton?.addEventListener("click", () => openSettings(false));
   closeButton?.addEventListener("click", () => window.close());
+  void openSettings(true);
 })();

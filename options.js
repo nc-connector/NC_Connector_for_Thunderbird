@@ -17,6 +17,9 @@ const SHARE_POLICY_KEYS = NCSharingStorage.SHARE_POLICY_KEYS;
 const normalizeAttachmentThresholdMb = NCSharingStorage.normalizeAttachmentThresholdMb;
 const normalizeAttachmentLinkTarget = NCSharingStorage.normalizeAttachmentLinkTarget;
 const OPTIONS_LOG_PREFIX = "[NCUI][Options]";
+const authenticationRequired = new URL(window.location.href).searchParams.get("authenticationRequired") === "1";
+let optionsPageClosed = false;
+window.addEventListener("pagehide", () => { optionsPageClosed = true; });
 const SYSTEM_ADDRESSBOOK_ADMIN_URL = "https://github.com/nc-connector/NC_Connector_for_Thunderbird/blob/main/docs/ADMIN.md#43-talk-and-system-address-book";
 const ATTACHMENT_AUTOMATION_ADMIN_URL = "https://github.com/nc-connector/NC_Connector_for_Thunderbird/blob/main/docs/ADMIN.md#63-attachment-policy-example";
 const NC_CONNECTOR_HOMEPAGE_URL = "https://nc-connector.de";
@@ -36,6 +39,7 @@ const baseUrlInput = document.getElementById("baseUrl");
 const baseUrlManagedPolicyMarker = document.getElementById("baseUrlManagedPolicyMarker");
 const baseUrlManagedPolicyTooltip = document.getElementById("baseUrlManagedPolicyTooltip");
 const authBlock = document.getElementById("authBlock");
+const authModeManagedHint = document.getElementById("authModeManagedHint");
 const userInput = document.getElementById("user");
 const appPassInput = document.getElementById("appPass");
 const saveButton = document.getElementById("save");
@@ -1187,6 +1191,14 @@ async function load(){
   await refreshTalkSystemAddressbookState({ forceRefresh: true });
   setAuthMode(stored.authMode || "manual");
   updateAuthModeUI();
+  if (authenticationRequired && NCManagedSetup.shouldStartManagedLoginFlow({
+    baseUrl: getEffectiveBaseUrl(baseUrlInput.value),
+    user: userInput.value,
+    appPass: appPassInput.value,
+    managedSetup: managedSetupPolicy
+  })){
+    await startLoginFlow({ automatic: true });
+  }
 }
 
 /**
@@ -1361,9 +1373,11 @@ async function openLoginUrl(url){
 
 /**
  * Persist options to storage and request host permission if needed.
- * @returns {Promise<void>}
+ * @param {{guidedLogin?:boolean}} options
+ * @returns {Promise<boolean|undefined>}
  */
-async function save(){
+async function save({ guidedLogin = false } = {}){
+  if (guidedLogin && optionsPageClosed) return;
   if (!managedSetupPolicyReady){
     throw new Error(i18n("options_status_load_failed"));
   }
@@ -1373,18 +1387,21 @@ async function save(){
   }
   const user = userInput.value.trim();
   const appPass = appPassInput.value;
-  const permissionOk = await ensureOriginPermissionInteractive();
+  const permissionOk = await ensureOriginPermissionInteractive({ allowPrompt: !guidedLogin });
   if (!permissionOk){
     return;
   }
   await refreshBackendPolicyStatus({ baseUrl, user, appPass });
+  if (guidedLogin && optionsPageClosed) return;
   const updates = {
     baseUrl,
     user,
     appPass,
-    debugEnabled: document.getElementById("debugEnabled").checked,
-    authMode: getSelectedAuthMode()
+    debugEnabled: document.getElementById("debugEnabled").checked
   };
+  if (!managedSetupPolicy?.hasAuthMode){
+    updates.authMode = getSelectedAuthMode();
+  }
   // Only explicit local edits are persisted; displayed backend values stay overlays.
   dirtyLocalDefaultKeys.forEach((key) => {
     updates[key] = localDefaultDraft[key];
@@ -1400,6 +1417,7 @@ async function save(){
   }
   // Flush edits made under local defaults before the new source can lock them.
   await globalThis.NCVfsOptions?.save?.({ beforeSourceChange: true });
+  if (guidedLogin && optionsPageClosed) return;
   await browser.storage.local.set(updates);
   dirtyLocalDefaultKeys.clear();
   if (Object.prototype.hasOwnProperty.call(updates, "defaultsSource")){
@@ -1685,11 +1703,12 @@ authRadios.forEach((radio) => {
 
 function getSelectedAuthMode(){
   const checked = document.querySelector("input[name='authMode']:checked");
-  return checked ? checked.value : "manual";
+  return NCManagedSetup.resolveAuthMode(checked?.value, managedSetupPolicy);
 }
 
 function setAuthMode(mode){
-  const target = authRadios.find((radio) => radio.value === mode);
+  const effectiveMode = NCManagedSetup.resolveAuthMode(mode, managedSetupPolicy);
+  const target = authRadios.find((radio) => radio.value === effectiveMode);
   if (target){
     target.checked = true;
   } else if (authRadios.length){
@@ -1699,7 +1718,12 @@ function setAuthMode(mode){
 
 function updateAuthModeUI(){
   const mode = getSelectedAuthMode();
+  setAuthMode(mode);
   const manual = mode === "manual";
+  const managedAuthMode = managedSetupPolicy?.hasAuthMode === true;
+  const authModeHint = managedAuthMode
+    ? i18n(managedSetupPolicy.authModeValid ? "policy_admin_controlled_tooltip" : "managed_auth_mode_invalid")
+    : "";
   const managedSetupUnavailable = !managedSetupPolicyReady;
   const managedBaseUrlLocked = isManagedBaseUrlLocked();
   const hasBaseUrl = !!getEffectiveBaseUrl(baseUrlInput?.value || "");
@@ -1711,7 +1735,7 @@ function updateAuthModeUI(){
       ? (i18n("options_managed_nextcloud_url_tooltip") || getAdminControlledHint())
       : "";
     baseUrlInput.classList.toggle("needs-attention", !hasBaseUrl);
-    baseUrlInput.disabled = managedBaseUrlLocked;
+    baseUrlInput.disabled = managedBaseUrlLocked || loginFlowInProgress;
     baseUrlInput.title = managedHint;
     if (baseUrlManagedPolicyMarker){
       baseUrlManagedPolicyMarker.hidden = !managedBaseUrlLocked;
@@ -1727,8 +1751,14 @@ function updateAuthModeUI(){
     authBlock.classList.toggle("is-disabled", managedSetupUnavailable || !hasBaseUrl);
   }
   authRadios.forEach((radio) => {
-    radio.disabled = managedSetupUnavailable || !hasBaseUrl || loginFlowInProgress;
+    radio.disabled = managedAuthMode || managedSetupUnavailable || !hasBaseUrl || loginFlowInProgress;
+    radio.title = authModeHint;
+    radio.parentElement.title = authModeHint;
   });
+  if (authModeManagedHint){
+    authModeManagedHint.hidden = !managedAuthMode;
+    authModeManagedHint.textContent = authModeHint;
+  }
   if (userInput) userInput.disabled = managedSetupUnavailable || !hasBaseUrl || !manual || loginFlowInProgress;
   if (appPassInput) appPassInput.disabled = managedSetupUnavailable || !hasBaseUrl || !manual || loginFlowInProgress;
   if (loginFlowButton){
@@ -1944,58 +1974,98 @@ function updateAttachmentThresholdState(){
 }
 
 if (loginFlowButton){
-  loginFlowButton.addEventListener("click", async () => {
-    if (loginFlowButton.disabled || loginFlowInProgress) return;
-    if (!managedSetupPolicyReady){
-      showStatus(i18n("options_status_load_failed"), true, true);
-      updateAuthModeUI();
-      return;
-    }
-    const baseUrl = baseUrlInput.value.trim();
-    if (!baseUrl){
-      showStatus(i18n("options_loginflow_missing"), true);
-      return;
-    }
-    if (!(await ensureOriginPermissionInteractive())){
-      return;
-    }
-    loginFlowInProgress = true;
+  loginFlowButton.addEventListener("click", () => startLoginFlow());
+}
+
+async function startLoginFlow({ automatic = false } = {}){
+  if (optionsPageClosed || loginFlowButton?.disabled || loginFlowInProgress) return;
+  if (!managedSetupPolicyReady){
+    showStatus(i18n("options_status_load_failed"), true, true);
     updateAuthModeUI();
-    try{
-      showStatus(i18n("options_loginflow_starting"), false, true);
-      const startResponse = await browser.runtime.sendMessage({
-        type: "options:loginFlowStart",
-        payload: { baseUrl }
-      });
-      if (!startResponse?.ok){
-        showStatus(startResponse?.error || i18n("options_loginflow_failed"), true);
-        return;
+    return;
+  }
+  const baseUrl = NCManagedSetup.normalizeNextcloudUrl(getEffectiveBaseUrl(baseUrlInput.value));
+  if (!baseUrl){
+    showStatus(i18n("options_loginflow_missing"), true);
+    return;
+  }
+  loginFlowInProgress = true;
+  updateAuthModeUI();
+  try{
+    // Permission prompts require a click; automatic setup may only use an existing grant.
+    if (!(await ensureOriginPermissionInteractive({ allowPrompt: !automatic }))){
+      if (automatic && !optionsPageClosed){
+        showStatus(i18n("options_permission_required"), false, true);
       }
-      await openLoginUrl(startResponse.loginUrl);
-      showStatus(i18n("options_loginflow_browser"), false, true);
-      const response = await browser.runtime.sendMessage({
-        type: "options:loginFlowComplete",
-        payload: {
-          pollEndpoint: startResponse.pollEndpoint,
-          pollToken: startResponse.pollToken
-        }
-      });
-      if (response?.ok){
-        if (response.user) userInput.value = response.user;
-        if (response.appPass) appPassInput.value = response.appPass;
-        showStatus(i18n("options_loginflow_success"), false, false, true);
-        await runConnectionTest({ showMissing: false });
-      }else{
-        showStatus(response?.error || i18n("options_loginflow_failed"), true);
-      }
-    }catch(error){
-      globalThis.NCLogContext.safeConsoleError(OPTIONS_LOG_PREFIX, "login flow failed", error);
-      showStatus(error?.message || i18n("options_loginflow_failed"), true);
-    }finally{
-      loginFlowInProgress = false;
-      updateAuthModeUI();
+      return;
     }
-  });
+    if (optionsPageClosed) return;
+    showStatus(i18n("options_loginflow_starting"), false, true);
+    const startResponse = await browser.runtime.sendMessage({
+      type: "options:loginFlowStart",
+      payload: { baseUrl }
+    });
+    if (optionsPageClosed) return;
+    if (!startResponse?.ok){
+      showStatus(startResponse?.error || i18n("options_loginflow_failed"), true);
+      return;
+    }
+    if (!(await openLoginUrl(startResponse.loginUrl))){
+      showStatus(i18n("options_loginflow_failed"), true);
+      return;
+    }
+    if (optionsPageClosed) return;
+    showStatus(i18n("options_loginflow_browser"), false, true);
+    const response = await browser.runtime.sendMessage({
+      type: "options:loginFlowComplete",
+      payload: {
+        pollEndpoint: startResponse.pollEndpoint,
+        pollToken: startResponse.pollToken
+      }
+    });
+    if (optionsPageClosed) return;
+    if (!response?.ok || !response.user || !response.appPass){
+      showStatus(response?.error || i18n("options_loginflow_failed"), true);
+      return;
+    }
+    userInput.value = response.user;
+    appPassInput.value = response.appPass;
+    showStatus(i18n("options_loginflow_success"), false, false, true);
+    const verification = await runConnectionTest({ showMissing: false });
+    if (verification?.ok && !optionsPageClosed && authenticationRequired
+      && managedSetupPolicy?.hasAuthMode && managedSetupPolicy.authModeValid
+      && managedSetupPolicy.authMode === "loginFlow"){
+      await saveManagedLogin();
+    }
+  }catch(error){
+    globalThis.NCLogContext.safeConsoleError(OPTIONS_LOG_PREFIX, "login flow failed", error);
+    if (!optionsPageClosed){
+      showStatus(error?.message || i18n("options_loginflow_failed"), true);
+    }
+  }finally{
+    loginFlowInProgress = false;
+    if (!optionsPageClosed) updateAuthModeUI();
+  }
+}
+
+async function saveManagedLogin(){
+  try{
+    const restartRequired = await save({ guidedLogin: true });
+    if (typeof restartRequired !== "boolean" || optionsPageClosed) return;
+    if (restartRequired){
+      await restartBackgroundForVfsDiscovery();
+    }
+    // Close only this setup tab, never its containing Thunderbird window.
+    const tab = await browser.tabs.getCurrent();
+    if (!optionsPageClosed && Number.isInteger(tab?.id)){
+      await browser.tabs.remove(tab.id);
+    }
+  }catch(error){
+    globalThis.NCLogContext.safeConsoleError(OPTIONS_LOG_PREFIX, "save managed login failed", error);
+    if (!optionsPageClosed){
+      showStatus(error?.message || i18n("options_status_save_failed"), true);
+    }
+  }
 }
 
 /**
