@@ -411,6 +411,7 @@ function createStoreHarness(){
   return {
     context,
     storage,
+    timers,
     ready: vm.runInContext("PERSISTED_SHARE_CLEANUP_READY", context)
   };
 }
@@ -440,6 +441,97 @@ async function expectReject(operation, message){
     rejected = error?.message === "storage_write_rejected";
   }
   assert(rejected, message);
+}
+
+async function verifyPausedCleanupRecovery(){
+  for (const status of [401, 429]){
+    const { context, storage, timers, ready } = createStoreHarness();
+    await ready;
+    const groupId = `paused-cleanup-${status}`;
+    let requests = 0;
+    context.NCCore.getOpts = async () => ({
+      baseUrl: "https://cloud.example.test", user: "user", appPass: "saved-password"
+    });
+    context.NCCore.getCurrentUserId = async () => "user";
+    context.NCCore.buildDavAccountContext = () => ({
+      davRoot: "https://cloud.example.test/remote.php/dav/files/user", authHeader: "test-auth"
+    });
+    context.NCCore.isConnectionPausedError = (error) => [401, 429].includes(Number(error?.status));
+    context.NCCore.getVerifiedConnectionIdentity = async () => null;
+    context.NCNextcloudDav.buildFileUrl = (root, relative) => `${root}/${relative}`;
+    context.NCNextcloudDav.deleteTrackedRoot = async () => {
+      requests += 1;
+      const error = new Error(`HTTP ${status}`);
+      error.status = status;
+      throw error;
+    };
+    context.NCFileLinkShare.clearIndeterminate = async () => {};
+    await context.persistWizardShareCleanupGroup(cleanupEntry(groupId, "paused-root"));
+    await context.markPersistentShareCleanupPending(groupId, "test", { schedule: false });
+    const timerCount = timers.count();
+    await context.runPersistedShareCleanupAttempt(groupId, "test");
+    const paused = context.getPersistentShareCleanupGroup(groupId);
+    assert(requests === 1 && paused.connectionPaused === true && paused.attempt === 0,
+      "Connection refusal must pause cleanup without consuming retries");
+    assert(paused.state === "pending" && paused.resources.length === 1 && timers.count() === timerCount,
+      "Paused cleanup must retain ownership without retry timers");
+    assert(context.normalizePersistedShareCleanupGroup(groupId,
+      storage.disk.nccShareCleanupGroupsV1[groupId]).connectionPaused === true,
+      "The paused state must survive persisted cleanup hydration");
+    await context.resumePausedPersistentShareCleanup({ baseUrl: "https://cloud.example.test", userId: "another-user" });
+    await context.resumePausedPersistentShareCleanup({ baseUrl: "https://another.example.test", userId: "user" });
+    assert(timers.count() === timerCount && paused.connectionPaused === true,
+      "Another server or user must not resume cleanup");
+    await context.resumePausedPersistentShareCleanup({ baseUrl: "https://cloud.example.test", userId: "user" });
+    assert(timers.count() === timerCount + 1,
+      "A verified same-owner connection must schedule one cleanup attempt");
+    context.NCNextcloudDav.deleteTrackedRoot = async () => { requests += 1; };
+    timers.fireByDelay(2000);
+    await waitFor(() => context.getPersistentShareCleanupGroup(groupId) === null,
+      "Restored cleanup must finish and release persisted ownership");
+    assert(requests === 2, "Restored cleanup must issue exactly one fresh deletion");
+  }
+
+  for (const userId of ["user", "another-user"]){
+    const { context, timers, ready } = createStoreHarness();
+    await ready;
+    const groupId = `late-cleanup-${userId}`;
+    let requests = 0;
+    context.NCCore.getOpts = async () => ({
+      baseUrl: "https://cloud.example.test", user: "user", appPass: "saved-password"
+    });
+    context.NCCore.getCurrentUserId = async () => "user";
+    context.NCCore.buildDavAccountContext = () => ({
+      davRoot: "https://cloud.example.test/remote.php/dav/files/user", authHeader: "test-auth"
+    });
+    context.NCCore.isConnectionPausedError = (error) => Number(error?.status) === 401;
+    context.NCCore.getVerifiedConnectionIdentity = async () => ({
+      baseUrl: "https://cloud.example.test", userId
+    });
+    context.NCNextcloudDav.buildFileUrl = (root, relative) => `${root}/${relative}`;
+    context.NCNextcloudDav.deleteTrackedRoot = async () => {
+      requests += 1;
+      const error = new Error("HTTP 401 from the old request");
+      error.status = 401;
+      throw error;
+    };
+    context.NCFileLinkShare.clearIndeterminate = async () => {};
+    await context.persistWizardShareCleanupGroup(cleanupEntry(groupId, "late-root"));
+    await context.markPersistentShareCleanupPending(groupId, "test", { schedule: false });
+    const timerCount = timers.count();
+    await context.runPersistedShareCleanupAttempt(groupId, "test");
+    assert(requests === 1 && context.getPersistentShareCleanupGroup(groupId).attempt === 0,
+      "A stale request must not consume persistent cleanup attempts");
+    assert(timers.count() === timerCount + (userId === "user" ? 1 : 0),
+      "Only a newly verified matching owner may recover a late persisted refusal");
+    if (userId === "user"){
+      context.NCNextcloudDav.deleteTrackedRoot = async () => { requests += 1; };
+      timers.fireByDelay(2000);
+      await waitFor(() => context.getPersistentShareCleanupGroup(groupId) === null,
+        "A late same-owner restore must finish the existing persistent cleanup");
+      assert(requests === 2, "Late restore must issue one fresh deletion, not replay old credentials");
+    }
+  }
 }
 
 async function verifyStorageFirstCleanupMutations(){
@@ -1082,6 +1174,7 @@ async function run(){
   await verifyDelayedStageTimeoutRollback();
   await verifySuccessfulCommit();
   await verifyStorageFirstCleanupMutations();
+  await verifyPausedCleanupRecovery();
   await verifyCrashRetentionStates();
   console.log("[OK] sharing-finalize-lifecycle-check passed");
 }

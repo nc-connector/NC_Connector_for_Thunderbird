@@ -48,6 +48,16 @@ function createFakeTimers(){
     },
     clearTimeout(id){
       timers.delete(id);
+    },
+    runAll(){
+      const pending = Array.from(timers.values());
+      timers.clear();
+      for (const timer of pending){
+        timer.callback();
+      }
+    },
+    get size(){
+      return timers.size;
     }
   };
 }
@@ -75,7 +85,9 @@ function createComposeHarness(){
     storeAvailable: true,
     saveDeferred: null,
     captureRecipientsError: null,
-    attachmentRoutingBlocked: false
+    attachmentRoutingBlocked: false,
+    deleteError: null,
+    verifiedConnection: null
   };
   const calls = {
     composeWrites: [],
@@ -86,6 +98,8 @@ function createComposeHarness(){
     persistentRemove: [],
     persistentPending: [],
     persistentExhausted: [],
+    persistentPaused: [],
+    persistentResumed: [],
     captureRecipients: [],
     enrichIdentity: [],
     manualFallback: [],
@@ -187,6 +201,14 @@ function createComposeHarness(){
       60000
     ]),
     PERSISTED_SHARE_CLEANUP_READY: Promise.resolve(),
+    NCCore: {
+      isConnectionPausedError(error){
+        return [401, 429].includes(Number(error?.status)) || error?.ncAuthenticationPaused === true;
+      },
+      async getVerifiedConnectionIdentity(){
+        return control.verifiedConnection;
+      }
+    },
     NCShareTemplateContract: {
       RIGHTS_SEGMENT_START: "[[NCC_RIGHTS_START]]",
       RIGHTS_SEGMENT_END: "[[NCC_RIGHTS_END]]"
@@ -312,6 +334,27 @@ function createComposeHarness(){
       }
       return !!group;
     },
+    async pausePersistentShareCleanupGroup(groupId){
+      calls.persistentPaused.push(groupId);
+      const group = getPersistentGroup(groupId);
+      if (group){
+        group.connectionPaused = true;
+        group.state = "pending";
+      }
+      return !!group;
+    },
+    normalizePersistedCleanupBaseUrl(value){
+      return String(value || "").trim().replace(/\/+$/, "");
+    },
+    async resumePausedPersistentShareCleanup(connection, liveGroupIds){
+      calls.persistentResumed.push({ connection, liveGroupIds: Array.from(liveGroupIds) });
+      for (const group of persistedGroups.values()){
+        if (group.connectionPaused === true && group.resources.every((resource) =>
+          resource.baseUrl === connection.baseUrl && resource.userId === connection.userId)){
+          group.connectionPaused = false;
+        }
+      }
+    },
     async markPersistentShareCleanupTainted(groupId){
       const group = getPersistentGroup(groupId);
       if (group){
@@ -323,6 +366,9 @@ function createComposeHarness(){
     async removePersistentShareCleanupDescriptor(){},
     async deletePersistedShareCleanupDescriptor(){
       calls.remoteDeletes.push("persisted");
+      if (control.deleteError){
+        throw control.deleteError;
+      }
     },
     createPersistedShareCleanupDescriptor(entry){
       return entry?.cleanupDescriptor || {
@@ -605,7 +651,9 @@ function createComposeHarness(){
     context,
     control,
     calls,
+    timers,
     composeCleanup,
+    wizardCleanup,
     passwordDispatch,
     persistedGroups,
     composeDetails,
@@ -1155,6 +1203,78 @@ async function verifySendLaterManualPasswordDraft(){
   );
 }
 
+async function verifyPausedLiveCleanup(){
+  for (const status of [401, 429]){
+    const harness = createComposeHarness();
+    const groupId = `draft-paused-${status}-0001`;
+    const { state } = harness.setShare(81, groupId);
+    const wizardId = `wizard-paused-${status}-0001`;
+    harness.setPersistent(wizardId, { ownerKind: "wizard" });
+    const wizard = {
+      ...state.entries[0], cleanupId: wizardId, windowId: 901, retryTimerId: null
+    };
+    harness.wizardCleanup.set(901, wizard);
+    const error = new Error(`HTTP ${status}`);
+    error.status = status;
+    harness.control.deleteError = error;
+    await harness.context.deleteComposeShareCleanupNow(81, "test", state.cleanupId);
+    await harness.context.deleteSharingWizardRemoteCleanupNow(901, "test", wizard.cleanupId);
+    assert(harness.calls.remoteDeletes.length === 2 && harness.timers.size === 0,
+      "Authentication and rate-limit refusals must not schedule live cleanup retries");
+    assert(state.connectionPaused === true && wizard.connectionPaused === true
+      && state.entries.length === 1 && harness.calls.persistentPaused.length === 2,
+      "Paused live cleanup must retain both runtime and persisted ownership");
+    assert(harness.context.scheduleComposeShareCleanupRetry(81, state.cleanupId, "test") === false
+      && harness.context.scheduleSharingWizardRemoteCleanupRetry(901, wizard.cleanupId, "test") === false,
+      "A paused live cleanup must refuse another retry timer");
+    await harness.context.resumePausedShareCleanup({
+      baseUrl: "https://other.example.test", userId: "user"
+    });
+    await harness.context.resumePausedShareCleanup({
+      baseUrl: "https://cloud.example.test", userId: "another-user"
+    });
+    assert(harness.timers.size === 0, "Another account must not resume live cleanup");
+    harness.control.deleteError = null;
+    const connection = { baseUrl: "https://cloud.example.test", userId: "user" };
+    await Promise.all([
+      harness.context.resumePausedShareCleanup(connection),
+      harness.context.resumePausedShareCleanup(connection)
+    ]);
+    assert(harness.timers.size === 2,
+      "Repeated restore notifications must schedule one timer per live owner");
+    const resumed = harness.calls.persistentResumed.find((call) => call.liveGroupIds.length === 2);
+    assert(resumed?.liveGroupIds.includes(groupId) && resumed.liveGroupIds.includes(wizardId),
+      "Live owners must be excluded from duplicate persisted cleanup timers");
+    harness.timers.runAll();
+    await waitFor(() => !harness.composeCleanup.has(81) && !harness.wizardCleanup.has(901),
+      "Restored live cleanup must finish through the existing workers");
+    assert(harness.calls.remoteDeletes.length === 4 && harness.calls.persistentExhausted.length === 0,
+      "Restored live cleanup must run once without exhausting ownership");
+  }
+
+  for (const userId of ["user", "another-user"]){
+    const harness = createComposeHarness();
+    const groupId = `draft-late-${userId}-0001`;
+    const { state } = harness.setShare(82, groupId);
+    const error = new Error("HTTP 401 from the old request");
+    error.status = 401;
+    harness.control.deleteError = error;
+    harness.control.verifiedConnection = { baseUrl: "https://cloud.example.test", userId };
+    await harness.context.deleteComposeShareCleanupNow(82, "test", state.cleanupId);
+    assert(harness.calls.remoteDeletes.length === 1
+      && harness.timers.size === (userId === "user" ? 1 : 0),
+      "A late live refusal may recover only for a freshly verified matching owner");
+    if (userId === "user"){
+      harness.control.deleteError = null;
+      harness.timers.runAll();
+      await waitFor(() => !harness.composeCleanup.has(82),
+        "Late same-owner recovery must finish live cleanup");
+      assert(harness.calls.remoteDeletes.length === 2,
+        "Late live recovery must make only one fresh attempt");
+    }
+  }
+}
+
 async function run(){
   await verifySaveOrdering();
   await verifyTemplateLifecycle();
@@ -1165,6 +1285,7 @@ async function run(){
   await verifySavedBaselineRetention();
   await verifyTabCloseWaitsForSave();
   await verifySendLaterManualPasswordDraft();
+  await verifyPausedLiveCleanup();
   console.log("[OK] compose-send-lifecycle-check passed");
 }
 

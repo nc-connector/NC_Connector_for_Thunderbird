@@ -229,6 +229,16 @@ async function deleteSharingWizardRemoteCleanupNow(
       entry
     );
   }catch(error){
+    if (NCCore.isConnectionPausedError(error)){
+      entry.connectionPaused = true;
+      await pausePersistentShareCleanupGroup(entry.cleanupId);
+      L("sharing wizard cleanup paused for connection", { windowId });
+      const restored = await NCCore.getVerifiedConnectionIdentity();
+      if (restored){
+        await resumePausedShareCleanup(restored);
+      }
+      return false;
+    }
     console.error("[NCBG] sharing wizard cleanup delete failed", {
       windowId,
       reason: reason || "",
@@ -246,7 +256,7 @@ function scheduleSharingWizardRemoteCleanupRetry(
   attempt = 0
 ){
   const entry = SHARING_WIZARD_CLEANUP_BY_WINDOW.get(windowId);
-  if (!entry || entry.cleanupId !== cleanupId || entry.retryTimerId){
+  if (!entry || entry.cleanupId !== cleanupId || entry.retryTimerId || entry.connectionPaused === true){
     return false;
   }
   const retryIndex = Math.max(0, Number(attempt) || 0);
@@ -858,6 +868,16 @@ async function deleteComposeShareCleanupNow(
   }catch(error){
     state.deleting = false;
     state.deletePromise = null;
+    if (NCCore.isConnectionPausedError(error)){
+      state.connectionPaused = true;
+      await pausePersistentShareCleanupGroup(state.draftGroupId);
+      L("compose share cleanup paused for connection", { tabId });
+      const restored = await NCCore.getVerifiedConnectionIdentity();
+      if (restored){
+        await resumePausedShareCleanup(restored);
+      }
+      return false;
+    }
     console.error("[NCBG] compose share cleanup delete failed", {
       tabId,
       shares: Array.isArray(state.entries) ? state.entries.length : 0,
@@ -875,7 +895,7 @@ function scheduleComposeShareCleanupRetry(
   attempt = 0
 ){
   const entry = COMPOSE_SHARE_CLEANUP_BY_TAB.get(tabId);
-  if (!entry || entry.cleanupId !== cleanupId || entry.timerId){
+  if (!entry || entry.cleanupId !== cleanupId || entry.timerId || entry.connectionPaused === true){
     return false;
   }
   const retryIndex = Math.max(0, Number(attempt) || 0);
@@ -924,6 +944,50 @@ function scheduleComposeShareCleanupRetry(
     });
   }, SHARE_CLEANUP_RETRY_DELAYS_MS[retryIndex]);
   return true;
+}
+
+async function resumePausedShareCleanup(connection){
+  const baseUrl = normalizePersistedCleanupBaseUrl(connection?.baseUrl);
+  const userId = String(connection?.userId || "").trim();
+  if (!baseUrl || !userId){
+    return;
+  }
+  const liveGroupIds = new Set();
+  const wizardEntries = [];
+  const composeStates = [];
+  for (const [windowId, entry] of SHARING_WIZARD_CLEANUP_BY_WINDOW){
+    const descriptor = entry.cleanupDescriptor;
+    if (entry.connectionPaused !== true
+      || descriptor?.baseUrl !== baseUrl || descriptor?.userId !== userId){
+      continue;
+    }
+    liveGroupIds.add(entry.cleanupId);
+    wizardEntries.push([windowId, entry]);
+  }
+  for (const [tabId, state] of COMPOSE_SHARE_CLEANUP_BY_TAB){
+    if (state.connectionPaused !== true || !state.entries?.length
+      || !state.entries.every((entry) => entry.cleanupDescriptor?.baseUrl === baseUrl
+        && entry.cleanupDescriptor?.userId === userId)){
+      continue;
+    }
+    liveGroupIds.add(state.draftGroupId);
+    composeStates.push([tabId, state]);
+  }
+  await resumePausedPersistentShareCleanup(connection, liveGroupIds);
+  for (const [windowId, entry] of wizardEntries){
+    if (SHARING_WIZARD_CLEANUP_BY_WINDOW.get(windowId) !== entry || entry.connectionPaused !== true){
+      continue;
+    }
+    entry.connectionPaused = false;
+    scheduleSharingWizardRemoteCleanupRetry(windowId, entry.cleanupId, "connection_restored");
+  }
+  for (const [tabId, state] of composeStates){
+    if (COMPOSE_SHARE_CLEANUP_BY_TAB.get(tabId) !== state || state.connectionPaused !== true){
+      continue;
+    }
+    state.connectionPaused = false;
+    scheduleComposeShareCleanupRetry(tabId, state.cleanupId, "connection_restored");
+  }
 }
 
 function scheduleSavedComposeShareCleanupDetach(tabId, state){

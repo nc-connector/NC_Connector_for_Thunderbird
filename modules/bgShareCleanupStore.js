@@ -241,6 +241,7 @@ function normalizePersistedShareCleanupGroup(groupId, value){
       .filter((id) => Number.isInteger(id) && id > 0),
     resources,
     dispatches: [],
+    connectionPaused: value.connectionPaused === true,
     attempt: Math.max(0, Number(value.attempt) || 0),
     created: Math.max(0, Number(value.created) || Date.now()),
     updated: Math.max(0, Number(value.updated) || Date.now())
@@ -270,6 +271,7 @@ function persistedShareCleanupSnapshot(groups = PERSISTED_SHARE_CLEANUP_GROUPS){
       messageIds: group.messageIds.slice(),
       resources: group.resources.map((descriptor) => ({ ...descriptor })),
       dispatches: [],
+      connectionPaused: group.connectionPaused === true,
       attempt: group.attempt,
       created: group.created,
       updated: group.updated
@@ -687,7 +689,7 @@ async function deletePersistedShareCleanupDescriptor(descriptor){
 async function runPersistedShareCleanupAttempt(groupId, reason = ""){
   await PERSISTED_SHARE_CLEANUP_READY;
   const group = PERSISTED_SHARE_CLEANUP_GROUPS[groupId];
-  if (!group || group.state !== "pending"){
+  if (!group || group.state !== "pending" || group.connectionPaused === true){
     return true;
   }
   if (globalThis.navigator?.onLine === false){
@@ -708,6 +710,17 @@ async function runPersistedShareCleanupAttempt(groupId, reason = ""){
     });
     return true;
   }catch(error){
+    if (NCCore.isConnectionPausedError(error)){
+      await pausePersistentShareCleanupGroup(groupId);
+      L("persistent share cleanup paused for connection", {
+        groupId: bgShortId(groupId, 24)
+      });
+      const restored = await NCCore.getVerifiedConnectionIdentity();
+      if (restored){
+        await resumePausedPersistentShareCleanup(restored);
+      }
+      return false;
+    }
     const currentState = await queuePersistentShareCleanupMutation((groups) => {
       const current = groups[groupId];
       if (!current){
@@ -747,6 +760,7 @@ function schedulePersistedShareCleanupRetry(groupId, reason = ""){
   const group = PERSISTED_SHARE_CLEANUP_GROUPS[groupId];
   if (!group
     || group.state !== "pending"
+    || group.connectionPaused === true
     || PERSISTED_SHARE_CLEANUP_RETRY_TIMER_BY_GROUP.has(groupId)){
     return false;
   }
@@ -760,6 +774,54 @@ function schedulePersistedShareCleanupRetry(groupId, reason = ""){
   }, SHARE_CLEANUP_RETRY_DELAYS_MS[retryIndex]);
   PERSISTED_SHARE_CLEANUP_RETRY_TIMER_BY_GROUP.set(groupId, timerId);
   return true;
+}
+
+async function pausePersistentShareCleanupGroup(groupId){
+  await PERSISTED_SHARE_CLEANUP_READY;
+  const paused = await queuePersistentShareCleanupMutation((groups) => {
+    const group = groups[groupId];
+    if (!group || group.saved === true || ["saved", "send_pending"].includes(group.state)){
+      return { changed: false, value: false };
+    }
+    group.connectionPaused = true;
+    group.state = "pending";
+    group.updated = Date.now();
+    return { changed: true, value: true };
+  });
+  const timerId = PERSISTED_SHARE_CLEANUP_RETRY_TIMER_BY_GROUP.get(groupId);
+  if (timerId){
+    clearTimeout(timerId);
+    PERSISTED_SHARE_CLEANUP_RETRY_TIMER_BY_GROUP.delete(groupId);
+  }
+  return paused;
+}
+
+async function resumePausedPersistentShareCleanup(connection, liveGroupIds = new Set()){
+  await PERSISTED_SHARE_CLEANUP_READY;
+  const baseUrl = normalizePersistedCleanupBaseUrl(connection?.baseUrl);
+  const userId = String(connection?.userId || "").trim();
+  if (!baseUrl || !userId){
+    return;
+  }
+  const resumedIds = await queuePersistentShareCleanupMutation((groups) => {
+    const ids = [];
+    for (const group of Object.values(groups)){
+      if (group.connectionPaused !== true
+        || group.state !== "pending"
+        || !group.resources.every((resource) => resource.baseUrl === baseUrl && resource.userId === userId)){
+        continue;
+      }
+      group.connectionPaused = false;
+      group.updated = Date.now();
+      ids.push(group.groupId);
+    }
+    return { changed: ids.length > 0, value: ids };
+  });
+  for (const groupId of resumedIds){
+    if (!liveGroupIds.has(groupId)){
+      schedulePersistedShareCleanupRetry(groupId, "connection_restored");
+    }
+  }
 }
 
 async function markPersistentShareCleanupPending(groupId, reason = "", options = {}){

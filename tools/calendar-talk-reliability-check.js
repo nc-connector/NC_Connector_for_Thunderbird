@@ -86,7 +86,9 @@ function createDepartureHarness({
     ROOM_META: JSON.parse(JSON.stringify(initialRoomMeta)),
     ROOM_META_KEY: "nctalkRoomMeta",
     NCTalkCore: {
-      async leaveTalkRoom(){
+      async leaveTalkRoom({ connectionOpts }){
+        assert(connectionOpts?.baseUrl === "https://cloud.example.test",
+          "Departure must use the account snapshot checked by its retry runner");
         leaveAttempts += 1;
         if (deferLeave){
           await new Promise((resolve) => {
@@ -100,11 +102,14 @@ function createDepartureHarness({
     },
     NCCore: {
       async getOpts(){
-        return {};
+        return { baseUrl: "https://cloud.example.test" };
       },
       async getCurrentUserId(){
         return "owner-user";
-      }
+      },
+      async getVerifiedConnectionIdentity(){ return null; },
+      normalizeBaseUrl(value){ return String(value || "").replace(/\/+$/, ""); },
+      isConnectionPausedError(error){ return [401, 429].includes(Number(error?.status)) || error?.ncAuthenticationPaused === true; }
     },
     cancelActiveTalkRoomDelete(){},
     extractTalkMetadataFromIcal(){
@@ -157,7 +162,7 @@ function createDepartureHarness({
   loadScript(
     "modules/bgCalendarDeparture.js",
     context,
-    "\nglobalThis.NCCalendarDepartureTest = { runCalendarDepartureRetry, resumeCalendarDepartureRetries, setRoomMeta, setRoomMetaIf, setEventTokenEntry, removeEventTokenEntryIfToken, hasTrustedEventTokenReferenceExcept };"
+    "\nglobalThis.NCCalendarDepartureTest = { runCalendarDepartureRetry, resumeCalendarDepartureRetries, resumePausedCalendarDeparture, setRoomMeta, setRoomMetaIf, setEventTokenEntry, removeEventTokenEntryIfToken, hasTrustedEventTokenReferenceExcept };"
   );
   return {
     context,
@@ -560,6 +565,8 @@ async function testPersistentCalendarDepartureRetries(){
       departureRetryAttempts: 0,
       departureNextAttemptAt: 0,
       departureRetryExhausted: false,
+      departureBaseUrl: "https://cloud.example.test",
+      departureUserId: "owner-user",
       departureCompleted: false,
       departureCalendarId: "calendar-a",
       departureItemId: "item-a"
@@ -595,6 +602,9 @@ async function testPersistentCalendarDepartureRetries(){
       && preparedConfirmed.context.ROOM_META["prepared-token"].departureCompleted === true,
     "A recovered prepared departure must persist completion"
   );
+  assert(preparedConfirmed.context.ROOM_META["prepared-token"].departureBaseUrl === "https://cloud.example.test"
+    && preparedConfirmed.context.ROOM_META["prepared-token"].departureUserId === "owner-user",
+    "Activating a prepared departure must preserve its already captured owner");
 
   const preparedUnconfirmed = createDepartureHarness({
     initialRoomMeta: preparedRecord,
@@ -740,6 +750,94 @@ async function testPersistentCalendarDepartureRetries(){
   );
   assert(bounded.scheduler.size === 0, "An exhausted departure retry must not schedule another timer");
 
+  for (const status of [401, 429]){
+    const paused = createDepartureHarness({ initialRoomMeta: initialRecord });
+    let leaveAttempts = 0;
+    paused.context.NCTalkCore.leaveTalkRoom = async () => {
+      leaveAttempts += 1;
+      const error = new Error(`HTTP ${status}`);
+      error.status = status;
+      throw error;
+    };
+    await paused.context.NCCalendarDepartureTest.runCalendarDepartureRetry("room-token", 1);
+    assert(leaveAttempts === 1 && paused.scheduler.size === 0,
+      "Connection refusal must pause departure without network retries");
+    assert(paused.context.ROOM_META["room-token"].departurePending === true
+      && paused.context.ROOM_META["room-token"].departureConnectionPaused === true
+      && paused.context.ROOM_META["room-token"].departureRetryAttempts === 0,
+      "Paused departure must retain generation and pending ownership without consuming attempts");
+    await paused.context.NCCalendarDepartureTest.resumePausedCalendarDeparture({
+      baseUrl: "https://cloud.example.test", userId: "another-user"
+    });
+    assert(paused.scheduler.size === 0, "Another canonical user must not resume departure");
+    await paused.context.NCCalendarDepartureTest.resumePausedCalendarDeparture({
+      baseUrl: "https://cloud.example.test", userId: "owner-user"
+    });
+    assert(paused.scheduler.size === 1, "The verified owner must resume departure");
+    paused.context.NCTalkCore.leaveTalkRoom = async () => { leaveAttempts += 1; };
+    paused.scheduler.runAll();
+    await new Promise((resolve) => setImmediate(resolve));
+    await flushPromises();
+    assert(paused.context.ROOM_META["room-token"].departureCompleted === true && leaveAttempts === 2,
+      "Resumed departure must finish exactly once");
+  }
+
+  for (const userId of ["owner-user", "another-user"]){
+    const lateRefusal = createDepartureHarness({ initialRoomMeta: initialRecord });
+    lateRefusal.context.NCCore.getVerifiedConnectionIdentity = async () => ({
+      baseUrl: "https://cloud.example.test", userId
+    });
+    let requests = 0;
+    lateRefusal.context.NCTalkCore.leaveTalkRoom = async () => {
+      requests += 1;
+      const error = new Error("HTTP 401 from the old request");
+      error.status = 401;
+      throw error;
+    };
+    await lateRefusal.context.NCCalendarDepartureTest.runCalendarDepartureRetry("room-token", 1);
+    assert(requests === 1
+      && lateRefusal.context.ROOM_META["room-token"].departureRetryAttempts === 0,
+      "A late authentication refusal must neither repeat nor consume a departure attempt");
+    assert(lateRefusal.scheduler.size === (userId === "owner-user" ? 1 : 0),
+      "Late departure recovery must require the freshly verified original owner");
+    if (userId === "owner-user"){
+      lateRefusal.context.NCTalkCore.leaveTalkRoom = async () => { requests += 1; };
+      lateRefusal.scheduler.runAll();
+      await new Promise((resolve) => setImmediate(resolve));
+      await flushPromises();
+      assert(requests === 2 && lateRefusal.context.ROOM_META["room-token"].departureCompleted === true,
+        "A verified fresh connection must finish pending departure exactly once");
+    }
+  }
+
+  const coldDeparture = createDepartureHarness({ initialRoomMeta: {
+    "room-token": {
+      ...initialRecord["room-token"],
+      departureBaseUrl: "https://cloud.example.test",
+      departureUserId: "owner-user"
+    }
+  } });
+  coldDeparture.context.NCCore.getCurrentUserId = async () => {
+    const error = new Error("HTTP 401 during the cold canonical-user lookup");
+    error.status = 401;
+    throw error;
+  };
+  await coldDeparture.context.NCCalendarDepartureTest.runCalendarDepartureRetry("room-token", 1);
+  assert(coldDeparture.leaveAttempts === 0 && coldDeparture.scheduler.size === 0
+    && coldDeparture.context.ROOM_META["room-token"].departureUserId === "owner-user"
+    && coldDeparture.context.ROOM_META["room-token"].departureConnectionPaused === true,
+    "A cold UID refusal must preserve the departure owner without sending a leave request");
+  await coldDeparture.context.NCCalendarDepartureTest.resumePausedCalendarDeparture({
+    baseUrl: "https://cloud.example.test", userId: "owner-user"
+  });
+  coldDeparture.context.NCCore.getCurrentUserId = async () => "owner-user";
+  coldDeparture.scheduler.runAll();
+  await new Promise((resolve) => setImmediate(resolve));
+  await flushPromises();
+  assert(coldDeparture.leaveAttempts === 1
+    && coldDeparture.context.ROOM_META["room-token"].departureCompleted === true,
+    "A verified original owner must resume a cold paused departure once");
+
   const generationRace = createDepartureHarness({
     initialRoomMeta: initialRecord,
     deferLeave: true
@@ -770,6 +868,33 @@ async function testPersistentCalendarDepartureRetries(){
       && generationRace.context.ROOM_META["room-token"].departurePending === true,
     "A completed stale departure attempt must not clear a newer persisted generation"
   );
+
+  const lateGeneration = createDepartureHarness({ initialRoomMeta: initialRecord });
+  let rejectOldLeave;
+  lateGeneration.context.NCTalkCore.leaveTalkRoom = () => new Promise((resolve, reject) => {
+    rejectOldLeave = reject;
+  });
+  const oldLeave = lateGeneration.context.NCCalendarDepartureTest.runCalendarDepartureRetry("room-token", 1);
+  await flushPromises();
+  await lateGeneration.context.NCCalendarDepartureTest.setRoomMeta("room-token", {
+    delegateId: "new-delegate",
+    departurePending: true,
+    departureRetryGeneration: 2,
+    departureRetryAttempts: 0,
+    departureNextAttemptAt: 0,
+    departureRetryExhausted: false,
+    departureConnectionPaused: false,
+    departureCompleted: false
+  });
+  await lateGeneration.context.NCCalendarDepartureTest.resumeCalendarDepartureRetries();
+  const oldError = new Error("HTTP 401 from an old generation");
+  oldError.status = 401;
+  rejectOldLeave(oldError);
+  await oldLeave;
+  assert(lateGeneration.scheduler.size === 1
+    && lateGeneration.context.ROOM_META["room-token"].departureRetryGeneration === 2
+    && lateGeneration.context.ROOM_META["room-token"].departureConnectionPaused === false,
+    "An old authentication failure must not cancel or pause a newer departure generation");
 }
 
 function createCalendarRemovalHarness(withOtherReference, { armFailures = 0 } = {}){
@@ -917,6 +1042,9 @@ async function testAddressbookFailureStopsClassification(){
   let addressbookCalls = 0;
   const context = {
     L(){},
+    NCCore: {
+      isConnectionPausedError(error){ return [401, 429].includes(Number(error?.status)) || error?.ncAuthenticationPaused === true; }
+    },
     console: { error(){} },
     shortToken: (token) => token,
     isRetryableTalkCalendarError(){
@@ -983,6 +1111,31 @@ globalThis.NCInviteeClassificationTest = { addInviteesToTalkRoom };`,
   assert(additions.length === 1, "The later successful attempt must add one participant");
   assert(additions[0].source === "users", "The internal attendee must be added as a user");
   assert(additions[0].actorId === "internal-user", "The internal attendee must use the canonical contact UID");
+
+  for (const status of [401, 429]){
+    const refusal = new Error(`HTTP ${status}`);
+    refusal.status = status;
+    context.NCTalkCore.getSystemAddressbookContacts = async () => { throw refusal; };
+    let received = null;
+    try{
+      await context.NCInviteeClassificationTest.addInviteesToTalkRoom({ token: "room-token", ical: "VEVENT" });
+    }catch(error){
+      received = error;
+    }
+    assert(received === refusal && received.ncCalendarRetryable !== true,
+      "Address-book authentication/rate refusal must not become a transient calendar retry");
+    let requests = 0;
+    context.extractIcalAttendees = async () => ["first@example.test", "second@example.test"];
+    context.NCTalkCore.getSystemAddressbookContacts = async () => [];
+    context.NCTalkCore.addTalkParticipant = async () => { requests += 1; throw refusal; };
+    try{
+      await context.NCInviteeClassificationTest.addInviteesToTalkRoom({ token: "room-token", ical: "VEVENT" });
+    }catch(error){
+      received = error;
+    }
+    assert(received === refusal && requests === 1,
+      "Participant iteration must stop at the first authentication/rate refusal");
+  }
 }
 
 function makeOcsResponse(status, statusName, data){
@@ -1230,6 +1383,7 @@ function createAddressbookHarness(){
   const account = { baseUrl: "https://cloud.example.test", user: "login", appPass: "test-password", userId: "owner" };
   const logs = [];
   const requests = [];
+  const permissions = [];
   const context = {
     ICAL: require(path.resolve(__dirname, "../vendor/ical.js")),
     Date: { now: () => now },
@@ -1238,9 +1392,13 @@ function createAddressbookHarness(){
     L: (...args) => logs.push(args),
     logTalkCoreError: (...args) => logs.push(args),
     getOpts: async () => ({ ...account }),
-    ensureHostPermission: async () => {},
+    ensureHostPermission: async (url) => { permissions.push(url); },
     localizedError: (key, substitutions = []) => new Error([key, ...substitutions].join(": ")),
-    NCCore: { getCurrentUserId: async () => account.userId },
+    NCCore: {
+      getCurrentUserId: async () => account.userId,
+      runAuthenticatedRequest: async ({ request }) => request(),
+      isConnectionPausedError: (error) => [401, 429].includes(Number(error?.status)) || error?.ncAuthenticationPaused === true
+    },
     NCOcs: { buildAuthHeader: () => "test-auth", runWithTimeout: async (operation) => operation(undefined) },
     fetch: async (url) => {
       requests.push(url);
@@ -1261,10 +1419,130 @@ function createAddressbookHarness(){
   loadScript("modules/talkAddressbook.js", context, `
 globalThis.addressbookTest = { getSystemAddressbookContacts, getSystemAddressbookStatus, searchSystemAddressbook, cache: SYSTEM_ADDRESSBOOK_CACHE };`);
   return {
-    context, api: context.addressbookTest, account, logs, requests,
+    context, api: context.addressbookTest, account, logs, requests, permissions,
     advance: (milliseconds = 20000) => { now += milliseconds; },
     setReply: (changes) => { reply = { ...reply, ...changes }; }
   };
+}
+
+async function testAddressbookBeforeSignIn(){
+  for (const missing of ["baseUrl", "user", "appPass"]){
+    const harness = createAddressbookHarness();
+    harness.account[missing] = "";
+    const status = await harness.api.getSystemAddressbookStatus({ forceRefresh: true });
+    assert(status.configured === false && status.checked === false && status.available === false
+      && status.count === 0 && status.error === "", `${missing}: missing credentials must be an unconfigured state, not an address-book failure`);
+    assert(harness.requests.length === 0 && harness.permissions.length === 0,
+      `${missing}: an unconfigured account must not request host permission or query CardDAV`);
+    assert(harness.logs.length === 0, `${missing}: missing account data must not be logged as an address-book failure`);
+  }
+  const previouslyConnected = createAddressbookHarness();
+  await previouslyConnected.api.getSystemAddressbookContacts(true);
+  const cachedContacts = previouslyConnected.api.cache.contacts;
+  const requestsBeforeReset = previouslyConnected.requests.length;
+  const permissionsBeforeReset = previouslyConnected.permissions.length;
+  previouslyConnected.account.appPass = "";
+  const resetStatus = await previouslyConnected.api.getSystemAddressbookStatus();
+  assert(!resetStatus.configured && !resetStatus.checked && !resetStatus.available,
+    "Cached contacts must not turn a disconnected account into a confirmed address book");
+  assert(previouslyConnected.api.cache.contacts === cachedContacts,
+    "An unconfigured status check must not delete previously cached contacts");
+  assert(previouslyConnected.requests.length === requestsBeforeReset
+    && previouslyConnected.permissions.length === permissionsBeforeReset,
+    "A disconnected account must not refresh stale cached contacts");
+}
+
+async function testAddressbookUiStates(){
+  const element = () => ({
+    checked: true, disabled: false, title: "", hidden: false, textContent: "",
+    classList: { toggle(){} }, querySelectorAll: () => []
+  });
+  const context = {
+    console, globalThis: null, window: null,
+    t: (key) => key, i18n: (key) => key, wizardTranslate: (key) => key,
+    state: { policy: { active: false, editable: {} }, delegate: { suggestions: ["old"], activeIndex: 0 } },
+    NCWizardPolicyUi: { getAdminControlledHint: () => "policy_admin_controlled_tooltip" },
+    popupSizer: null, updateDelegateStatus(){}, hideDelegateDropdown(){},
+    policyLockTalkAddUsers: false, policyLockTalkAddGuests: false,
+    getAdminControlledHint: () => "policy_admin_controlled_tooltip",
+    applyPolicySettingsOverlay(){}, OPTIONS_LOG_PREFIX: "[NCUI][Options]",
+    talkAddressbookLockActive: false, talkAddressbookLockDetail: "",
+    logs: [], messages: [], response: null,
+    logUiError: (...args) => context.logs.push(args), logDebug(){},
+    NCLogContext: { safeConsoleError: (...args) => context.logs.push(args) },
+    browser: { runtime: { sendMessage: async (message) => {
+      context.messages.push(message);
+      if (context.response instanceof Error) throw context.response;
+      return context.response;
+    } } }
+  };
+  context.globalThis = context;
+  context.window = context;
+  for (const name of [
+    "addUsersToggle", "addGuestsToggle", "delegateInput", "delegateClearBtn",
+    "addUsersAddressbookLockHint", "addGuestsAddressbookLockHint", "delegateAddressbookLockHint",
+    "addUsersTooltipList", "addGuestsTooltipList", "delegateTooltipList", "delegateAddressbookHelp",
+    "delegateAddressbookWarningText", "addUsersToggleRow", "addGuestsToggleRow", "delegateInputLabel",
+    "talkDefaultAddUsersInput", "talkDefaultAddGuestsInput", "talkDefaultAddUsersRow", "talkDefaultAddGuestsRow",
+    "optionsAddUsersAddressbookLockHint", "optionsAddGuestsAddressbookLockHint",
+    "optionsAddUsersTooltipList", "optionsAddGuestsTooltipList", "talkAddressbookWarningRow",
+    "optionsTalkAddressbookWarningText"
+  ]) context[name] = element();
+  vm.createContext(context);
+  loadScript("modules/policyState.js", context, "\nglobalThis.NCPolicyState = NCPolicyState;");
+  loadScript("ui/addressbookUi.js", context);
+  vm.runInContext(sourceSection("ui/talkDialog.js", "  function applySystemAddressbookStatus(", "  function renderDelegateDropdown("), context);
+  vm.runInContext(sourceSection("options.js", "function applyTalkSystemAddressbookLockState(", "async function refreshComposeAttachmentConflictState("), context);
+  const classify = context.NCAddressbookUi.getSystemAddressbookUiState;
+  for (const [status, configured, checked, available, detail] of [
+    [{ configured: false, checked: false, available: false, error: "" }, false, false, false, "connection_required_talk_message"],
+    [{ configured: true, checked: false, available: false }, true, false, false, "talk_system_addressbook_unavailable_message"],
+    [{ configured: true, checked: true, available: true }, true, true, true, ""],
+    [{ available: true }, true, true, true, ""],
+    [{ available: false, error: "HTTP 401" }, true, true, false, "HTTP 401"],
+    [{}, true, true, false, "talk_system_addressbook_unavailable_message"]
+  ]){
+    const result = classify(status, context.t);
+    assert(result.configured === configured && result.checked === checked && result.available === available
+      && result.unavailable === (checked && !available) && result.detail === detail,
+      "Shared address-book UI state must distinguish missing accounts, confirmed errors, and older status responses");
+  }
+  assert(classify({}, context.t, "Permission denied").detail === "Permission denied",
+    "A failed message response must retain its actual diagnostic message");
+  for (const [response, available, warning, detail] of [
+    [{ ok: true, status: { configured: false, checked: false, available: false, error: "" } }, false, false, "connection_required_talk_message"],
+    [{ ok: true, status: { configured: true, checked: true, available: true, count: 2 } }, true, false, ""],
+    [{ ok: true, status: { available: false, error: "HTTP 401" } }, false, true, "HTTP 401"],
+    [{ ok: true, status: { available: true, count: 0 } }, true, false, ""],
+    [{ ok: false, error: "Permission denied" }, false, true, "Permission denied"],
+    [{ ok: false, status: { available: true }, error: "Status request failed" }, false, true, "Status request failed"],
+    [new Error("Network unavailable"), false, true, "Network unavailable"]
+  ]){
+    context.response = response;
+    context.talkDefaultAddUsersInput.checked = true;
+    context.talkDefaultAddGuestsInput.checked = true;
+    await context.refreshTalkSystemAddressbookState();
+    assert(context.talkAddressbookWarningRow.hidden === !warning,
+      "Options must not display an address-book warning before sign-in or after a successful check");
+    assert(context.talkDefaultAddUsersInput.disabled === warning && context.talkDefaultAddGuestsInput.disabled === warning,
+      "Options local participant defaults must stay editable before sign-in but lock on actual availability failures");
+    assert(context.talkDefaultAddUsersInput.checked && context.talkDefaultAddGuestsInput.checked,
+      "Options status refresh must not overwrite the user's saved participant preferences");
+    const wizardAvailable = await context.refreshSystemAddressbookAvailability();
+    assert(wizardAvailable === available && context.delegateAddressbookHelp.hidden === !warning,
+      "The Talk wizard must suppress false activation warnings while retaining confirmed failure guidance");
+    assert(context.addUsersToggle.disabled === !available && context.addGuestsToggle.disabled === !available
+      && context.delegateInput.disabled === !available,
+      "Talk runtime participant and moderator controls must remain locked without a confirmed available address book");
+    assert(context.addUsersToggle.title === detail && context.delegateAddressbookWarningText.textContent === detail,
+      "Talk must show the connection prompt or actual failure rather than a false server activation claim");
+  }
+  context.response = { ok: true, status: { configured: false, checked: false, available: false } };
+  context.policyLockTalkAddUsers = true;
+  await context.refreshTalkSystemAddressbookState();
+  assert(context.talkDefaultAddUsersInput.disabled && !context.talkDefaultAddGuestsInput.disabled
+    && context.talkAddressbookWarningRow.hidden,
+    "Suppressing a pre-login address-book warning must not remove a real administrator policy lock");
 }
 
 async function testAddressbookResponseValidation(){
@@ -1295,6 +1573,7 @@ async function testAddressbookResponseValidation(){
     harness.setReply(reply);
     const status = await harness.api.getSystemAddressbookStatus({ forceRefresh: true });
     assert(status.available === false, "Invalid exports must not appear as available empty address books");
+    assert(status.configured === true && status.checked === true, "A completed failing address-book read must remain distinct from missing credentials");
     assert(status.error === "error_system_addressbook_invalid_response", "Invalid exports need the localized response error");
     assert(harness.api.cache.contacts === original, "Invalid exports must preserve the last good contacts");
     assert(harness.api.cache.fetchedAt === fetchedAt, "A failed read must not refresh the successful cache timestamp");
@@ -1312,6 +1591,7 @@ async function testAddressbookResponseValidation(){
     harness.setReply(reply);
     const status = await harness.api.getSystemAddressbookStatus();
     assert(status.available && status.count === 2, "Valid vCards remain usable with HTTP 200 or 404 regardless of their Content-Type");
+    assert(status.configured === true && status.checked === true, "Confirmed address-book exports must report a configured completed check");
     const contacts = await harness.api.searchSystemAddressbook({ searchTerm: "alpha" });
     assert(contacts.length === 1 && contacts[0].id === "user-1", "Accepted exports must populate the searchable cache");
     assert(harness.requests.length === 1, "Accepted HTTP 404 exports use the normal success cache");
@@ -1353,6 +1633,7 @@ async function testAddressbookResponseValidation(){
     harness.setReply(changes);
     const status = await harness.api.getSystemAddressbookStatus({ forceRefresh: true });
     assert(!status.available, "HTTP and transport failures must report unavailability");
+    assert(status.configured === true && status.checked === true, "A transport or HTTP error must not report an unconfigured account");
     assert(harness.api.cache.contacts === original, "HTTP and transport failures must retain cached contacts");
     assert(!status.error.includes("private-response-marker"), "User errors must not expose HTTP response bodies");
     assert(!JSON.stringify(harness.logs).includes("private-response-marker"), "HTTP response bodies must not enter logs");
@@ -1615,7 +1896,11 @@ async function testConnectionRequiredSetupNavigation(){
     ].map((id) => [id, {
       textContent: "",
       disabled: false,
+      hidden: false,
+      dataset: {},
+      classList: { toggle(){} },
       listeners: {},
+      setAttribute(){},
       addEventListener(type, listener){
         this.listeners[type] = listener;
       }
@@ -1625,9 +1910,10 @@ async function testConnectionRequiredSetupNavigation(){
       URLSearchParams,
       window: {
         location: { search: `?source=${source}` },
+        addEventListener(){},
         close(){ closeCount++; }
       },
-      document: { getElementById: (id) => elements[id] },
+      document: { getElementById: (id) => elements[id], querySelector: () => null },
       NCLogContext: { safeConsoleError: (...args) => errors.push(args) },
       NCTalkDomI18n: { translatePage(){} },
       browser: {
@@ -1646,62 +1932,93 @@ async function testConnectionRequiredSetupNavigation(){
   }
 
   for (const source of ["sharing", "talk"]){
-    const automatic = createNotice(source);
-    assert(
-      automatic.elements.connectionRequiredMessage.textContent === `connection_required_${source}_message`
-        && automatic.requests.length === 1
-        && automatic.requests[0].type === "connection:openOptions"
-        && automatic.requests[0].payload.managedOnly === true,
-      `${source}: loading the missing-account notice must request managed-only setup with its localized explanation`
-    );
-    await automatic.elements.openSettingsBtn.listeners.click();
-    assert(automatic.requests.length === 1, `${source}: a pending automatic handoff must block duplicate clicks`);
-    automatic.pendingResponses[0].resolve({ ok: true, opened: true });
-    await flushPromises();
-    await automatic.elements.openSettingsBtn.listeners.click();
-    assert(
-      automatic.closeCount === 1 && automatic.requests.length === 1 && automatic.elements.openSettingsBtn.disabled,
-      `${source}: successful setup navigation must close once and reject later duplicate clicks`
-    );
-
     const manual = createNotice(source);
-    manual.pendingResponses[0].resolve({ ok: true, opened: false });
-    await flushPromises();
     assert(
-      manual.closeCount === 0 && !manual.elements.openSettingsBtn.disabled
-        && manual.elements.connectionRequiredStatus.textContent === "",
-      `${source}: an unmanaged account must retain the existing notice and explicit setup button`
+      manual.elements.connectionRequiredMessage.textContent === `connection_required_${source}_message`
+        && manual.requests.length === 0
+        && manual.closeCount === 0,
+      `${source}: loading the missing-account notice must explain setup without navigating automatically`
     );
     const explicitOpen = manual.elements.openSettingsBtn.listeners.click();
     await manual.elements.openSettingsBtn.listeners.click();
     assert(
-      manual.requests.length === 2 && manual.requests[1].payload.managedOnly === false,
-      `${source}: the explicit setup button must bypass managed-only routing without duplicate requests`
+      manual.requests.length === 1
+        && JSON.stringify(manual.requests[0]) === JSON.stringify({ type: "connection:openOptions" }),
+      `${source}: an explicit Settings click must open setup once`
     );
-    manual.pendingResponses[1].resolve({ ok: true, opened: true });
+    manual.pendingResponses[0].resolve({ ok: true, opened: true });
     await explicitOpen;
-    assert(manual.closeCount === 1, `${source}: explicit setup must close after confirmed tab creation`);
+    await manual.elements.openSettingsBtn.listeners.click();
+    assert(
+      manual.closeCount === 1 && manual.requests.length === 1 && manual.elements.openSettingsBtn.disabled,
+      `${source}: confirmed setup navigation must close once and reject later duplicate clicks`
+    );
   }
 
   for (const failure of ["response", "transport"]){
     const notice = createNotice("talk");
+    const firstAttempt = notice.elements.openSettingsBtn.listeners.click();
     if (failure === "transport"){
       notice.pendingResponses[0].reject(new Error("runtime unavailable"));
     }else{
       notice.pendingResponses[0].resolve({ ok: false, error: "navigation unavailable" });
     }
-    await flushPromises();
+    await firstAttempt;
     assert(
       notice.closeCount === 0 && !notice.elements.openSettingsBtn.disabled
         && notice.elements.connectionRequiredStatus.textContent === "sharing_vfs_navigation_failed"
         && notice.errors.length === 1,
-      `${failure}: failed automatic setup must remain visible, localized, logged, and retryable`
+      `${failure}: failed Settings navigation must remain visible, localized, logged, and retryable`
     );
     const retry = notice.elements.openSettingsBtn.listeners.click();
     assert(notice.elements.connectionRequiredStatus.textContent === "", "Retry must clear the preceding navigation error");
     notice.pendingResponses[1].resolve({ ok: true });
     await retry;
     assert(notice.closeCount === 0, "A successful response without opened=true must not close the notice");
+  }
+}
+
+async function testTalkSetupRouting(){
+  const source = sourceSection("modules/bgCalendar.js", "const TALK_DIALOG_POPUP_PATH", "async function hydrateTalkWizardContextFromEditor(");
+  for (const configured of [false, true]){
+    for (const managed of [false, true]){
+      for (const authMode of ["manual", "loginFlow", "invalid"]){
+        const popups = [];
+        const notices = [];
+        const errors = [];
+        const prepared = [];
+        let clickHandler;
+        const context = {
+          console: { error: (...args) => errors.push(args) },
+          L(){},
+          isNextcloudAccountConfigured: async () => configured,
+          NCCore: { getOpts: async () => ({ authMode, managedSetup: { isEnterpriseRollout: managed } }) },
+          openConnectionRequiredWindow: async (source) => notices.push(source),
+          NCTalkCore: { getSystemAddressbookStatus: async () => ({ available: true, count: 1 }) },
+          createCalendarWizardContextId: () => "wizard-id",
+          setCalendarWizardContext: (id, value) => { prepared.push({ id, value }); return value; },
+          mergeCalendarSnapshotIntoWizardContext(){},
+          refreshCalendarWizardContextSnapshot(){},
+          setLatestCalendarWizardPopupContext(){},
+          hydrateTalkWizardContextFromEditor: async () => {},
+          browser: {
+            calendarItemAction: { setPopup: async ({ popup }) => popups.push(popup) },
+            storage: { onChanged: { addListener(){} } },
+            ncCalToolbar: { onClicked: { addListener: (handler) => { clickHandler = handler; } } }
+          }
+        };
+        vm.createContext(context);
+        vm.runInContext(source, context, { filename: "modules/bgCalendar.js" });
+        await flushPromises();
+        const expectedPopup = configured ? "ui/talkDialog.html"
+          : (managed ? "" : "ui/connectionRequired.html?source=talk");
+        assert(popups.length === 1 && popups[0] === expectedPopup, `${configured}/${managed}/${authMode}: Talk must select its existing wizard, unmanaged notice, or managed command without a popup`);
+        await clickHandler({ editorId: "ed-00000000-0000-0000-0000-000000000000" });
+        assert(notices.length === (!configured && managed ? 1 : 0), `${configured}/${managed}/${authMode}: only missing managed credentials must navigate to Settings`);
+        assert(prepared.length === (configured ? 1 : 0), "Missing credentials must not retain a calendar wizard context for later resumption");
+        assert(errors.length === 0, "Each supported Talk setup state must complete without errors");
+      }
+    }
   }
 }
 
@@ -1722,18 +2039,19 @@ function testStaticLifecycleRules(){
   assert(
     stateSource.includes("async function isNextcloudAccountConfigured()")
       && stateSource.includes("const options = await NCCore.getOpts();")
-      && stateSource.includes("async function openConnectionRequiredWindow(source = \"sharing\")"),
+      && stateSource.includes("async function openConnectionRequiredWindow(source = \"sharing\""),
     "Manual action setup gates must use the effective Nextcloud account"
   );
   assert(
-    /if \(!\(await isNextcloudAccountConfigured\(\)\)\)\{[\s\S]{0,300}?await openConnectionRequiredWindow\(\"sharing\"\);[\s\S]{0,80}?return;[\s\S]{0,100}?await openSharingWizardWindow\(tab\.id\);/.test(composeSource),
+    composeSource.includes('await openConnectionRequiredWindow("sharing");')
+      && composeSource.includes("await openSharingWizardWindow(tab.id);"),
     "Manual sharing must show setup guidance before opening its wizard"
   );
   assert(
     calendarSource.includes("TALK_CONNECTION_REQUIRED_POPUP_PATH")
-      && calendarSource.includes("const configured = await isNextcloudAccountConfigured();")
-      && /if \(!\(await isNextcloudAccountConfigured\(\)\)\)\{[\s\S]{0,160}?return;/.test(calendarSource),
-    "The Talk action must select its setup notice before preparing a wizard context"
+      && calendarSource.includes('await openConnectionRequiredWindow("talk");')
+      && stateSource.includes("return await openAuthenticationRequiredOptions();"),
+    "Both managed actions must open the same Settings setup before preparing a wizard context"
   );
   assert(
     connectionRequiredHtml.includes('id="openSettingsBtn"')
@@ -1768,7 +2086,46 @@ function testStaticLifecycleRules(){
   assert(toolbarSource.includes('"startupcache-invalidate"'), "Experiment disable/reload must invalidate startup cache");
 }
 
+async function testCalendarAuthenticationAndOwnerCapture(){
+  const opts = { baseUrl: "https://cloud.example.test", user: "login-alias", appPass: "test-password" };
+  const context = {
+    BG_STATE_READY: Promise.resolve(),
+    NCCore: {
+      getOpts: async () => opts,
+      getCurrentUserId: async () => "canonical-owner",
+      normalizeBaseUrl: (value) => String(value || "").replace(/\/+$/, ""),
+      isConnectionPausedError: (error) => [401, 429].includes(Number(error?.status)) || error?.ncAuthenticationPaused === true
+    },
+    NCTalkCore: {
+      delegateRoomModerator: async () => ({ shouldLeaveSelf: true })
+    },
+    L(){},
+    shortToken: (token) => token,
+    bgI18n: (key) => key
+  };
+  vm.createContext(context);
+  vm.runInContext(sourceSection("modules/bgCalendar.js", "async function applyCalendarDelegation", "function getIcalContractApi")
+    + sourceSection("modules/bgCalendar.js", "function isRetryableTalkCalendarError", "function createCalendarRetryableError"), context);
+  for (const delegateId of ["canonical-owner", "another-user"]){
+    const result = await context.applyCalendarDelegation({ token: "room-token", delegateId });
+    assert(result.ok && result.connection.baseUrl === opts.baseUrl
+      && result.connection.userId === "canonical-owner",
+      "An accepted departure generation must capture the canonical owner, not its login alias");
+  }
+  for (const status of [401, 429]){
+    assert(context.isRetryableTalkCalendarError({ status }) === false,
+      "Authentication and rate-limit pauses must not become calendar retry timers");
+  }
+  assert(context.isRetryableTalkCalendarError({ ncAuthenticationPaused: true }) === false,
+    "A paused connection without a status must not be classified as a network retry");
+  for (const status of [0, 408, 423, 503]){
+    assert(context.isRetryableTalkCalendarError({ status }) === true,
+      "Ordinary transport and temporary server failures must retain existing bounded retries");
+  }
+}
+
 async function run(){
+  await testCalendarAuthenticationAndOwnerCapture();
   await testCalendarQueue();
   await testSerializedRoomMetaMutations();
   await testPersistentCalendarDepartureRetries();
@@ -1778,11 +2135,14 @@ async function run(){
   await testTalkDefaultsLanguageAndActionEdits();
   testUidOnlyAddressbookContact();
   await testAddressbookResponseValidation();
+  await testAddressbookBeforeSignIn();
+  await testAddressbookUiStates();
   await testInvalidAddressbookStopsRealClassification();
   testPropertyRollbackProgress();
   await testPropertySnapshotPrecedesFieldMutation();
   testExperimentShutdownLifecycle();
   await testConnectionRequiredSetupNavigation();
+  await testTalkSetupRouting();
   testStaticLifecycleRules();
   console.log("[OK] calendar-talk-reliability-check passed");
 }

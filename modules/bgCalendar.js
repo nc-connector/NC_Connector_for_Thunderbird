@@ -29,16 +29,20 @@ async function configureTalkCalendarItemPopup(){
     // moz-extension://.../moz-extension://... URL. Move this back to the
     // manifest once upstream handles already expanded popup URLs correctly.
     const configured = await isNextcloudAccountConfigured();
+    const managedSetupRequired = !configured
+      && (await NCCore.getOpts()).managedSetup?.isEnterpriseRollout === true;
     if (revision !== TALK_POPUP_CONFIGURATION_REVISION){
       return;
     }
     const popup = configured
       ? TALK_DIALOG_POPUP_PATH
-      : TALK_CONNECTION_REQUIRED_POPUP_PATH;
+      : (managedSetupRequired ? "" : TALK_CONNECTION_REQUIRED_POPUP_PATH);
+    // Managed first sign-in opens Settings from the command listener instead.
     await browser.calendarItemAction.setPopup({ popup });
     L("calendar item action popup configured", {
       popup,
-      configured
+      configured,
+      managedSetupRequired
     });
   }catch(error){
     console.error("[NCBG] calendar item action popup configure failed", error);
@@ -73,6 +77,10 @@ browser.ncCalToolbar?.onClicked?.addListener((snapshot) => {
     try{
       if (!(await isNextcloudAccountConfigured())){
         L("ncCalToolbar.onClicked blocked", { reason: "credentials_missing" });
+        const options = await NCCore.getOpts();
+        if (options.managedSetup?.isEnterpriseRollout === true){
+          await openConnectionRequiredWindow("talk");
+        }
         return;
       }
       const requestedEditorId = typeof snapshot?.editorId === "string" ? snapshot.editorId.trim() : "";
@@ -276,7 +284,10 @@ async function applyCalendarDelegation(payload = {}){
   if (!token || !delegateId){
     return { ok:false, error: bgI18n("error_delegation_data_missing") };
   }
-  const { normalized: currentNorm } = await getCanonicalCalendarUserId();
+  const connectionOpts = await NCCore.getOpts();
+  const userId = await NCCore.getCurrentUserId(connectionOpts);
+  const currentNorm = String(userId || "").trim().toLowerCase();
+  const connection = { baseUrl: NCCore.normalizeBaseUrl(connectionOpts.baseUrl), userId };
   const targetNorm = String(delegateId).trim().toLowerCase();
   if (targetNorm === currentNorm){
     L("calendar delegation skipped (same user)", { token: shortToken(token), delegate: delegateId });
@@ -284,6 +295,7 @@ async function applyCalendarDelegation(payload = {}){
       ok:true,
       skipped:true,
       reason:"sameUser",
+      connection,
       result: {
         leftSelf: false,
         shouldLeaveSelf: false,
@@ -296,7 +308,7 @@ async function applyCalendarDelegation(payload = {}){
     newModerator: delegateId,
     leaveSelf: false
   });
-  return { ok:true, result };
+  return { ok:true, result, connection };
 }
 
 function getIcalContractApi(){
@@ -399,11 +411,13 @@ async function extractIcalAttendees(ical){
 }
 
 function isRetryableTalkCalendarError(error){
+  if (NCCore.isConnectionPausedError(error)){
+    return false;
+  }
   const status = Number(error?.status) || 0;
   return status === 0
     || status === 408
     || status === 423
-    || status === 429
     || (status >= 500 && status <= 599);
 }
 
@@ -441,6 +455,12 @@ async function addInviteesToTalkRoom({ token, ical, addUsers = true, addGuests =
     contacts = await NCTalkCore.getSystemAddressbookContacts(false);
   }catch(error){
     console.error("[NCBG] system addressbook lookup failed", error);
+    if (NCCore.isConnectionPausedError(error)){
+      throw error;
+    }
+    if (!isRetryableTalkCalendarError(error)){
+      throw error;
+    }
     throw createCalendarRetryableError(
       "Talk participant classification failed because the system addressbook is unavailable",
       error,
@@ -484,6 +504,9 @@ async function addInviteesToTalkRoom({ token, ical, addUsers = true, addGuests =
       await NCTalkCore.addTalkParticipant({ token, actorId, source });
       added += 1;
     }catch(error){
+      if (NCCore.isConnectionPausedError(error)){
+        throw error;
+      }
       failed += 1;
       if (isRetryableTalkCalendarError(error)){
         retryableFailed += 1;
@@ -850,6 +873,9 @@ async function handleCalendarItemUpsert(item){
               departureRetryAttempts: 0,
               departureNextAttemptAt: 0,
               departureRetryExhausted: false,
+              departureConnectionPaused: false,
+              departureBaseUrl: String(result.connection?.baseUrl || ""),
+              departureUserId: String(result.connection?.userId || ""),
               departureCompleted: false,
               departureCalendarId: String(item.calendarId || ""),
               departureItemId: String(item.id || "")
@@ -876,6 +902,9 @@ async function handleCalendarItemUpsert(item){
           }
         }catch(error){
           console.error("[NCBG] calendar delegation failed", error);
+          if (NCCore.isConnectionPausedError(error)){
+            throw error;
+          }
           if (error?.ncCalendarRetryable === true){
             throw error;
           }
@@ -993,6 +1022,9 @@ async function handleCalendarItemRemoved(calendarId, id){
         }
       }catch(error){
         console.error("[NCBG] delegated room ownership check failed", error);
+        if (NCCore.isConnectionPausedError(error)){
+          throw error;
+        }
         throw createCalendarRetryableError(
           "Delegated room ownership could not be verified.",
           error,

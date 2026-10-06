@@ -31,7 +31,10 @@ function getCalendarDepartureRetryRecord(token){
     generation: Math.max(0, Number(meta.departureRetryGeneration) || 0),
     attempts: Math.max(0, Number(meta.departureRetryAttempts) || 0),
     nextAttemptAt: Math.max(0, Number(meta.departureNextAttemptAt) || 0),
-    exhausted: meta.departureRetryExhausted === true
+    exhausted: meta.departureRetryExhausted === true,
+    connectionPaused: meta.departureConnectionPaused === true,
+    baseUrl: String(meta.departureBaseUrl || ""),
+    userId: String(meta.departureUserId || "")
   };
 }
 
@@ -147,7 +150,7 @@ function cancelCalendarDepartureRetryTimer(token, reason = ""){
 }
 
 function scheduleCalendarDepartureRetryTimer(record){
-  if (!record?.token || record.exhausted === true){
+  if (!record?.token || record.exhausted === true || record.connectionPaused === true){
     return false;
   }
   const existing = CALENDAR_DEPARTURE_RETRY_TIMER_BY_TOKEN.get(record.token);
@@ -185,9 +188,34 @@ function scheduleCalendarDepartureRetryTimer(record){
   return true;
 }
 
-async function persistCalendarDepartureRetryFailure(record, error){
+async function persistCalendarDepartureRetryFailure(record, error, account = record){
+  if (NCCore.isConnectionPausedError(error)){
+    const updated = await setRoomMetaIf(
+      record.token,
+      (current) => current.departurePending === true
+        && (Number(current.departureRetryGeneration) || 0) === record.generation,
+      {
+        departureConnectionPaused: true,
+        departureBaseUrl: String(account.baseUrl || ""),
+        departureUserId: String(account.userId || ""),
+        departureNextAttemptAt: 0,
+        departureRetryExhausted: false
+      }
+    );
+    if (!updated){
+      return false;
+    }
+    cancelCalendarDepartureRetryTimer(record.token, "connection_paused");
+    L("calendar departure paused for connection", { token: shortToken(record.token) });
+    const restored = await NCCore.getVerifiedConnectionIdentity();
+    if (restored){
+      await resumePausedCalendarDeparture(restored);
+    }
+    return false;
+  }
   const attempts = record.attempts + 1;
-  const exhausted = attempts > CALENDAR_DEPARTURE_RETRY_DELAYS_MS.length;
+  const exhausted = Number(error?.status) === 403
+    || attempts > CALENDAR_DEPARTURE_RETRY_DELAYS_MS.length;
   const nextAttemptAt = exhausted
     ? 0
     : Date.now() + CALENDAR_DEPARTURE_RETRY_DELAYS_MS[attempts - 1];
@@ -203,7 +231,9 @@ async function persistCalendarDepartureRetryFailure(record, error){
       departureRetryAttempts: attempts,
       departureNextAttemptAt: nextAttemptAt,
       departureRetryExhausted: exhausted,
-      departureCompleted: false
+      departureCompleted: false,
+      departureBaseUrl: String(account.baseUrl || ""),
+      departureUserId: String(account.userId || "")
     }
   );
   if (!updated){
@@ -240,7 +270,8 @@ async function completeCalendarDepartureRetry(record, reason){
       departureNextAttemptAt: 0,
       departureRetryExhausted: false,
       departureShouldLeaveSelf: false,
-      departureCompleted: true
+      departureCompleted: true,
+      departureConnectionPaused: false
     }
   );
   if (!updated){
@@ -278,6 +309,7 @@ async function activatePreparedCalendarDeparture({
       departureRetryAttempts: 0,
       departureNextAttemptAt: shouldLeaveSelf === true ? Date.now() : 0,
       departureRetryExhausted: false,
+      departureConnectionPaused: false,
       departureCompleted: shouldLeaveSelf !== true
     }
   );
@@ -380,6 +412,7 @@ async function runCalendarDepartureRetry(token, expectedGeneration = null){
   if (
     !record
     || record.exhausted
+    || record.connectionPaused
     || (
       expectedGeneration != null
       && record.generation !== Number(expectedGeneration)
@@ -392,16 +425,32 @@ async function runCalendarDepartureRetry(token, expectedGeneration = null){
     return false;
   }
   CALENDAR_DEPARTURE_RETRY_ACTIVE_BY_TOKEN.add(record.token);
+  let account = { baseUrl: record.baseUrl, userId: record.userId };
   try{
-    const { normalized: currentUser } = await getCanonicalCalendarUserId();
+    const opts = await NCCore.getOpts();
+    account = {
+      baseUrl: NCCore.normalizeBaseUrl(opts.baseUrl),
+      userId: await NCCore.getCurrentUserId(opts)
+    };
+    const currentUser = String(account.userId || "").trim().toLowerCase();
     if (!isCurrentCalendarDepartureRetry(record.token, record.generation)){
+      return false;
+    }
+    if ((record.baseUrl && record.baseUrl !== account.baseUrl)
+      || (record.userId && record.userId !== account.userId)){
+      await setRoomMetaIf(
+        record.token,
+        (current) => current.departurePending === true
+          && (Number(current.departureRetryGeneration) || 0) === record.generation,
+        { departureConnectionPaused: true, departureNextAttemptAt: 0 }
+      );
       return false;
     }
     if (!currentUser){
       throw new Error("Canonical Nextcloud user id is unavailable.");
     }
     if (currentUser !== record.delegateId.toLowerCase()){
-      await NCTalkCore.leaveTalkRoom({ token: record.token });
+      await NCTalkCore.leaveTalkRoom({ token: record.token, connectionOpts: opts });
     }
     if (!isCurrentCalendarDepartureRetry(record.token, record.generation)){
       return false;
@@ -413,7 +462,7 @@ async function runCalendarDepartureRetry(token, expectedGeneration = null){
         : "leave_success"
     );
   }catch(error){
-    await persistCalendarDepartureRetryFailure(record, error);
+    await persistCalendarDepartureRetryFailure(record, error, account);
     return false;
   }finally{
     CALENDAR_DEPARTURE_RETRY_ACTIVE_BY_TOKEN.delete(record.token);
@@ -446,5 +495,29 @@ async function resumeCalendarDepartureRetries(){
       await recoverPreparedCalendarDeparture(token);
     }
     ensureCalendarDepartureRetry(token);
+  }
+}
+
+async function resumePausedCalendarDeparture(connection){
+  await BG_STATE_READY;
+  const baseUrl = NCCore.normalizeBaseUrl(connection?.baseUrl);
+  const userId = String(connection?.userId || "").trim();
+  if (!baseUrl || !userId){
+    return;
+  }
+  for (const token of Object.keys(ROOM_META)){
+    const record = getCalendarDepartureRetryRecord(token);
+    if (!record?.connectionPaused || record.baseUrl !== baseUrl || record.userId !== userId){
+      continue;
+    }
+    const resumed = await setRoomMetaIf(
+      token,
+      (current) => current.departurePending === true
+        && (Number(current.departureRetryGeneration) || 0) === record.generation,
+      { departureConnectionPaused: false, departureNextAttemptAt: Date.now() }
+    );
+    if (resumed){
+      ensureCalendarDepartureRetry(token);
+    }
   }
 }

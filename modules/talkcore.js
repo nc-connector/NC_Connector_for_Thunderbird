@@ -436,8 +436,8 @@ async function createTalkPublicRoom({
   objectType,
   objectId,
   eventConversation
-} = {}){
-  const { baseUrl, user, appPass } = await getOpts();
+} = {}, connectionOpts = null){
+  const { baseUrl, user, appPass } = connectionOpts || await getOpts();
   if (!baseUrl || !user || !appPass) throw localizedError("error_credentials_missing");
   await ensureHostPermission(baseUrl);
 
@@ -711,9 +711,9 @@ async function updateTalkLobby({ token, enableLobby, startTimestamp } = {}){
 /**
  * Delete a Talk room via OCS; 404 is treated as success.
  */
-async function deleteTalkRoom({ token, signal } = {}){
+async function deleteTalkRoom({ token, signal, connectionOpts } = {}){
   if (!token) throw localizedError("error_room_token_missing");
-  const { baseUrl, user, appPass } = await getOpts();
+  const { baseUrl, user, appPass } = connectionOpts || await getOpts();
   if (!baseUrl || !user || !appPass) throw localizedError("error_credentials_missing");
   await ensureHostPermission(baseUrl);
   const auth = NCOcs.buildAuthHeader(user, appPass);
@@ -889,9 +889,9 @@ async function promoteTalkModerator({ token, attendeeId } = {}){
 /**
  * Remove the authenticated user from the room (self-leave).
  */
-async function leaveTalkRoom({ token } = {}){
+async function leaveTalkRoom({ token, connectionOpts } = {}){
   if (!token) throw localizedError("error_room_token_missing");
-  const { baseUrl, user, appPass } = await getOpts();
+  const { baseUrl, user, appPass } = connectionOpts || await getOpts();
   if (!baseUrl || !user || !appPass) throw localizedError("error_credentials_missing");
   await ensureHostPermission(baseUrl);
   L("leave room request", { token: shortToken(token) });

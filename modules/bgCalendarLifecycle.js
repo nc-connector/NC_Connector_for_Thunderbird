@@ -116,7 +116,7 @@ async function clearTalkRoomDeleteRetry(token, reason = ""){
 
 function scheduleTalkRoomDeleteRetryTimer(record){
   const token = typeof record?.token === "string" ? record.token.trim() : "";
-  if (!token || ROOM_DELETE_RETRY_TIMER_BY_TOKEN.has(token)){
+  if (!token || record.connectionPaused === true || ROOM_DELETE_RETRY_TIMER_BY_TOKEN.has(token)){
     return;
   }
   const delayMs = Math.max(0, Number(record.nextAttemptAt) - Date.now());
@@ -161,6 +161,7 @@ async function armTalkRoomDeleteRetry({
     return;
   }
   const existing = ROOM_DELETE_RETRY[normalizedToken] || {};
+  const roomMeta = typeof getRoomMeta === "function" ? getRoomMeta(normalizedToken) || {} : {};
   const nextAttemptAt = Date.now() + Math.max(0, Number(delayMs) || 0);
   const record = {
     token: normalizedToken,
@@ -169,6 +170,9 @@ async function armTalkRoomDeleteRetry({
     nextAttemptAt,
     calendarId: calendarId || existing.calendarId || "",
     itemId: itemId || existing.itemId || "",
+    baseUrl: String(existing.baseUrl || roomMeta.cleanupBaseUrl || ""),
+    userId: String(existing.userId || roomMeta.cleanupUserId || ""),
+    connectionPaused: existing.connectionPaused === true,
     created: Number(existing.created) || Date.now()
   };
   const persistedRecord = await persistTalkRoomDeleteRetry(record);
@@ -263,7 +267,7 @@ async function retainTalkRoomDeleteEvidence(record, {
 async function runTalkRoomDeleteRetry(token){
   await BG_STATE_READY;
   const record = ROOM_DELETE_RETRY[token];
-  if (!record){
+  if (!record || record.connectionPaused === true){
     return;
   }
   const cleanupEntry = ROOM_CLEANUP_BY_TOKEN.get(token);
@@ -279,8 +283,22 @@ async function runTalkRoomDeleteRetry(token){
     controller: new AbortController(),
     cancelReason: ""
   };
+  let account = {
+    baseUrl: String(record.baseUrl || ""),
+    userId: String(record.userId || "")
+  };
   TALK_ROOM_DELETE_ACTIVE_BY_TOKEN.set(token, active);
   try{
+    const opts = await NCCore.getOpts();
+    account = {
+      baseUrl: NCCore.normalizeBaseUrl(opts.baseUrl),
+      userId: await NCCore.getCurrentUserId(opts)
+    };
+    if ((record.baseUrl && record.baseUrl !== account.baseUrl)
+      || (record.userId && record.userId !== account.userId)){
+      await persistTalkRoomDeleteRetry({ ...record, connectionPaused: true, nextAttemptAt: 0 });
+      return;
+    }
     // Register the abort handle before the final reference check. A calendar
     // upsert that arrives while the HTTP request is in flight can then cancel
     // the request instead of merely clearing its persisted retry record.
@@ -297,7 +315,8 @@ async function runTalkRoomDeleteRetry(token){
     });
     await NCTalkCore.deleteTalkRoom({
       token,
-      signal: active.controller.signal
+      signal: active.controller.signal,
+      connectionOpts: opts
     });
     await finishTalkRoomDelete(record, "delete_success");
   }catch(error){
@@ -307,6 +326,21 @@ async function runTalkRoomDeleteRetry(token){
       return;
     }
     const status = readTalkDeleteErrorStatus(error);
+    if (NCCore.isConnectionPausedError(error)){
+      await persistTalkRoomDeleteRetry({
+        ...record,
+        ...account,
+        connectionPaused: true,
+        nextAttemptAt: 0,
+        exhausted: false
+      });
+      L("room delete paused for connection", { token: shortToken(token) });
+      const restored = await NCCore.getVerifiedConnectionIdentity();
+      if (restored){
+        await resumePausedTalkRoomCleanup(restored);
+      }
+      return;
+    }
     if (status === 403){
       L("room delete no longer permitted", { token: shortToken(token) });
       await retainTalkRoomDeleteEvidence(record, {
@@ -332,6 +366,7 @@ async function runTalkRoomDeleteRetry(token){
       return;
     }
     const retryRecord = Object.assign({}, record, {
+      ...account,
       attempts,
       nextAttemptAt: Date.now() + ROOM_DELETE_RETRY_DELAYS_MS[attempts - 1],
       exhausted: false
@@ -354,6 +389,35 @@ async function resumeTalkRoomDeleteRetries(){
     scheduleTalkRoomDeleteRetryTimer(record);
   }
 }
+
+async function resumePausedTalkRoomCleanup(connection){
+  await BG_STATE_READY;
+  const baseUrl = NCCore.normalizeBaseUrl(connection?.baseUrl);
+  const userId = String(connection?.userId || "").trim();
+  if (!baseUrl || !userId){
+    return;
+  }
+  for (const record of Object.values(ROOM_DELETE_RETRY)){
+    if (record.connectionPaused !== true
+      || record.baseUrl !== baseUrl || record.userId !== userId){
+      continue;
+    }
+    const resumed = await persistTalkRoomDeleteRetry({
+      ...record,
+      connectionPaused: false,
+      nextAttemptAt: Date.now()
+    });
+    scheduleTalkRoomDeleteRetryTimer(resumed);
+  }
+}
+
+NCCore.onConnectionRestored.addListener(async (connection) => {
+  await Promise.all([
+    resumePausedTalkRoomCleanup(connection),
+    resumePausedCalendarDeparture(connection),
+    resumePausedShareCleanup(connection)
+  ]);
+});
 
 /**
  * Schedule deferred room deletion for discarded/superseded editors.

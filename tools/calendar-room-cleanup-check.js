@@ -61,7 +61,9 @@ function createLifecycleHarness({
     CALENDAR_WIZARD_CONTEXT_TTL_MS: 60_000,
     L(){},
     NCTalkCore: {
-      async deleteTalkRoom({ token, signal }){
+      async deleteTalkRoom({ token, signal, connectionOpts }){
+        assert(connectionOpts?.baseUrl === "https://cloud.example.test",
+          "Room deletion must use the account snapshot checked by its cleanup runner");
         deleteAttempts += 1;
         deleteStarted = true;
         if (deferDelete){
@@ -86,6 +88,14 @@ function createLifecycleHarness({
         }
         deletedRooms.push(token);
       }
+    },
+    NCCore: {
+      async getOpts(){ return { baseUrl: "https://cloud.example.test" }; },
+      normalizeBaseUrl(value){ return String(value || "").replace(/\/+$/, ""); },
+      async getCurrentUserId(){ return "owner-user"; },
+      async getVerifiedConnectionIdentity(){ return null; },
+      isConnectionPausedError(error){ return [401, 429].includes(Number(error?.status)) || error?.ncAuthenticationPaused === true; },
+      onConnectionRestored: { addListener(){} }
     },
     Promise,
     ROOM_DELETE_RETRY: JSON.parse(JSON.stringify(initialRoomDeleteRetry)),
@@ -135,7 +145,7 @@ function createLifecycleHarness({
   loadScript(
     "modules/bgCalendarLifecycle.js",
     context,
-    "\nglobalThis.NCCalendarCleanupTest = { handleCalendarItemsEditorClosed, removeRoomCleanupEntry, mergeCalendarEventFields, persistTalkRoomDeleteRetry, clearTalkRoomDeleteRetry, runTalkRoomDeleteRetry, cancelActiveTalkRoomDelete };"
+    "\nglobalThis.NCCalendarCleanupTest = { handleCalendarItemsEditorClosed, removeRoomCleanupEntry, mergeCalendarEventFields, persistTalkRoomDeleteRetry, clearTalkRoomDeleteRetry, runTalkRoomDeleteRetry, cancelActiveTalkRoomDelete, resumePausedTalkRoomCleanup };"
   );
   return {
     context,
@@ -425,6 +435,112 @@ async function run(){
     forbiddenDelete.removedEventMappings.length === 0,
     "HTTP 403 must not erase the event-token evidence"
   );
+
+  for (const status of [401, 429]){
+    const paused = createLifecycleHarness({ deleteStatus: status });
+    const token = `paused-${status}`;
+    await paused.context.NCCalendarCleanupTest.persistTalkRoomDeleteRetry({
+      token,
+      attempts: 2,
+      nextAttemptAt: 0
+    });
+    await paused.context.NCCalendarCleanupTest.runTalkRoomDeleteRetry(token);
+    assert(paused.deleteAttempts === 1, `HTTP ${status} must stop deletion after one request`);
+    assert(paused.context.ROOM_DELETE_RETRY[token].connectionPaused === true,
+      "Connection refusal must preserve a paused cleanup record");
+    assert(paused.context.ROOM_DELETE_RETRY[token].attempts === 2,
+      "Connection refusal must not consume cleanup attempts");
+    assert(paused.scheduler.size === 0 && paused.deletedMeta.length === 0,
+      "Paused deletion must retain metadata without retry timers");
+    await paused.context.NCCalendarCleanupTest.resumePausedTalkRoomCleanup({
+      baseUrl: "https://other.example.test", userId: "owner-user"
+    });
+    await paused.context.NCCalendarCleanupTest.resumePausedTalkRoomCleanup({
+      baseUrl: "https://cloud.example.test", userId: "other-user"
+    });
+    assert(paused.scheduler.size === 0, "Another server or user must not resume room deletion");
+    await paused.context.NCCalendarCleanupTest.resumePausedTalkRoomCleanup({
+      baseUrl: "https://cloud.example.test", userId: "owner-user"
+    });
+    assert(paused.scheduler.size === 1, "The verified owner must resume paused room deletion once");
+    paused.context.NCTalkCore.deleteTalkRoom = async () => {};
+    paused.scheduler.runAll();
+    await flushPromises();
+    assert(!paused.context.ROOM_DELETE_RETRY[token], "Resumed successful deletion must clear ownership");
+  }
+
+  for (const userId of ["owner-user", "another-user"]){
+    const lateRefusal = createLifecycleHarness({ deleteStatus: 401 });
+    const token = `late-refusal-${userId}`;
+    lateRefusal.context.NCCore.getVerifiedConnectionIdentity = async () => ({
+      baseUrl: "https://cloud.example.test", userId
+    });
+    await lateRefusal.context.NCCalendarCleanupTest.persistTalkRoomDeleteRetry({
+      token, attempts: 2, nextAttemptAt: 0
+    });
+    await lateRefusal.context.NCCalendarCleanupTest.runTalkRoomDeleteRetry(token);
+    assert(lateRefusal.deleteAttempts === 1,
+      "A late refusal must not immediately repeat the failed room request");
+    assert(lateRefusal.context.ROOM_DELETE_RETRY[token].attempts === 2,
+      "A stale-credential refusal must retain the existing retry budget");
+    assert(lateRefusal.scheduler.size === (userId === "owner-user" ? 1 : 0),
+      "Only a newly verified matching owner may recover after the restore event already ran");
+    if (userId === "owner-user"){
+      lateRefusal.context.NCTalkCore.deleteTalkRoom = async () => {};
+      lateRefusal.scheduler.runAll();
+      await flushPromises();
+      assert(!lateRefusal.context.ROOM_DELETE_RETRY[token],
+        "The fresh same-owner attempt must finish the existing cleanup");
+    }
+  }
+
+  const metadataOwner = createLifecycleHarness();
+  metadataOwner.context.getRoomMeta = () => ({
+    cleanupBaseUrl: "https://cloud.example.test", cleanupUserId: "owner-user"
+  });
+  await metadataOwner.context.armTalkRoomDeleteRetry({ token: "known-owner-token" });
+  metadataOwner.scheduler.runAll();
+  await flushPromises();
+  assert(!metadataOwner.context.ROOM_DELETE_RETRY["known-owner-token"],
+    "A newly armed room cleanup must inherit its stored owner");
+
+  await metadataOwner.context.armTalkRoomDeleteRetry({ token: "cold-owner-token" });
+  metadataOwner.context.NCCore.getCurrentUserId = async () => {
+    const error = new Error("HTTP 401 during the cold canonical-user lookup");
+    error.status = 401;
+    throw error;
+  };
+  metadataOwner.scheduler.runAll();
+  await flushPromises();
+  const coldRecord = metadataOwner.context.ROOM_DELETE_RETRY["cold-owner-token"];
+  assert(coldRecord.connectionPaused === true
+    && coldRecord.baseUrl === "https://cloud.example.test" && coldRecord.userId === "owner-user",
+    "A cold UID refusal must preserve the durable creator identity for later recovery");
+  await metadataOwner.context.NCCalendarCleanupTest.resumePausedTalkRoomCleanup({
+    baseUrl: "https://cloud.example.test", userId: "owner-user"
+  });
+  metadataOwner.context.NCCore.getCurrentUserId = async () => "owner-user";
+  metadataOwner.scheduler.runAll();
+  await flushPromises();
+  assert(!metadataOwner.context.ROOM_DELETE_RETRY["cold-owner-token"],
+    "A freshly verified original owner must recover cleanup after a cold UID refusal");
+
+  const unknownOwner = createLifecycleHarness();
+  await unknownOwner.context.NCCalendarCleanupTest.persistTalkRoomDeleteRetry({
+    token: "legacy-unknown-token", attempts: 0, nextAttemptAt: 0
+  });
+  unknownOwner.context.NCCore.getCurrentUserId = async () => {
+    const error = new Error("HTTP 401 before legacy ownership can be resolved");
+    error.status = 401;
+    throw error;
+  };
+  await unknownOwner.context.NCCalendarCleanupTest.runTalkRoomDeleteRetry("legacy-unknown-token");
+  await unknownOwner.context.NCCalendarCleanupTest.resumePausedTalkRoomCleanup({
+    baseUrl: "https://cloud.example.test", userId: "owner-user"
+  });
+  assert(unknownOwner.scheduler.size === 0
+    && unknownOwner.context.ROOM_DELETE_RETRY["legacy-unknown-token"].connectionPaused === true,
+    "An unknown legacy owner must not be guessed from the newly signed-in user");
 
   const referencedDuringDelete = createLifecycleHarness({ deferDelete: true });
   referencedDuringDelete.context.ROOM_DELETE_RETRY["moving-token"] = {
