@@ -1,6 +1,7 @@
 "use strict";
 
-const { assert } = require("./review-check-utils");
+const { assert, loadScript } = require("./review-check-utils");
+const { createCoreHarness } = require("./network-security-test-utils");
 const {
   createUploadContext,
   createFakeClock,
@@ -76,7 +77,7 @@ async function checkRetryRules(){
 
   assert(
     JSON.stringify(context.NCFileLinkUploadPolicy.RETRY_STATUS_CODES)
-      === JSON.stringify([408, 423, 429, 502, 503, 504]),
+      === JSON.stringify([408, 423, 502, 503, 504]),
     "Retry status list must match the upload rules"
   );
   assert(dav.parseRetryAfter("12", 0) === 12000, "Retry-After seconds must be parsed");
@@ -103,7 +104,7 @@ async function checkRetryRules(){
         });
       }
       if (attempts === 2){
-        return makeDavResponse(429, {
+        return makeDavResponse(423, {
           headers: { "Retry-After": "0" },
           onCancel: () => closedResponses++
         });
@@ -127,6 +128,18 @@ async function checkRetryRules(){
   });
   assert(nonRetry.status === 500, "A non-retry status must return to its caller");
   assert(attempts === 1, "A non-retry status must not be replayed");
+
+  attempts = 0;
+  const rateLimited = await dav.fetchWithRetry({
+    operation: "rate_limit_check",
+    timeoutMs: 0,
+    request: async () => {
+      attempts++;
+      return makeDavResponse(429, { headers: { "Retry-After": "90" } });
+    }
+  });
+  assert(rateLimited.status === 429 && attempts === 1,
+    "The generic upload retry loop must not shorten or replay a server rate limit");
 
   attempts = 0;
   const exhausted = await dav.fetchWithRetry({
@@ -283,8 +296,10 @@ async function checkRequestTimeoutsAndAbort(){
 
   let activeXhr = null;
   class FakeXMLHttpRequest{
-    constructor(){
+    constructor(options){
+      assert(options?.mozAnon === true, "Uploads must exclude ambient cookies and cached HTTP authentication");
       activeXhr = this;
+      this.headers = {};
       this.upload = {};
       this.status = 0;
       this.statusText = "";
@@ -292,7 +307,7 @@ async function checkRequestTimeoutsAndAbort(){
     }
 
     open(){}
-    setRequestHeader(){}
+    setRequestHeader(name, value){ this.headers[name] = value; }
     getResponseHeader(){ return ""; }
     send(){}
     abort(){
@@ -323,6 +338,7 @@ async function checkRequestTimeoutsAndAbort(){
     "Canceling a transfer must abort its active XHR"
   );
   assert(activeXhr?.aborted, "The upload signal must call XMLHttpRequest.abort()");
+  assert(activeXhr.headers.Authorization === "Basic test", "Anonymous XHR must retain the explicit account authorization header");
   assert(xhrFailure.name === "AbortError", "XHR cancellation must stay an AbortError");
 }
 
@@ -1101,7 +1117,85 @@ async function checkReservationCleanupHandoff(){
   );
 }
 
+async function checkSharedAuthenticationGuard(){
+  const stored = {
+    baseUrl: "https://cloud.example.test",
+    user: "alice",
+    appPass: "revoked-password"
+  };
+  let status = 401;
+  const harness = createCoreHarness({
+    localStorage: stored,
+    fetchImpl: ({ url }) => {
+      if (url.includes("/capabilities")){
+        return makeDavResponse(200, { body: JSON.stringify({ ocs: {
+          meta: { status: "ok", statuscode: 200 },
+          data: { version: { major: 35, string: "35.0.1" }, capabilities: {} }
+        } }) });
+      }
+      if (url.includes("/cloud/user")){
+        return makeDavResponse(200, { body: JSON.stringify({ ocs: {
+          meta: { status: "ok", statuscode: 200 }, data: { id: "canonical-alice" }
+        } }) });
+      }
+      return makeDavResponse(status, { body: "response" });
+    }
+  });
+  const context = harness.context;
+  loadScript("modules/ocs.js", context);
+  loadScript("modules/fileLinkUploadPolicy.js", context);
+  loadScript("modules/nextcloudDav.js", context);
+  loadScript("modules/fileLinkTransfer.js", context);
+  loadScript("modules/fileLinkRootReservation.js", context);
+  const dav = context.NCNextcloudDav;
+  const url = stored.baseUrl + "/remote.php/dav/files/canonical-alice/file.txt";
+  const oldAuth = context.NCOcs.buildAuthHeader(stored.user, stored.appPass);
+  const refused = await expectFailure(
+    () => dav.requestPath({ method: "PROPFIND", url, authHeader: oldAuth }),
+    "A confirmed DAV authentication refusal must pause the connection"
+  );
+  assert(refused.status === 401 && refused.ncUserMessage === "connection_auth_required",
+    "DAV authentication failures must retain the shared localized sign-in message");
+  const requestCount = harness.requests.length;
+  const pausedCalls = [
+    () => context.NCOcs.ocsRequest({ url, headers: { Authorization: oldAuth } }),
+    () => dav.probePath({ url, authHeader: oldAuth }),
+    () => dav.createCollection({ url, authHeader: oldAuth }),
+    () => dav.deleteRemotePath({ url, authHeader: oldAuth }),
+    () => dav.xhrWithRetry({ url, headers: { Authorization: oldAuth }, createBody: () => new Blob(["data"]) }),
+    () => context.NCFileLinkTransfer.moveChunkIntoPlace({
+      uploadFolderUrl: url, targetUrl: url + ".moved", totalSize: 4, authHeader: oldAuth
+    }),
+    () => context.NCFileLinkRootReservation.moveRootReservation({
+      reservationUrl: url, targetUrl: url + ".reserved", authHeader: oldAuth
+    })
+  ];
+  for (const call of pausedCalls){
+    const failure = await expectFailure(call, "Every authenticated transport must honor the shared pause");
+    assert(harness.core.isConnectionPausedError(failure), "The pause must not become a generic transport failure");
+  }
+  assert(harness.requests.length === requestCount,
+    "OCS, DAV, XHR and MOVE recovery must not retry a rejected saved password");
+
+  const fresh = { ...stored, appPass: "replacement-password" };
+  const tested = await harness.core.testCredentials(fresh);
+  assert(tested.ok && (await harness.core.getConnectionState()).reason === "auth_required",
+    "Successful testing alone must leave ordinary requests paused");
+  Object.assign(stored, fresh);
+  await harness.core.commitVerifiedConnection(fresh);
+  status = 207;
+  const freshAuth = context.NCOcs.buildAuthHeader(stored.user, stored.appPass);
+  assert((await dav.requestPath({ method: "PROPFIND", url, authHeader: freshAuth })).status === 207,
+    "A successfully verified and saved replacement must restore DAV access");
+  const afterSave = harness.requests.length;
+  await expectFailure(() => dav.probePath({ url, authHeader: oldAuth }),
+    "A captured old password must not be replayed after recovery");
+  assert(harness.requests.length === afterSave && !(await harness.core.getConnectionState()).reason,
+    "Refusing a stale request must neither send it nor invalidate the new saved account");
+}
+
 async function runDavProtocolChecks(){
+  await checkSharedAuthenticationGuard();
   await checkRetryRules();
   await checkRequestTimeoutsAndAbort();
   await checkMoveRecovery();

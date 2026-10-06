@@ -2,7 +2,7 @@
 
 const vm = require("node:vm");
 const { webcrypto } = require("node:crypto");
-const { loadScript } = require("./review-check-utils");
+const { loadScript, createRequestGuardStub } = require("./review-check-utils");
 
 function createFakeClock(start = 100000){
   let now = Number(start) || 0;
@@ -78,6 +78,7 @@ function createClockDate(clock){
 
 function createUploadContext(overrides = {}){
   const context = {
+    NCCore: createRequestGuardStub(),
     console,
     Blob,
     TextEncoder,

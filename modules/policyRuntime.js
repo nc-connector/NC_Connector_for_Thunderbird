@@ -134,15 +134,23 @@ const NCPolicyRuntime = (() => {
     globalThis.NCLogContext.safeConsoleError("[NCBG]", scope, details);
   }
 
-  async function fetchStatusEndpoint(endpointUrl, trimmedUser, password){
+  async function fetchStatusEndpoint(endpointUrl, trimmedUser, password, verification = false){
     return NCOcs.runWithTimeout(async (requestSignal) => {
-      const response = await fetch(endpointUrl, {
-        method: "GET",
-        headers: {
-          "Authorization": NCOcs.buildAuthHeader(trimmedUser, password),
-          "Accept": "application/json"
-        },
-        signal: requestSignal
+      const authHeader = NCOcs.buildAuthHeader(trimmedUser, password);
+      const response = await NCCore.runAuthenticatedRequest({
+        url: endpointUrl,
+        authHeader,
+        verification,
+        request: () => fetch(endpointUrl, {
+          method: "GET",
+          credentials: "omit",
+          cache: "no-store",
+          headers: {
+            "Authorization": authHeader,
+            "Accept": "application/json"
+          },
+          signal: requestSignal
+        })
       });
       const raw = await response.text();
       return { response, raw };
@@ -267,7 +275,8 @@ const NCPolicyRuntime = (() => {
     user,
     appPass,
     source = "runtime",
-    optionalProbe = false
+    optionalProbe = false,
+    verification = false
   } = {}){
     const normalizedBaseUrl = NCCore.normalizeBaseUrl(String(baseUrl || "").trim());
     const trimmedUser = String(user || "").trim();
@@ -312,11 +321,11 @@ const NCPolicyRuntime = (() => {
     let response;
     let raw = "";
     try{
-      const result = await fetchStatusEndpoint(endpointUrl, trimmedUser, password);
+      const result = await fetchStatusEndpoint(endpointUrl, trimmedUser, password, verification);
       response = result.response;
       raw = result.raw;
     }catch(error){
-      const localResult = buildLocalModeResult("network_error", {
+      const localResult = buildLocalModeResult(error?.ncAuthenticationPaused ? "auth_required" : (error?.ncRateLimited ? "rate_limited" : "network_error"), {
         endpointChecked: true,
         endpointUrl
       });
@@ -351,11 +360,11 @@ const NCPolicyRuntime = (() => {
 
       try{
         activeEndpointUrl = fallbackEndpointUrl;
-        const fallbackResult = await fetchStatusEndpoint(fallbackEndpointUrl, trimmedUser, password);
+        const fallbackResult = await fetchStatusEndpoint(fallbackEndpointUrl, trimmedUser, password, verification);
         response = fallbackResult.response;
         raw = fallbackResult.raw;
       }catch(error){
-        const localResult = buildLocalModeResult("network_error", {
+        const localResult = buildLocalModeResult(error?.ncAuthenticationPaused ? "auth_required" : (error?.ncRateLimited ? "rate_limited" : "network_error"), {
           endpointAvailable: false,
           endpointChecked: true,
           endpointUrl
@@ -427,9 +436,10 @@ const NCPolicyRuntime = (() => {
    * Read backend status live from the backend endpoint.
    * @returns {Promise<object>}
    */
-  function withLocalPreferences(status, opts){
+  async function withLocalPreferences(status, opts){
     return withStatusWarning({
       ...status,
+      connectionState: await NCCore.getConnectionState(),
       managedSetup: opts?.managedSetup || null,
       localDefaultsSource: NCPolicyState.normalizeDefaultsSource(opts?.defaultsSource)
     });
@@ -469,12 +479,13 @@ const NCPolicyRuntime = (() => {
 
   async function probePolicyStatus(params = {}){
     const opts = await NCCore.getOpts();
-    const result = withLocalPreferences(await readPolicyStatusFromCredentials({
+    const result = await withLocalPreferences(await readPolicyStatusFromCredentials({
       baseUrl: params?.baseUrl,
       user: params?.user,
       appPass: params?.appPass,
       source: params?.source || "options_test",
-      optionalProbe: true
+      optionalProbe: true,
+      verification: true
     }), opts);
     L("policy status probe result", buildPolicyStatusDebug(result, params?.source || "options_test"));
     return result;

@@ -75,11 +75,13 @@ function createCoreHarness({
     console: testConsole,
     URL,
     Buffer,
+    TextEncoder,
+    btoa,
     AbortController,
     DOMException,
     globalThis: null,
     window: null,
-    Date: clock ? { now: () => clock.now } : Date,
+    Date: clock ? { now: () => clock.now, parse: Date.parse } : Date,
     setTimeout: clock
       ? ((callback, delayMs) => {
         clock.now += Math.max(0, Number(delayMs) || 0);
@@ -94,7 +96,9 @@ function createCoreHarness({
       },
       storage: {
         local: {
-          get: async () => localStorage
+          get: async () => ({ ...localStorage }),
+          set: async (updates) => Object.assign(localStorage, updates),
+          remove: async (keys) => { for (const key of keys) delete localStorage[key]; }
         }
       }
     },
@@ -147,6 +151,7 @@ function createCoreHarness({
   loadScript("modules/logContext.js", context);
   loadScript("modules/nccore.js", context, ";globalThis.__NCCore = NCCore;");
   return {
+    context,
     core: context.__NCCore,
     logs,
     requests,

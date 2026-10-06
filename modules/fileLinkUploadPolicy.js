@@ -21,7 +21,7 @@
   const MAX_PARALLEL_REQUESTS = 3;
   const MAX_ATTEMPTS = 3;
   const RETRY_AFTER_LIMIT_MS = 30000;
-  const RETRY_STATUS_CODES = Object.freeze([408, 423, 429, 502, 503, 504]);
+  const RETRY_STATUS_CODES = Object.freeze([408, 423, 502, 503, 504]);
 
   function requireSize(value){
     const numeric = Number(value);

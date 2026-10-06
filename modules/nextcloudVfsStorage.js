@@ -348,16 +348,19 @@
           operationOptions.signal,
           operationOptions.expectedAccountKey
         );
+        const url = dav.buildVfsFileUrl(context.davRoot, normalizedPath, { allowRoot: false });
         const response = await dav.fetchWithTimeout({
-          request: (requestSignal) => global.fetch(
-            dav.buildVfsFileUrl(context.davRoot, normalizedPath, { allowRoot: false }),
-            {
+          request: (requestSignal) => core.runAuthenticatedRequest({
+            url,
+            authHeader: context.authHeader,
+            request: () => global.fetch(url, {
               method: "GET",
+              credentials: "omit",
               headers: { "Authorization": context.authHeader },
               signal: requestSignal,
               cache: "no-store"
-            }
-          ),
+            })
+          }),
           signal: operationOptions.signal,
           timeoutMs: dav.UPLOAD_TIMEOUT_MS
         });

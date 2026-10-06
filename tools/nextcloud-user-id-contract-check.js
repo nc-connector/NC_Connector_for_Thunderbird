@@ -12,14 +12,20 @@ function makeResponse(status, payload){
   };
 }
 
-function createCoreHarness(responses, { backgroundLogger = true } = {}){
+function createCoreHarness(responses, { backgroundLogger = true, stored = {
+  baseUrl: "https://cloud.example.test/nextcloud",
+  user: "login@example.test",
+  appPass: "app-password"
+}, timers = null, clock = null, uiRuntime = false } = {}){
   const requests = [];
   const queue = responses.slice();
   const context = {
     console,
     Buffer,
-    setTimeout,
-    clearTimeout,
+    URL,
+    Date: clock ? { now: () => clock.now, parse: Date.parse } : Date,
+    setTimeout: timers ? timers.set : setTimeout,
+    clearTimeout: timers ? timers.clear : clearTimeout,
     AbortController,
     DOMException,
     globalThis: null,
@@ -27,7 +33,9 @@ function createCoreHarness(responses, { backgroundLogger = true } = {}){
     browser: {
       storage: {
         local: {
-          get: async () => ({})
+          get: async () => ({ ...stored }),
+          set: async (updates) => Object.assign(stored, updates),
+          remove: async (keys) => { for (const key of keys) delete stored[key]; }
         }
       }
     },
@@ -46,6 +54,7 @@ function createCoreHarness(responses, { backgroundLogger = true } = {}){
       requireOriginPermission: async () => true
     },
     NCLogContext: {
+      isKnownUiRuntime: () => uiRuntime,
       resolveAddonLogPrefix: () => "[TEST]",
       redactSensitiveText: (value) => String(value ?? ""),
       safeConsoleError: () => {}
@@ -72,7 +81,7 @@ function createCoreHarness(responses, { backgroundLogger = true } = {}){
   context.NCOcs.buildAuthHeader = (user, appPass) =>
     "Basic " + Buffer.from(`${user}:${appPass}`, "utf8").toString("base64");
   loadScript("modules/nccore.js", context, ";globalThis.__NCCore = NCCore;");
-  return { context, requests };
+  return { context, requests, stored };
 }
 
 function createSharingHarness(buildDavAccountContext){
@@ -237,7 +246,174 @@ async function expectRejected(callback, label){
   return failure;
 }
 
+async function checkSavedAuthenticationRecovery(){
+  const credentials = { baseUrl: "https://cloud.example.test/nextcloud", user: "login@example.test", appPass: "old-password" };
+  const stored = { ...credentials };
+  const capabilities = makeResponse(200, {
+    ocs: { meta: { status: "ok", statuscode: 100 }, data: { version: "35.0.1", capabilities: {} } }
+  });
+  const currentUser = makeResponse(200, {
+    ocs: { meta: { status: "ok", statuscode: 100 }, data: { id: "canonical-user" } }
+  });
+  const rejected = makeResponse(401, {});
+  const harness = createCoreHarness([capabilities, currentUser, rejected, capabilities, currentUser, capabilities, currentUser], { stored });
+  const core = harness.context.__NCCore;
+  const url = credentials.baseUrl + "/remote.php/dav/files/canonical-user/a";
+  const header = harness.context.NCOcs.buildAuthHeader(credentials.user, credentials.appPass);
+  const successful = await core.testCredentials(credentials);
+  assert(successful.ok, "Initial credentials must be independently verified");
+  let oldResponse;
+  const oldRequest = core.runAuthenticatedRequest({ url, authHeader: header, request: () => new Promise((resolve) => { oldResponse = resolve; }) });
+  let beforeSaveResponse;
+  const beforeSaveRequest = core.runAuthenticatedRequest({ url, authHeader: header, request: () => new Promise((resolve) => { beforeSaveResponse = resolve; }) });
+  await new Promise(setImmediate);
+  await expectRejected(() => core.runAuthenticatedRequest({ url, authHeader: header, request: async () => rejected }), "A saved-credential 401 must pause the connection");
+  assert((await core.getConnectionState()).reason === "auth_required", "The confirmed refusal must be visible as an authentication problem");
+  const stateText = JSON.stringify(stored.ncConnectionStateV1);
+  assert(!stateText.includes(credentials.user) && !stateText.includes(credentials.appPass) && !stateText.includes(header), "The persistent pause marker must not duplicate credentials");
+  assert(await core.getCurrentUserId(credentials) === "canonical-user", "A paused connection must retain its canonical ownership metadata");
+  let automaticCalls = 0;
+  await expectRejected(() => core.runAuthenticatedRequest({ url, authHeader: header, request: async () => { automaticCalls += 1; return currentUser; } }), "Automatic requests with rejected credentials must stop before transport");
+  assert(automaticCalls === 0, "A paused connection must not create another failed server login");
+  const restart = createCoreHarness([], { stored });
+  await expectRejected(() => restart.context.__NCCore.getRequiredCapabilities(credentials), "The pause must survive a background restart");
+  assert(restart.requests.length === 0, "Restart must not retry rejected stored credentials");
+
+  const wrongDraft = await core.testCredentials({ ...credentials, appPass: "wrong-draft" });
+  assert(!wrongDraft.ok && wrongDraft.code === "auth", "Wrong replacement credentials must fail clearly");
+  const replacement = { ...credentials, appPass: "new-valid-password" };
+  const validDraft = await core.testCredentials(replacement);
+  assert(validDraft.ok, "A user-directed replacement test must bypass the old 401 pause");
+  beforeSaveResponse(rejected);
+  await expectRejected(() => beforeSaveRequest, "A late rejection may still belong to the old saved password before replacement is written");
+  assert((await core.getConnectionState()).reason === "auth_required", "A successful draft test alone must not release automatic requests");
+  await expectRejected(() => core.commitVerifiedConnection(replacement), "An unsaved tested account must not resume the connection");
+  const resumed = [];
+  core.onConnectionRestored.addListener((identity) => resumed.push(identity));
+  Object.assign(stored, replacement);
+  await core.commitVerifiedConnection(replacement);
+  await new Promise(setImmediate);
+  assert((await core.getConnectionState()).reason === "" && resumed.length === 1, "Verified saved credentials must resume the connection and notify paused work");
+  assert(resumed[0].baseUrl === credentials.baseUrl && resumed[0].userId === "canonical-user", "Recovery must identify the verified canonical account without credentials");
+  await core.runAuthenticatedRequest({ url, authHeader: harness.context.NCOcs.buildAuthHeader(replacement.user, replacement.appPass), request: async () => currentUser });
+  await expectRejected(() => core.runAuthenticatedRequest({ url, authHeader: header, request: async () => { automaticCalls += 1; return rejected; } }), "Delayed work must not replay the replaced password");
+  assert(automaticCalls === 0, "Stale captured passwords must stay off the network after recovery");
+  oldResponse(rejected);
+  await expectRejected(() => oldRequest, "A late old-account response still fails its original operation");
+  assert((await core.getConnectionState()).reason === "", "A late rejection of the old password must not poison a newly verified saved connection");
+  assert((await core.getVerifiedConnectionIdentity())?.userId === "canonical-user", "Late cleanup failures may recover through the current saved verification");
+
+  const foreign = { ...replacement, baseUrl: "https://other.example.test" };
+  const foreignTest = await core.testCredentials(foreign);
+  assert(foreignTest.ok, "Testing another server may establish only a draft verification");
+  await expectRejected(() => core.commitVerifiedConnection(foreign), "A different unsaved server must not unlock or replace the current connection");
+  assert((await core.getVerifiedConnectionIdentity())?.baseUrl === credentials.baseUrl, "An unsaved draft must not change the verified cleanup owner");
+
+  const permissionResponse = makeResponse(403, {});
+  await core.runAuthenticatedRequest({ url, authHeader: harness.context.NCOcs.buildAuthHeader(replacement.user, replacement.appPass), request: async () => permissionResponse });
+  assert((await core.getConnectionState()).reason === "", "Operation-specific 403 refusals must not mark the app password invalid");
+  stored.defaultsSource = "backend";
+  stored.nccShareCleanupGroupsV1 = { retained: true };
+  await core.removeSavedCredentials();
+  assert(!("user" in stored) && !("appPass" in stored), "Explicit credential removal must remove both saved login fields");
+  assert(stored.baseUrl === credentials.baseUrl && stored.defaultsSource === "backend" && stored.nccShareCleanupGroupsV1.retained,
+    "Removing credentials must preserve the configured URL, local defaults and cleanup ownership");
+  assert(await core.getVerifiedConnectionIdentity() === null, "Removing credentials must discard the old recovery proof");
+  await expectRejected(() => core.runAuthenticatedRequest({ url, authHeader: harness.context.NCOcs.buildAuthHeader(replacement.user, replacement.appPass), request: async () => { automaticCalls += 1; return currentUser; } }), "A previously captured account must stop working after explicit credential removal");
+  assert(automaticCalls === 0, "Removing saved credentials must stop stale captured requests before they reach the server");
+  stored.ncConnectionStateV1 = { baseUrl: credentials.baseUrl, authenticationRejected: true, retryAt: 0 };
+  assert((await core.getConnectionState()).reason === "", "An incomplete account needs first sign-in rather than an invalid-login banner");
+
+  const validStored = { ...credentials };
+  const validConnection = createCoreHarness([rejected], { stored: validStored });
+  const failedDraft = await validConnection.context.__NCCore.testCredentials({ ...credentials, appPass: "invented-draft" });
+  assert(!failedDraft.ok && (await validConnection.context.__NCCore.getConnectionState()).reason === "",
+    "Testing an incorrect unsaved password must not pause a valid saved connection");
+  await validConnection.context.__NCCore.runAuthenticatedRequest({ url, authHeader: header, request: async () => currentUser });
+}
+
+async function checkRateLimitRecovery(){
+  const stored = { baseUrl: "https://cloud.example.test", user: "alice", appPass: "app-password" };
+  const pendingTimers = new Map();
+  let nextTimer = 1;
+  const timers = {
+    set: (callback, delayMs) => { const id = nextTimer++; pendingTimers.set(id, { callback, delayMs }); return id; },
+    clear: (id) => pendingTimers.delete(id)
+  };
+  const harness = createCoreHarness([], { stored, timers });
+  let now = 1700000000000;
+  harness.context.Date = { now: () => now, parse: Date.parse };
+  const core = harness.context.__NCCore;
+  const url = stored.baseUrl + "/ocs/v2.php/cloud/user";
+  const authHeader = harness.context.NCOcs.buildAuthHeader(stored.user, stored.appPass);
+  const rateResponse = { status: 429, headers: { get: () => "120" } };
+  await expectRejected(() => core.runAuthenticatedRequest({ url, authHeader, request: async () => rateResponse }), "HTTP 429 must stop the request flow");
+  const state = await core.getConnectionState();
+  assert(state.reason === "rate_limited" && state.retryAt === now + 120000, "Retry-After must be honored without the former 30-second cap");
+  let calls = 0;
+  await expectRejected(() => core.runAuthenticatedRequest({ url, authHeader, verification: true, request: async () => { calls += 1; return { status: 200 }; } }), "Even explicit verification must respect the server cooldown");
+  assert(calls === 0, "A cooldown must not make another automatic or explicit request before its deadline");
+  const restarted = createCoreHarness([], { stored, timers });
+  restarted.context.Date = harness.context.Date;
+  assert((await restarted.context.__NCCore.getConnectionState()).reason === "rate_limited", "Server cooldowns must survive a background restart");
+  assert(pendingTimers.size > 0, "A persisted cooldown must schedule its expiry after restart");
+  stored.baseUrl = "https://other.example.test";
+  assert((await core.getConnectionState()).reason === "", "Another server must not inherit the earlier server cooldown");
+  stored.baseUrl = "https://cloud.example.test";
+  await core.removeSavedCredentials();
+  assert((await core.getConnectionState()).reason === "rate_limited", "Removing a saved password must not bypass a server-requested cooldown");
+  stored.user = "alice";
+  stored.appPass = "app-password";
+  await harness.context.browser.storage.local.set({ ncConnectionStateV1: { ...stored.ncConnectionStateV1, authenticationRejected: true, baseUrl: stored.baseUrl } });
+  now += 120001;
+  assert((await core.getConnectionState()).reason === "auth_required", "Expiry of a 429 must not clear a separate confirmed 401 refusal");
+
+  const expiredStored = {
+    baseUrl: "https://cloud.example.test", user: "alice", appPass: "app-password",
+    ncConnectionStateV1: { authenticationRejected: false, rateLimitOrigin: "https://cloud.example.test", retryAt: 1700000000000 }
+  };
+  const expiryRecovery = createCoreHarness([makeResponse(200, {
+    ocs: { meta: { status: "ok", statuscode: 100 }, data: { id: "canonical-alice" } }
+  })], { stored: expiredStored, timers, clock: { now: 1700000000001 } });
+  await new Promise(setImmediate);
+  const restored = [];
+  expiryRecovery.context.__NCCore.onConnectionRestored.addListener((identity) => restored.push(identity));
+  await new Promise(setImmediate);
+  assert(restored.length === 1 && restored[0].userId === "canonical-alice", "A cooldown expiring during startup must notify cleanup listeners registered later");
+  assert((await expiryRecovery.context.__NCCore.getConnectionState()).reason === "", "Expired server cooldowns must become usable without another credential save");
+  const uiStored = { ...expiredStored, ncConnectionStateV1: { authenticationRejected: false, rateLimitOrigin: "https://cloud.example.test", retryAt: 1700000000000 } };
+  const uiCopy = createCoreHarness([], { stored: uiStored, timers, clock: { now: 1700000000001 }, uiRuntime: true });
+  await new Promise(setImmediate);
+  assert(uiCopy.requests.length === 0 && uiStored.ncConnectionStateV1.retryAt === 1700000000000,
+    "A rendering-only Sharing UI copy must not consume background cooldown recovery");
+
+  const saveStored = {
+    baseUrl: "https://cloud.example.test", user: "alice", appPass: "old-password",
+    ncConnectionStateV1: { baseUrl: "https://cloud.example.test", authenticationRejected: true, retryAt: 0 }
+  };
+  const saveClock = { now: 1700000100000 };
+  const saveDuringCooldown = createCoreHarness([
+    makeResponse(200, { ocs: { meta: { status: "ok", statuscode: 100 }, data: { version: "35.0.1", capabilities: {} } } }),
+    makeResponse(200, { ocs: { meta: { status: "ok", statuscode: 100 }, data: { id: "canonical-alice" } } })
+  ], { stored: saveStored, timers, clock: saveClock });
+  const saveCore = saveDuringCooldown.context.__NCCore;
+  const replacement = { baseUrl: saveStored.baseUrl, user: saveStored.user, appPass: "new-password" };
+  assert((await saveCore.testCredentials(replacement)).ok, "Replacement credentials may verify before an optional backend probe receives 429");
+  await expectRejected(() => saveCore.runAuthenticatedRequest({ url, authHeader: harness.context.NCOcs.buildAuthHeader(replacement.user, replacement.appPass), verification: true, request: async () => rateResponse }), "An optional post-test backend request may rate-limit the connection");
+  Object.assign(saveStored, replacement);
+  const recovery = [];
+  saveCore.onConnectionRestored.addListener((identity) => recovery.push(identity));
+  assert((await saveCore.commitVerifiedConnection(replacement)).reason === "rate_limited", "A verified saved password must keep an active server cooldown instead of falsely reporting Save failure");
+  assert(!saveStored.ncConnectionStateV1.authenticationRejected && recovery.length === 0, "A good saved replacement clears the old 401 but does not run cleanup during the server wait");
+  saveClock.now += 120001;
+  await saveCore.getConnectionState();
+  await new Promise(setImmediate);
+  assert(recovery.length === 1 && recovery[0].userId === "canonical-alice", "Paused operations become eligible after both verified Save and expiry of the server cooldown");
+}
+
 async function run(){
+  await checkSavedAuthenticationRecovery();
+  await checkRateLimitRecovery();
   const capabilities = makeResponse(200, {
     ocs: { meta: { status: "ok" }, data: { version: "32.0.0" } }
   });
@@ -362,9 +538,7 @@ async function run(){
   ]);
   const firstCapabilities = inflightCapabilities.context.__NCCore.getRequiredCapabilities(credentials);
   const secondCapabilities = inflightCapabilities.context.__NCCore.getRequiredCapabilities(credentials);
-  for (let index = 0; index < 4; index++){
-    await Promise.resolve();
-  }
+  await new Promise(setImmediate);
   assert(
     inflightCapabilities.requests.length === 1,
     "Concurrent non-upload capability reads must share one request"
@@ -399,9 +573,7 @@ async function run(){
     ...credentials,
     signal: abortController.signal
   });
-  for (let index = 0; index < 4; index++){
-    await Promise.resolve();
-  }
+  await new Promise(setImmediate);
   abortController.abort();
   const abortFailure = await expectRejected(
     () => abortedRequest,

@@ -429,15 +429,20 @@
     operation = "dav_request",
     log
   } = {}){
-    const request = (_attempt, requestSignal) => fetch(url, {
-      method: String(method || "GET").toUpperCase(),
-      headers: {
-        "Authorization": authHeader,
-        ...headers
-      },
-      body,
-      signal: requestSignal,
-      cache: "no-store"
+    const request = (_attempt, requestSignal) => NCCore.runAuthenticatedRequest({
+      url,
+      authHeader,
+      request: () => fetch(url, {
+        method: String(method || "GET").toUpperCase(),
+        credentials: "omit",
+        headers: {
+          "Authorization": authHeader,
+          ...headers
+        },
+        body,
+        signal: requestSignal,
+        cache: "no-store"
+      })
     });
     if (retryTransport || retryStatuses){
       return fetchWithRetry({
@@ -602,6 +607,9 @@
         if (signal?.aborted || error?.name === "AbortError"){
           throw createAbortError();
         }
+        if (NCCore.isConnectionPausedError(error)){
+          throw error;
+        }
         if (!retryTransport || attempt >= NCFileLinkUploadPolicy.MAX_ATTEMPTS){
           const uploadError = createTechnicalError(
             error?.message || String(error)
@@ -627,7 +635,7 @@
     throw createUploadError(0);
   }
 
-  function xhrRequest({
+  async function xhrRequest({
     method,
     url,
     headers,
@@ -636,63 +644,68 @@
     onProgress,
     timeoutMs = UPLOAD_TIMEOUT_MS
   } = {}){
-    return new Promise((resolve, reject) => {
-      throwIfAborted(signal);
-      const xhr = new XMLHttpRequest();
-      let settled = false;
-      const finish = (callback, value) => {
-        if (settled){
-          return;
-        }
-        settled = true;
-        signal?.removeEventListener?.("abort", onAbort);
-        callback(value);
-      };
-      const onAbort = () => {
-        try{
-          xhr.abort();
-        }catch(error){
-          global.NCLogContext?.safeConsoleError?.(
-            "[NCBG][FileLink]",
-            "XHR abort failed",
-            error
-          );
-        }
-        finish(reject, createAbortError());
-      };
+    return NCCore.runAuthenticatedRequest({
+      url,
+      authHeader: headers?.Authorization || headers?.authorization,
+      request: () => new Promise((resolve, reject) => {
+        throwIfAborted(signal);
+        // Firefox's anonymous mode excludes ambient cookies and HTTP-auth retries.
+        const xhr = new XMLHttpRequest({ mozAnon: true });
+        let settled = false;
+        const finish = (callback, value) => {
+          if (settled){
+            return;
+          }
+          settled = true;
+          signal?.removeEventListener?.("abort", onAbort);
+          callback(value);
+        };
+        const onAbort = () => {
+          try{
+            xhr.abort();
+          }catch(error){
+            global.NCLogContext?.safeConsoleError?.(
+              "[NCBG][FileLink]",
+              "XHR abort failed",
+              error
+            );
+          }
+          finish(reject, createAbortError());
+        };
 
-      xhr.open(String(method || "PUT"), url, true);
-      xhr.timeout = Math.max(1, Number(timeoutMs) || UPLOAD_TIMEOUT_MS);
-      for (const [name, value] of Object.entries(headers || {})){
-        xhr.setRequestHeader(name, String(value));
-      }
-      xhr.upload.onprogress = (event) => {
-        if (typeof onProgress === "function"){
-          onProgress({
-            loaded: Math.max(0, Number(event.loaded) || 0),
-            total: event.lengthComputable ? Math.max(0, Number(event.total) || 0) : 0
-          });
+        xhr.open(String(method || "PUT"), url, true);
+        xhr.timeout = Math.max(1, Number(timeoutMs) || UPLOAD_TIMEOUT_MS);
+        for (const [name, value] of Object.entries(headers || {})){
+          xhr.setRequestHeader(name, String(value));
         }
-      };
-      xhr.onload = () => finish(resolve, {
-        status: Number(xhr.status) || 0,
-        statusText: xhr.statusText || "",
-        responseText: xhr.responseText || "",
-        getHeader: (name) => xhr.getResponseHeader(name) || ""
-      });
-      xhr.onerror = () => {
-        const error = createUploadError(0);
-        error.ncTransportFailure = true;
-        finish(reject, error);
-      };
-      xhr.ontimeout = () => {
-        const error = createUploadError(0, "Upload failed (timeout)");
-        error.ncTransportFailure = true;
-        finish(reject, error);
-      };
-      xhr.onabort = () => finish(reject, createAbortError());
-      signal?.addEventListener?.("abort", onAbort, { once: true });
-      xhr.send(body);
+        xhr.upload.onprogress = (event) => {
+          if (typeof onProgress === "function"){
+            onProgress({
+              loaded: Math.max(0, Number(event.loaded) || 0),
+              total: event.lengthComputable ? Math.max(0, Number(event.total) || 0) : 0
+            });
+          }
+        };
+        xhr.onload = () => finish(resolve, {
+          status: Number(xhr.status) || 0,
+          statusText: xhr.statusText || "",
+          responseText: xhr.responseText || "",
+          getHeader: (name) => xhr.getResponseHeader(name) || ""
+        });
+        xhr.onerror = () => {
+          const error = createUploadError(0);
+          error.ncTransportFailure = true;
+          finish(reject, error);
+        };
+        xhr.ontimeout = () => {
+          const error = createUploadError(0, "Upload failed (timeout)");
+          error.ncTransportFailure = true;
+          finish(reject, error);
+        };
+        xhr.onabort = () => finish(reject, createAbortError());
+        signal?.addEventListener?.("abort", onAbort, { once: true });
+        xhr.send(body);
+      })
     });
   }
 
@@ -761,13 +774,18 @@
       timeoutMs,
       consume: (response, requestSignal) =>
         snapshotResponse(response, requestSignal, response.status !== 404),
-      request: (_attempt, requestSignal) => fetch(url, {
-        method: "PROPFIND",
-        headers: {
-          "Authorization": authHeader,
-          "Depth": "0"
-        },
-        signal: requestSignal
+      request: (_attempt, requestSignal) => NCCore.runAuthenticatedRequest({
+        url,
+        authHeader,
+        request: () => fetch(url, {
+          method: "PROPFIND",
+          credentials: "omit",
+          headers: {
+            "Authorization": authHeader,
+            "Depth": "0"
+          },
+          signal: requestSignal
+        })
       })
     });
     if (response.status === 404){
@@ -814,10 +832,15 @@
           requestSignal,
           response.status !== 201 && response.status !== 405
         ),
-      request: (_attempt, requestSignal) => fetch(url, {
-        method: "MKCOL",
-        headers,
-        signal: requestSignal
+      request: (_attempt, requestSignal) => NCCore.runAuthenticatedRequest({
+        url,
+        authHeader,
+        request: () => fetch(url, {
+          method: "MKCOL",
+          credentials: "omit",
+          headers,
+          signal: requestSignal
+        })
       })
     });
     if (response.status === 201){
@@ -944,10 +967,15 @@
           requestSignal,
           !response.ok && response.status !== 404
         ),
-      request: (_attempt, requestSignal) => fetch(url, {
-        method: "DELETE",
-        headers: { "Authorization": authHeader },
-        signal: requestSignal
+      request: (_attempt, requestSignal) => NCCore.runAuthenticatedRequest({
+        url,
+        authHeader,
+        request: () => fetch(url, {
+          method: "DELETE",
+          credentials: "omit",
+          headers: { "Authorization": authHeader },
+          signal: requestSignal
+        })
       })
     });
     if (response.status === 404){

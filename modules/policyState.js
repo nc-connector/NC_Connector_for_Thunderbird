@@ -9,6 +9,8 @@ const NCPolicyState = (() => {
   const POLICY_DOMAINS = Object.freeze(["share", "talk", "email_signature"]);
   const ACTIVE_SEAT_STATE = "active";
   const NOTICE_KEYS = Object.freeze({
+    auth_required: "connection_auth_required",
+    rate_limited: "connection_rate_limited",
     backend_required: "sharing_password_separate_backend_required_tooltip",
     backend_unavailable: "policy_warning_backend_unavailable",
     enterprise_backend_required: "enterprise_rollout_backend_required",
@@ -89,6 +91,11 @@ const NCPolicyState = (() => {
   }
 
   function getStatusNoticeCode(policyStatus, forFeature = false){
+    if (policyStatus?.reason === "credentials_missing") return "";
+    const connectionReason = policyStatus?.connectionState?.reason || policyStatus?.reason;
+    if (connectionReason === "auth_required" || connectionReason === "rate_limited"){
+      return connectionReason;
+    }
     const managedAccess = getManagedAccessState(policyStatus);
     if (!forFeature && !managedAccess.allowed && policyStatus?.reason !== "credentials_missing"){
       return managedAccess.reason;
@@ -257,8 +264,9 @@ const NCPolicyState = (() => {
 
   function getManagedAccessState(status){
     const managed = status?.managedSetup?.isEnterpriseRollout === true;
-    let reason = "";
-    if (managed){
+    const connectionReason = status?.reason === "credentials_missing" ? "" : (status?.connectionState?.reason || status?.reason);
+    let reason = ["auth_required", "rate_limited"].includes(connectionReason) ? connectionReason : "";
+    if (managed && !reason){
       if (status.endpointChecked === true && status.reason === "endpoint_missing"){
         reason = "enterprise_backend_required";
       }else if (status.fetchSucceeded !== true){

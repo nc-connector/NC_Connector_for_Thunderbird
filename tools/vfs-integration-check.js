@@ -258,10 +258,11 @@ async function checkRouterLeavesToolkitMessagesUnclaimed(){
     { baseUrl: "https://cloud.example.test", user: "account", appPass: "secret", managedSetup: { hasAuthMode: true } }
   ]){
     accountOptions = options;
-    const response = await listener({ type: "connection:openOptions", payload: { managedOnly: true } }, {});
+    const openedBefore = openedTabs.length;
+    const response = await listener({ type: "connection:openOptions" }, {});
     assert(
-      response?.ok === true && response.opened === false && openedTabs.length === 3,
-      "Automatic connection setup must leave unmanaged or already complete accounts in the existing notice"
+      response?.ok === true && response.opened === true && openedTabs.length === openedBefore + 1,
+      "Explicit settings navigation must remain available for unmanaged and already complete accounts"
     );
   }
   for (const authMode of ["loginflow", "manual", "invalid"]){
@@ -274,26 +275,21 @@ async function checkRouterLeavesToolkitMessagesUnclaimed(){
         [missingField]: ""
       };
       const openedBefore = openedTabs.length;
-      const response = await listener({ type: "connection:openOptions", payload: { managedOnly: true } }, {});
+      const response = await listener({ type: "connection:openOptions" }, {});
       const openedTab = openedTabs.at(-1);
       assert(
         response?.ok === true && response.opened === true
           && openedTabs.length === openedBefore + 1
           && openedTab.windowId === 73
           && openedTab.url === "moz-extension://connector/options.html?tab=general&authenticationRequired=1",
-        `${authMode}/${missingField}: any AuthMode policy must guide incomplete accounts to the normal settings tab without account data in its URL`
+        `${authMode}/${missingField}: explicit navigation must open settings without account data in its URL`
       );
     }
   }
   accountOptionsError = new Error("managed setup unavailable");
   const openedBeforeFailure = openedTabs.length;
-  const failedResponse = await listener({ type: "connection:openOptions", payload: { managedOnly: true } }, {});
-  assert(
-    failedResponse?.ok === false && openedTabs.length === openedBeforeFailure && loggedErrors.length === 1,
-    "Failed managed account reads must report and log the failure without opening settings automatically"
-  );
   const accountReadsBeforeExplicit = accountOptionsCalls;
-  const explicitResponse = await listener({ type: "connection:openOptions", payload: { managedOnly: false } }, {});
+  const explicitResponse = await listener({ type: "connection:openOptions" }, {});
   assert(
     explicitResponse?.ok === true && explicitResponse.opened === true
       && openedTabs.length === openedBeforeFailure + 1

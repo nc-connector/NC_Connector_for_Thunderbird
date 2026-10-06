@@ -241,20 +241,27 @@ async function getSystemAddressbookContacts(force = false){
   const addressUrl = base + "/remote.php/dav/addressbooks/users/" + encodeURIComponent(userId) + "/z-server-generated--system/?export";
   try{
     const { response, raw } = await NCOcs.runWithTimeout(async (signal) => {
-      const response = await fetch(addressUrl, {
-        method: "GET",
-        headers: {
-          "Authorization": auth,
-          "Accept": "text/directory",
-          "Cache-Control": "no-cache"
-        },
-        signal
+      const response = await NCCore.runAuthenticatedRequest({
+        url: addressUrl,
+        authHeader: auth,
+        request: () => fetch(addressUrl, {
+          method: "GET",
+          credentials: "omit",
+          headers: {
+            "Authorization": auth,
+            "Accept": "text/directory",
+            "Cache-Control": "no-cache"
+          },
+          signal
+        })
       });
       const raw = await response.text();
       return { response, raw };
     });
     if (!response.ok && response.status !== 404){
-      throw localizedError("error_system_addressbook_failed", ["HTTP " + response.status]);
+      const error = localizedError("error_system_addressbook_failed", ["HTTP " + response.status]);
+      error.status = response.status;
+      throw error;
     }
     const contentType = String(response.headers.get("content-type") || "").split(";")[0].trim().toLowerCase();
     let contacts;
@@ -326,8 +333,20 @@ async function searchSystemAddressbook({ searchTerm = "", limit = 200, forceRefr
 
 async function getSystemAddressbookStatus({ forceRefresh = false } = {}){
   try{
+    const { baseUrl, user, appPass } = await getOpts();
+    if (!baseUrl || !user || !appPass){
+      return {
+        configured: false,
+        checked: false,
+        available: false,
+        count: 0,
+        error: ""
+      };
+    }
     const contacts = await getSystemAddressbookContacts(!!forceRefresh);
     return {
+      configured: true,
+      checked: true,
       available: true,
       count: Array.isArray(contacts) ? contacts.length : 0,
       error: ""
@@ -336,6 +355,8 @@ async function getSystemAddressbookStatus({ forceRefresh = false } = {}){
     const detail = error?.message || String(error);
     logTalkCoreError("system addressbook status check failed", error);
     return {
+      configured: true,
+      checked: true,
       available: false,
       count: 0,
       error: detail

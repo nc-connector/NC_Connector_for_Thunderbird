@@ -1,7 +1,7 @@
 "use strict";
 
 const vm = require("node:vm");
-const { assert, loadScript } = require("./review-check-utils");
+const { assert, loadScript, createRequestGuardStub } = require("./review-check-utils");
 const {
   createUploadContext,
   flushMicrotasks,
@@ -185,6 +185,8 @@ async function createCleanupHarness(deleteRemotePath, overrides = {}){
     COMPOSE_SHARE_CLEANUP_BY_TAB: composeEntries,
     L: () => {},
     NCCore: {
+      ...createRequestGuardStub(),
+      getVerifiedConnectionIdentity: async () => null,
       normalizeBaseUrl: normalizeTestBaseUrl,
       getOpts: async () => ({
         baseUrl: TEST_BASE_URL,

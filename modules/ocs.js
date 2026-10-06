@@ -131,11 +131,17 @@
     timeoutMs = CONTROL_REQUEST_TIMEOUT_MS
   } = {}){
     const { res, raw } = await runWithTimeout(async (requestSignal) => {
-      const response = await fetch(url, {
-        method,
-        headers,
-        body,
-        signal: requestSignal
+      const response = await NCCore.runAuthenticatedRequest({
+        url,
+        authHeader: headers.Authorization || headers.authorization,
+        request: () => fetch(url, {
+          method,
+          // Explicit account credentials must not inherit a Thunderbird web session.
+          credentials: "omit",
+          headers,
+          body,
+          signal: requestSignal
+        })
       });
       const responseText = await response.text().catch((error) => {
         if (requestSignal?.aborted || error?.name === "AbortError"){

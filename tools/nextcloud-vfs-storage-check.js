@@ -1,6 +1,7 @@
 const fs = require("fs");
 const path = require("path");
 const vm = require("vm");
+const { createRequestGuardStub } = require("./review-check-utils");
 
 const ROOT = path.resolve(__dirname, "..");
 
@@ -39,6 +40,7 @@ function createResponse(status, raw = ""){
 
 function createContext(fetchImpl = async () => createResponse(204)){
   return {
+    NCCore: createRequestGuardStub(),
     console,
     URL,
     Blob,
@@ -169,6 +171,7 @@ function createStorageHarness(){
   };
 
   const core = {
+    ...createRequestGuardStub(),
     async getOpts(){
       return { ...state.opts };
     },

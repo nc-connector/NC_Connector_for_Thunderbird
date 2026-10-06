@@ -81,20 +81,28 @@
       response = await NCNextcloudDav.fetchWithTimeout({
         signal,
         timeoutMs: NCNextcloudDav.CONTROL_REQUEST_TIMEOUT_MS,
-        request: (requestSignal) => fetch(sourceUrl, {
-          method: "MOVE",
-          headers: {
-            "Authorization": authHeader,
-            "Destination": targetUrl,
-            ...(typeof overwrite === "boolean" ? { "Overwrite": overwrite ? "T" : "F" } : {}),
-            ...headers
-          },
-          signal: requestSignal
+        request: (requestSignal) => NCCore.runAuthenticatedRequest({
+          url: sourceUrl,
+          authHeader,
+          request: () => fetch(sourceUrl, {
+            method: "MOVE",
+            credentials: "omit",
+            headers: {
+              "Authorization": authHeader,
+              "Destination": targetUrl,
+              ...(typeof overwrite === "boolean" ? { "Overwrite": overwrite ? "T" : "F" } : {}),
+              ...headers
+            },
+            signal: requestSignal
+          })
         })
       });
     }catch(error){
       if (signal?.aborted || error?.name === "AbortError"){
         throw NCNextcloudDav.createAbortError();
+      }
+      if (NCCore.isConnectionPausedError(error)){
+        throw error;
       }
       const recovered = await recoverUnclearMove();
       if (recovered){

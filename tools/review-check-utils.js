@@ -50,11 +50,24 @@ function loadScript(relativePath, context, suffix = ""){
   vm.runInContext(source, context, { filename: relativePath });
 }
 
+// Protocol-only harnesses do not model saved accounts. Authentication state is
+// exercised separately with the real NCCore in login-network-security-check.
+function createRequestGuardStub(){
+  return {
+    runAuthenticatedRequest: ({ request }) => request(),
+    getConnectionState: async () => ({ reason: "", retryAt: 0 }),
+    isConnectionPausedError: (error) => error?.ncAuthenticationPaused === true
+      || error?.ncRateLimited === true
+      || [401, 429].includes(Number(error?.status))
+  };
+}
+
 module.exports = {
   ROOT,
   assert,
   readText,
   readJson,
   listFiles,
-  loadScript
+  loadScript,
+  createRequestGuardStub
 };

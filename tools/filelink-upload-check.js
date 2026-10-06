@@ -2,12 +2,13 @@
 
 const vm = require("node:vm");
 const { webcrypto } = require("node:crypto");
-const { assert, loadScript, readJson, readText } = require("./review-check-utils");
+const { assert, loadScript, readJson, readText, createRequestGuardStub } = require("./review-check-utils");
 
 const MIB = 1024 * 1024;
 
 function createContext(){
   const context = {
+    NCCore: createRequestGuardStub(),
     console,
     Blob,
     TextEncoder,
@@ -337,7 +338,7 @@ async function run(){
   assert(policy.isBulkCandidate(8 * MIB), "Exactly 8 MiB must remain a bulk candidate");
   assert(!policy.isBulkCandidate(8 * MIB + 1), "A file above 8 MiB must not use bulk");
   assert(
-    JSON.stringify(policy.RETRY_STATUS_CODES) === JSON.stringify([408, 423, 429, 502, 503, 504]),
+    JSON.stringify(policy.RETRY_STATUS_CODES) === JSON.stringify([408, 423, 502, 503, 504]),
     "Retry status list must match the shared upload rules"
   );
   assert(policy.MAX_PARALLEL_REQUESTS === 3, "Transfer worker limit must be three");

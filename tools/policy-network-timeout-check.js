@@ -3,7 +3,8 @@
 const vm = require("node:vm");
 const {
   assert,
-  loadScript
+  loadScript,
+  createRequestGuardStub
 } = require("./review-check-utils");
 const { makeResponse } = require("./network-security-test-utils");
 
@@ -37,6 +38,7 @@ async function run(){
     globalThis: null,
     window: null,
     NCCore: {
+      ...createRequestGuardStub(),
       normalizeBaseUrl: (value) => String(value || "").replace(/\/+$/, ""),
       getOpts: async () => ({
         baseUrl: "https://cloud.example.test",

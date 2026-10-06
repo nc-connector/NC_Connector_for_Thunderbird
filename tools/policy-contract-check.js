@@ -1,7 +1,7 @@
 "use strict";
 
 const vm = require("node:vm");
-const { assert, loadScript, readText } = require("./review-check-utils");
+const { assert, loadScript, readText, createRequestGuardStub } = require("./review-check-utils");
 
 function loadPolicyState(){
   const context = { globalThis: null };
@@ -83,6 +83,7 @@ function loadPolicyContext(payload, response = {}){
       };
     },
     NCCore: {
+      ...createRequestGuardStub(),
       normalizeBaseUrl: (value) => String(value || "").replace(/\/+$/, ""),
       getOpts: async () => ({
         baseUrl: "https://cloud.example.test",

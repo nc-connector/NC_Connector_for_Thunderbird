@@ -224,19 +224,27 @@
       response = await NCNextcloudDav.fetchWithTimeout({
         signal,
         timeoutMs: NCNextcloudDav.CONTROL_REQUEST_TIMEOUT_MS,
-        request: (requestSignal) => fetch(reservationUrl, {
-          method: "MOVE",
-          headers: {
-            "Authorization": authHeader,
-            "Destination": targetUrl,
-            "Overwrite": "F"
-          },
-          signal: requestSignal
+        request: (requestSignal) => NCCore.runAuthenticatedRequest({
+          url: reservationUrl,
+          authHeader,
+          request: () => fetch(reservationUrl, {
+            method: "MOVE",
+            credentials: "omit",
+            headers: {
+              "Authorization": authHeader,
+              "Destination": targetUrl,
+              "Overwrite": "F"
+            },
+            signal: requestSignal
+          })
         })
       });
     }catch(error){
       if (signal?.aborted || error?.name === "AbortError"){
         throw NCNextcloudDav.createAbortError();
+      }
+      if (NCCore.isConnectionPausedError(error)){
+        throw error;
       }
       const resolved = await resolveUnclearResult();
       if (resolved != null){
