@@ -1,4 +1,31 @@
 {
+  "options_remove_credentials_button": {
+    "message": "Odstranit uložené přihlašovací údaje"
+  },
+  "options_remove_credentials_hint": {
+    "message": "Odstraní uložené uživatelské jméno a heslo aplikace z tohoto profilu Thunderbirdu. URL Nextcloudu a ostatní nastavení zůstanou zachována. Heslo aplikace v Nextcloudu se neodstraní."
+  },
+  "options_remove_credentials_confirm": {
+    "message": "Odstranit uložené přihlašovací údaje z tohoto profilu Thunderbirdu? Nejprve dokončete probíhající nahrávání a další akce NC Connectoru."
+  },
+  "options_remove_credentials_success": {
+    "message": "Uložené přihlašovací údaje byly odstraněny. Znovu se přihlaste v části Obecné."
+  },
+  "options_remove_credentials_failed": {
+    "message": "Uložené přihlašovací údaje se nepodařilo odstranit. Zkuste to znovu."
+  },
+  "options_remove_credentials_busy": {
+    "message": "Nejprve dokončete probíhající nahrávání a poté to zkuste znovu."
+  },
+  "connection_auth_required": {
+    "message": "Přihlášení k Nextcloudu už není platné. Přihlaste se prosím znovu."
+  },
+  "connection_rate_limited": {
+    "message": "Nextcloud nyní omezuje počet požadavků. Počkejte prosím a zkuste to později."
+  },
+  "connection_reauthenticate": {
+    "message": "Přihlásit se znovu"
+  },
   "managed_auth_mode_invalid": {
     "message": "Centrálně nastavený způsob přihlášení je neplatný. Je vybráno přihlášení přes Nextcloud, ale nespustí se automaticky. Obraťte se na správce."
   },
@@ -299,6 +326,21 @@
   "connection_required_open_settings": {
     "message": "Otevřít nastavení"
   },
+  "connection_managed_title": {
+    "message": "Připojit se k vašemu Nextcloudu"
+  },
+  "options_setup_managed_message": {
+    "message": "Tuto instalaci spravuje vaše organizace. Ke svému Nextcloudu ještě nejste připojeni. Nastavte prosím jednorázově připojení."
+  },
+  "options_setup_loginflow_hint": {
+    "message": "Přihlaste se kliknutím na „Přihlásit se do Nextcloud“."
+  },
+  "options_setup_manual_hint": {
+    "message": "Zadejte své uživatelské jméno a heslo aplikace. Poté připojení otestujte a uložte."
+  },
+  "options_setup_saved": {
+    "message": "Údaje připojení jsou uloženy. Vraťte se do okna e-mailu nebo události a spusťte požadovanou akci znovu."
+  },
   "options_connection_privacy_hint": {
     "message": "NC Connector se připojuje pouze k serveru Nextcloud zadanému zde. Vaše přihlašovací údaje jsou uloženy v tomto profilu Thunderbirdu a odesílají se pouze na tento server, nikdy nám ani jiným třetím stranám."
   },
@@ -397,6 +439,9 @@
   },
   "options_status_saved": {
     "message": "Uloženo."
+  },
+  "options_status_debug_saved": {
+    "message": "Nastavení ladicího protokolování uloženo."
   },
   "options_status_save_failed": {
     "message": "Uložení selhalo."
@@ -959,11 +1004,14 @@
   "talk_option_moderator_line3": {
     "message": "Pokud delegování selže, vlastnictví místnosti zůstává na tvůrci."
   },
-  "talk_system_addressbook_required_short": {
-    "message": "Vyžaduje aktivní systémový adresář Nextcloud."
-  },
   "talk_system_addressbook_required_message": {
     "message": "Tato funkce vyžaduje aktivní systémový adresář Nextcloud."
+  },
+  "talk_system_addressbook_unavailable_short": {
+    "message": "Systémový adresář Nextcloudu není dostupný"
+  },
+  "talk_system_addressbook_unavailable_message": {
+    "message": "Systémový adresář Nextcloudu nebylo možné ověřit. Zkuste to znovu nebo se obraťte na správce Nextcloudu."
   },
   "talk_system_addressbook_admin_link_label": {
     "message": "Průvodce nastavením"

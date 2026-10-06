@@ -173,35 +173,6 @@ async function checkManagedAuthMode(){
   assert(localStorage.authMode === "manual", "Reading managed authentication must not mutate the local preference");
 }
 
-async function checkManagedLoginFlowEligibility(){
-  const cases = [
-    [{}, {}, false],
-    [{ AuthMode: "LoginFlow" }, {}, false],
-    [{ NextcloudUrl: "https://managed.example.test/nc" }, {}, false],
-    [{ AuthMode: "Manual", NextcloudUrl: "https://managed.example.test/nc" }, {}, false],
-    [{ AuthMode: "invalid", NextcloudUrl: "https://managed.example.test/nc" }, {}, false],
-    [{ AuthMode: null, NextcloudUrl: "https://managed.example.test/nc" }, {}, false],
-    [{ AuthMode: "LoginFlow", NextcloudUrl: "http://managed.example.test/nc" }, {}, false],
-    [{ AuthMode: "LoginFlow", NextcloudUrl: "invalid" }, {}, false],
-    [{ AuthMode: "LoginFlow", NextcloudUrl: "https://managed.example.test/nc" }, { baseUrl: "https://other.example.test/nc" }, false],
-    [{ AuthMode: "LoginFlow", NextcloudUrl: "https://managed.example.test/nc" }, { baseUrl: "https://managed.example.test/other" }, false],
-    [{ AuthMode: "LoginFlow", NextcloudUrl: "https://managed.example.test/nc" }, { baseUrl: "" }, false],
-    [{ AuthMode: "LoginFlow", NextcloudUrl: "https://managed.example.test/nc" }, { user: "alice", appPass: "saved-app-password" }, false],
-    [{ AuthMode: "LoginFlow", NextcloudUrl: "https://managed.example.test/nc" }, { user: "alice" }, true],
-    [{ AuthMode: "LoginFlow", NextcloudUrl: "https://managed.example.test/nc" }, { appPass: "saved-app-password" }, true],
-    [{ AuthMode: "LoginFlow", NextcloudUrl: "https://managed.example.test/nc" }, { user: " ", appPass: " " }, true],
-    [{ AuthMode: " LoginFLOW ", NextcloudUrl: "https://MANAGED.example.test:443/nc/", NextcloudUrlLocked: false }, { baseUrl: " https://managed.example.test/nc/ " }, true]
-  ];
-  for (const [values, localOptions, expected] of cases){
-    const harness = createManagedSetupHarness(async () => values);
-    const managedSetup = await harness.managedSetup.read();
-    const options = { baseUrl: "https://managed.example.test/nc", user: "", appPass: "", ...localOptions, managedSetup };
-    assert(harness.managedSetup.shouldStartManagedLoginFlow(options) === expected, "Automatic Login Flow requires a valid managed method, matching valid managed URL, and incomplete credentials");
-  }
-  const unmanaged = createManagedSetupHarness(async () => ({}));
-  assert(!unmanaged.managedSetup.shouldStartManagedLoginFlow(), "Missing setup cannot start Login Flow automatically");
-}
-
 async function checkRejectedManagedStorage(){
   const leakedUrl = "https://private-managed.example.test/nextcloud";
   const leakedPassword = "managed-storage-secret";
@@ -348,7 +319,7 @@ async function checkCoreAndOptionsFailClosed(){
     "Connection tests must stay blocked after the initial managed-policy read fails"
   );
   assert(
-    optionsSource.includes("managedSetupUnavailable || loginFlowInProgress || !hasBaseUrl"),
+    optionsSource.includes("managedSetupUnavailable || connectionChangeInProgress || !hasBaseUrl"),
     "Login Flow must stay disabled while the managed-policy state is unavailable"
   );
   assert(
@@ -372,13 +343,108 @@ async function checkCoreAndOptionsFailClosed(){
   );
 }
 
+async function checkFirstSignInNavigation(){
+  const source = readText("modules/bgState.js");
+  const start = source.indexOf("async function isNextcloudAccountConfigured(){");
+  const end = source.indexOf("function shortToken(", start);
+  assert(start >= 0 && end > start, "The shared account/setup boundary must remain present");
+  for (const managed of [false, true]){
+    for (const action of ["sharing", "talk"]){
+      const openedPopups = [];
+      const focusedPopups = [];
+      let settingsOpened = 0;
+      const account = { baseUrl: "https://cloud.example.test", managedSetup: { isEnterpriseRollout: managed } };
+      const context = {
+        URL,
+        L(){},
+        CONNECTION_REQUIRED_POPUP_WIDTH: 480,
+        CONNECTION_REQUIRED_POPUP_HEIGHT: 250,
+        NCCore: { getOpts: async () => account },
+        openAuthenticationRequiredOptions: async () => { settingsOpened++; return { id: 73 }; },
+        focusPopupWindowBestEffort: async (popup) => { focusedPopups.push(popup); return true; },
+        browser: {
+          runtime: { getURL: (path) => `moz-extension://test/${path}` },
+          windows: { create: async (options) => { openedPopups.push(options); return { id: 84 }; } }
+        }
+      };
+      vm.createContext(context);
+      vm.runInContext(source.slice(start, end), context, { filename: "modules/bgState.js" });
+      assert(!(await context.isNextcloudAccountConfigured()), "An effective URL without saved credentials must require sign-in");
+      const result = await context.openConnectionRequiredWindow(action);
+      if (managed){
+        assert(settingsOpened === 1 && result.id === 73 && openedPopups.length === 0 && focusedPopups.length === 0, `${action}: managed setup must use the regular Settings tab, not a separate login popup`);
+      }else{
+        assert(settingsOpened === 0 && result.id === 84 && openedPopups.length === 1 && focusedPopups.length === 1, `${action}: unmanaged setup must retain its existing notice`);
+        assert(openedPopups[0].url === `moz-extension://test/ui/connectionRequired.html?source=${action}`, "The unmanaged notice URL must carry only the action name");
+      }
+      account.user = "alice";
+      account.appPass = "saved-app-password";
+      assert(await context.isNextcloudAccountConfigured(), "Existing effective credentials must pass the action setup guard");
+    }
+  }
+}
+
+async function checkCreatedRoomCleanupOwner(){
+  for (const storageFails of [false, true]){
+    let route;
+    let persisted;
+    let cleanup;
+    const account = { baseUrl: "https://cloud.example.test", user: "alice", appPass: "saved-password" };
+    const wizard = { editorId: "editor", metadata: {}, roomCreateInProgress: false };
+    const context = {
+      console: { error(){} },
+      URL,
+      L(){},
+      bgI18n: (key) => key,
+      browser: { runtime: { onMessage: { addListener: (listener) => { route = listener; } } } },
+      NCCore: {
+        getOpts: async () => ({ ...account }),
+        normalizeBaseUrl: (value) => value,
+        getCurrentUserId: async (options) => {
+          assert(options.user === "alice", "Cleanup ownership must resolve the captured login");
+          return "canonical-alice";
+        }
+      },
+      NCPolicyRuntime: { assertManagedAccess: async () => {} },
+      getCalendarWizardContext: () => wizard,
+      hydrateTalkWizardContextFromEditor: async () => true,
+      refreshCalendarWizardContextSnapshot(){},
+      NCTalkCore: {
+        createTalkPublicRoom: async (_payload, options) => {
+          assert(options.user === "alice", "Room creation must use the owner-checked connection snapshot");
+          account.user = "different-user";
+          return { token: "new-room" };
+        },
+        deleteTalkRoom: async (options) => { cleanup = options; }
+      },
+      setRoomMeta: async (token, owner) => {
+        if (storageFails) throw new Error("storage unavailable");
+        persisted = { token, ...owner };
+      }
+    };
+    vm.createContext(context);
+    loadScript("modules/bgRouter.js", context);
+    const response = await route({ type: "talk:createRoom", contextId: "context", payload: { title: "Meeting" } });
+    if (storageFails){
+      assert(response.ok === false && cleanup?.token === "new-room" && cleanup.connectionOpts.user === "alice",
+        "A room without durable ownership must not be reported as inserted and cleanup must use its original account");
+    }else{
+      assert(response.ok && persisted.cleanupBaseUrl === "https://cloud.example.test"
+        && persisted.cleanupUserId === "canonical-alice",
+        "Room cleanup ownership must survive a concurrent saved-account change");
+    }
+    assert(wizard.roomCreateInProgress === false, "Room creation must release its busy state");
+  }
+}
+
 async function run(){
+  await checkCreatedRoomCleanupOwner();
   await checkManagedStorageStates();
   await checkManagedAuthMode();
-  await checkManagedLoginFlowEligibility();
   await checkRejectedManagedStorage();
   await checkManagedVfsAndCalendarBoundaries();
   await checkCoreAndOptionsFailClosed();
+  await checkFirstSignInNavigation();
   console.log("[OK] managed-setup-contract-check passed");
 }
 

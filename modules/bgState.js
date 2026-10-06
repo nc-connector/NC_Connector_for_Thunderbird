@@ -278,11 +278,15 @@ async function isNextcloudAccountConfigured(){
 }
 
 /**
- * Open the compact setup notice used by manual sharing when no account exists.
+ * Open Settings for managed first sign-in, otherwise show the setup notice.
  * @param {"sharing"|"talk"} source
  * @returns {Promise<object>}
  */
 async function openConnectionRequiredWindow(source = "sharing"){
+  const options = await NCCore.getOpts();
+  if (options.managedSetup?.isEnterpriseRollout === true){
+    return await openAuthenticationRequiredOptions();
+  }
   const popupUrl = new URL(browser.runtime.getURL("ui/connectionRequired.html"));
   popupUrl.searchParams.set("source", source === "talk" ? "talk" : "sharing");
   const windowInfo = await browser.windows.create({

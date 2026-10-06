@@ -37,7 +37,7 @@
       : "connection_required_sharing_message");
   }
 
-  async function openSettings(managedOnly){
+  async function openSettings(){
     if (settingsOpening || settingsOpened){
       return;
     }
@@ -50,8 +50,7 @@
     }
     try{
       const response = await browser.runtime.sendMessage({
-        type: "connection:openOptions",
-        payload: { managedOnly }
+        type: "connection:openOptions"
       });
       if (!response?.ok){
         throw new Error(response?.error || "connection_options_open_failed");
@@ -73,7 +72,6 @@
     }
   }
 
-  openSettingsButton?.addEventListener("click", () => openSettings(false));
+  openSettingsButton?.addEventListener("click", openSettings);
   closeButton?.addEventListener("click", () => window.close());
-  void openSettings(true);
 })();

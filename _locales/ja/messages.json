@@ -1,4 +1,31 @@
 {
+  "options_remove_credentials_button": {
+    "message": "保存済みの認証情報を削除"
+  },
+  "options_remove_credentials_hint": {
+    "message": "この Thunderbird プロファイルに保存されたユーザー名とアプリパスワードを削除します。Nextcloud の URL とその他の設定は保持されます。Nextcloud 側のアプリパスワードは削除されません。"
+  },
+  "options_remove_credentials_confirm": {
+    "message": "この Thunderbird プロファイルから保存済みの認証情報を削除しますか？先に進行中のアップロードとその他の NC Connector の操作を完了してください。"
+  },
+  "options_remove_credentials_success": {
+    "message": "保存済みの認証情報を削除しました。「一般」から再度ログインしてください。"
+  },
+  "options_remove_credentials_failed": {
+    "message": "保存済みの認証情報を削除できませんでした。もう一度お試しください。"
+  },
+  "options_remove_credentials_busy": {
+    "message": "先に進行中のアップロードを完了してから、もう一度お試しください。"
+  },
+  "connection_auth_required": {
+    "message": "Nextcloudへのログインが無効になりました。もう一度ログインしてください。"
+  },
+  "connection_rate_limited": {
+    "message": "Nextcloudが一時的にリクエストを制限しています。しばらく待ってから再試行してください。"
+  },
+  "connection_reauthenticate": {
+    "message": "再ログイン"
+  },
   "managed_auth_mode_invalid": {
     "message": "一元設定されたログイン方法が無効です。Nextcloud でのログインが選択されますが、自動では開始されません。管理者にお問い合わせください。"
   },
@@ -299,6 +326,21 @@
   "connection_required_open_settings": {
     "message": "設定を開く"
   },
+  "connection_managed_title": {
+    "message": "Nextcloud に接続"
+  },
+  "options_setup_managed_message": {
+    "message": "このインストールは組織によって管理されています。まだ Nextcloud に接続されていません。初回の接続設定を行ってください。"
+  },
+  "options_setup_loginflow_hint": {
+    "message": "「Nextcloud でログイン」をクリックしてログインしてください。"
+  },
+  "options_setup_manual_hint": {
+    "message": "ユーザー名とアプリパスワードを入力してください。その後、接続をテストして保存してください。"
+  },
+  "options_setup_saved": {
+    "message": "接続情報を保存しました。メールまたは予定のウィンドウに戻り、目的の操作をもう一度開始してください。"
+  },
   "options_connection_privacy_hint": {
     "message": "NC Connector は、ここで入力した Nextcloud サーバーにのみ接続します。ログイン情報はこの Thunderbird プロファイルに保存され、そのサーバーだけに送信されます。開発者やその他の第三者に送信されることはありません。"
   },
@@ -397,6 +439,9 @@
   },
   "options_status_saved": {
     "message": "保存しました。"
+  },
+  "options_status_debug_saved": {
+    "message": "デバッグログの設定を保存しました。"
   },
   "options_status_save_failed": {
     "message": "保存に失敗しました。"
@@ -959,11 +1004,14 @@
   "talk_option_moderator_line3": {
     "message": "委任が失敗した場合、ルームの所有権は作成者に残ります。"
   },
-  "talk_system_addressbook_required_short": {
-    "message": "アクティブな Nextcloud システムのアドレス帳が必要です。"
-  },
   "talk_system_addressbook_required_message": {
     "message": "この機能には、アクティブな Nextcloud システム アドレス帳が必要です。"
+  },
+  "talk_system_addressbook_unavailable_short": {
+    "message": "Nextcloudのシステムアドレス帳を利用できません"
+  },
+  "talk_system_addressbook_unavailable_message": {
+    "message": "Nextcloudのシステムアドレス帳を確認できませんでした。もう一度試すか、Nextcloud管理者にお問い合わせください。"
   },
   "talk_system_addressbook_admin_link_label": {
     "message": "セットアップガイド"

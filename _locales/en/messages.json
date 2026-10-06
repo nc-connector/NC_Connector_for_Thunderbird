@@ -1,4 +1,31 @@
 {
+  "options_remove_credentials_button": {
+    "message": "Remove saved credentials"
+  },
+  "options_remove_credentials_hint": {
+    "message": "Removes the saved username and app password from this Thunderbird profile. The Nextcloud URL and other settings are retained. The app password in Nextcloud is not deleted."
+  },
+  "options_remove_credentials_confirm": {
+    "message": "Remove saved credentials from this Thunderbird profile? Please finish any ongoing uploads and other NC Connector actions first."
+  },
+  "options_remove_credentials_success": {
+    "message": "Saved credentials have been removed. Please sign in again under General."
+  },
+  "options_remove_credentials_failed": {
+    "message": "Saved credentials could not be removed. Please try again."
+  },
+  "options_remove_credentials_busy": {
+    "message": "Please finish ongoing uploads first, then try again."
+  },
+  "connection_auth_required": {
+    "message": "Your Nextcloud sign-in is no longer valid. Please sign in again."
+  },
+  "connection_rate_limited": {
+    "message": "Nextcloud is temporarily limiting requests. Please wait and try again later."
+  },
+  "connection_reauthenticate": {
+    "message": "Sign in again"
+  },
   "managed_auth_mode_invalid": {
     "message": "The centrally configured sign-in method is invalid. Login with Nextcloud is selected without starting automatically. Please contact your administrator."
   },
@@ -299,6 +326,21 @@
   "connection_required_open_settings": {
     "message": "Open settings"
   },
+  "connection_managed_title": {
+    "message": "Connect to your Nextcloud"
+  },
+  "options_setup_managed_message": {
+    "message": "This installation is managed by your organization. You are not yet connected to your Nextcloud. Please set up the connection once."
+  },
+  "options_setup_loginflow_hint": {
+    "message": "Click “Login with Nextcloud” to sign in."
+  },
+  "options_setup_manual_hint": {
+    "message": "Enter your username and app password. Then test and save the connection."
+  },
+  "options_setup_saved": {
+    "message": "The connection details are saved. Return to your email or appointment window and start the desired action again."
+  },
   "options_connection_privacy_hint": {
     "message": "NC Connector connects only to the Nextcloud server entered here. Your sign-in details are stored in this Thunderbird profile and sent only to that server—never to us or other third parties."
   },
@@ -397,6 +439,9 @@
   },
   "options_status_saved": {
     "message": "Saved."
+  },
+  "options_status_debug_saved": {
+    "message": "Debug logging setting saved."
   },
   "options_status_save_failed": {
     "message": "Saving failed."
@@ -959,11 +1004,14 @@
   "talk_option_moderator_line3": {
     "message": "If delegation fails, room ownership remains with the creator."
   },
-  "talk_system_addressbook_required_short": {
-    "message": "Requires an active Nextcloud system address book."
-  },
   "talk_system_addressbook_required_message": {
     "message": "This feature requires an active Nextcloud system address book."
+  },
+  "talk_system_addressbook_unavailable_short": {
+    "message": "Nextcloud system address book unavailable"
+  },
+  "talk_system_addressbook_unavailable_message": {
+    "message": "The Nextcloud system address book could not be checked. Please try again or contact your Nextcloud administrator."
   },
   "talk_system_addressbook_admin_link_label": {
     "message": "Setup guide"

@@ -60,6 +60,17 @@
       row: dom.policyWarningRow,
       textElement: dom.policyWarningText,
       adminLink: dom.policyWarningAdminLink,
+      reauthenticateButton: dom.policyWarningReauthenticate,
+      policyStatus: state.policy.status,
+      translate: wizardTranslate
+    });
+  }
+  function refreshConnectionWarning(){
+    return NCWizardPolicyUi.refreshConnectionWarningUi({
+      row: dom.policyWarningRow,
+      textElement: dom.policyWarningText,
+      adminLink: dom.policyWarningAdminLink,
+      reauthenticateButton: dom.policyWarningReauthenticate,
       policyStatus: state.policy.status,
       translate: wizardTranslate
     });
@@ -282,6 +293,7 @@
     dom.policyWarningRow = document.getElementById('policyWarningRow');
     dom.policyWarningText = document.getElementById('policyWarningText');
     dom.policyWarningAdminLink = document.getElementById('policyWarningAdminLink');
+    dom.policyWarningReauthenticate = document.getElementById('policyWarningReauthenticate');
     dom.steps = Array.from(document.querySelectorAll('.wizard-step'));
     dom.shareNameRow = document.getElementById('shareNameRow');
     dom.shareName = document.getElementById('shareName');
@@ -1460,6 +1472,7 @@
       }
       if (!response?.ok){
         setMessage(response?.error || i18n('sharing_status_error'), 'error');
+        await refreshConnectionWarning();
         return false;
       }
       if (response.exists){
@@ -1471,6 +1484,7 @@
     }catch(error){
       logUiError("share folder preflight failed", error);
       setMessage(error?.message || i18n('sharing_status_error'), 'error');
+      await refreshConnectionWarning();
       return false;
     }finally{
       state.shareFolderCheckInProgress = false;
@@ -2217,6 +2231,7 @@
       log('Upload completed');
     }catch(error){
       logUiError("upload failed", error);
+      await refreshConnectionWarning();
       state.uploadCompleted = false;
       setMessage(error?.message || i18n('sharing_status_error'), 'error');
       setUploadStatus(error?.message || i18n('sharing_status_error'));

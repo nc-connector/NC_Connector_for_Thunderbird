@@ -5,6 +5,18 @@
  */
 (function(global){
   'use strict';
+
+  function getSystemAddressbookUiState(status = {}, translate, responseError = ""){
+    const configured = status.configured !== false;
+    const checked = configured && status.checked !== false;
+    const available = checked && status.available === true;
+    const unavailable = checked && !available;
+    const detail = available ? ""
+      : (!configured ? translate("connection_required_talk_message")
+        : (status.error || responseError || translate("talk_system_addressbook_unavailable_message")));
+    return { configured, checked, available, unavailable, detail };
+  }
+
   /**
    * Toggle one tooltip list between normal and lock-hint entries.
    * @param {HTMLElement|null} tooltipList
@@ -22,6 +34,7 @@
   }
 
   global.NCAddressbookUi = Object.freeze({
+    getSystemAddressbookUiState,
     applySystemAddressbookTooltipState
   });
 })(typeof window !== "undefined" ? window : (typeof globalThis !== "undefined" ? globalThis : this));

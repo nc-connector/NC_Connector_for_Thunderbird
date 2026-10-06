@@ -18,7 +18,13 @@ const normalizeAttachmentThresholdMb = NCSharingStorage.normalizeAttachmentThres
 const normalizeAttachmentLinkTarget = NCSharingStorage.normalizeAttachmentLinkTarget;
 const OPTIONS_LOG_PREFIX = "[NCUI][Options]";
 const authenticationRequired = new URL(window.location.href).searchParams.get("authenticationRequired") === "1";
+const reauthenticationRequested = new URL(window.location.href).searchParams.get("reauthenticate") === "1";
 let optionsPageClosed = false;
+let managedConnectionSetup = false;
+let managedConnectionSaved = false;
+let credentialsRemovalInProgress = false;
+let credentialSaveInProgress = false;
+let credentialTestInProgress = false;
 window.addEventListener("pagehide", () => { optionsPageClosed = true; });
 const SYSTEM_ADDRESSBOOK_ADMIN_URL = "https://github.com/nc-connector/NC_Connector_for_Thunderbird/blob/main/docs/ADMIN.md#43-talk-and-system-address-book";
 const ATTACHMENT_AUTOMATION_ADMIN_URL = "https://github.com/nc-connector/NC_Connector_for_Thunderbird/blob/main/docs/ADMIN.md#63-attachment-policy-example";
@@ -40,12 +46,18 @@ const baseUrlManagedPolicyMarker = document.getElementById("baseUrlManagedPolicy
 const baseUrlManagedPolicyTooltip = document.getElementById("baseUrlManagedPolicyTooltip");
 const authBlock = document.getElementById("authBlock");
 const authModeManagedHint = document.getElementById("authModeManagedHint");
+const connectionSetupNotice = document.getElementById("connectionSetupNotice");
+const connectionSetupMessage = document.getElementById("connectionSetupMessage");
+const connectionSetupHint = document.getElementById("connectionSetupHint");
 const userInput = document.getElementById("user");
 const appPassInput = document.getElementById("appPass");
+const removeCredentialsButton = document.getElementById("removeCredentials");
 const saveButton = document.getElementById("save");
+const debugTabPanel = document.getElementById("tab-debug");
 const policyWarningRow = document.getElementById("policyWarningRow");
 const policyWarningText = document.getElementById("policyWarningText");
 const policyWarningAdminLink = document.getElementById("policyWarningAdminLink");
+const policyWarningReauthenticate = document.getElementById("policyWarningReauthenticate");
 const sharingBaseRow = document.getElementById("sharingBaseRow");
 const sharingDefaultShareNameRow = document.getElementById("sharingDefaultShareNameRow");
 const sharingDefaultPermissionsRow = document.getElementById("sharingDefaultPermissionsRow");
@@ -87,6 +99,7 @@ const talkDefaultAddGuestsRow = document.getElementById("talkDefaultAddGuestsRow
 const optionsAddGuestsTooltipList = document.getElementById("optionsAddGuestsTooltipList");
 const optionsAddGuestsAddressbookLockHint = document.getElementById("optionsAddGuestsAddressbookLockHint");
 const talkAddressbookWarningRow = document.getElementById("talkAddressbookWarningRow");
+const optionsTalkAddressbookWarningText = document.getElementById("optionsTalkAddressbookWarningText");
 const optionsTalkAddressbookAdminLink = document.getElementById("optionsTalkAddressbookAdminLink");
 const talkDefaultPasswordRow = document.getElementById("talkDefaultPasswordRow");
 const talkDefaultPasswordInput = document.getElementById("talkDefaultPassword");
@@ -881,18 +894,25 @@ function applyEmailSignatureSettingsOverlay(){
 }
 
 function applyPolicyWarningUi(){
+  // First sign-in precedes a backend/Seat check; missing credentials are not a refusal.
+  if (managedConnectionSetup && !managedConnectionSaved){
+    if (policyWarningRow) policyWarningRow.hidden = true;
+    return;
+  }
   NCWizardPolicyUi.applyPolicyWarningUi({
     row: policyWarningRow,
     textElement: policyWarningText,
     adminLink: policyWarningAdminLink,
+    reauthenticateButton: policyWarningReauthenticate,
     policyStatus: runtimePolicyStatus,
     translate: i18n
   });
 }
 
 async function refreshBackendPolicyStatus(credentials = null){
+  let response;
   try{
-    const response = credentials
+    response = credentials
       ? await browser.runtime.sendMessage({
         type: "options:testConnection",
         payload: {
@@ -909,6 +929,7 @@ async function refreshBackendPolicyStatus(credentials = null){
       : null;
   }catch(error){
     runtimePolicyStatus = null;
+    response = { ok: false, error: i18n("options_test_failed") };
     globalThis.NCLogContext.safeConsoleError(OPTIONS_LOG_PREFIX, "policy status check failed", error);
   }
   if (runtimePolicyStatus){
@@ -918,6 +939,22 @@ async function refreshBackendPolicyStatus(credentials = null){
   refreshLanguageOverrideSelects();
   applyPolicyWarningUi();
   applyPolicySettingsOverlay();
+  if (response?.ok !== true){
+    await NCWizardPolicyUi.refreshConnectionWarningUi({
+      row: policyWarningRow,
+      textElement: policyWarningText,
+      adminLink: policyWarningAdminLink,
+      reauthenticateButton: policyWarningReauthenticate,
+      policyStatus: runtimePolicyStatus,
+      translate: i18n
+    });
+  }
+  return response;
+}
+
+function getConnectionTestErrorMessage(response){
+  if (response?.code === "auth") return i18n("options_test_failed_auth");
+  return response?.error || i18n("options_test_failed");
 }
 
 /**
@@ -1060,10 +1097,12 @@ async function load(){
   if (stored.baseUrl) baseUrlInput.value = stored.baseUrl;
   if (stored.user) userInput.value = stored.user;
   if (stored.appPass) appPassInput.value = stored.appPass;
+  document.getElementById("debugEnabled").checked = !!stored.debugEnabled;
   await refreshManagedSetupPolicy();
   const effectiveBaseUrl = getEffectiveBaseUrl(stored.baseUrl || "");
   if (effectiveBaseUrl) baseUrlInput.value = effectiveBaseUrl;
-  document.getElementById("debugEnabled").checked = !!stored.debugEnabled;
+  managedConnectionSetup = authenticationRequired && managedSetupPolicy?.isEnterpriseRollout === true
+    && (!effectiveBaseUrl || !String(stored.user || "").trim() || !String(stored.appPass || "").trim());
   if (sharingBaseInput){
     sharingBaseInput.value = stored[SHARING_KEYS.basePath] || DEFAULT_SHARING_BASE;
   }
@@ -1191,13 +1230,16 @@ async function load(){
   await refreshTalkSystemAddressbookState({ forceRefresh: true });
   setAuthMode(stored.authMode || "manual");
   updateAuthModeUI();
-  if (authenticationRequired && NCManagedSetup.shouldStartManagedLoginFlow({
-    baseUrl: getEffectiveBaseUrl(baseUrlInput.value),
-    user: userInput.value,
-    appPass: appPassInput.value,
-    managedSetup: managedSetupPolicy
-  })){
-    await startLoginFlow({ automatic: true });
+  if (reauthenticationRequested && stored.user && stored.appPass){
+    showStatus(i18n("connection_auth_required"), false, true);
+    if (getSelectedAuthMode() === "manual"){
+      // Keep the saved account intact until its replacement has been verified.
+      appPassInput.value = "";
+      updateAuthModeUI();
+      appPassInput.focus();
+    }else{
+      loginFlowButton.focus();
+    }
   }
 }
 
@@ -1244,6 +1286,9 @@ function applyTalkSystemAddressbookLockState(locked, detail = ""){
   if (talkAddressbookWarningRow){
     talkAddressbookWarningRow.hidden = !talkAddressbookLockActive;
   }
+  if (optionsTalkAddressbookWarningText){
+    optionsTalkAddressbookWarningText.textContent = talkAddressbookLockDetail;
+  }
 }
 
 /**
@@ -1259,17 +1304,17 @@ async function refreshTalkSystemAddressbookState(options = {}){
       payload: { forceRefresh }
     });
     const status = response?.status || {};
-    const locked = !(response?.ok && status.available !== false);
-    const detail = locked
-      ? i18n("talk_system_addressbook_required_message")
-      : "";
-    if (locked && (status.error || response?.error)){
+    const addressbookState = window.NCAddressbookUi.getSystemAddressbookUiState(
+      response?.ok ? status : {}, i18n, response?.error
+    );
+    if (addressbookState.unavailable && (status.error || response?.error)){
       globalThis.NCLogContext.safeConsoleError(OPTIONS_LOG_PREFIX, "system addressbook unavailable", status.error || response.error);
     }
-    applyTalkSystemAddressbookLockState(locked, detail);
+    // Local defaults can be edited before an account exists; this is not availability.
+    applyTalkSystemAddressbookLockState(addressbookState.unavailable, addressbookState.detail);
   }catch(error){
     globalThis.NCLogContext.safeConsoleError(OPTIONS_LOG_PREFIX, "system addressbook status check failed", error);
-    applyTalkSystemAddressbookLockState(true, i18n("talk_system_addressbook_required_message"));
+    applyTalkSystemAddressbookLockState(true, i18n("talk_system_addressbook_unavailable_message"));
   }
   applyPolicySettingsOverlay();
 }
@@ -1378,6 +1423,24 @@ async function openLoginUrl(url){
  */
 async function save({ guidedLogin = false } = {}){
   if (guidedLogin && optionsPageClosed) return;
+  // Diagnostics must be available before sign-in, without changing connection settings.
+  if (!guidedLogin && debugTabPanel?.classList.contains("active")){
+    await browser.storage.local.set({ debugEnabled: document.getElementById("debugEnabled").checked });
+    showStatus(i18n("options_status_debug_saved"));
+    return false;
+  }
+  if (credentialsRemovalInProgress || credentialSaveInProgress || credentialTestInProgress) return false;
+  credentialSaveInProgress = true;
+  updateAuthModeUI();
+  try{
+    return await saveConnection({ guidedLogin });
+  }finally{
+    credentialSaveInProgress = false;
+    updateAuthModeUI();
+  }
+}
+
+async function saveConnection({ guidedLogin }){
   if (!managedSetupPolicyReady){
     throw new Error(i18n("options_status_load_failed"));
   }
@@ -1391,8 +1454,12 @@ async function save({ guidedLogin = false } = {}){
   if (!permissionOk){
     return;
   }
-  await refreshBackendPolicyStatus({ baseUrl, user, appPass });
+  const verification = await refreshBackendPolicyStatus({ baseUrl, user, appPass });
   if (guidedLogin && optionsPageClosed) return;
+  if (verification?.ok !== true){
+    showStatus(getConnectionTestErrorMessage(verification), true, true);
+    return;
+  }
   const updates = {
     baseUrl,
     user,
@@ -1419,6 +1486,13 @@ async function save({ guidedLogin = false } = {}){
   await globalThis.NCVfsOptions?.save?.({ beforeSourceChange: true });
   if (guidedLogin && optionsPageClosed) return;
   await browser.storage.local.set(updates);
+  const committed = await browser.runtime.sendMessage({
+    type: "connection:commitVerified",
+    payload: { baseUrl, user, appPass }
+  });
+  if (committed?.ok !== true){
+    throw new Error(committed?.error || i18n("options_status_save_failed"));
+  }
   dirtyLocalDefaultKeys.clear();
   if (Object.prototype.hasOwnProperty.call(updates, "defaultsSource")){
     defaultsSourceDirty = false;
@@ -1427,7 +1501,14 @@ async function save({ guidedLogin = false } = {}){
   // First setup stores credentials only here; reload policy so locks show immediately.
   await refreshBackendPolicyStatus();
   await refreshTalkSystemAddressbookState({ forceRefresh: true });
-  showStatus(i18n("options_status_saved"));
+  if (managedConnectionSetup){
+    managedConnectionSaved = true;
+    updateManagedConnectionNotice();
+    applyPolicyWarningUi();
+    showStatus(i18n("options_setup_saved"), false, true, true);
+  }else{
+    showStatus(i18n("options_status_saved"));
+  }
   return vfsBackgroundRestartRequired;
 }
 
@@ -1438,6 +1519,39 @@ async function restartBackgroundForVfsDiscovery(){
   }
   backgroundPage.location.reload();
 }
+
+async function removeSavedCredentials(){
+  if (credentialsRemovalInProgress || credentialSaveInProgress || credentialTestInProgress || loginFlowInProgress
+    || !window.confirm(i18n("options_remove_credentials_confirm"))) return false;
+  credentialsRemovalInProgress = true;
+  updateAuthModeUI();
+  try{
+    const response = await browser.runtime.sendMessage({ type: "connection:removeCredentials" });
+    if (response?.ok !== true){
+      showStatus(response?.error || i18n("options_remove_credentials_failed"), true, true);
+      return false;
+    }
+    userInput.value = "";
+    appPassInput.value = "";
+    delete localDefaultDraft.user;
+    delete localDefaultDraft.appPass;
+    managedConnectionSaved = false;
+    managedConnectionSetup = managedSetupPolicy?.isEnterpriseRollout === true;
+    await refreshBackendPolicyStatus();
+    await refreshTalkSystemAddressbookState({ forceRefresh: false });
+    showStatus(i18n("options_remove_credentials_success"), false, true);
+    return true;
+  }catch(error){
+    globalThis.NCLogContext.safeConsoleError(OPTIONS_LOG_PREFIX, "remove saved credentials failed", error);
+    showStatus(error?.message || i18n("options_remove_credentials_failed"), true, true);
+    return false;
+  }finally{
+    credentialsRemovalInProgress = false;
+    updateAuthModeUI();
+  }
+}
+
+removeCredentialsButton?.addEventListener("click", removeSavedCredentials);
 
 if (saveButton){
   saveButton.addEventListener("click", async () => {
@@ -1625,6 +1739,9 @@ function initTabs(){
       panel.classList.toggle("active", panel.id === `tab-${id}`);
     });
     activeId = id;
+    if (!initial){
+      updateAuthModeUI();
+    }
     if (id === "vfs"){
       if (!initial){
         void globalThis.NCVfsOptions?.refresh?.();
@@ -1716,6 +1833,22 @@ function setAuthMode(mode){
   }
 }
 
+function updateManagedConnectionNotice(){
+  if (!connectionSetupNotice){
+    return;
+  }
+  connectionSetupNotice.hidden = !managedConnectionSetup;
+  if (!managedConnectionSetup){
+    return;
+  }
+  connectionSetupMessage.textContent = i18n(managedConnectionSaved
+    ? "options_setup_saved" : "options_setup_managed_message");
+  connectionSetupHint.hidden = managedConnectionSaved;
+  connectionSetupHint.textContent = managedConnectionSaved ? ""
+    : i18n(getSelectedAuthMode() === "loginFlow"
+      ? "options_setup_loginflow_hint" : "options_setup_manual_hint");
+}
+
 function updateAuthModeUI(){
   const mode = getSelectedAuthMode();
   setAuthMode(mode);
@@ -1730,12 +1863,17 @@ function updateAuthModeUI(){
   const hasUser = !!String(userInput?.value || "").trim();
   const hasAppPass = !!String(appPassInput?.value || "").trim();
   const hasConnectionSettings = hasBaseUrl && hasUser && hasAppPass;
+  const connectionChangeInProgress = loginFlowInProgress || credentialsRemovalInProgress
+    || credentialSaveInProgress || credentialTestInProgress;
+  if (removeCredentialsButton){
+    removeCredentialsButton.disabled = connectionChangeInProgress;
+  }
   if (baseUrlInput){
     const managedHint = managedBaseUrlLocked
       ? (i18n("options_managed_nextcloud_url_tooltip") || getAdminControlledHint())
       : "";
     baseUrlInput.classList.toggle("needs-attention", !hasBaseUrl);
-    baseUrlInput.disabled = managedBaseUrlLocked || loginFlowInProgress;
+    baseUrlInput.disabled = managedBaseUrlLocked || connectionChangeInProgress;
     baseUrlInput.title = managedHint;
     if (baseUrlManagedPolicyMarker){
       baseUrlManagedPolicyMarker.hidden = !managedBaseUrlLocked;
@@ -1747,11 +1885,11 @@ function updateAuthModeUI(){
     }
   }
   if (authBlock){
-    authBlock.disabled = managedSetupUnavailable || !hasBaseUrl || loginFlowInProgress;
+    authBlock.disabled = managedSetupUnavailable || !hasBaseUrl || connectionChangeInProgress;
     authBlock.classList.toggle("is-disabled", managedSetupUnavailable || !hasBaseUrl);
   }
   authRadios.forEach((radio) => {
-    radio.disabled = managedAuthMode || managedSetupUnavailable || !hasBaseUrl || loginFlowInProgress;
+    radio.disabled = managedAuthMode || managedSetupUnavailable || !hasBaseUrl || connectionChangeInProgress;
     radio.title = authModeHint;
     radio.parentElement.title = authModeHint;
   });
@@ -1759,17 +1897,19 @@ function updateAuthModeUI(){
     authModeManagedHint.hidden = !managedAuthMode;
     authModeManagedHint.textContent = authModeHint;
   }
-  if (userInput) userInput.disabled = managedSetupUnavailable || !hasBaseUrl || !manual || loginFlowInProgress;
-  if (appPassInput) appPassInput.disabled = managedSetupUnavailable || !hasBaseUrl || !manual || loginFlowInProgress;
+  if (userInput) userInput.disabled = managedSetupUnavailable || !hasBaseUrl || !manual || connectionChangeInProgress;
+  if (appPassInput) appPassInput.disabled = managedSetupUnavailable || !hasBaseUrl || !manual || connectionChangeInProgress;
   if (loginFlowButton){
-    loginFlowButton.disabled = managedSetupUnavailable || loginFlowInProgress || !hasBaseUrl || mode !== "loginFlow";
+    loginFlowButton.disabled = managedSetupUnavailable || connectionChangeInProgress || !hasBaseUrl || mode !== "loginFlow";
   }
   if (testButton){
-    testButton.disabled = managedSetupUnavailable || loginFlowInProgress || !hasConnectionSettings;
+    testButton.disabled = managedSetupUnavailable || connectionChangeInProgress || !hasConnectionSettings;
   }
   if (saveButton){
-    saveButton.disabled = managedSetupUnavailable || loginFlowInProgress || !hasConnectionSettings;
+    saveButton.disabled = !debugTabPanel?.classList.contains("active")
+      && (managedSetupUnavailable || connectionChangeInProgress || !hasConnectionSettings);
   }
+  updateManagedConnectionNotice();
 }
 
 function initTalkDefaultRoomTypePicker(){
@@ -1977,7 +2117,7 @@ if (loginFlowButton){
   loginFlowButton.addEventListener("click", () => startLoginFlow());
 }
 
-async function startLoginFlow({ automatic = false } = {}){
+async function startLoginFlow(){
   if (optionsPageClosed || loginFlowButton?.disabled || loginFlowInProgress) return;
   if (!managedSetupPolicyReady){
     showStatus(i18n("options_status_load_failed"), true, true);
@@ -1992,11 +2132,7 @@ async function startLoginFlow({ automatic = false } = {}){
   loginFlowInProgress = true;
   updateAuthModeUI();
   try{
-    // Permission prompts require a click; automatic setup may only use an existing grant.
-    if (!(await ensureOriginPermissionInteractive({ allowPrompt: !automatic }))){
-      if (automatic && !optionsPageClosed){
-        showStatus(i18n("options_permission_required"), false, true);
-      }
+    if (!(await ensureOriginPermissionInteractive())){
       return;
     }
     if (optionsPageClosed) return;
@@ -2032,7 +2168,7 @@ async function startLoginFlow({ automatic = false } = {}){
     appPassInput.value = response.appPass;
     showStatus(i18n("options_loginflow_success"), false, false, true);
     const verification = await runConnectionTest({ showMissing: false });
-    if (verification?.ok && !optionsPageClosed && authenticationRequired
+    if (verification?.ok && !optionsPageClosed && managedConnectionSetup
       && managedSetupPolicy?.hasAuthMode && managedSetupPolicy.authModeValid
       && managedSetupPolicy.authMode === "loginFlow"){
       await saveManagedLogin();
@@ -2055,11 +2191,6 @@ async function saveManagedLogin(){
     if (restartRequired){
       await restartBackgroundForVfsDiscovery();
     }
-    // Close only this setup tab, never its containing Thunderbird window.
-    const tab = await browser.tabs.getCurrent();
-    if (!optionsPageClosed && Number.isInteger(tab?.id)){
-      await browser.tabs.remove(tab.id);
-    }
   }catch(error){
     globalThis.NCLogContext.safeConsoleError(OPTIONS_LOG_PREFIX, "save managed login failed", error);
     if (!optionsPageClosed){
@@ -2074,6 +2205,9 @@ async function saveManagedLogin(){
  * @returns {Promise<object>}
  */
 async function runConnectionTest({ showMissing = true } = {}){
+  if (credentialsRemovalInProgress || credentialSaveInProgress || credentialTestInProgress){
+    return { ok:false, skipped:true, reason:"busy" };
+  }
   if (!managedSetupPolicyReady){
     if (showMissing){
       showStatus(i18n("options_status_load_failed"), true, true);
@@ -2089,10 +2223,12 @@ async function runConnectionTest({ showMissing = true } = {}){
     }
     return { ok:false, skipped:true, reason:"missing" };
   }
-  if (!(await ensureOriginPermissionInteractive({ allowPrompt: showMissing }))){
-    return { ok:false, skipped:true, reason:"permission" };
-  }
+  credentialTestInProgress = true;
+  updateAuthModeUI();
   try{
+    if (!(await ensureOriginPermissionInteractive({ allowPrompt: showMissing }))){
+      return { ok:false, skipped:true, reason:"permission" };
+    }
     const response = await browser.runtime.sendMessage({
       type: "options:testConnection",
       payload: { baseUrl, user, appPass }
@@ -2101,15 +2237,23 @@ async function runConnectionTest({ showMissing = true } = {}){
       const message = response?.message ? String(response.message) : i18n("options_test_success");
       showStatus(message, false, false, true);
     }else{
-      const code = response?.code;
-      const fallbackKey = code === "auth" ? "options_test_failed_auth" : "options_test_failed";
-      const message = response?.error || i18n(fallbackKey);
-      showStatus(message, true);
+      showStatus(getConnectionTestErrorMessage(response), true);
+      await NCWizardPolicyUi.refreshConnectionWarningUi({
+        row: policyWarningRow,
+        textElement: policyWarningText,
+        adminLink: policyWarningAdminLink,
+        reauthenticateButton: policyWarningReauthenticate,
+        policyStatus: runtimePolicyStatus,
+        translate: i18n
+      });
     }
     return response;
   }catch(error){
     globalThis.NCLogContext.safeConsoleError(OPTIONS_LOG_PREFIX, "testConnection runtime failed", error);
     showStatus(error?.message || i18n("options_test_failed"), true);
     return { ok:false, error: error?.message || String(error) };
+  }finally{
+    credentialTestInProgress = false;
+    updateAuthModeUI();
   }
 }

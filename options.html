@@ -133,6 +133,16 @@ footer{
 .auth-block{border:1px solid var(--tb-border); border-radius:var(--tb-radius); padding:14px; margin:14px 0; background:var(--tb-surface);}
 .auth-block.is-disabled{opacity:.55;}
 .auth-block legend{font-weight:600; padding:0 4px;}
+.connection-setup-notice{
+  border:1px solid var(--brand-blue);
+  border-radius:var(--tb-radius);
+  background:var(--tb-surface-2);
+  padding:14px;
+  margin-bottom:16px;
+}
+.connection-setup-notice h2{margin:0 0 8px 0; font-size:16px;}
+.connection-setup-notice p{margin:0;}
+.connection-setup-notice .hint{margin-top:8px;}
 .radio-option{display:flex; align-items:center; gap:8px; margin:6px 0;}
 .button-row{display:flex; flex-wrap:wrap; gap:10px; margin-top:12px;}
 #testConnection,#loginFlowButton{
@@ -568,9 +578,15 @@ footer{
       </p>
       <p class="policy-warning-text" id="policyWarningText"></p>
       <a id="policyWarningAdminLink" class="policy-warning-link" target="_blank" rel="noopener noreferrer" hidden></a>
+      <button id="policyWarningReauthenticate" type="button" data-i18n="connection_reauthenticate" hidden></button>
     </div>
   </div>
   <section id="tab-general" class="tab-panel active">
+    <div id="connectionSetupNotice" class="connection-setup-notice" role="status" hidden>
+      <h2 data-i18n="connection_managed_title"></h2>
+      <p id="connectionSetupMessage"></p>
+      <p id="connectionSetupHint" class="hint"></p>
+    </div>
     <div class="row">
       <label for="baseUrl" class="option-tooltip-wrap">
         <span data-i18n="options_base_url_label">Nextcloud URL</span>
@@ -864,9 +880,9 @@ footer{
         <div class="talk-addressbook-warning" role="alert">
           <p class="talk-addressbook-warning-title">
             <span aria-hidden="true">⚠️ </span>
-            <span data-i18n="talk_system_addressbook_required_short">Requires an active Nextcloud system address book.</span>
+            <span data-i18n="talk_system_addressbook_unavailable_short">Nextcloud system address book unavailable</span>
           </p>
-          <p class="talk-addressbook-warning-text" data-i18n="talk_system_addressbook_required_message">This feature requires an active Nextcloud system address book.</p>
+          <p class="talk-addressbook-warning-text" id="optionsTalkAddressbookWarningText"></p>
           <a id="optionsTalkAddressbookAdminLink" class="talk-addressbook-warning-link" data-i18n="talk_system_addressbook_admin_link_label" target="_blank" rel="noopener noreferrer" href="https://github.com/nc-connector/NC_Connector_for_Thunderbird/blob/main/docs/ADMIN.md#43-talk-and-system-address-book">Setup guide</a>
         </div>
       </div>
@@ -979,6 +995,13 @@ footer{
           <option value="backend" data-i18n="options_defaults_source_backend"></option>
         </select>
         <p id="defaultsSourceHint" class="hint" data-i18n="options_defaults_source_seat_required_tooltip"></p>
+      </div>
+    </div>
+    <div class="row">
+      <label for="removeCredentials" data-i18n="options_auth_heading"></label>
+      <div>
+        <button id="removeCredentials" type="button" data-i18n="options_remove_credentials_button" aria-describedby="removeCredentialsHint"></button>
+        <p id="removeCredentialsHint" class="hint" data-i18n="options_remove_credentials_hint"></p>
       </div>
     </div>
   </section>

@@ -1,4 +1,31 @@
 {
+  "options_remove_credentials_button": {
+    "message": "移除已保存的登录凭据"
+  },
+  "options_remove_credentials_hint": {
+    "message": "移除此 Thunderbird 配置文件中保存的用户名和应用密码。Nextcloud 地址及其他设置会保留。不会删除 Nextcloud 中的应用密码。"
+  },
+  "options_remove_credentials_confirm": {
+    "message": "要从此 Thunderbird 配置文件中移除已保存的登录凭据吗？请先完成正在进行的上传和其他 NC Connector 操作。"
+  },
+  "options_remove_credentials_success": {
+    "message": "已移除保存的登录凭据。请在“常规”中重新登录。"
+  },
+  "options_remove_credentials_failed": {
+    "message": "无法移除已保存的登录凭据。请重试。"
+  },
+  "options_remove_credentials_busy": {
+    "message": "请先完成正在进行的上传，然后重试。"
+  },
+  "connection_auth_required": {
+    "message": "Nextcloud 登录已失效。请重新登录。"
+  },
+  "connection_rate_limited": {
+    "message": "Nextcloud 暂时限制了请求。请稍候再试。"
+  },
+  "connection_reauthenticate": {
+    "message": "重新登录"
+  },
   "managed_auth_mode_invalid": {
     "message": "集中配置的登录方式无效。已选择通过 Nextcloud 登录，但不会自动启动。请联系管理员。"
   },
@@ -299,6 +326,21 @@
   "connection_required_open_settings": {
     "message": "打开设置"
   },
+  "connection_managed_title": {
+    "message": "连接到您的 Nextcloud"
+  },
+  "options_setup_managed_message": {
+    "message": "此安装由您的组织管理。您尚未连接到您的 Nextcloud。请先完成一次连接设置。"
+  },
+  "options_setup_loginflow_hint": {
+    "message": "点击“使用 Nextcloud 登录”以登录。"
+  },
+  "options_setup_manual_hint": {
+    "message": "请输入您的用户名和应用密码，然后测试并保存连接。"
+  },
+  "options_setup_saved": {
+    "message": "连接信息已保存。请返回邮件或日程窗口，重新开始所需操作。"
+  },
   "options_connection_privacy_hint": {
     "message": "NC Connector 仅连接到此处填写的 Nextcloud 服务器。您的登录信息保存在此 Thunderbird 配置文件中，并且只会发送到该服务器，绝不会发送给我们或其他第三方。"
   },
@@ -397,6 +439,9 @@
   },
   "options_status_saved": {
     "message": "已保存。"
+  },
+  "options_status_debug_saved": {
+    "message": "调试日志设置已保存。"
   },
   "options_status_save_failed": {
     "message": "保存失败。"
@@ -959,11 +1004,14 @@
   "talk_option_moderator_line3": {
     "message": "如果委派失败，房间所有权仍归创建者所有。"
   },
-  "talk_system_addressbook_required_short": {
-    "message": "需要有效的 Nextcloud 系统地址簿。"
-  },
   "talk_system_addressbook_required_message": {
     "message": "此功能需要活动的 Nextcloud 系统地址簿。"
+  },
+  "talk_system_addressbook_unavailable_short": {
+    "message": "Nextcloud 系统通讯录不可用"
+  },
+  "talk_system_addressbook_unavailable_message": {
+    "message": "无法检查 Nextcloud 系统通讯录。请重试或联系您的 Nextcloud 管理员。"
   },
   "talk_system_addressbook_admin_link_label": {
     "message": "设置指南"

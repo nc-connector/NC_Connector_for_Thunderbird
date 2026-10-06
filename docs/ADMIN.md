@@ -69,6 +69,8 @@ Browser sign-in must also be able to reach your organization's identity provider
 
 Use an app password, not the user's main Nextcloud password. Each user signs in separately; do not distribute credentials with the add-on.
 
+Both **Test connection** and **Save** check the entered account. Incorrect credentials show an error and are not saved; correct the username or app password and retry. A failed save leaves the previously saved connection and settings unchanged. Being signed in to Nextcloud elsewhere in Thunderbird does not replace the add-on's credentials.
+
 For centrally prepared first sign-in, use [Enterprise Rollout](#enterprise-rollout). The settings remain accessible in Thunderbird.
 
 <a id="6-enterprise-rollout"></a>
@@ -158,12 +160,15 @@ Example with a locked URL, browser sign-in, and backend defaults:
 
 ### First sign-in
 
-With managed `AuthMode` and missing credentials, clicking **Insert Nextcloud share** or **Insert Talk link** opens setup with the chosen method locked.
+If the connection has not been set up in a managed installation, clicking **Insert Nextcloud share** or **Insert Talk link** opens the **General** settings tab in Thunderbird's main window. A blue notice explains why sign-in is needed. The configured server address and sign-in method appear below it.
 
-- **LoginFlow:** Browser sign-in starts automatically when the active URL matches the managed URL and Thunderbird has already granted server access. Otherwise, the user clicks **Login with Nextcloud** and grants access if asked. Successful sign-in and connection verification save the credentials and close the setup tab, including after a manual retry.
-- **Manual:** The user enters a username and app password, tests the connection, and saves.
+1. With **LoginFlow**, click **Login with Nextcloud** in Settings. If Thunderbird asks for permission to access the server, approve it there.
+2. Complete sign-in and approve access in the browser. Keep the Settings tab open. With managed `AuthMode=LoginFlow`, NC Connector verifies and saves the connection automatically.
+3. Return to the email or appointment and click **Insert Nextcloud share** or **Insert Talk link** again. Backend and Seat checks then apply as usual.
 
-After setup, click Share or Talk again in the original message or appointment. Opening Settings normally does not start LoginFlow or close the tab automatically. Complete saved credentials do not trigger a new automatic sign-in.
+With **Manual**, enter the username and app password, run **Test connection**, and save. The managed sign-in method stays locked in either case.
+
+Settings stays open after saving and shows a reminder to start the desired action again. NC Connector does not start LoginFlow automatically or reopen the original action. Sign-in does not change the message or appointment, create a share, or create a Talk room. A complete saved connection skips this setup step.
 
 ### Change or remove managed values
 
@@ -333,6 +338,23 @@ Uninstalling normally clears the add-on's local data, including settings and sav
 3. For HTTP `401`, sign in again. For `403`, check user permissions and gateway restrictions.
 4. If only one workstation is affected, compare its certificate, proxy, and endpoint-security settings with a working machine. Do not disable certificate validation.
 
+If Nextcloud rejects a saved app password, NC Connector pauses requests using it
+and offers **Sign in again**. For manual sign-in, enter the new app password and
+click **Save**; for browser sign-in, click **Login with Nextcloud**. Saving tests
+the new connection before accepting it. A failed test leaves the stored account
+unchanged and does not resume paused requests.
+
+After a successful save, normal requests resume. Pending share and Talk cleanup
+can continue only for the same Nextcloud account. Existing message content and
+saved appointments are not removed. For HTTP `429`, wait until the server's
+requested delay has passed; repeatedly testing the password will not help.
+
+To remove the saved sign-in without uninstalling the add-on, finish pending work
+and choose **Advanced → Remove saved credentials**. This removes the local
+username and app password, but retains the URL, preferences, and cleanup records.
+It does not revoke the app password in Nextcloud or delete remote content. The
+next Share or Talk action requires sign-in again.
+
 ### Managed settings are missing or invalid
 
 Check `about:policies`, the add-on ID, key spelling, JSON types, and the installed add-on version. Older versions may not support newer keys. Restart Thunderbird after correcting the policy.
@@ -343,7 +365,9 @@ Check `about:policies`, the add-on ID, key spelling, JSON types, and the install
 | Sign-in method is invalid | Set `AuthMode` to `LoginFlow` or `Manual`. Invalid values lock LoginFlow but do not start or save it automatically. |
 | Default-values source is invalid | Set `DefaultsSource` to `local` or `backend`. Without an explicit backend override, invalid input locks the source to `local`. |
 | Settings cannot be loaded | Correct managed-policy errors first. NC Connector does not silently ignore unreadable policy; connection changes, tests, and login remain blocked in that session. |
-| LoginFlow did not start automatically | Check for incomplete credentials, a matching managed URL, and granted server access. Use the login button if permission is still needed. |
+| The first-sign-in notice did not appear | The notice appears when an action opens Settings for an incomplete connection in a managed installation. Complete saved connections open the action directly; opening Settings normally does not show the notice. |
+| Browser sign-in does not start | Click **Login with Nextcloud** in Settings. If prompted, approve server access there. Check that the workstation can open the configured URL and identity provider. |
+| Sign-in succeeded but the wizard did not open | Return to the email or appointment and click Share or Talk again. If a backend or Seat notice appears, follow its instructions. |
 
 <a id="67-managed-installation-cannot-start-an-action"></a>
 
@@ -364,6 +388,8 @@ Without Enterprise Rollout, users without a valid assigned Seat can still use Sh
 <a id="43-talk-and-system-address-book"></a>
 
 ### System address book
+
+Complete sign-in and run **Test connection** before checking the address book. NC Connector does not check it or show an address-book warning before an account is configured. If a warning reports a connection, sign-in, or permission problem, resolve that problem first.
 
 If user search or moderator selection is disabled, or users are missing:
 
@@ -412,7 +438,7 @@ See the [Nextcloud system address book guide](https://docs.nextcloud.com/server/
 4. Match the failure time with the client and server logs. Check DAV methods and headers against [Network access](#network-access); a blocked `MOVE` or `DELETE` can break upload completion or cleanup.
 5. If only large files fail, check proxy size limits, timeouts, buffering, and server storage performance.
 
-HTTP `423` indicates a lock, `429` rate limiting, and `502`–`504` an upstream or gateway failure. Temporary errors are retried automatically within limits; repeated failures need server-side diagnosis.
+HTTP `423` indicates a lock and `502`–`504` an upstream or gateway failure. These temporary errors are retried within limits. HTTP `429` pauses requests for the server's requested delay rather than immediately retrying; try the upload again afterward. Repeated failures need server-side diagnosis.
 
 <a id="84-insufficient-storage-507"></a>
 
@@ -472,11 +498,11 @@ After an add-on, server, proxy, or policy change, test the connection and the af
 
 ## Logs and support
 
-1. Enable **Debug logging** on the add-on's **Debug** tab.
+1. Enable **Debug logging** on the add-on's **Debug** tab and click **Save** while that tab is selected. This saves only the logging setting and works before sign-in.
 2. Open Thunderbird's **Error Console** and reproduce the issue once.
 3. Record the time, Thunderbird and add-on versions, Nextcloud and relevant app versions, action, error message, and matching log lines. Include the HTTP status from the server or proxy where relevant.
 4. Review the excerpt for credentials, private share or Secret links, filenames, recipients, and customer data before forwarding it.
-5. Turn debug logging off again after diagnosis.
+5. Turn debug logging off again after diagnosis and click **Save** on the **Debug** tab.
 
 `[NCBG]` covers background work, uploads, and calendar processing. `[NCUI][Sharing]`, `[NCUI][Talk]`, and `[NCUI][Options]` identify the corresponding interfaces; `[ncCalToolbar]` concerns the calendar button and editor.
 

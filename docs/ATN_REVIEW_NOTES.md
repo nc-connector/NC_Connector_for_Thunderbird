@@ -28,7 +28,11 @@ release-specific differences remain in `CHANGELOG.md`.
 - License-management links are shown only to Nextcloud administrators and point to the configured Nextcloud's backend administration. The mail add-on does not contact the license server directly.
 - Older backend responses remain supported. Without the backend, normal local Sharing and Talk remain available in unmanaged installations without a license warning.
 - Presence of a supported URL, URL-lock, defaults-source, or `AuthMode` managed setting requires backend-confirmed access with a valid assigned Seat. Missing backend, missing access, and failed verification have distinct messages. Initial login, cleanup, revocation, and disconnect remain accessible. No native registry access or new permission is added.
-- Managed `AuthMode` locks the sign-in method without overwriting the local choice. Guided first sign-in uses the existing Login Flow and may start automatically only with an existing server host permission and matching managed URL; otherwise the user grants permission through the login button. Successful verification saves and closes only the setup tab. Normal options remain open; late login replies after closing setup are discarded.
+- Managed `AuthMode` locks the sign-in method without overwriting the local choice. When a managed installation lacks credentials, Sharing or Talk opens General Settings in Thunderbird's main window with an inline explanation. The existing login button explicitly requests host access and starts browser LoginFlow. Verified first-sign-in credentials with managed `AuthMode=LoginFlow` use the existing automatic save path; Manual retains Test/Save. Settings stays open and asks the user to start the desired action again. No original item, action continuation, or separate login dialog is retained. Ordinary Settings remains unchanged.
+- Saving on the Debug tab writes only the local logging switch. It is available before sign-in and without managed-policy, host-permission, backend, or Seat checks. Other settings drafts and credentials are unchanged; credential saves still use the normal path.
+- Credential Test and Save use the explicit entered account without ambient Thunderbird cookies or cached HTTP authentication. Nextcloud fetches use `credentials: "omit"`; upload XHR uses the documented Firefox `mozAnon` option and keeps explicit Basic Auth. Failed credential checks show a localized error before any settings or VFS save; verified connections can still be stored without backend or Seat access. Debug-only saving remains independent. No profile data, cookies, permissions, or vendor code are changed.
+- A confirmed HTTP `401` for the currently stored connection persistently pauses authenticated requests using that connection. HTTP `403` does not invalidate the account. The existing Settings path offers explicit reauthentication; only successful testing followed by saving replacement credentials resumes requests. Failed draft tests cannot invalidate a different stored connection. Pending cleanup retains its ownership and resumes only for the same canonical account. HTTP `429` has a separate persistent cooldown that honors the server's `Retry-After` without shortening it to the upload retry cap. No new permission, Experiment API, automatic original-action continuation, or credential store is added.
+- Advanced settings also offer explicit, confirmed removal of the locally saved username and app password. The URL, preferences, and cleanup tracking remain; no server token or remote content is revoked or deleted. Active uploads prevent removal, and delayed requests cannot reuse the removed credentials.
 - Advanced settings can select local or backend defaults. The backend can override managed storage and optionally allow a user selection. Missing source metadata preserves the managed/local path. Local preferences are retained separately from policy overlays; per-action editability is unchanged. See [default resolution](DEVELOPMENT.md#61-where-options-live) and [rollout instructions](ADMIN.md#6-enterprise-rollout).
 - Legacy zero-day Share expiry is normalized once to one day at the backend-response boundary. Positive and missing values retain their meaning; locked policies and editable local choices still use the existing resolution path. The policy regression suite compares expiry and attachment thresholds across Community and Pro, including inactive personal Seats and both upload modes.
 
@@ -70,7 +74,7 @@ must replace that loading mechanism with explicit imports.
 ## Behavior Guarantees
 
 1) Talk button is present in dialog and tab editors.
-2) Button click opens the Talk wizard through the native calendar item action popup.
+2) With a configured account, the button opens the Talk wizard through the native calendar item action popup. Missing credentials follow the Settings setup path described below.
 3) Wizard can read/write unsaved editor state through `editorId` targeting.
 4) Editor close signals handle discarded/superseded cleanup; only official calendar create/update events with matching `X-NCTALK-TOKEN` confirm persistence.
 5) Event move/delete handling remains driven by official calendar item events.
@@ -96,8 +100,10 @@ password-dispatch, header, or body mutation cannot be exposed as committed.
 16) Sending is blocked only while automated attachment routing owns the compose
   tab. A manually opened sharing wizard does not participate in that guard.
 17) Manual Sharing and Talk actions do not initialize their wizard while the
-  effective Nextcloud URL, user, or app password is missing. A local setup
-  notice offers navigation to the General options tab instead.
+  effective Nextcloud URL, user, or app password is missing. Managed installations
+  open the General options tab with a first-sign-in notice; unmanaged installations
+  show a notice offering navigation there. After saving, the user starts the action
+  again. Initial setup does not mutate the message or appointment.
 
 ---
 
@@ -128,6 +134,11 @@ password-dispatch, header, or body mutation cannot be exposed as committed.
 - Talk user search, moderator selection, and participant toggles (users/guests)
   depend on runtime system-addressbook availability checks and are disabled
   with explicit user guidance when the addressbook endpoint is unavailable.
+- An incomplete account returns an unconfigured, unchecked address-book status
+  without a request. Options show no dependency warning or address-book-induced
+  locks on local defaults in that state; wizard execution still requires a
+  successful check. Retrieval failures retain the actual error instead of
+  presenting every failure as a disabled Nextcloud address book.
 - System-addressbook reads validate the complete vCard export before replacing cached contacts. A valid non-empty export is accepted with HTTP 404 or a wrong Content-Type; other HTTP errors remain rejected. Invalid responses stop participant classification and are not treated as an empty address book. Parser diagnostics do not expose contact data or response bodies. The existing bundled parser and all experiments remain unchanged.
 - Effective Talk setting `talk_set_password` controls password protection. New
   password-protected rooms start with a generated password that users can
@@ -262,7 +273,8 @@ password-dispatch, header, or body mutation cannot be exposed as committed.
   normal profile without enterprise policy and resolves to an empty managed
   setup. Other `storage.managed` failures stay fail-closed: background URL
   selection does not fall back to local state, and options show existing local
-  credentials read-only while blocking Save/Test/Login Flow for that run.
+  credentials read-only while blocking connection Save/Test/Login Flow for that
+  run. The local Debug-tab save remains available.
 
 ### Nextcloud 32 FileLink upload
 
@@ -275,7 +287,7 @@ password-dispatch, header, or body mutation cannot be exposed as committed.
 - Normal Direct PUT uses the server-recognized `X-NC-WebDAV-Auto-Mkcol` header. The protocol check covers a single-file nested directory, where this header creates the missing parent path. A create-only VFS-provider write first uploads to a unique sibling stage and then uses `MOVE` with `Overwrite: F`, so retrying a lost PUT response cannot turn a completed upload into a false target collision.
 - The final share root is reserved through a unique staging collection and `MOVE` with `Overwrite: F`. A target collision is decided by Nextcloud without an earlier check/create race.
 - Final MOVE requests are not repeated blindly. An unclear staged-file MOVE is accepted only when its operation-owned source has disappeared and the target is a file of the expected size. A retained source plus an existing create-only target remains a collision, including when an older target has the same size. Root reservations use the equivalent source/target DAV probes for collections.
-- Replay-safe requests use at most three attempts for transport failures or HTTP `408`, `423`, `429`, `502`, `503`, and `504`; `Retry-After` is capped at 30 seconds.
+- Replay-safe requests use at most three attempts for transport failures or HTTP `408`, `423`, `502`, `503`, and `504`; these transient retry delays are capped at 30 seconds. HTTP `401` and `429` instead stop at the shared connection guard; `429` honors the server's full requested cooldown.
 - HTTP `507`, including a failed item reported by DAV Bulk, maps to the localized insufficient-storage message.
 - Public-share create and metadata update send the exact `permissions` mask without the overriding legacy `publicUpload` field. Unclear create responses use an exact-path lookup and permit one more create only after the lookup reports a known empty result.
 - The Sharing wizard receives a separate Bulk-checksum file count before upload. Intermediate checksum updates and the existing aggregate/item batches are limited to at most every 100 ms. Debug upload summaries are limited to one every five seconds.

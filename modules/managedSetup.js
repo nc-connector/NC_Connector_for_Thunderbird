@@ -159,25 +159,11 @@ const NCManagedSetup = (() => {
     return localMode || "manual";
   }
 
-  function shouldStartManagedLoginFlow(options){
-    const managed = options?.managedSetup;
-    if (!managed?.hasAuthMode || !managed.authModeValid || managed.authMode !== "loginFlow" || !managed.hasNextcloudUrl){
-      return false;
-    }
-    const managedBaseUrl = normalizeNextcloudUrl(managed.nextcloudUrl);
-    const effectiveBaseUrl = normalizeNextcloudUrl(options.baseUrl);
-    if (!managedBaseUrl || managedBaseUrl !== effectiveBaseUrl){
-      return false;
-    }
-    return !String(options.user || "").trim() || !String(options.appPass || "").trim();
-  }
-
   return {
     emptyPolicy,
     normalizeNextcloudUrl,
     read,
     resolveBaseUrl,
-    resolveAuthMode,
-    shouldStartManagedLoginFlow
+    resolveAuthMode
   };
 })();

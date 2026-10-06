@@ -1,4 +1,31 @@
 {
+  "options_remove_credentials_button": {
+    "message": "Opgeslagen inloggegevens verwijderen"
+  },
+  "options_remove_credentials_hint": {
+    "message": "Verwijdert de opgeslagen gebruikersnaam en het app-wachtwoord uit dit Thunderbird-profiel. De Nextcloud-URL en andere instellingen blijven behouden. Het app-wachtwoord in Nextcloud wordt niet verwijderd."
+  },
+  "options_remove_credentials_confirm": {
+    "message": "Opgeslagen inloggegevens uit dit Thunderbird-profiel verwijderen? Rond eerst lopende uploads en andere NC Connector-acties af."
+  },
+  "options_remove_credentials_success": {
+    "message": "De opgeslagen inloggegevens zijn verwijderd. Meld u opnieuw aan onder Algemeen."
+  },
+  "options_remove_credentials_failed": {
+    "message": "De opgeslagen inloggegevens konden niet worden verwijderd. Probeer het opnieuw."
+  },
+  "options_remove_credentials_busy": {
+    "message": "Rond eerst lopende uploads af en probeer het daarna opnieuw."
+  },
+  "connection_auth_required": {
+    "message": "Uw aanmelding bij Nextcloud is niet meer geldig. Meld u opnieuw aan."
+  },
+  "connection_rate_limited": {
+    "message": "Nextcloud beperkt tijdelijk het aantal verzoeken. Wacht even en probeer het later opnieuw."
+  },
+  "connection_reauthenticate": {
+    "message": "Opnieuw aanmelden"
+  },
   "managed_auth_mode_invalid": {
     "message": "De centraal ingestelde aanmeldmethode is ongeldig. Aanmelden met Nextcloud is geselecteerd, maar wordt niet automatisch gestart. Neem contact op met uw beheerder."
   },
@@ -299,6 +326,21 @@
   "connection_required_open_settings": {
     "message": "Instellingen openen"
   },
+  "connection_managed_title": {
+    "message": "Verbinden met uw Nextcloud"
+  },
+  "options_setup_managed_message": {
+    "message": "Deze installatie wordt beheerd door uw organisatie. U bent nog niet verbonden met uw Nextcloud. Stel de verbinding eenmalig in."
+  },
+  "options_setup_loginflow_hint": {
+    "message": "Klik op ‘Inloggen met Nextcloud’ om u aan te melden."
+  },
+  "options_setup_manual_hint": {
+    "message": "Voer uw gebruikersnaam en app-wachtwoord in. Test en sla de verbinding daarna op."
+  },
+  "options_setup_saved": {
+    "message": "De verbindingsgegevens zijn opgeslagen. Ga terug naar uw e-mail- of afspraakvenster en start de gewenste actie opnieuw."
+  },
   "options_connection_privacy_hint": {
     "message": "NC Connector maakt alleen verbinding met de Nextcloud-server die u hier invoert. Uw aanmeldgegevens worden in dit Thunderbird-profiel opgeslagen en alleen naar die server verzonden, nooit naar ons of andere derden."
   },
@@ -397,6 +439,9 @@
   },
   "options_status_saved": {
     "message": "Opgeslagen."
+  },
+  "options_status_debug_saved": {
+    "message": "Instelling voor debuglogboek opgeslagen."
   },
   "options_status_save_failed": {
     "message": "Opslaan mislukt."
@@ -959,11 +1004,14 @@
   "talk_option_moderator_line3": {
     "message": "Als het delegeren mislukt, blijft het eigendom van de ruimte bij de maker."
   },
-  "talk_system_addressbook_required_short": {
-    "message": "Vereist een actief Nextcloud-systeemadresboek."
-  },
   "talk_system_addressbook_required_message": {
     "message": "Voor deze functie is een actief Nextcloud-systeemadresboek vereist."
+  },
+  "talk_system_addressbook_unavailable_short": {
+    "message": "Nextcloud-systeemadresboek niet beschikbaar"
+  },
+  "talk_system_addressbook_unavailable_message": {
+    "message": "Het Nextcloud-systeemadresboek kon niet worden gecontroleerd. Probeer het opnieuw of neem contact op met uw Nextcloud-beheerder."
   },
   "talk_system_addressbook_admin_link_label": {
     "message": "Installatiehandleiding"

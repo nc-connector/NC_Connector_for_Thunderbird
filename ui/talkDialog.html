@@ -694,6 +694,7 @@ textarea{
         <div class="policy-warning-title"><span aria-hidden="true">⚠️ </span><span data-i18n="policy_warning_title"></span></div>
         <div id="policyWarningText"></div>
         <a id="policyWarningAdminLink" target="_blank" rel="noopener noreferrer" hidden></a>
+        <button id="policyWarningReauthenticate" type="button" data-i18n="connection_reauthenticate" hidden></button>
       </div>
       <div class="section-grid section-grid-two">
         <div class="section">
@@ -761,7 +762,7 @@ textarea{
             <ul class="option-tooltip-list" id="addUsersTooltipList">
               <li data-i18n="talk_option_add_users_line1">Internal Nextcloud users are added directly to the room</li>
               <li data-i18n="talk_option_add_users_line2">The room is immediately visible in Nextcloud Talk</li>
-              <li id="addUsersAddressbookLockHint" data-lock-hint="true" data-i18n="talk_system_addressbook_required_message" hidden>This feature requires an active Nextcloud system address book.</li>
+              <li id="addUsersAddressbookLockHint" data-lock-hint="true" hidden></li>
             </ul>
           </div>
         </label>
@@ -773,7 +774,7 @@ textarea{
             <ul class="option-tooltip-list" id="addGuestsTooltipList">
               <li data-i18n="talk_option_add_guests_line1">Guests are also added directly to the room</li>
               <li data-i18n="talk_option_add_guests_line2">⚠️ They will receive a separate (additional) email with a personal access link</li>
-              <li id="addGuestsAddressbookLockHint" data-lock-hint="true" data-i18n="talk_system_addressbook_required_message" hidden>This feature requires an active Nextcloud system address book.</li>
+              <li id="addGuestsAddressbookLockHint" data-lock-hint="true" hidden></li>
             </ul>
           </div>
         </label>
@@ -810,7 +811,7 @@ textarea{
               <li data-i18n="talk_option_moderator_line1">The selected user is promoted after room creation.</li>
               <li data-i18n="talk_option_moderator_line2">On successful delegation, the creator leaves the room.</li>
               <li data-i18n="talk_option_moderator_line3">If delegation fails, room ownership remains with the creator.</li>
-              <li id="delegateAddressbookLockHint" data-lock-hint="true" data-i18n="talk_system_addressbook_required_message" hidden>This feature requires an active Nextcloud system address book.</li>
+              <li id="delegateAddressbookLockHint" data-lock-hint="true" hidden></li>
             </ul>
           </div>
         </label>
@@ -824,7 +825,7 @@ textarea{
           </div>
           <div class="delegate-status" id="delegateStatus"></div>
           <div class="delegate-addressbook-help" id="delegateAddressbookHelp" hidden>
-            <div data-i18n="talk_system_addressbook_required_message">This feature requires an active Nextcloud system address book.</div>
+            <div id="delegateAddressbookWarningText"></div>
             <a id="systemAddressbookAdminLinkDelegateInline" data-i18n="talk_system_addressbook_admin_link_label" target="_blank" rel="noopener noreferrer" href="https://github.com/nc-connector/NC_Connector_for_Thunderbird/blob/main/docs/ADMIN.md#43-talk-and-system-address-book">Setup guide</a>
           </div>
           <div class="delegate-selected" id="delegateSelected" hidden>

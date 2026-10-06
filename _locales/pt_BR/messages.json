@@ -1,4 +1,31 @@
 {
+  "options_remove_credentials_button": {
+    "message": "Remover credenciais salvas"
+  },
+  "options_remove_credentials_hint": {
+    "message": "Remove o nome de usuário e a senha de aplicativo salvos neste perfil do Thunderbird. A URL do Nextcloud e as outras configurações são mantidas. A senha de aplicativo no Nextcloud não é excluída."
+  },
+  "options_remove_credentials_confirm": {
+    "message": "Remover as credenciais salvas deste perfil do Thunderbird? Primeiro conclua os envios e as outras ações do NC Connector em andamento."
+  },
+  "options_remove_credentials_success": {
+    "message": "As credenciais salvas foram removidas. Entre novamente em Geral."
+  },
+  "options_remove_credentials_failed": {
+    "message": "Não foi possível remover as credenciais salvas. Tente novamente."
+  },
+  "options_remove_credentials_busy": {
+    "message": "Primeiro conclua os envios em andamento e tente novamente."
+  },
+  "connection_auth_required": {
+    "message": "Seu acesso ao Nextcloud não é mais válido. Entre novamente."
+  },
+  "connection_rate_limited": {
+    "message": "O Nextcloud está limitando temporariamente as solicitações. Aguarde e tente novamente mais tarde."
+  },
+  "connection_reauthenticate": {
+    "message": "Entrar novamente"
+  },
   "managed_auth_mode_invalid": {
     "message": "O método de login configurado centralmente é inválido. O login com Nextcloud está selecionado, mas não é iniciado automaticamente. Entre em contato com seu administrador."
   },
@@ -299,6 +326,21 @@
   "connection_required_open_settings": {
     "message": "Abrir configurações"
   },
+  "connection_managed_title": {
+    "message": "Conectar ao seu Nextcloud"
+  },
+  "options_setup_managed_message": {
+    "message": "Esta instalação é gerenciada pela sua organização. Você ainda não está conectado ao seu Nextcloud. Configure a conexão uma vez."
+  },
+  "options_setup_loginflow_hint": {
+    "message": "Clique em “Entrar com Nextcloud” para entrar."
+  },
+  "options_setup_manual_hint": {
+    "message": "Digite seu nome de usuário e sua senha de aplicativo. Em seguida, teste e salve a conexão."
+  },
+  "options_setup_saved": {
+    "message": "Os dados de conexão foram salvos. Volte à janela do e-mail ou compromisso e inicie novamente a ação desejada."
+  },
   "options_connection_privacy_hint": {
     "message": "O NC Connector se conecta somente ao servidor Nextcloud informado aqui. Suas credenciais são armazenadas neste perfil do Thunderbird e enviadas apenas a esse servidor, nunca a nós ou a terceiros."
   },
@@ -397,6 +439,9 @@
   },
   "options_status_saved": {
     "message": "Salvo."
+  },
+  "options_status_debug_saved": {
+    "message": "Configuração do registro de depuração salva."
   },
   "options_status_save_failed": {
     "message": "Falha ao salvar."
@@ -959,11 +1004,14 @@
   "talk_option_moderator_line3": {
     "message": "Se a delegação falhar, a propriedade da sala permanecerá com o criador."
   },
-  "talk_system_addressbook_required_short": {
-    "message": "Requer um catálogo de endereços do sistema Nextcloud ativo."
-  },
   "talk_system_addressbook_required_message": {
     "message": "Este recurso requer um catálogo de endereços do sistema Nextcloud ativo."
+  },
+  "talk_system_addressbook_unavailable_short": {
+    "message": "Catálogo de endereços do sistema Nextcloud indisponível"
+  },
+  "talk_system_addressbook_unavailable_message": {
+    "message": "Não foi possível verificar o catálogo de endereços do sistema Nextcloud. Tente novamente ou entre em contato com seu administrador do Nextcloud."
   },
   "talk_system_addressbook_admin_link_label": {
     "message": "Guia de configuração"

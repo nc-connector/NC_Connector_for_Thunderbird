@@ -215,6 +215,12 @@ What to look for:
 Debug output is controlled by the option:
 - `debugEnabled` in `browser.storage.local`
 
+With the Debug tab active, the options Save button writes only `debugEnabled`.
+It does not require credentials, host permission, a managed-policy read, or
+backend/Seat access, and does not save drafts from other tabs or make requests.
+Saving from another tab and the verified managed LoginFlow save retain the
+normal credential-save path.
+
 Implementation:
 - Background uses `L(...)` in `modules/bgState.js` and logs as `[NCBG] …` when enabled.
 - `ui/debugForwarder.js` mirrors `debugEnabled` live into the Talk dialog, Sharing wizard, and attachment prompt UIs.
@@ -311,11 +317,13 @@ Storage backend:
 
 The manual compose Sharing action and the calendar Talk action check the same
 effective account returned by `NCCore.getOpts()` before preparing a wizard.
-When URL, user, or app password is missing, a managed `AuthMode` opens General
-options for setup through `connection:openOptions`. Without that setting,
-`ui/connectionRequired.html` retains its action-specific notice and navigation
-button. Neither path creates a Sharing or Talk wizard context or a pending action;
-the user invokes the original action again after setup.
+Missing credentials in any managed installation open the General options tab
+through `openAuthenticationRequiredOptions()` in `bgRouter.js`. Its
+`authenticationRequired=1` query parameter enables the inline first-sign-in
+notice. `openInNormalThunderbirdTab()` targets a normal Thunderbird window,
+not the compose or calendar dialog. Unmanaged actions retain
+`ui/connectionRequired.html` with explicit Settings navigation through
+`connection:openOptions`.
 
 `NCManagedSetup` tracks `AuthMode` presence and validity separately. Strings are
 trimmed and compared case-insensitively against `LoginFlow` and `Manual`. Any
@@ -327,24 +335,28 @@ exposes the effective mode while the stored `authMode` remains the raw local
 choice. Options do not persist a managed overlay as a local preference; removing
 the override restores the saved choice, with `manual` as the existing default.
 
-The authentication-required options entry may start the existing Login Flow once
-when credentials are incomplete, managed `AuthMode=LoginFlow` is valid, the valid
-managed URL matches the normalized effective URL, and host permission already
-exists. An ordinary Settings opening, a local URL alone, a URL-lock-only policy,
-an effective URL mismatch, or complete credentials cannot trigger it. Automatic
-setup checks permission without requesting it: a new host grant needs user
-activation, so the existing login button remains the permission-request entry.
-Manual and invalid managed modes do not start browser login automatically.
-
-Successful Login Flow plus connection verification uses the existing credential
-save path and closes only an authentication-required setup tab under valid managed
-`LoginFlow`, including an explicit login-button start or retry. Ordinary Settings
-stays open. Login, verification, or persistence failure does not close setup or
-launch Share/Talk; cancellation does not re-arm an automatic retry. The setup
-marker, initial-load attempt, and in-flight UI state are transient and carry no pending
-Share/Talk operation across page teardown or background restart. This adds no
-Experiment API or manifest permission. The existing ordered MV2 scripts remain
-the loading dependency for a later MV3 migration.
+The existing options LoginFlow button requests optional host permission from its
+click handler and uses the existing `NCCore` Login Flow messages. Loading options
+never starts LoginFlow. For first sign-in with a valid managed
+`AuthMode=LoginFlow`, successful connection verification calls the existing
+options save path automatically. Manual sign-in retains its Test/Save controls.
+Normal credential saves require an explicit successful connection test before
+writing local settings or flushing VFS edits. Authentication failures use the
+same localized message as the Test button. Rejected or unreadable test results
+leave the saved account, local preferences, and form draft unchanged; they do
+not complete managed setup. Backend or Seat availability is evaluated separately
+and does not prevent storing an otherwise verified connection.
+After the credential storage write, `connection:commitVerified` accepts only the
+same saved account with a recent successful credential-test proof. It clears the
+persistent authentication pause and notifies owner-bound cleanup listeners.
+Testing draft credentials alone never unlocks the saved account.
+The options page stays open and shows `options_setup_saved` after saving;
+the user starts Sharing or Talk again from the desired message or appointment.
+No original action ID, continuation record, or resume handler is retained.
+Backend and Seat checks run when the user starts the action again.
+This adds no Experiment API or manifest permission. The current ordered MV2
+scripts and background reload for Toolkit discovery remain dependencies for a
+later MV3 migration.
 
 The General tab explains directly below the Nextcloud URL that credentials stay
 in the Thunderbird profile and are sent only to the configured server. The VFS
@@ -386,6 +398,7 @@ Core:
 - `authMode` — raw local `manual|loginFlow` choice; managed values apply only at runtime
 - `debugEnabled` — enable verbose logging
 - `defaultsSource` — explicit local `local|backend` selection; absence is preserved, with no install-time migration
+- `ncConnectionStateV1` — rejected-connection base URL plus authentication-pause flag and server-origin rate-limit deadline; contains no username, password, authorization header, or credential fingerprint
 
 Talk defaults:
 - `talkDefaultTitle`
@@ -1074,10 +1087,10 @@ There is no mode switch after a failed Direct, Chunked, or Bulk operation.
 Replay-safe DAV requests use at most three attempts. Retry status codes are:
 
 ```text
-408, 423, 429, 502, 503, 504
+408, 423, 502, 503, 504
 ```
 
-`Retry-After` supports seconds and HTTP dates and is capped at 30 seconds. Without a valid server value, the delay is 500 ms after the first failed attempt and 1,000 ms after the second.
+For these transient retries, `Retry-After` supports seconds and HTTP dates and is capped at 30 seconds. Without a valid server value, the delay is 500 ms after the first failed attempt and 1,000 ms after the second. HTTP `429` is handled before this retry loop by the shared connection guard: its server delay is not shortened to 30 seconds and it does not trigger immediate upload retries.
 
 DAV and OCS control requests, including response-body reads, stop after 60 seconds per attempt. Upload XHR requests stop after five minutes. Cleanup requests stop after 10 seconds per attempt. A control-request timeout is treated as a transport failure only for a replay-safe operation.
 
@@ -1322,7 +1335,44 @@ This add-on uses Nextcloud APIs such as:
 - Addressbook (system addressbook export):
   - `remote.php/dav/addressbooks/.../?export`
 
+`getSystemAddressbookStatus()` returns `configured: false`, `checked: false`,
+and `available: false` without a network request when credentials are incomplete.
+Options do not show an address-book warning or lock local Talk defaults for this
+unconfigured state. Executing address-book-dependent wizard actions still
+requires a successful check. Checked retrieval failures preserve their actual
+error message rather than claiming the administrator must activate the address
+book.
+
 Authentication aliases and DAV identities are intentionally kept separate. Basic Auth uses the configured login (which may be an email address), while `modules/nccore.js` resolves and caches `ocs.data.id` for the current background session. User-scoped FileLink, chunk-upload, and CardDAV paths use only that canonical UID; a missing UID fails explicitly instead of substituting the login.
+
+Nextcloud fetch requests use `credentials: "omit"` so an existing Thunderbird
+web session or HTTP-authentication cache cannot substitute another account.
+Upload XHR uses Firefox's documented `mozAnon` constructor option for the same
+isolation. Both transports retain the explicitly constructed Basic header.
+Credential checks force fresh capability and user requests with `cache: "no-store"`;
+debug output records success or the failure code, never credentials or response
+bodies. Neither sign-in nor uninstall needs to clear Thunderbird's cookies.
+
+`NCCore.runAuthenticatedRequest` gates authenticated fetch and anonymous upload
+XHR before network access. A confirmed HTTP `401` invalidates only the currently
+saved connection, clears capability metadata, and retains a persistent pause
+across background and Thunderbird restarts. A failed test of different draft
+credentials does not change that saved connection's state; `403` is an operation
+permission failure, not a password invalidation. Delayed requests cannot replay
+credentials replaced or removed in Settings.
+
+HTTP `429` retains a separate server-origin cooldown and honors seconds or HTTP
+dates in `Retry-After`; without a usable value, it waits one minute. Authentication
+recovery requires fresh successful Test plus Save, not a cache hit or merely
+editing the form. Paused cleanup keeps its records and attempt count; verified
+recovery re-arms only records owned by the same normalized server and canonical
+user. The common policy UI offers explicit reauthentication without resuming an
+original message or appointment action.
+`connection:removeCredentials` removes only `user` and `appPass`, invalidates
+in-memory identity/capability/proof data, and preserves rate-limit and remote
+cleanup records. The Advanced button requires explicit confirmation; removal is
+refused while an upload is active. It neither clears all extension storage nor
+revokes the server token.
 
 All endpoint interaction lives in shared modules, including `modules/ocs.js`, `modules/nccore.js`, `modules/nextcloudDav.js`, `modules/nextcloudVfsStorage.js`, `modules/policyRuntime.js`, `modules/talkcore.js`, `modules/talkAddressbook.js`, `modules/ncSharing.js`, and `modules/ncSecrets.js`.
 
@@ -1339,9 +1389,10 @@ Thunderbird reject `storage.managed.get()` with `Managed storage manifest not
 found` when no native manifest or `3rdparty` policy exists; this documented
 unmanaged state resolves to an empty policy. Other read failures remain
 fail-closed: options hydrate existing local credentials for visibility but block
-Save, Test, and Login Flow for that run, while background routing refuses to
+connection Save, Test, and Login Flow for that run, while background routing refuses to
 fall back to a local URL. A successful managed-policy result already obtained in
-the same run is not overwritten by a later failure.
+the same run is not overwritten by a later failure. The local Debug-tab save
+remains available for diagnosing that failure.
 
 Presence of any supported URL, URL-lock alias, `DefaultsSource`, or `AuthMode` key activates managed installation checks, including false or invalid values. The `adminSettings` wrapper alone and unrelated managed keys do not. `NCPolicyRuntime.assertManagedAccess()` uses the common `getManagedAccessState()` result for Share preparation/upload, Talk creation and updates, attachment automation, and VFS access. Missing backend, missing/invalid Seat, and failed verification have separate localized messages. Community and Pro use the same valid assigned Seat rules. Unmanaged actions do not gain an extra policy request from this guard. Missing credentials still lead to connection setup before operational checks.
 

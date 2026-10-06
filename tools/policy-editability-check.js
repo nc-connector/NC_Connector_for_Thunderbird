@@ -47,6 +47,7 @@ function loadPolicyApis(){
   loadScript("modules/policyState.js", context, "\nglobalThis.NCPolicyState = NCPolicyState;");
   loadScript("ui/wizardPolicyUi.js", context);
   return {
+    context,
     policyState: context.NCPolicyState,
     policyUi: context.NCWizardPolicyUi
   };
@@ -263,6 +264,63 @@ function verifyPolicyNoticeUi(policyState, policyUi){
     assertEqual(policyUi.getLicenseAdminUrl({ ...adminStatus, endpointUrl }), "", "Unsafe or unrelated endpoint URLs must not produce an admin link");
   }
   assertEqual(policyUi.getLicenseAdminUrl({ ...makeStatus(), endpointUrl: adminStatus.endpointUrl }), "", "Non-admins must not get an admin URL");
+}
+
+async function verifyConnectionNoticeUi(context, policyState, policyUi){
+  const calls = [];
+  let state = { reason: "auth_required", retryAt: 0 };
+  context.browser = { runtime: { sendMessage: async (message) => {
+    calls.push(message);
+    return message.type === "connection:getState" ? { ok: true, state } : { ok: true };
+  } } };
+  context.NCLogContext = { safeConsoleError(){}, resolveAddonLogPrefix: () => "[NCUI][Options]" };
+  const classes = new Set();
+  const row = { hidden: true, classList: { toggle(name, enabled){ enabled ? classes.add(name) : classes.delete(name); } }, setAttribute(){} };
+  const textElement = { textContent: "" };
+  const adminLink = { hidden: false, removeAttribute(name){ delete this[name]; } };
+  const reauthenticateButton = { hidden: true, disabled: false, textContent: "", onclick: null };
+  const confirmed = {
+    fetchSucceeded: true, endpointAvailable: true,
+    endpointUrl: "https://cloud.example.test/apps/ncc_backend_4mc/api/v1/status",
+    status: { seatAssigned: true, seatState: "active", isValid: true, canManageLicense: true }
+  };
+  for (const locale of fs.readdirSync(path.join(__dirname, "..", "_locales"))){
+    const messages = JSON.parse(readText(`_locales/${locale}/messages.json`));
+    const translate = (key) => messages[key]?.message || "";
+    for (const managed of [false, true]){
+      for (const reason of ["auth_required", "rate_limited"]){
+        const policyStatus = { ...confirmed, managedSetup: { isEnterpriseRollout: managed }, connectionState: { reason, retryAt: 1000 } };
+        const notice = policyState.getStatusNotice(policyStatus);
+        assertEqual(notice.code, reason, `${locale}: connection failure must not become a license or Seat refusal`);
+        assert(!notice.license, "A rejected password or rate limit is not a license failure");
+        assertEqual(policyState.getManagedAccessState(policyStatus).reason, reason, "Managed and unmanaged feature guards must retain the connection cause");
+        const options = { row, textElement, adminLink, reauthenticateButton, policyStatus, translate };
+        policyUi.applyPolicyWarningUi(options);
+        assertEqual(textElement.textContent, messages[reason === "auth_required" ? "connection_auth_required" : "connection_rate_limited"].message, `${locale}: all surfaces must use the localized connection notice`);
+        assert(!row.hidden && classes.has("is-informational") && adminLink.hidden, "Connection notices must use an informational style without a license-admin link");
+        assertEqual(reauthenticateButton.hidden, reason !== "auth_required", "Rate limiting must not offer an immediate authentication retry");
+        if (reason === "auth_required"){
+          assertEqual(reauthenticateButton.textContent, messages.connection_reauthenticate.message, `${locale}: sign-in action must be localized`);
+          calls.length = 0;
+          await reauthenticateButton.onclick();
+          assert(calls.length === 1 && calls[0].type === "connection:openOptions" && calls[0].reauthenticate === true, "Sign in again must only open General settings, without starting login or resuming an action");
+          assert(!reauthenticateButton.disabled, "The sign-in action must become available again after navigation");
+        }
+      }
+    }
+    const options = { row, textElement, adminLink, reauthenticateButton, policyStatus: confirmed, translate };
+    calls.length = 0;
+    await policyUi.refreshConnectionWarningUi(options);
+    assert(calls.length === 1 && calls[0].type === "connection:getState", "Updating a failed wizard must only read connection state, not authenticate again");
+    assertEqual(textElement.textContent, messages.connection_auth_required.message, "A late 401 must replace the wizard's older positive policy notice");
+    state = { reason: "rate_limited", retryAt: 1000 };
+    await policyUi.refreshConnectionWarningUi(options);
+    assert(reauthenticateButton.hidden && textElement.textContent === messages.connection_rate_limited.message, "A late 429 must show the wait notice, without an immediate retry");
+    state = { reason: "auth_required", retryAt: 0 };
+    policyUi.applyPolicyWarningUi({ ...options, policyStatus: confirmed });
+    assert(row.hidden && reauthenticateButton.hidden, "A restored connection must clear the old sign-in notice and action");
+  }
+  assertEqual(policyState.getStatusNotice({ reason: "credentials_missing", connectionState: { reason: "auth_required" } }).code, "", "An unconfigured account must not be labelled as an expired login");
 }
 
 function verifyAttachmentLinkTargetValues(sharingStorage){
@@ -820,16 +878,23 @@ async function verifyOptionsDefaultsSourceUi(policyState, policyUi){
     talkDefaultRoomTypeValueInput: element("event"),
     setTalkDefaultRoomType(){},
     runtimePolicyStatus: confirmedStatus(), managedSetupPolicy: {}, managedSetupPolicyReady: true,
+    managedConnectionSetup: false, credentialsRemovalInProgress: false,
+    credentialSaveInProgress: false, credentialTestInProgress: false,
+    debugTabPanel: element(),
     defaultsSourceSelect: element(), defaultsSourceRow: element(), defaultsSourceHint: element(),
     baseUrlInput: element("https://cloud.example.test"), userInput: element("user"), appPassInput: element("example"),
     getEffectiveBaseUrl: (value) => value, isManagedBaseUrlLocked: () => false,
     ensureOriginPermissionInteractive: async () => true, getSelectedAuthMode: () => "manual",
     refreshTalkSystemAddressbookState: async () => {}, showStatus(){},
+    updateAuthModeUI(){},
     NCVfsOptions: {
       setDefaultsSourceState(){},
       save: async (options) => { saveOrder.push(options?.beforeSourceChange ? "vfs:before" : "vfs:after"); return false; }
     },
-    browser: { storage: { local: { set: async (updates) => { saveOrder.push("storage"); Object.assign(stored, updates); } } } },
+    browser: {
+      storage: { local: { set: async (updates) => { saveOrder.push("storage"); Object.assign(stored, updates); } } },
+      runtime: { sendMessage: async () => ({ ok: true }) }
+    },
     window: { location: { search: "" }, addEventListener(){}, requestAnimationFrame(){} },
     document: {
       getElementById: () => element(),
@@ -856,7 +921,10 @@ async function verifyOptionsDefaultsSourceUi(policyState, policyUi){
     context.applyInitialPolicyDefaults([nameBinding, titleBinding], context.localDefaultDraft);
     context.updateDefaultsSourceUi();
   };
-  context.refreshBackendPolicyStatus = async () => render();
+  context.refreshBackendPolicyStatus = async () => {
+    render();
+    return { ok: true };
+  };
   render();
   assertEqual(nameInput.value, "Backend name", "Backend preview must replace the displayed local name");
   assertEqual(titleInput.value, "Backend meeting", "Backend preview must seed an absent local value");
@@ -941,13 +1009,14 @@ function verifyOptionsLanguagePlacement(){
 }
 
 async function run(){
-  const { policyState, policyUi } = loadPolicyApis();
+  const { context, policyState, policyUi } = loadPolicyApis();
   const sharingStorage = loadSharingStorage();
   verifyAttachmentLinkTargetValues(sharingStorage);
   verifySharePolicyKeyRegistry(sharingStorage);
   verifyAttachmentLinkTargetLockedFallback(sharingStorage, policyUi);
   verifyPolicyTable(policyState, policyUi);
   verifyPolicyNoticeUi(policyState, policyUi);
+  await verifyConnectionNoticeUi(context, policyState, policyUi);
   verifyOptionsLanguagePlacement();
   await verifyOptionsDefaultsSourceUi(policyState, policyUi);
   verifyConsumerGuards();

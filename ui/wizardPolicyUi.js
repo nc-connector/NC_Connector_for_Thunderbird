@@ -64,13 +64,13 @@
     };
   }
 
-  function applyPolicyWarningUi({ row, textElement, adminLink, policyStatus, translate } = {}){
+  function applyPolicyWarningUi({ row, textElement, adminLink, reauthenticateButton, policyStatus, translate } = {}){
     if (!row){
       return;
     }
     const notice = NCPolicyState.getStatusNotice(policyStatus);
     const message = NCPolicyState.getStatusNoticeMessage(notice, translate);
-    const informational = ["license_grace", "license_connection_error", "backend_unavailable", "no_seat"].includes(notice.code);
+    const informational = ["license_grace", "license_connection_error", "backend_unavailable", "no_seat", "auth_required", "rate_limited"].includes(notice.code);
     row.hidden = !message;
     row.classList.toggle("is-informational", informational);
     row.setAttribute("role", informational ? "status" : "alert");
@@ -86,6 +86,34 @@
       }else{
         adminLink.removeAttribute("href");
       }
+    }
+    if (reauthenticateButton){
+      reauthenticateButton.hidden = notice.code !== "auth_required";
+      reauthenticateButton.textContent = text(translate, "connection_reauthenticate");
+      reauthenticateButton.onclick = async () => {
+        reauthenticateButton.disabled = true;
+        try{
+          await browser.runtime.sendMessage({ type: "connection:openOptions", reauthenticate: true });
+        }catch(error){
+          global.NCLogContext.safeConsoleError(global.NCLogContext.resolveAddonLogPrefix("Connection"), "open sign-in settings failed", error);
+        }finally{
+          reauthenticateButton.disabled = false;
+        }
+      };
+    }
+  }
+
+  async function refreshConnectionWarningUi(options){
+    try{
+      const response = await browser.runtime.sendMessage({ type: "connection:getState" });
+      if (response?.ok && ["auth_required", "rate_limited"].includes(response.state?.reason)){
+        applyPolicyWarningUi({
+          ...options,
+          policyStatus: { ...options.policyStatus, connectionState: response.state }
+        });
+      }
+    }catch(error){
+      global.NCLogContext.safeConsoleError(global.NCLogContext.resolveAddonLogPrefix("Connection"), "sign-in status unavailable", error);
     }
   }
 
@@ -267,6 +295,7 @@
     getVfsExternalUnavailableHint,
     readPolicyDomain,
     applyPolicyWarningUi,
+    refreshConnectionWarningUi,
     readPolicyBoundDefaults,
     resolvePolicyBoundValues,
     applyDisabledState,

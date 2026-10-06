@@ -28,6 +28,7 @@
   const policyWarningRow = document.getElementById("policyWarningRow");
   const policyWarningText = document.getElementById("policyWarningText");
   const policyWarningAdminLink = document.getElementById("policyWarningAdminLink");
+  const policyWarningReauthenticate = document.getElementById("policyWarningReauthenticate");
   const titleInput = document.getElementById("titleInput");
   const passwordInput = document.getElementById("passwordInput");
   const passwordToggle = document.getElementById("passwordToggle");
@@ -64,6 +65,7 @@
   const delegateTooltipList = document.getElementById("delegateTooltipList");
   const delegateAddressbookLockHint = document.getElementById("delegateAddressbookLockHint");
   const delegateAddressbookHelp = document.getElementById("delegateAddressbookHelp");
+  const delegateAddressbookWarningText = document.getElementById("delegateAddressbookWarningText");
   const systemAddressbookAdminLinkDelegateInline = document.getElementById("systemAddressbookAdminLinkDelegateInline");
   const messageBar = document.getElementById("messageBar");
   const okBtn = document.getElementById("okBtn");
@@ -192,8 +194,9 @@
       alertLabel: ""
     },
     systemAddressbook: {
+      configured: null,
       checked: false,
-      available: true,
+      available: false,
       error: ""
     },
     policy: {
@@ -288,6 +291,17 @@
       row: policyWarningRow,
       textElement: policyWarningText,
       adminLink: policyWarningAdminLink,
+      reauthenticateButton: policyWarningReauthenticate,
+      policyStatus: state.policy.status,
+      translate: wizardTranslate
+    });
+  }
+  function refreshConnectionWarning(){
+    return NCWizardPolicyUi.refreshConnectionWarningUi({
+      row: policyWarningRow,
+      textElement: policyWarningText,
+      adminLink: policyWarningAdminLink,
+      reauthenticateButton: policyWarningReauthenticate,
       policyStatus: state.policy.status,
       translate: wizardTranslate
     });
@@ -442,6 +456,7 @@
     }catch(error){
       logUiError("init failed", error);
       setMessage(error?.message || String(error), true);
+      await refreshConnectionWarning();
     }
   }
 
@@ -706,8 +721,8 @@
       }
       hydrateDelegateFromMetadata(meta);
       applyPolicyControlLocks();
-      if (state.systemAddressbook.checked){
-        applySystemAddressbookAvailability(state.systemAddressbook.available, state.systemAddressbook.error);
+      if (state.systemAddressbook.checked || state.systemAddressbook.configured === false){
+        applySystemAddressbookStatus(state.systemAddressbook);
       }
   }
 
@@ -803,6 +818,7 @@
     }catch(error){
       logUiError("handleOk failed", error);
       setMessage(error?.message || String(error), true);
+      await refreshConnectionWarning();
       state.busy = false;
       okBtn.disabled = false;
       cancelBtn.disabled = false;
@@ -1392,7 +1408,7 @@
     if (!delegateInput){
       return;
     }
-    if (state.systemAddressbook.checked && !state.systemAddressbook.available){
+    if (!state.systemAddressbook.available){
       updateDelegateStatus("");
       hideDelegateDropdown(true);
       return;
@@ -1412,7 +1428,7 @@
     if (!delegateInput){
       return;
     }
-    if (state.systemAddressbook.checked && !state.systemAddressbook.available){
+    if (!state.systemAddressbook.available){
       updateDelegateStatus("");
       hideDelegateDropdown(true);
       return;
@@ -1431,17 +1447,15 @@
       if (seq !== state.delegate.searchSeq){
         return;
       }
-      applySystemAddressbookAvailability(true, "");
       let items = [];
-      if (response){
-        if (response.ok && Array.isArray(response.users)){
-          items = response.users;
-        }else if (Array.isArray(response.result)){
-          items = response.result;
-        }else if (response.error){
-          throw new Error(response.error);
-        }
+      if (response?.ok && Array.isArray(response.users)){
+        items = response.users;
+      }else if (Array.isArray(response?.result)){
+        items = response.result;
+      }else{
+        throw new Error(response?.error || t("talk_system_addressbook_unavailable_message"));
       }
+      applySystemAddressbookStatus({ configured: true, checked: true, available: true });
       const emailPattern = /^[^@\s]+@[^@\s]+\.[^@\s]+$/;
       const normalized = items
         .map((item) => {
@@ -1495,32 +1509,28 @@
         logUiError("delegate search failed (stale request)", error);
         return;
       }
-      const detail = t("talk_system_addressbook_required_message");
       logUiError("delegate search unavailable", error);
-      applySystemAddressbookAvailability(false, detail);
+      applySystemAddressbookStatus({
+        configured: true,
+        checked: true,
+        available: false,
+        error: error?.message || String(error)
+      });
       updateDelegateStatus("");
       state.delegate.suggestions = [];
       hideDelegateDropdown(true);
     }
   }
 
-  /**
-   * Apply system-addressbook availability to Talk controls.
-   * @param {boolean} available
-   * @param {string} detail
-   */
-  function applySystemAddressbookAvailability(available, detail = ""){
-    const lockActive = !available;
+  function applySystemAddressbookStatus(status, responseError = ""){
+    const addressbook = NCAddressbookUi.getSystemAddressbookUiState(status, t, responseError);
+    const lockActive = !addressbook.available;
     const usersPolicyLock = NCPolicyState.isEditableLocked(state.policy.active, state.policy.editable, "talk_add_users");
     const guestsPolicyLock = NCPolicyState.isEditableLocked(state.policy.active, state.policy.editable, "talk_add_guests");
     const usersLockActive = lockActive || usersPolicyLock;
     const guestsLockActive = lockActive || guestsPolicyLock;
     const adminHint = NCWizardPolicyUi.getAdminControlledHint(wizardTranslate);
-    state.systemAddressbook.checked = true;
-    state.systemAddressbook.available = !!available;
-    state.systemAddressbook.error = lockActive
-      ? (detail || t("talk_system_addressbook_required_message"))
-      : "";
+    state.systemAddressbook = { ...addressbook, error: addressbook.detail };
 
     if (addUsersToggle){
       if (lockActive){
@@ -1547,19 +1557,22 @@
       delegateClearBtn.disabled = lockActive;
     }
     if (addUsersAddressbookLockHint){
-      addUsersAddressbookLockHint.textContent = state.systemAddressbook.error || t("talk_system_addressbook_required_message");
+      addUsersAddressbookLockHint.textContent = state.systemAddressbook.error;
     }
     if (addGuestsAddressbookLockHint){
-      addGuestsAddressbookLockHint.textContent = state.systemAddressbook.error || t("talk_system_addressbook_required_message");
+      addGuestsAddressbookLockHint.textContent = state.systemAddressbook.error;
     }
     if (delegateAddressbookLockHint){
-      delegateAddressbookLockHint.textContent = state.systemAddressbook.error || t("talk_system_addressbook_required_message");
+      delegateAddressbookLockHint.textContent = state.systemAddressbook.error;
     }
     window.NCAddressbookUi?.applySystemAddressbookTooltipState(addUsersTooltipList, lockActive);
     window.NCAddressbookUi?.applySystemAddressbookTooltipState(addGuestsTooltipList, lockActive);
     window.NCAddressbookUi?.applySystemAddressbookTooltipState(delegateTooltipList, lockActive);
     if (delegateAddressbookHelp){
-      delegateAddressbookHelp.hidden = !lockActive;
+      delegateAddressbookHelp.hidden = !addressbook.unavailable;
+    }
+    if (delegateAddressbookWarningText){
+      delegateAddressbookWarningText.textContent = state.systemAddressbook.error;
     }
     if (addUsersToggleRow){
       addUsersToggleRow.classList.toggle("is-disabled", usersLockActive);
@@ -1601,21 +1614,22 @@
         payload: { forceRefresh }
       });
       const status = response?.status || {};
-      const available = !!(response?.ok && status.available !== false);
-      const detail = available ? "" : t("talk_system_addressbook_required_message");
+      applySystemAddressbookStatus(response?.ok ? status : { available: false }, response?.error);
+      const available = state.systemAddressbook.available;
       if (!available && (status.error || response?.error)){
         logUiError("system addressbook unavailable", status.error || response.error);
       }
-      applySystemAddressbookAvailability(available, detail);
       logDebug("system addressbook status", {
+        configured: state.systemAddressbook.configured,
+        checked: state.systemAddressbook.checked,
         available,
         count: Number.isFinite(status.count) ? status.count : 0,
-        hasError: !!detail
+        hasError: !!status.error
       });
       return available;
     }catch(error){
       logUiError("system addressbook status failed", error);
-      applySystemAddressbookAvailability(false, t("talk_system_addressbook_required_message"));
+      applySystemAddressbookStatus({ available: false }, error?.message || String(error));
       return false;
     }
   }

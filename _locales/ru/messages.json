@@ -1,4 +1,31 @@
 {
+  "options_remove_credentials_button": {
+    "message": "Удалить сохранённые учётные данные"
+  },
+  "options_remove_credentials_hint": {
+    "message": "Удаляет сохранённые имя пользователя и пароль приложения из этого профиля Thunderbird. Адрес Nextcloud и остальные настройки сохраняются. Пароль приложения в Nextcloud не удаляется."
+  },
+  "options_remove_credentials_confirm": {
+    "message": "Удалить сохранённые учётные данные из этого профиля Thunderbird? Сначала завершите текущие загрузки и другие действия NC Connector."
+  },
+  "options_remove_credentials_success": {
+    "message": "Сохранённые учётные данные удалены. Войдите снова на вкладке «Общие»."
+  },
+  "options_remove_credentials_failed": {
+    "message": "Не удалось удалить сохранённые учётные данные. Повторите попытку."
+  },
+  "options_remove_credentials_busy": {
+    "message": "Сначала завершите текущие загрузки, затем повторите попытку."
+  },
+  "connection_auth_required": {
+    "message": "Вход в Nextcloud больше не действителен. Войдите снова."
+  },
+  "connection_rate_limited": {
+    "message": "Nextcloud временно ограничивает запросы. Подождите и повторите попытку позже."
+  },
+  "connection_reauthenticate": {
+    "message": "Войти снова"
+  },
   "managed_auth_mode_invalid": {
     "message": "Централизованно настроенный способ входа недопустим. Выбран вход через Nextcloud, но он не запускается автоматически. Обратитесь к администратору."
   },
@@ -299,6 +326,21 @@
   "connection_required_open_settings": {
     "message": "Открыть настройки"
   },
+  "connection_managed_title": {
+    "message": "Подключиться к вашему Nextcloud"
+  },
+  "options_setup_managed_message": {
+    "message": "Этой установкой управляет ваша организация. Вы ещё не подключены к вашему Nextcloud. Пожалуйста, настройте подключение один раз."
+  },
+  "options_setup_loginflow_hint": {
+    "message": "Нажмите «Войти через Nextcloud», чтобы войти."
+  },
+  "options_setup_manual_hint": {
+    "message": "Введите имя пользователя и пароль приложения. Затем проверьте и сохраните подключение."
+  },
+  "options_setup_saved": {
+    "message": "Данные подключения сохранены. Вернитесь в окно письма или события и начните нужное действие заново."
+  },
   "options_connection_privacy_hint": {
     "message": "NC Connector подключается только к указанному здесь серверу Nextcloud. Данные для входа хранятся в этом профиле Thunderbird и отправляются только на этот сервер — никогда нам или другим третьим лицам."
   },
@@ -397,6 +439,9 @@
   },
   "options_status_saved": {
     "message": "Сохранено."
+  },
+  "options_status_debug_saved": {
+    "message": "Настройка журнала отладки сохранена."
   },
   "options_status_save_failed": {
     "message": "Не удалось сохранить."
@@ -959,11 +1004,14 @@
   "talk_option_moderator_line3": {
     "message": "Если делегирование не удалось, право собственности на комнату остается за создателем."
   },
-  "talk_system_addressbook_required_short": {
-    "message": "Требуется активная адресная книга системы Nextcloud."
-  },
   "talk_system_addressbook_required_message": {
     "message": "Для этой функции требуется активная адресная книга системы Nextcloud."
+  },
+  "talk_system_addressbook_unavailable_short": {
+    "message": "Системная адресная книга Nextcloud недоступна"
+  },
+  "talk_system_addressbook_unavailable_message": {
+    "message": "Не удалось проверить системную адресную книгу Nextcloud. Повторите попытку или обратитесь к администратору Nextcloud."
   },
   "talk_system_addressbook_admin_link_label": {
     "message": "Руководство по настройке"

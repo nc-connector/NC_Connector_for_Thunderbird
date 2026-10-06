@@ -1,4 +1,31 @@
 {
+  "options_remove_credentials_button": {
+    "message": "Mentett bejelentkezési adatok eltávolítása"
+  },
+  "options_remove_credentials_hint": {
+    "message": "Eltávolítja a mentett felhasználónevet és alkalmazásjelszót ebből a Thunderbird-profilból. A Nextcloud URL-címe és a többi beállítás megmarad. A Nextcloudban lévő alkalmazásjelszó nem törlődik."
+  },
+  "options_remove_credentials_confirm": {
+    "message": "Eltávolítja a mentett bejelentkezési adatokat ebből a Thunderbird-profilból? Előbb fejezze be a folyamatban lévő feltöltéseket és a többi NC Connector-műveletet."
+  },
+  "options_remove_credentials_success": {
+    "message": "A mentett bejelentkezési adatok eltávolítva. Jelentkezzen be újra az Általános lapon."
+  },
+  "options_remove_credentials_failed": {
+    "message": "A mentett bejelentkezési adatokat nem sikerült eltávolítani. Próbálja újra."
+  },
+  "options_remove_credentials_busy": {
+    "message": "Előbb fejezze be a folyamatban lévő feltöltéseket, majd próbálja újra."
+  },
+  "connection_auth_required": {
+    "message": "A Nextcloud-bejelentkezés már nem érvényes. Jelentkezzen be újra."
+  },
+  "connection_rate_limited": {
+    "message": "A Nextcloud átmenetileg korlátozza a kéréseket. Várjon, majd próbálja újra később."
+  },
+  "connection_reauthenticate": {
+    "message": "Újra bejelentkezés"
+  },
   "managed_auth_mode_invalid": {
     "message": "A központilag beállított bejelentkezési mód érvénytelen. A Nextcloud-bejelentkezés van kiválasztva, de nem indul el automatikusan. Forduljon a rendszergazdához."
   },
@@ -299,6 +326,21 @@
   "connection_required_open_settings": {
     "message": "Beállítások megnyitása"
   },
+  "connection_managed_title": {
+    "message": "Csatlakozás a Nextcloudhoz"
+  },
+  "options_setup_managed_message": {
+    "message": "Ezt a telepítést a szervezete kezeli. Még nem csatlakozott a Nextcloudhoz. Kérjük, egyszer állítsa be a kapcsolatot."
+  },
+  "options_setup_loginflow_hint": {
+    "message": "A bejelentkezéshez kattintson a „Bejelentkezés Nextclouddal” gombra."
+  },
+  "options_setup_manual_hint": {
+    "message": "Adja meg felhasználónevét és alkalmazásjelszavát. Ezután tesztelje és mentse a kapcsolatot."
+  },
+  "options_setup_saved": {
+    "message": "A kapcsolat adatai mentve vannak. Térjen vissza az e-mail vagy a naptáresemény ablakába, és indítsa el újra a kívánt műveletet."
+  },
   "options_connection_privacy_hint": {
     "message": "Az NC Connector kizárólag az itt megadott Nextcloud-kiszolgálóhoz csatlakozik. A bejelentkezési adatok ebben a Thunderbird-profilban tárolódnak, és csak erre a kiszolgálóra kerülnek elküldésre, nekünk vagy más harmadik félnek soha."
   },
@@ -397,6 +439,9 @@
   },
   "options_status_saved": {
     "message": "Mentve."
+  },
+  "options_status_debug_saved": {
+    "message": "A hibakeresési naplózás beállítása elmentve."
   },
   "options_status_save_failed": {
     "message": "Mentés sikertelen."
@@ -959,11 +1004,14 @@
   "talk_option_moderator_line3": {
     "message": "Ha a delegálás sikertelen, a szoba tulajdonjoga a készítőnél marad."
   },
-  "talk_system_addressbook_required_short": {
-    "message": "Aktív Nextcloud rendszercímjegyzéket igényel."
-  },
   "talk_system_addressbook_required_message": {
     "message": "Ehhez a funkcióhoz aktív Nextcloud rendszercímjegyzék szükséges."
+  },
+  "talk_system_addressbook_unavailable_short": {
+    "message": "A Nextcloud rendszer-címjegyzéke nem érhető el"
+  },
+  "talk_system_addressbook_unavailable_message": {
+    "message": "A Nextcloud rendszer-címjegyzékét nem lehetett ellenőrizni. Próbálja újra, vagy forduljon Nextcloud-rendszergazdájához."
   },
   "talk_system_addressbook_admin_link_label": {
     "message": "Beállítási útmutató"

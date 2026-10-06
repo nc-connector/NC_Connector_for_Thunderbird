@@ -1,4 +1,31 @@
 {
+  "options_remove_credentials_button": {
+    "message": "移除已儲存的登入憑證"
+  },
+  "options_remove_credentials_hint": {
+    "message": "移除此 Thunderbird 設定檔中儲存的使用者名稱和應用程式密碼。Nextcloud 網址及其他設定會保留。不會刪除 Nextcloud 中的應用程式密碼。"
+  },
+  "options_remove_credentials_confirm": {
+    "message": "要從此 Thunderbird 設定檔中移除已儲存的登入憑證嗎？請先完成進行中的上傳及其他 NC Connector 操作。"
+  },
+  "options_remove_credentials_success": {
+    "message": "已移除儲存的登入憑證。請在「一般」中重新登入。"
+  },
+  "options_remove_credentials_failed": {
+    "message": "無法移除已儲存的登入憑證。請再試一次。"
+  },
+  "options_remove_credentials_busy": {
+    "message": "請先完成進行中的上傳，然後再試一次。"
+  },
+  "connection_auth_required": {
+    "message": "Nextcloud 登入已失效。請重新登入。"
+  },
+  "connection_rate_limited": {
+    "message": "Nextcloud 暫時限制了請求。請稍候再試。"
+  },
+  "connection_reauthenticate": {
+    "message": "重新登入"
+  },
   "managed_auth_mode_invalid": {
     "message": "集中設定的登入方式無效。已選擇透過 Nextcloud 登入，但不會自動啟動。請聯絡管理員。"
   },
@@ -299,6 +326,21 @@
   "connection_required_open_settings": {
     "message": "開啟設定"
   },
+  "connection_managed_title": {
+    "message": "連線至您的 Nextcloud"
+  },
+  "options_setup_managed_message": {
+    "message": "此安裝由您的組織管理。您尚未連線至您的 Nextcloud。請先完成一次連線設定。"
+  },
+  "options_setup_loginflow_hint": {
+    "message": "按一下「使用 Nextcloud 登入」以登入。"
+  },
+  "options_setup_manual_hint": {
+    "message": "請輸入您的使用者名稱和應用程式密碼，然後測試並儲存連線。"
+  },
+  "options_setup_saved": {
+    "message": "連線資訊已儲存。請返回電子郵件或行事曆事件視窗，重新開始所需操作。"
+  },
   "options_connection_privacy_hint": {
     "message": "NC Connector 只會連線到此處輸入的 Nextcloud 伺服器。您的登入資訊會儲存在此 Thunderbird 設定檔中，且只傳送至該伺服器，絕不會傳送給我們或其他第三方。"
   },
@@ -397,6 +439,9 @@
   },
   "options_status_saved": {
     "message": "已儲存。"
+  },
+  "options_status_debug_saved": {
+    "message": "偵錯日誌設定已儲存。"
   },
   "options_status_save_failed": {
     "message": "儲存失敗。"
@@ -959,11 +1004,14 @@
   "talk_option_moderator_line3": {
     "message": "若委派失敗，房間所有權仍歸創作者所有。"
   },
-  "talk_system_addressbook_required_short": {
-    "message": "需要有效的 Nextcloud 系統通訊錄。"
-  },
   "talk_system_addressbook_required_message": {
     "message": "此功能需要活動的 Nextcloud 系統通訊錄。"
+  },
+  "talk_system_addressbook_unavailable_short": {
+    "message": "Nextcloud 系統通訊錄無法使用"
+  },
+  "talk_system_addressbook_unavailable_message": {
+    "message": "無法檢查 Nextcloud 系統通訊錄。請重試或聯絡您的 Nextcloud 管理員。"
   },
   "talk_system_addressbook_admin_link_label": {
     "message": "設定指南"

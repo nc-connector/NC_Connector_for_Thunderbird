@@ -1,4 +1,31 @@
 {
+  "options_remove_credentials_button": {
+    "message": "Usuń zapisane dane logowania"
+  },
+  "options_remove_credentials_hint": {
+    "message": "Usuwa zapisaną nazwę użytkownika i hasło aplikacji z tego profilu Thunderbirda. Adres URL Nextcloud i pozostałe ustawienia zostaną zachowane. Hasło aplikacji w Nextcloud nie zostanie usunięte."
+  },
+  "options_remove_credentials_confirm": {
+    "message": "Usunąć zapisane dane logowania z tego profilu Thunderbirda? Najpierw zakończ trwające przesyłanie plików i inne działania NC Connector."
+  },
+  "options_remove_credentials_success": {
+    "message": "Zapisane dane logowania zostały usunięte. Zaloguj się ponownie w zakładce Ogólne."
+  },
+  "options_remove_credentials_failed": {
+    "message": "Nie udało się usunąć zapisanych danych logowania. Spróbuj ponownie."
+  },
+  "options_remove_credentials_busy": {
+    "message": "Najpierw zakończ trwające przesyłanie plików, a następnie spróbuj ponownie."
+  },
+  "connection_auth_required": {
+    "message": "Logowanie do Nextcloud nie jest już ważne. Zaloguj się ponownie."
+  },
+  "connection_rate_limited": {
+    "message": "Nextcloud tymczasowo ogranicza liczbę żądań. Poczekaj i spróbuj ponownie później."
+  },
+  "connection_reauthenticate": {
+    "message": "Zaloguj się ponownie"
+  },
   "managed_auth_mode_invalid": {
     "message": "Centralnie skonfigurowana metoda logowania jest nieprawidłowa. Wybrano logowanie przez Nextcloud, ale nie uruchamia się ono automatycznie. Skontaktuj się z administratorem."
   },
@@ -299,6 +326,21 @@
   "connection_required_open_settings": {
     "message": "Otwórz ustawienia"
   },
+  "connection_managed_title": {
+    "message": "Połącz ze swoim Nextcloud"
+  },
+  "options_setup_managed_message": {
+    "message": "Ta instalacja jest zarządzana przez Twoją organizację. Nie masz jeszcze połączenia ze swoim Nextcloud. Skonfiguruj połączenie jednorazowo."
+  },
+  "options_setup_loginflow_hint": {
+    "message": "Kliknij „Zaloguj się do Nextcloud”, aby się zalogować."
+  },
+  "options_setup_manual_hint": {
+    "message": "Wprowadź nazwę użytkownika i hasło aplikacji. Następnie przetestuj i zapisz połączenie."
+  },
+  "options_setup_saved": {
+    "message": "Dane połączenia zostały zapisane. Wróć do okna wiadomości lub wydarzenia i ponownie rozpocznij wybraną czynność."
+  },
   "options_connection_privacy_hint": {
     "message": "NC Connector łączy się wyłącznie z serwerem Nextcloud podanym w tym miejscu. Dane logowania są przechowywane w tym profilu Thunderbirda i wysyłane tylko do tego serwera, nigdy do nas ani innych podmiotów trzecich."
   },
@@ -397,6 +439,9 @@
   },
   "options_status_saved": {
     "message": "Zapisano."
+  },
+  "options_status_debug_saved": {
+    "message": "Zapisano ustawienie rejestrowania diagnostycznego."
   },
   "options_status_save_failed": {
     "message": "Zapisywanie nie powiodło się."
@@ -959,11 +1004,14 @@
   "talk_option_moderator_line3": {
     "message": "Jeśli delegowanie się nie powiedzie, pokój pozostanie własnością twórcy."
   },
-  "talk_system_addressbook_required_short": {
-    "message": "Wymaga aktywnej książki adresowej systemu Nextcloud."
-  },
   "talk_system_addressbook_required_message": {
     "message": "Ta funkcja wymaga aktywnej książki adresowej systemu Nextcloud."
+  },
+  "talk_system_addressbook_unavailable_short": {
+    "message": "Systemowa książka adresowa Nextcloud jest niedostępna"
+  },
+  "talk_system_addressbook_unavailable_message": {
+    "message": "Nie udało się sprawdzić systemowej książki adresowej Nextcloud. Spróbuj ponownie lub skontaktuj się z administratorem Nextcloud."
   },
   "talk_system_addressbook_admin_link_label": {
     "message": "Przewodnik konfiguracji"

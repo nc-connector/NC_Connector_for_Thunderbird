@@ -17,7 +17,13 @@
  */
 function messageError(type, error){
   console.error("[NCBG] " + type, error);
-  return { ok:false, error: error?.message || String(error) };
+  return {
+    ok: false,
+    error: error?.ncUserMessage || error?.message || String(error),
+    code: error?.code || "",
+    status: Number(error?.status) || 0,
+    retryAt: Number(error?.retryAt) || 0
+  };
 }
 
 function readMessageContextId(msg){
@@ -56,6 +62,14 @@ async function openInNormalThunderbirdTab(url){
   });
   await browser.windows.update(targetWindow.id, { focused: true });
   return tab;
+}
+
+async function openAuthenticationRequiredOptions({ reauthenticate = false } = {}){
+  const optionsUrl = new URL(browser.runtime.getURL("options.html"));
+  optionsUrl.searchParams.set("tab", "general");
+  optionsUrl.searchParams.set("authenticationRequired", "1");
+  if (reauthenticate) optionsUrl.searchParams.set("reauthenticate", "1");
+  return await openInNormalThunderbirdTab(optionsUrl.href);
 }
 
 async function getVfsOptionsState(){
@@ -199,20 +213,36 @@ browser.runtime.onMessage.addListener((msg, sender) => {
     }
     if (msg.type === "connection:openOptions"){
       try{
-        if (msg.payload?.managedOnly === true){
-          const options = await NCCore.getOpts();
-          if (!options?.managedSetup?.hasAuthMode
-            || (options.baseUrl && options.user && options.appPass)){
-            return { ok:true, opened:false };
-          }
-        }
-        const optionsUrl = new URL(browser.runtime.getURL("options.html"));
-        optionsUrl.searchParams.set("tab", "general");
-        optionsUrl.searchParams.set("authenticationRequired", "1");
-        await openInNormalThunderbirdTab(optionsUrl.href);
+        await openAuthenticationRequiredOptions({ reauthenticate: msg.reauthenticate === true });
         return { ok:true, opened:true };
       }catch(error){
         return messageError("connection:openOptions", error);
+      }
+    }
+    if (msg.type === "connection:getState"){
+      try{
+        return { ok: true, state: await NCCore.getConnectionState() };
+      }catch(error){
+        return messageError(msg.type, error);
+      }
+    }
+    if (msg.type === "connection:commitVerified"){
+      try{
+        return { ok: true, state: await NCCore.commitVerifiedConnection(msg.payload || {}) };
+      }catch(error){
+        return messageError(msg.type, error);
+      }
+    }
+    if (msg.type === "connection:removeCredentials"){
+      try{
+        if ([...FILELINK_UPLOAD_SESSIONS.values()].some((session) =>
+          !session.completed && !session.controller.signal.aborted && !session.disconnected
+        )){
+          throw new Error(bgI18n("options_remove_credentials_busy"));
+        }
+        return { ok: true, state: await NCCore.removeSavedCredentials() };
+      }catch(error){
+        return messageError(msg.type, error);
       }
     }
     if (msg.type === "vfs:openOptions"){
@@ -437,7 +467,23 @@ browser.runtime.onMessage.addListener((msg, sender) => {
       if (context.metadata?.token){
         return { ok:false, error: bgI18n("talk_error_existing_room_linked") };
       }
-      const result = await NCTalkCore.createTalkPublicRoom(msg.payload);
+      const connectionOpts = await NCCore.getOpts();
+      const owner = {
+        cleanupBaseUrl: NCCore.normalizeBaseUrl(connectionOpts.baseUrl),
+        cleanupUserId: await NCCore.getCurrentUserId(connectionOpts)
+      };
+      const result = await NCTalkCore.createTalkPublicRoom(msg.payload, connectionOpts);
+      try{
+        await setRoomMeta(result.token, owner);
+      }catch(error){
+        // Do not report an untracked room as successfully inserted.
+        try{
+          await NCTalkCore.deleteTalkRoom({ token: result.token, connectionOpts });
+        }catch(cleanupError){
+          console.error("[NCBG] untracked Talk room cleanup failed", cleanupError);
+        }
+        throw error;
+      }
       return { ok:true, result };
     }catch(error){
       return messageError("talk:createRoom", error);
@@ -687,7 +733,7 @@ browser.runtime.onMessage.addListener((msg, sender) => {
           policyStatus
         };
       }
-      return { ok:false, error: result.message || bgI18n("error_credentials_missing"), code: result.code || "" };
+      return { ok:false, error: result.message || bgI18n("error_credentials_missing"), code: result.code || "", retryAt: result.retryAt || 0 };
     }catch(error){
       return messageError("options:testConnection", error);
     }
