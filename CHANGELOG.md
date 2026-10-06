@@ -4,6 +4,21 @@ All notable changes to **NC Connector for Thunderbird** will be documented in th
 
 This project targets **Thunderbird ESR 140** through **ESR 153**.
 
+## 3.4.4
+
+### Added
+- Add "Sign in again" to connection notices and "Remove saved credentials" under Advanced. Removing credentials preserves the Nextcloud URL, preferences, and cleanup tracking.
+
+### Changed
+- Explain managed first sign-in in Settings and require an explicit login. Settings remain open after setup; users start their Sharing or Talk action again.
+
+### Fixed
+- Validate entered credentials on Test and Save without reusing Thunderbird sessions or cached authentication. Invalid credentials show a clear error and leave the saved connection unchanged.
+- Pause authenticated requests after HTTP 401, including across restarts, until verified credentials are saved. Honor HTTP 429 retry delays and show clear connection notices.
+- Preserve pending Share and Talk cleanup during connection pauses and resume it only for the same verified Nextcloud account.
+- Allow debug logging to be saved independently of connection setup without saving drafts from other settings tabs.
+- Avoid system address-book warnings before an account is configured, and show actual retrieval errors instead of incorrectly reporting a disabled address book.
+
 ## 3.4.3
 
 ### Added
