@@ -45,6 +45,7 @@ It complements:
   - [9.1 Official calendar experiment API (as-is)](#91-official-calendar-experiment-api-as-is)
   - [9.2 What we do on create/update/remove](#92-what-we-do-on-createupdateremove)
   - [9.3 Orphan-room prevention](#93-orphan-room-prevention)
+  - [9.4 Calendar and address book setup](#94-calendar-and-address-book-setup)
 - [10. Sharing wizard (compose window)](#10-sharing-wizard-compose-window)
   - [10.1 Flow & responsibilities](#101-flow--responsibilities)
   - [10.2 Inserting share blocks into compose (mode-aware)](#102-inserting-share-blocks-into-compose-mode-aware)
@@ -107,6 +108,7 @@ Top-level:
   - `experiments/calendar/` — official calendar experiment API (kept **as-is**) for persisted item monitoring
   - `experiments/ncCalToolbar/` — minimal custom experiment for stable editor toolbar integration (dialog + tab)
   - `experiments/ncComposePrefs/` — read-only experiment exposing Thunderbird compose big-attachment prefs for conflict locking
+  - `experiments/ncDavCollections/` — minimal experiment registering CalDAV calendars/CardDAV address books and their login
 - `_locales/` — translations (`messages.json` per locale)
 - `docs/` — developer & reviewer documentation
 
@@ -144,6 +146,7 @@ Key files you’ll touch most:
 - `modules/bgCalendarState.js` — serialized, storage-first room metadata and event-token mapping
 - `modules/bgCalendarDeparture.js` — persistent post-delegation departure retry state
 - `modules/bgCalendar.js` — `ncCalToolbar` integration, room metadata mapping, and persisted calendar monitoring sync
+- `modules/bgCollectionSync.js` — Nextcloud calendar/address book discovery and reconciliation with Thunderbird collections
 - `modules/bgRouter.js` — `runtime.onMessage` dispatcher for Talk/Sharing/Options/UI bridge contracts
 - `modules/policyState.js` — shared helpers for normalized backend policy status objects
 - `modules/policyRuntime.js` — centralized backend seat/policy status fetch + normalization (`/apps/ncc_backend_4mc/api/v1/status`)
@@ -772,6 +775,51 @@ Shutdown marks the bridge inactive before listeners and observers are removed,
 guards late callbacks, and invalidates Thunderbird's startup cache after
 experiment teardown so stale privileged modules are not reused.
 
+### 9.4 Calendar and address book setup
+
+`modules/bgCollectionSync.js` registers the signed-in user's Nextcloud
+collections as regular Thunderbird collections. It is setup only; content sync
+stays with Thunderbird's CalDAV/CardDAV providers.
+
+- Discovery: `PROPFIND Depth: 1` on `/remote.php/dav/calendars/<uid>/` and
+  `/remote.php/dav/addressbooks/users/<uid>/` with the saved app password via
+  `NCCore.runAuthenticatedRequest`, so 401/429 pause handling applies.
+- Calendars: event and task calendars only. Webcal subscriptions, scheduling
+  inbox/outbox, trash bin, and journal-only collections are skipped. Colors are
+  normalized from `#rrggbbaa` to `#rrggbb`.
+- Address books: all, including the read-only system address book, except the
+  generated *Recently contacted* book.
+- Login: every pass stores or updates the app password in the login manager
+  under the server origin and the theming name as HTTP-auth realm (the realm
+  Nextcloud answers the Basic challenge with), so a new Login Flow app password
+  reaches existing collections before Thunderbird prompts.
+- Revoked app password: Thunderbird answers the 4xx responses by dropping the
+  rejected login and may disable the CalDAV calendars. Signing in again stores
+  the new login on the next pass. Calendars that Thunderbird disabled in the
+  meantime can need a manual enable or a Thunderbird restart, which re-enables
+  auto-disabled calendars. The options tab shows a restart hint while managed
+  calendars are disabled.
+- New collections refresh every 5 minutes (`refreshInterval`,
+  `carddav.syncinterval`) instead of Thunderbird's 30-minute default; local
+  changes are uploaded immediately by Thunderbird either way.
+- Ownership: only collections created by this module are tracked (`managed`).
+  Server deletions remove them, server renames/recolors are applied until the
+  user changes them locally. A managed collection the user removes is recorded
+  as `dismissed` and not added again until **Restore** is used. Collections the
+  user added by hand (same URL) are never touched. An empty server list never
+  removes anything.
+- Account change (base URL or user ID): managed collections of the previous
+  account are removed.
+- Triggers: 20 s after startup, every 15 minutes, after a verified sign-in or
+  connection recovery (`NCCore.onConnectionRestored`), when a switch is turned
+  on, and from the options tab. Concurrent triggers share one pass.
+- Turning a switch off stops the sync; existing collections are kept.
+
+The `ncDavCollections` experiment only exposes the privileged steps:
+`saveLogin`, `createCalendar`, `listAddressBooks`, `createAddressBook`,
+`renameAddressBook`, and `removeAddressBook`. Calendars are listed, updated,
+and removed through the bundled calendar experiment.
+
 ---
 
 ## 10. Sharing wizard (compose window)
@@ -1228,6 +1276,10 @@ Delegation departure state:
 - Contains the leave operation required to finish a moderator handoff after
   calendar write-back or restart, without introducing a second source of truth.
 
+Calendar and address book setup:
+- Keys: `calendarSyncEnabled`, `addressBookSyncEnabled` — default `true`; only an explicit `false` disables a kind
+- Key: `ncCollectionSyncStateV1` — account identity (base URL + user ID), per kind the `managed` href → local id/name/color map and the `dismissed` href list, and the last pass result; contains no credentials
+
 Share cleanup groups:
 - Key: `nccShareCleanupGroupsV1`
 - Versioned wizard/compose ownership records with remote cleanup descriptors,
@@ -1295,6 +1347,11 @@ VFS source selection uses a separate named Port, `nc-vfs-source-selection`, so p
 - wizard → background: `start`, `cancel`
 - background → wizard: `progress`, `result`, `error`
 
+Calendar and address book setup:
+- `collectionSync:getStatus`
+- `collectionSync:syncNow`
+- `collectionSync:restoreDismissed`
+
 Note:
 - Talk-related runtime messaging uses the `talk:*` namespace only.
 
@@ -1334,6 +1391,9 @@ This add-on uses Nextcloud APIs such as:
   - VFS browsing and mutations stay below `/remote.php/dav/files/<canonical-uid>/...` and use `PROPFIND`, `GET`, `PUT`, `MKCOL`, `COPY`, `MOVE`, and `DELETE` as required
 - Addressbook (system addressbook export):
   - `remote.php/dav/addressbooks/.../?export`
+- Calendar and address book setup (`PROPFIND Depth: 1`):
+  - `/remote.php/dav/calendars/<canonical-uid>/`
+  - `/remote.php/dav/addressbooks/users/<canonical-uid>/`
 
 `getSystemAddressbookStatus()` returns `configured: false`, `checked: false`,
 and `available: false` without a network request when credentials are incomplete.

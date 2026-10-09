@@ -1474,5 +1474,47 @@
   },
   "vfs_setup_failed": {
     "message": "Не удалось предоставить доступ."
+  },
+  "options_tab_calendars": {
+    "message": "Календари и контакты"
+  },
+  "options_calendar_sync_label": {
+    "message": "Синхронизация с Nextcloud"
+  },
+  "options_calendar_sync_enable": {
+    "message": "Автоматически добавлять мои календари Nextcloud в Thunderbird"
+  },
+  "options_calendar_sync_status_label": {
+    "message": "Состояние синхронизации"
+  },
+  "options_calendar_sync_now": {
+    "message": "Синхронизировать сейчас"
+  },
+  "options_calendar_sync_restore": {
+    "message": "Вернуть удалённые календари и адресные книги"
+  },
+  "options_calendar_sync_status_never": {
+    "message": "Синхронизация ещё не выполнялась."
+  },
+  "options_calendar_sync_status_ok": {
+    "message": "Последняя синхронизация: $1 – календарей: $2, адресных книг: $3; добавлено: $4, удалено: $5."
+  },
+  "options_calendar_sync_status_error": {
+    "message": "Ошибка синхронизации: $1"
+  },
+  "options_calendar_sync_unavailable": {
+    "message": "Синхронизация календарей недоступна в этой версии Thunderbird."
+  },
+  "options_calendar_sync_running": {
+    "message": "Синхронизация…"
+  },
+  "options_address_book_sync_enable": {
+    "message": "Автоматически добавлять мои адресные книги Nextcloud в Thunderbird"
+  },
+  "options_calendar_sync_disabled_notice": {
+    "message": "Thunderbird отключил календари Nextcloud ($1), например после истечения срока входа. Перезапустите Thunderbird, чтобы снова включить их."
+  },
+  "options_calendar_sync_hint": {
+    "message": "Новые и общие календари и адресные книги добавляются каждые 15 минут."
   }
 }

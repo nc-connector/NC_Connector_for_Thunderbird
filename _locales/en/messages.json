@@ -1474,5 +1474,47 @@
   },
   "vfs_setup_failed": {
     "message": "Access could not be granted."
+  },
+  "options_tab_calendars": {
+    "message": "Calendars & contacts"
+  },
+  "options_calendar_sync_label": {
+    "message": "Nextcloud sync"
+  },
+  "options_calendar_sync_enable": {
+    "message": "Add my Nextcloud calendars to Thunderbird automatically"
+  },
+  "options_calendar_sync_status_label": {
+    "message": "Sync status"
+  },
+  "options_calendar_sync_now": {
+    "message": "Sync now"
+  },
+  "options_calendar_sync_restore": {
+    "message": "Restore removed calendars and address books"
+  },
+  "options_calendar_sync_status_never": {
+    "message": "Not synchronized yet."
+  },
+  "options_calendar_sync_status_ok": {
+    "message": "Last sync: $1 – $2 calendars, $3 address books; $4 added, $5 removed."
+  },
+  "options_calendar_sync_status_error": {
+    "message": "Sync failed: $1"
+  },
+  "options_calendar_sync_unavailable": {
+    "message": "Calendar sync is not available in this Thunderbird version."
+  },
+  "options_calendar_sync_running": {
+    "message": "Synchronizing…"
+  },
+  "options_address_book_sync_enable": {
+    "message": "Add my Nextcloud address books to Thunderbird automatically"
+  },
+  "options_calendar_sync_disabled_notice": {
+    "message": "Thunderbird has disabled $1 Nextcloud calendar(s), for example after an expired sign-in. Restart Thunderbird to enable them again."
+  },
+  "options_calendar_sync_hint": {
+    "message": "New and shared calendars and address books are added every 15 minutes."
   }
 }

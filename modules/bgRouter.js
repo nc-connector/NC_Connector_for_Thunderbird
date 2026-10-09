@@ -245,6 +245,27 @@ browser.runtime.onMessage.addListener((msg, sender) => {
         return messageError(msg.type, error);
       }
     }
+    if (msg.type === "collectionSync:getStatus"){
+      try{
+        return { ok: true, status: await NCCollectionSync.getStatus() };
+      }catch(error){
+        return messageError(msg.type, error);
+      }
+    }
+    if (msg.type === "collectionSync:syncNow"){
+      try{
+        return { ok: true, result: await NCCollectionSync.syncNow("manual"), status: await NCCollectionSync.getStatus() };
+      }catch(error){
+        return messageError(msg.type, error);
+      }
+    }
+    if (msg.type === "collectionSync:restoreDismissed"){
+      try{
+        return { ok: true, result: await NCCollectionSync.restoreDismissed(), status: await NCCollectionSync.getStatus() };
+      }catch(error){
+        return messageError(msg.type, error);
+      }
+    }
     if (msg.type === "vfs:openOptions"){
       try{
         const optionsUrl = new URL(browser.runtime.getURL("options.html"));

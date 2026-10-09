@@ -1474,5 +1474,47 @@
   },
   "vfs_setup_failed": {
     "message": "アクセスを許可できませんでした。"
+  },
+  "options_tab_calendars": {
+    "message": "カレンダーと連絡先"
+  },
+  "options_calendar_sync_label": {
+    "message": "Nextcloud 同期"
+  },
+  "options_calendar_sync_enable": {
+    "message": "Nextcloud のカレンダーを Thunderbird に自動で追加する"
+  },
+  "options_calendar_sync_status_label": {
+    "message": "同期の状態"
+  },
+  "options_calendar_sync_now": {
+    "message": "今すぐ同期"
+  },
+  "options_calendar_sync_restore": {
+    "message": "削除したカレンダーとアドレス帳を復元"
+  },
+  "options_calendar_sync_status_never": {
+    "message": "まだ同期されていません。"
+  },
+  "options_calendar_sync_status_ok": {
+    "message": "最終同期: $1 – カレンダー $2 件、アドレス帳 $3 件。追加 $4 件、削除 $5 件。"
+  },
+  "options_calendar_sync_status_error": {
+    "message": "同期に失敗しました: $1"
+  },
+  "options_calendar_sync_unavailable": {
+    "message": "この Thunderbird バージョンではカレンダー同期を利用できません。"
+  },
+  "options_calendar_sync_running": {
+    "message": "同期しています…"
+  },
+  "options_address_book_sync_enable": {
+    "message": "Nextcloud のアドレス帳を Thunderbird に自動で追加する"
+  },
+  "options_calendar_sync_disabled_notice": {
+    "message": "サインインの期限切れなどにより、Thunderbird が Nextcloud カレンダーを $1 件無効にしました。再度有効にするには Thunderbird を再起動してください。"
+  },
+  "options_calendar_sync_hint": {
+    "message": "新しいカレンダーとアドレス帳、共有されたものは 15 分ごとに追加されます。"
   }
 }

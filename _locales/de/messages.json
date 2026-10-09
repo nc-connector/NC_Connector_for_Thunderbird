@@ -1474,5 +1474,47 @@
   },
   "vfs_setup_failed": {
     "message": "Der Zugriff konnte nicht erteilt werden."
+  },
+  "options_tab_calendars": {
+    "message": "Kalender & Kontakte"
+  },
+  "options_calendar_sync_label": {
+    "message": "Nextcloud-Synchronisation"
+  },
+  "options_calendar_sync_enable": {
+    "message": "Meine Nextcloud-Kalender automatisch in Thunderbird einbinden"
+  },
+  "options_calendar_sync_status_label": {
+    "message": "Synchronisierungsstatus"
+  },
+  "options_calendar_sync_now": {
+    "message": "Jetzt synchronisieren"
+  },
+  "options_calendar_sync_restore": {
+    "message": "Entfernte Kalender und Adressbücher zurückholen"
+  },
+  "options_calendar_sync_status_never": {
+    "message": "Noch nicht synchronisiert."
+  },
+  "options_calendar_sync_status_ok": {
+    "message": "Zuletzt synchronisiert: $1 – $2 Kalender, $3 Adressbücher; $4 neu, $5 entfernt."
+  },
+  "options_calendar_sync_status_error": {
+    "message": "Synchronisierung fehlgeschlagen: $1"
+  },
+  "options_calendar_sync_unavailable": {
+    "message": "Die Kalendersynchronisation ist in dieser Thunderbird-Version nicht verfügbar."
+  },
+  "options_calendar_sync_running": {
+    "message": "Wird synchronisiert …"
+  },
+  "options_address_book_sync_enable": {
+    "message": "Meine Nextcloud-Adressbücher automatisch in Thunderbird einbinden"
+  },
+  "options_calendar_sync_disabled_notice": {
+    "message": "Thunderbird hat $1 Nextcloud-Kalender deaktiviert, etwa nach einer abgelaufenen Anmeldung. Starten Sie Thunderbird neu, um sie wieder zu aktivieren."
+  },
+  "options_calendar_sync_hint": {
+    "message": "Neue und geteilte Kalender und Adressbücher werden alle 15 Minuten ergänzt."
   }
 }
