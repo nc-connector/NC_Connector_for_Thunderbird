@@ -1474,5 +1474,47 @@
   },
   "vfs_setup_failed": {
     "message": "L’accès n’a pas pu être autorisé."
+  },
+  "options_tab_calendars": {
+    "message": "Agendas et contacts"
+  },
+  "options_calendar_sync_label": {
+    "message": "Synchronisation Nextcloud"
+  },
+  "options_calendar_sync_enable": {
+    "message": "Ajouter automatiquement mes agendas Nextcloud à Thunderbird"
+  },
+  "options_calendar_sync_status_label": {
+    "message": "État de la synchronisation"
+  },
+  "options_calendar_sync_now": {
+    "message": "Synchroniser maintenant"
+  },
+  "options_calendar_sync_restore": {
+    "message": "Rétablir les agendas et carnets retirés"
+  },
+  "options_calendar_sync_status_never": {
+    "message": "Pas encore synchronisé."
+  },
+  "options_calendar_sync_status_ok": {
+    "message": "Dernière synchronisation : $1 – $2 agendas, $3 carnets d'adresses ; $4 ajoutés, $5 retirés."
+  },
+  "options_calendar_sync_status_error": {
+    "message": "Échec de la synchronisation : $1"
+  },
+  "options_calendar_sync_unavailable": {
+    "message": "La synchronisation des agendas n'est pas disponible dans cette version de Thunderbird."
+  },
+  "options_calendar_sync_running": {
+    "message": "Synchronisation en cours…"
+  },
+  "options_address_book_sync_enable": {
+    "message": "Ajouter automatiquement mes carnets d'adresses Nextcloud à Thunderbird"
+  },
+  "options_calendar_sync_disabled_notice": {
+    "message": "Thunderbird a désactivé $1 calendrier(s) Nextcloud, par exemple après une connexion expirée. Redémarrez Thunderbird pour les réactiver."
+  },
+  "options_calendar_sync_hint": {
+    "message": "Les agendas et carnets d'adresses nouveaux et partagés sont ajoutés toutes les 15 minutes."
   }
 }

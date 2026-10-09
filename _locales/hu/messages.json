@@ -1474,5 +1474,47 @@
   },
   "vfs_setup_failed": {
     "message": "A hozzáférést nem sikerült megadni."
+  },
+  "options_tab_calendars": {
+    "message": "Naptárak és névjegyek"
+  },
+  "options_calendar_sync_label": {
+    "message": "Nextcloud-szinkronizálás"
+  },
+  "options_calendar_sync_enable": {
+    "message": "Nextcloud-naptáraim automatikus hozzáadása a Thunderbirdhöz"
+  },
+  "options_calendar_sync_status_label": {
+    "message": "Szinkronizálás állapota"
+  },
+  "options_calendar_sync_now": {
+    "message": "Szinkronizálás most"
+  },
+  "options_calendar_sync_restore": {
+    "message": "Eltávolított naptárak és címjegyzékek visszaállítása"
+  },
+  "options_calendar_sync_status_never": {
+    "message": "Még nem volt szinkronizálva."
+  },
+  "options_calendar_sync_status_ok": {
+    "message": "Utolsó szinkronizálás: $1 – $2 naptár, $3 címjegyzék; $4 hozzáadva, $5 eltávolítva."
+  },
+  "options_calendar_sync_status_error": {
+    "message": "A szinkronizálás sikertelen: $1"
+  },
+  "options_calendar_sync_unavailable": {
+    "message": "A naptárszinkronizálás ebben a Thunderbird-verzióban nem érhető el."
+  },
+  "options_calendar_sync_running": {
+    "message": "Szinkronizálás folyamatban…"
+  },
+  "options_address_book_sync_enable": {
+    "message": "Nextcloud-címjegyzékeim automatikus hozzáadása a Thunderbirdhöz"
+  },
+  "options_calendar_sync_disabled_notice": {
+    "message": "A Thunderbird letiltott $1 Nextcloud-naptárat, például egy lejárt bejelentkezés után. Az újbóli engedélyezéshez indítsa újra a Thunderbirdöt."
+  },
+  "options_calendar_sync_hint": {
+    "message": "Az új és megosztott naptárak és címjegyzékek 15 percenként kerülnek hozzáadásra."
   }
 }

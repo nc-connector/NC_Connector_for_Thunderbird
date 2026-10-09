@@ -6,6 +6,7 @@
     "test:ical-contract": "node tools/ical-contract-check.js",
     "test:calendar-room-cleanup": "node tools/calendar-room-cleanup-check.js",
     "test:calendar-talk-reliability": "node tools/calendar-talk-reliability-check.js",
+    "test:collection-sync": "node tools/collection-sync-check.js",
     "test:share-plaintext-contract": "node tools/share-plaintext-contract-check.js",
     "test:policy-contract": "node tools/policy-contract-check.js",
     "test:policy-editability": "node tools/policy-editability-check.js",

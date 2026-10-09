@@ -18,6 +18,15 @@ release-specific differences remain in `CHANGELOG.md`.
 - VFS provider/client support is ordinary WebExtension/background code. External
   provider discovery uses the install-time `management` permission; no Experiment API
   and no remote code are added.
+- Calendar and address book setup adds one minimal experiment
+  (`ncDavCollections`) for steps Thunderbird's WebExtension APIs do not offer:
+  storing the Nextcloud app password in the login manager for the DAV
+  providers, registering CalDAV calendars and CardDAV address books like
+  Thunderbird's own creation dialogs, and listing, renaming, and removing
+  CardDAV address books. Discovery, reconciliation, and state stay in
+  `modules/bgCollectionSync.js`; content sync stays with Thunderbird's
+  providers. Only https URLs and origins are accepted, and only collections the
+  add-on created are changed or removed.
 
 ---
 

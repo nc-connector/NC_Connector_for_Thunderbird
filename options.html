@@ -565,6 +565,7 @@ footer{
     <button type="button" class="tab-btn" data-tab="sharing" data-i18n="options_tab_sharing">Sharing</button>
     <button type="button" class="tab-btn" data-tab="vfs" data-i18n="options_tab_vfs">VFS</button>
     <button type="button" class="tab-btn" data-tab="talklink" data-i18n="options_tab_talklink">Talk Link</button>
+    <button type="button" class="tab-btn" data-tab="calendars" data-i18n="options_tab_calendars">Calendars &amp; contacts</button>
     <button type="button" class="tab-btn" data-tab="signature" data-i18n="options_tab_signature">Signature</button>
     <button type="button" class="tab-btn" data-tab="advanced" data-i18n="options_tab_advanced">Advanced</button>
     <button type="button" class="tab-btn" data-tab="debug" data-i18n="options_tab_debug">Debug</button>
@@ -957,6 +958,38 @@ footer{
       </div>
     </fieldset>
   </section>
+  <section id="tab-calendars" class="tab-panel">
+    <fieldset class="auth-block">
+      <legend data-i18n="options_calendar_sync_label">Nextcloud sync</legend>
+      <p class="hint" data-i18n="options_calendar_sync_hint">New and shared calendars and address books are added every 15 minutes.</p>
+      <p id="collectionSyncDisabledNotice" class="connection-setup-notice" role="status" hidden></p>
+      <div class="row">
+        <label for="calendarSyncEnabled" data-i18n="options_calendar_sync_enable">Add my Nextcloud calendars to Thunderbird automatically</label>
+        <div class="boolean-control">
+          <input id="calendarSyncEnabled" type="checkbox" disabled>
+        </div>
+      </div>
+      <div class="row">
+        <label for="addressBookSyncEnabled" data-i18n="options_address_book_sync_enable">Add my Nextcloud address books to Thunderbird automatically</label>
+        <div class="boolean-control">
+          <input id="addressBookSyncEnabled" type="checkbox" disabled>
+        </div>
+      </div>
+      <div class="row">
+        <span data-i18n="options_calendar_sync_status_label">Sync status</span>
+        <div>
+          <div class="vfs-status-card" aria-live="polite">
+            <span id="collectionSyncStatusDot" class="vfs-status-dot" aria-hidden="true"></span>
+            <strong id="collectionSyncStatus"></strong>
+          </div>
+          <div class="button-row">
+            <button id="collectionSyncNow" type="button" class="vfs-action-button" data-i18n="options_calendar_sync_now" disabled>Sync now</button>
+            <button id="collectionSyncRestore" type="button" class="vfs-action-button" data-i18n="options_calendar_sync_restore" disabled>Restore removed calendars and address books</button>
+          </div>
+        </div>
+      </div>
+    </fieldset>
+  </section>
   <section id="tab-signature" class="tab-panel">
     <fieldset class="auth-block">
       <legend data-i18n="options_signature_defaults_heading">Email signature</legend>
@@ -1059,4 +1092,5 @@ footer{
 <script src="ui/addressbookUi.js"></script>
 <script src="ui/wizardPolicyUi.js"></script>
 <script src="ui/optionsVfs.js"></script>
+<script src="ui/optionsCollectionSync.js"></script>
 <script src="options.js"></script>

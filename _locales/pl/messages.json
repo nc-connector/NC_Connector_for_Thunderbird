@@ -1474,5 +1474,47 @@
   },
   "vfs_setup_failed": {
     "message": "Nie udało się udzielić dostępu."
+  },
+  "options_tab_calendars": {
+    "message": "Kalendarze i kontakty"
+  },
+  "options_calendar_sync_label": {
+    "message": "Synchronizacja z Nextcloud"
+  },
+  "options_calendar_sync_enable": {
+    "message": "Automatycznie dodawaj moje kalendarze Nextcloud do Thunderbirda"
+  },
+  "options_calendar_sync_status_label": {
+    "message": "Stan synchronizacji"
+  },
+  "options_calendar_sync_now": {
+    "message": "Synchronizuj teraz"
+  },
+  "options_calendar_sync_restore": {
+    "message": "Przywróć usunięte kalendarze i książki adresowe"
+  },
+  "options_calendar_sync_status_never": {
+    "message": "Jeszcze nie zsynchronizowano."
+  },
+  "options_calendar_sync_status_ok": {
+    "message": "Ostatnia synchronizacja: $1 – kalendarze: $2, książki adresowe: $3; dodane: $4, usunięte: $5."
+  },
+  "options_calendar_sync_status_error": {
+    "message": "Synchronizacja nie powiodła się: $1"
+  },
+  "options_calendar_sync_unavailable": {
+    "message": "Synchronizacja kalendarzy nie jest dostępna w tej wersji Thunderbirda."
+  },
+  "options_calendar_sync_running": {
+    "message": "Trwa synchronizacja…"
+  },
+  "options_address_book_sync_enable": {
+    "message": "Automatycznie dodawaj moje książki adresowe Nextcloud do Thunderbirda"
+  },
+  "options_calendar_sync_disabled_notice": {
+    "message": "Thunderbird wyłączył kalendarze Nextcloud ($1), na przykład po wygaśnięciu logowania. Uruchom ponownie Thunderbirda, aby je ponownie włączyć."
+  },
+  "options_calendar_sync_hint": {
+    "message": "Nowe i udostępnione kalendarze oraz książki adresowe są dodawane co 15 minut."
   }
 }

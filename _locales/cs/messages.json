@@ -1474,5 +1474,47 @@
   },
   "vfs_setup_failed": {
     "message": "Přístup se nepodařilo udělit."
+  },
+  "options_tab_calendars": {
+    "message": "Kalendáře a kontakty"
+  },
+  "options_calendar_sync_label": {
+    "message": "Synchronizace s Nextcloudem"
+  },
+  "options_calendar_sync_enable": {
+    "message": "Automaticky přidávat mé kalendáře Nextcloud do Thunderbirdu"
+  },
+  "options_calendar_sync_status_label": {
+    "message": "Stav synchronizace"
+  },
+  "options_calendar_sync_now": {
+    "message": "Synchronizovat nyní"
+  },
+  "options_calendar_sync_restore": {
+    "message": "Obnovit odebrané kalendáře a adresáře"
+  },
+  "options_calendar_sync_status_never": {
+    "message": "Zatím nesynchronizováno."
+  },
+  "options_calendar_sync_status_ok": {
+    "message": "Poslední synchronizace: $1 – kalendáře: $2, adresáře: $3; přidáno $4, odebráno $5."
+  },
+  "options_calendar_sync_status_error": {
+    "message": "Synchronizace selhala: $1"
+  },
+  "options_calendar_sync_unavailable": {
+    "message": "Synchronizace kalendářů není v této verzi Thunderbirdu k dispozici."
+  },
+  "options_calendar_sync_running": {
+    "message": "Probíhá synchronizace…"
+  },
+  "options_address_book_sync_enable": {
+    "message": "Automaticky přidávat mé adresáře Nextcloud do Thunderbirdu"
+  },
+  "options_calendar_sync_disabled_notice": {
+    "message": "Thunderbird zakázal Nextcloud kalendáře ($1), například po vypršení přihlášení. Pro jejich opětovné povolení restartujte Thunderbird."
+  },
+  "options_calendar_sync_hint": {
+    "message": "Nové a sdílené kalendáře a adresáře se přidávají každých 15 minut."
   }
 }

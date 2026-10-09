@@ -10,6 +10,7 @@ This add-on integrates Nextcloud Talk and Nextcloud Sharing into Thunderbird.
 - Talk room creation with lobby, moderator delegation, and optional invitee sync (separately for internal users and external guests)
 - Calendar event integration via metadata and a stable event-editor toolbar button
 - Central options for credentials and defaults
+- Optional setup of the user's own and shared Nextcloud calendars and address books as regular Thunderbird CalDAV/CardDAV collections
 - Debug logging across UI/background/experiment layers
 
 ## Architecture
@@ -19,6 +20,7 @@ This add-on integrates Nextcloud Talk and Nextcloud Sharing into Thunderbird.
 - experiments/calendar/*: Thunderbird calendar experiment API (items CRUD + item lifecycle events) used “as-is”
 - experiments/ncCalToolbar/*: minimal custom experiment for stable editor context bridging (dialog + tab)
 - experiments/ncComposePrefs/*: read-only compose preference bridge used to detect Thunderbird's built-in big-attachment setting and lock conflicting NC attachment automation
+- experiments/ncDavCollections/*: minimal bridge storing the app password for Thunderbird's DAV providers and registering CalDAV calendars and CardDAV address books like Thunderbird's own dialogs; discovery and reconciliation stay in `modules/bgCollectionSync.js`
 
 Calendar integration (high level):
 - `experiments/ncCalToolbar` is responsible only for editor-targeted integration:

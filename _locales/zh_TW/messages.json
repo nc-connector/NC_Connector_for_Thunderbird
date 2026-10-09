@@ -1474,5 +1474,47 @@
   },
   "vfs_setup_failed": {
     "message": "無法授予存取權限。"
+  },
+  "options_tab_calendars": {
+    "message": "行事曆與聯絡人"
+  },
+  "options_calendar_sync_label": {
+    "message": "Nextcloud 同步"
+  },
+  "options_calendar_sync_enable": {
+    "message": "自動將我的 Nextcloud 行事曆加入 Thunderbird"
+  },
+  "options_calendar_sync_status_label": {
+    "message": "同步狀態"
+  },
+  "options_calendar_sync_now": {
+    "message": "立即同步"
+  },
+  "options_calendar_sync_restore": {
+    "message": "還原已移除的行事曆與通訊錄"
+  },
+  "options_calendar_sync_status_never": {
+    "message": "尚未同步。"
+  },
+  "options_calendar_sync_status_ok": {
+    "message": "上次同步：$1 – 行事曆 $2 個，通訊錄 $3 個；新增 $4 個，移除 $5 個。"
+  },
+  "options_calendar_sync_status_error": {
+    "message": "同步失敗：$1"
+  },
+  "options_calendar_sync_unavailable": {
+    "message": "此 Thunderbird 版本不支援行事曆同步。"
+  },
+  "options_calendar_sync_running": {
+    "message": "正在同步…"
+  },
+  "options_address_book_sync_enable": {
+    "message": "自動將我的 Nextcloud 通訊錄加入 Thunderbird"
+  },
+  "options_calendar_sync_disabled_notice": {
+    "message": "Thunderbird 已停用 $1 個 Nextcloud 行事曆，例如登入過期後。請重新啟動 Thunderbird 以重新啟用它們。"
+  },
+  "options_calendar_sync_hint": {
+    "message": "新的與共用的行事曆及通訊錄每 15 分鐘加入一次。"
   }
 }

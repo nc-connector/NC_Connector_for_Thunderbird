@@ -1474,5 +1474,47 @@
   },
   "vfs_setup_failed": {
     "message": "无法授予访问权限。"
+  },
+  "options_tab_calendars": {
+    "message": "日历和联系人"
+  },
+  "options_calendar_sync_label": {
+    "message": "Nextcloud 同步"
+  },
+  "options_calendar_sync_enable": {
+    "message": "自动将我的 Nextcloud 日历添加到 Thunderbird"
+  },
+  "options_calendar_sync_status_label": {
+    "message": "同步状态"
+  },
+  "options_calendar_sync_now": {
+    "message": "立即同步"
+  },
+  "options_calendar_sync_restore": {
+    "message": "恢复已移除的日历和通讯录"
+  },
+  "options_calendar_sync_status_never": {
+    "message": "尚未同步。"
+  },
+  "options_calendar_sync_status_ok": {
+    "message": "上次同步：$1 – 日历 $2 个，通讯录 $3 个；新增 $4 个，移除 $5 个。"
+  },
+  "options_calendar_sync_status_error": {
+    "message": "同步失败：$1"
+  },
+  "options_calendar_sync_unavailable": {
+    "message": "此 Thunderbird 版本不支持日历同步。"
+  },
+  "options_calendar_sync_running": {
+    "message": "正在同步…"
+  },
+  "options_address_book_sync_enable": {
+    "message": "自动将我的 Nextcloud 通讯录添加到 Thunderbird"
+  },
+  "options_calendar_sync_disabled_notice": {
+    "message": "Thunderbird 已停用 $1 个 Nextcloud 日历，例如登录过期后。请重启 Thunderbird 以重新启用它们。"
+  },
+  "options_calendar_sync_hint": {
+    "message": "新的和共享的日历及通讯录每 15 分钟添加一次。"
   }
 }

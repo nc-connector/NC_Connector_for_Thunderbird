@@ -1474,5 +1474,47 @@
   },
   "vfs_setup_failed": {
     "message": "Impossibile concedere l’accesso."
+  },
+  "options_tab_calendars": {
+    "message": "Calendari e contatti"
+  },
+  "options_calendar_sync_label": {
+    "message": "Sincronizzazione Nextcloud"
+  },
+  "options_calendar_sync_enable": {
+    "message": "Aggiungi automaticamente i miei calendari Nextcloud a Thunderbird"
+  },
+  "options_calendar_sync_status_label": {
+    "message": "Stato sincronizzazione"
+  },
+  "options_calendar_sync_now": {
+    "message": "Sincronizza ora"
+  },
+  "options_calendar_sync_restore": {
+    "message": "Ripristina calendari e rubriche rimossi"
+  },
+  "options_calendar_sync_status_never": {
+    "message": "Non ancora sincronizzato."
+  },
+  "options_calendar_sync_status_ok": {
+    "message": "Ultima sincronizzazione: $1 – $2 calendari, $3 rubriche; $4 aggiunti, $5 rimossi."
+  },
+  "options_calendar_sync_status_error": {
+    "message": "Sincronizzazione non riuscita: $1"
+  },
+  "options_calendar_sync_unavailable": {
+    "message": "La sincronizzazione dei calendari non è disponibile in questa versione di Thunderbird."
+  },
+  "options_calendar_sync_running": {
+    "message": "Sincronizzazione in corso…"
+  },
+  "options_address_book_sync_enable": {
+    "message": "Aggiungi automaticamente le mie rubriche Nextcloud a Thunderbird"
+  },
+  "options_calendar_sync_disabled_notice": {
+    "message": "Thunderbird ha disattivato $1 calendario/i Nextcloud, ad esempio dopo un accesso scaduto. Riavvia Thunderbird per riattivarli."
+  },
+  "options_calendar_sync_hint": {
+    "message": "I calendari e le rubriche nuovi e condivisi vengono aggiunti ogni 15 minuti."
   }
 }

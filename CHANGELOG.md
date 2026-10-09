@@ -4,6 +4,11 @@ All notable changes to **NC Connector for Thunderbird** will be documented in th
 
 This project targets **Thunderbird ESR 140** through **ESR 153**.
 
+## Unreleased
+
+### Added
+- Add own and shared Nextcloud calendars and address books to Thunderbird after sign-in, using the saved app password. New collections are added every 15 minutes, server-side deletions and renames are followed, and collections removed in Thunderbird stay removed. Added collections refresh every 5 minutes. Switches, status, and a restore action are in the new **Calendars & contacts** settings tab.
+
 ## 3.4.4
 
 ### Added

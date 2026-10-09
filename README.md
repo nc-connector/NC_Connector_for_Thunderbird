@@ -19,6 +19,7 @@ NC Connector is the Thunderbird-native Nextcloud integration for organizations t
 - apply managed email signatures from the optional backend
 - use attachment automation with clear rules instead of manual steps
 - write debug logs to Thunderbird's developer console for support cases
+- add your own and shared Nextcloud calendars and address books to Thunderbird after sign-in
 
 ## Optional backend
 
@@ -51,6 +52,12 @@ Key points:
 A Thunderbird event can create a Nextcloud Talk room directly. The dialog supports lobby, password, room type, listable scope, and moderation. Password-protected rooms start with a generated password that can be replaced or generated again.
 
 NC Connector can sync event changes back to the room and add invited attendees. Discarded unsaved events clean up their Talk rooms again. Deleting saved events removes rooms only when this behavior is explicitly enabled.
+
+## Calendars and address books
+
+After sign-in, NC Connector adds your Nextcloud calendars and address books, including ones shared with you, as regular Thunderbird CalDAV and CardDAV collections. It reuses the saved app password, so no further password prompt is needed. New and shared collections are added every 15 minutes; collections deleted on the server are removed again. Thunderbird keeps syncing their content itself.
+
+Collections you added by hand are left alone, and a collection you remove in Thunderbird is not added again. Both switches are in the **Calendars & contacts** settings tab.
 
 ## Signatures
 

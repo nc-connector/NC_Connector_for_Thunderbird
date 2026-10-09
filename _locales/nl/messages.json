@@ -1474,5 +1474,47 @@
   },
   "vfs_setup_failed": {
     "message": "Toegang kon niet worden verleend."
+  },
+  "options_tab_calendars": {
+    "message": "Agenda's en contacten"
+  },
+  "options_calendar_sync_label": {
+    "message": "Nextcloud-synchronisatie"
+  },
+  "options_calendar_sync_enable": {
+    "message": "Mijn Nextcloud-agenda's automatisch aan Thunderbird toevoegen"
+  },
+  "options_calendar_sync_status_label": {
+    "message": "Synchronisatiestatus"
+  },
+  "options_calendar_sync_now": {
+    "message": "Nu synchroniseren"
+  },
+  "options_calendar_sync_restore": {
+    "message": "Verwijderde agenda's en adresboeken herstellen"
+  },
+  "options_calendar_sync_status_never": {
+    "message": "Nog niet gesynchroniseerd."
+  },
+  "options_calendar_sync_status_ok": {
+    "message": "Laatst gesynchroniseerd: $1 – $2 agenda's, $3 adresboeken; $4 toegevoegd, $5 verwijderd."
+  },
+  "options_calendar_sync_status_error": {
+    "message": "Synchronisatie mislukt: $1"
+  },
+  "options_calendar_sync_unavailable": {
+    "message": "Agendasynchronisatie is niet beschikbaar in deze Thunderbird-versie."
+  },
+  "options_calendar_sync_running": {
+    "message": "Bezig met synchroniseren…"
+  },
+  "options_address_book_sync_enable": {
+    "message": "Mijn Nextcloud-adresboeken automatisch aan Thunderbird toevoegen"
+  },
+  "options_calendar_sync_disabled_notice": {
+    "message": "Thunderbird heeft $1 Nextcloud-agenda('s) uitgeschakeld, bijvoorbeeld na een verlopen aanmelding. Start Thunderbird opnieuw om ze weer in te schakelen."
+  },
+  "options_calendar_sync_hint": {
+    "message": "Nieuwe en gedeelde agenda's en adresboeken worden elke 15 minuten toegevoegd."
   }
 }

@@ -85,6 +85,7 @@
       "modules/bgCalendarState.js",
       "modules/bgCalendarDeparture.js",
       "modules/bgCalendar.js",
+      "modules/bgCollectionSync.js",
       "modules/bgRouter.js"
     ]
   },
@@ -228,6 +229,20 @@
         "paths": [
           [
             "ncComposePrefs"
+          ]
+        ]
+      }
+    },
+    "ncDavCollections": {
+      "schema": "experiments/ncDavCollections/schema.json",
+      "parent": {
+        "scopes": [
+          "addon_parent"
+        ],
+        "script": "experiments/ncDavCollections/parent.js",
+        "paths": [
+          [
+            "ncDavCollections"
           ]
         ]
       }

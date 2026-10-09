@@ -1,0 +1,168 @@
+[
+  {
+    "namespace": "ncDavCollections",
+    "description": "Provision Nextcloud CalDAV calendars and CardDAV address books the way Thunderbird's own creation dialogs do: credentials in the login manager first, then the collection bound to its username.",
+    "types": [
+      {
+        "id": "DavLogin",
+        "type": "object",
+        "properties": {
+          "origin": {
+            "type": "string"
+          },
+          "realm": {
+            "type": "string"
+          },
+          "username": {
+            "type": "string"
+          },
+          "password": {
+            "type": "string"
+          }
+        }
+      },
+      {
+        "id": "CalDavCalendarProperties",
+        "type": "object",
+        "properties": {
+          "url": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "username": {
+            "type": "string"
+          },
+          "color": {
+            "type": "string",
+            "optional": true
+          },
+          "readOnly": {
+            "type": "boolean",
+            "optional": true
+          }
+        }
+      },
+      {
+        "id": "CardDavBookProperties",
+        "type": "object",
+        "properties": {
+          "url": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "username": {
+            "type": "string"
+          },
+          "readOnly": {
+            "type": "boolean",
+            "optional": true
+          }
+        }
+      },
+      {
+        "id": "CardDavBook",
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "url": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          }
+        }
+      }
+    ],
+    "functions": [
+      {
+        "name": "saveLogin",
+        "type": "function",
+        "async": true,
+        "description": "Store or replace the HTTP-auth login the DAV providers look up for this origin and realm.",
+        "parameters": [
+          {
+            "name": "login",
+            "$ref": "DavLogin"
+          }
+        ]
+      },
+      {
+        "name": "createCalendar",
+        "type": "function",
+        "async": true,
+        "description": "Register a cached CalDAV calendar bound to the given username and return its calendar id.",
+        "parameters": [
+          {
+            "name": "properties",
+            "$ref": "CalDavCalendarProperties"
+          }
+        ],
+        "returns": {
+          "type": "string"
+        }
+      },
+      {
+        "name": "listAddressBooks",
+        "type": "function",
+        "async": true,
+        "description": "List all CardDAV address books with their server URL.",
+        "parameters": [],
+        "returns": {
+          "type": "array",
+          "items": {
+            "$ref": "CardDavBook"
+          }
+        }
+      },
+      {
+        "name": "createAddressBook",
+        "type": "function",
+        "async": true,
+        "description": "Register a CardDAV address book bound to the given username, start its first sync and return its UID.",
+        "parameters": [
+          {
+            "name": "properties",
+            "$ref": "CardDavBookProperties"
+          }
+        ],
+        "returns": {
+          "type": "string"
+        }
+      },
+      {
+        "name": "renameAddressBook",
+        "type": "function",
+        "async": true,
+        "description": "Rename a CardDAV address book.",
+        "parameters": [
+          {
+            "name": "id",
+            "type": "string"
+          },
+          {
+            "name": "name",
+            "type": "string"
+          }
+        ]
+      },
+      {
+        "name": "removeAddressBook",
+        "type": "function",
+        "async": true,
+        "description": "Remove a CardDAV address book; unknown ids are ignored.",
+        "parameters": [
+          {
+            "name": "id",
+            "type": "string"
+          }
+        ]
+      }
+    ]
+  }
+]
