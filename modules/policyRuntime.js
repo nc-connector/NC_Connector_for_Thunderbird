@@ -40,9 +40,10 @@ const NCPolicyRuntime = (() => {
 
   function isBackendStatusPayload(payload){
     return isObject(payload?.status)
-      && hasOwn(payload.status, "seat_assigned")
-      && hasOwn(payload.status, "seat_state")
-      && (isObject(payload?.policy) || isObject(payload?.policy_editable));
+      && typeof payload.status.seat_assigned === "boolean"
+      && typeof payload.status.is_valid === "boolean"
+      && typeof payload.status.seat_state === "string"
+      && payload.status.seat_state.trim().length > 0;
   }
 
   function buildLocalModeResult(reason, details = {}){
@@ -191,7 +192,17 @@ const NCPolicyRuntime = (() => {
     });
   }
 
-  function normalizeAndLogStatusPayload(payload, endpointUrl, source){
+  function normalizeAndLogStatusPayload(payload, endpointUrl, source, optionalProbe){
+    if (!isBackendStatusPayload(payload)){
+      // A malformed personal status is a failed check, never a confirmed Seat decision.
+      const failed = buildLocalModeResult("invalid_payload", {
+        endpointAvailable: true,
+        endpointChecked: true,
+        endpointUrl
+      });
+      logPolicyFallback("policy status fallback", { source, reason: failed.reason, endpointUrl }, optionalProbe);
+      return failed;
+    }
     const normalized = normalizeStatusPayload(payload);
     normalized.endpointUrl = endpointUrl;
     logNormalizedStatus(source, normalized);
@@ -208,8 +219,8 @@ const NCPolicyRuntime = (() => {
     const activation = isObject(rawStatus.license_activation) ? rawStatus.license_activation : null;
     const status = {
       userId: String(rawStatus.user_id || ""),
-      seatAssigned: !!rawStatus.seat_assigned,
-      seatState: String(rawStatus.seat_state || "none"),
+      seatAssigned: rawStatus.seat_assigned === true,
+      seatState: rawStatus.seat_state.trim(),
       overlicensed: !!rawStatus.overlicensed,
       mode: String(rawStatus.mode || ""),
       isValid: rawStatus.is_valid === true,
@@ -341,13 +352,13 @@ const NCPolicyRuntime = (() => {
     if (response.status === 404){
       // Broken pretty URL rewrites can return the real Nextcloud app body with HTTP 404.
       const parsedPretty = parseStatusPayload(raw);
-      if (parsedPretty.ok && isBackendStatusPayload(parsedPretty.payload)){
-        L("policy status pretty url returned valid payload with http 404", {
+      if (parsedPretty.ok && hasOwn(parsedPretty.payload, "status")){
+        L("policy status pretty url returned status payload with http 404", {
           source,
           hint: "Backend reachable, but server returned unexpected HTTP status. Check Nextcloud rewrite / pretty URL configuration.",
           ...buildPolicyResponseDebug(response, endpointUrl, raw)
         });
-        return normalizeAndLogStatusPayload(parsedPretty.payload, endpointUrl, source);
+        return normalizeAndLogStatusPayload(parsedPretty.payload, endpointUrl, source, optionalProbe);
       }
 
       const fallbackEndpointUrl = buildStatusEndpointUrl(normalizedBaseUrl, STATUS_ENDPOINT_INDEX_PATH);
@@ -386,6 +397,10 @@ const NCPolicyRuntime = (() => {
           ...buildPolicyResponseDebug(response, fallbackEndpointUrl, raw)
         });
       }else if (response.status === 404){
+        const parsedFallback = parseStatusPayload(raw);
+        if (parsedFallback.ok && hasOwn(parsedFallback.payload, "status")){
+          return normalizeAndLogStatusPayload(parsedFallback.payload, fallbackEndpointUrl, source, optionalProbe);
+        }
         const localResult = buildLocalModeResult("endpoint_missing", {
           endpointAvailable: false,
           endpointChecked: true,
@@ -429,7 +444,7 @@ const NCPolicyRuntime = (() => {
       return localResult;
     }
 
-    return normalizeAndLogStatusPayload(parsed.payload, activeEndpointUrl, source);
+    return normalizeAndLogStatusPayload(parsed.payload, activeEndpointUrl, source, optionalProbe);
   }
 
   /**

@@ -268,6 +268,63 @@ async function verifyRuntimeMetadata(policy){
   assert(setup.warning.visible === false && policy.getStatusNotice(setup).code === "", "Missing credentials must not fabricate a license warning");
 }
 
+async function verifyRuntimePersonalStatusFields(){
+  let cases = 0;
+  const malformedFields = [
+    ...["seat_assigned", "is_valid"].flatMap((field) =>
+      [undefined, null, "true", "false", 0, 1, {}, []].map((value) => ({ field, value }))),
+    ...[undefined, null, "", "  ", false, 1, {}, []].map((value) => ({ field: "seat_state", value }))
+  ];
+  for (const mode of ["community", "pro"]){
+    for (const status of [200, 404]){
+      for (const { field, value } of malformedFields){
+        const payload = createOverlicensedPayload();
+        Object.assign(payload.status, { mode, [field]: value });
+        const fixture = loadPolicyContext(payload, {
+          status, account: { managedSetup: { isEnterpriseRollout: true } }
+        });
+        const result = await fixture.NCPolicyRuntime.getPolicyStatus();
+        assert(!result.fetchSucceeded && result.reason === "invalid_payload", `${mode}/${status}/${field}: malformed personal status must fail verification`);
+        assert(result.endpointAvailable && result.endpointChecked, "A malformed backend status must not claim the endpoint is missing");
+        assert(!fixture.NCPolicyState.hasSeatEntitlement(result) && !result.policyActive, "Malformed personal status must never grant Seat functions or policies");
+        assert(fixture.NCPolicyState.getManagedAccessState(result).reason === "enterprise_status_unavailable", "Managed verification failure must not become a confirmed missing Seat");
+        cases++;
+      }
+      const payload = { status: { mode, seat_assigned: true, is_valid: true, seat_state: " Active " } };
+      const fixture = loadPolicyContext(payload, { status });
+      const result = await fixture.NCPolicyRuntime.getPolicyStatus();
+      assert(result.fetchSucceeded && fixture.NCPolicyState.hasSeatEntitlement(result), "A valid personal status does not require optional license metadata or policy domains");
+      assert(!result.policyActive, "Missing policy domains must stay inactive without denying the confirmed Seat");
+    }
+  }
+  for (const status of [401, 403, 503]){
+    const fixture = loadPolicyContext(createOverlicensedPayload(), { status });
+    const result = await fixture.NCPolicyRuntime.getPolicyStatus();
+    assert(!result.fetchSucceeded && !fixture.NCPolicyState.hasSeatEntitlement(result), "HTTP errors must not grant access through an otherwise valid response body");
+  }
+  for (const seatState of ["revoked", "UNKNOWN"]){
+    const payload = createOverlicensedPayload();
+    payload.status.seat_state = seatState;
+    const fixture = loadPolicyContext(payload);
+    const result = await fixture.NCPolicyRuntime.getPolicyStatus();
+    assert(result.fetchSucceeded && !fixture.NCPolicyState.hasSeatEntitlement(result), "Unknown personal Seat states must not grant access");
+  }
+  for (const malformed of [false, true]){
+    const payload = createOverlicensedPayload();
+    if (malformed) payload.status.seat_assigned = "false";
+    const fixture = loadPolicyContext(payload, { status: 404 });
+    const originalFetch = fixture.fetch;
+    fixture.fetch = async (endpointUrl) => {
+      const response = await originalFetch(endpointUrl);
+      return endpointUrl.includes("/index.php/") ? response : { ...response, text: async () => "null" };
+    };
+    const result = await fixture.NCPolicyRuntime.getPolicyStatus();
+    assert(result.fetchSucceeded === !malformed && result.endpointAvailable, "The index.php 404 path must apply the same personal-status validation");
+    assert(!malformed || result.reason === "invalid_payload", "Malformed fallback status must remain a verification failure");
+  }
+  console.log(`[OK] strict personal status validation: ${cases} malformed cases`);
+}
+
 function verifyDefaultsSourceSelection(policy){
   for (const mode of ["community", "pro"]){
     for (const backend of [null, "inherit", "local", "backend", "invalid"]){
@@ -470,6 +527,7 @@ async function run(){
   verifyDefaultsSourceSelection(policy);
   await verifyManagedAccessAndSourceMetadata();
   await verifyRuntimeMetadata(policy);
+  await verifyRuntimePersonalStatusFields();
   await verifySeatParity(policy, vfsPolicy);
   await verifySharePolicyNumbers();
 
