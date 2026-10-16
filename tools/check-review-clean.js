@@ -14,6 +14,7 @@ const CHECKS = [
   "tools/ical-contract-check.js",
   "tools/calendar-room-cleanup-check.js",
   "tools/calendar-talk-reliability-check.js",
+  "tools/calendar-resource-directory-check.js",
   "tools/share-plaintext-contract-check.js",
   "tools/policy-contract-check.js",
   "tools/policy-editability-check.js",

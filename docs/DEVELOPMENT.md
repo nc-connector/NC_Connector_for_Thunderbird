@@ -29,6 +29,7 @@ It complements:
 - [7. Calendar integration (Talk button in event editor)](#7-calendar-integration-talk-button-in-event-editor)
   - [7.1 Why a custom toolbar experiment exists](#71-why-a-custom-toolbar-experiment-exists)
   - [7.1.1 Why the Talk popup is assigned with `setPopup()`](#711-why-the-talk-popup-is-assigned-with-setpopup)
+  - [7.1.2 Room and resource directory](#712-room-and-resource-directory)
   - [7.2 Editor variants: dialog vs tab](#72-editor-variants-dialog-vs-tab)
   - [7.2.1 Why manual tab/window correlation exists today](#721-why-manual-tabwindow-correlation-exists-today)
   - [7.3 `ncCalToolbar` API surface (editor-targeted)](#73-nccaltoolbar-api-surface-editor-targeted)
@@ -488,6 +489,20 @@ Reason:
 This is a compatibility workaround, not the preferred long-term shape. If upstream fixes the popup path handling so already expanded URLs are not resolved again, move the Talk popup back to `calendar_item_action.default_popup` in `manifest.json` and remove the runtime `setPopup()` setup.
 
 The Talk context is prepared by `ncCalToolbar.onClicked` and claimed by the popup through `talk:claimPopupContext`.
+
+### 7.1.2 Room and resource directory
+
+`modules/calendarResourceDirectory.js` performs fresh, authenticated Depth-0
+`principal-property-search` REPORTs against `principals/calendar-rooms/` and
+`principals/calendar-resources/`. Nextcloud applies group visibility. Parsing accepts
+successful DAV propstats, validates collection-local principal hrefs and resource
+types, and bounds response size. It uses the existing connection, host-permission,
+version, timeout, and authentication-pause mechanisms. There is no new credential store.
+
+`NCCalendarResourceDirectory.list()` returns room/resource metadata without creating
+bookings or changing calendar items. It is loaded through the existing ordered MV2
+background scripts; no picker entry point is added here. The directory regression
+check runs through `npm run test:review`.
 
 ### 7.2 Editor variants: dialog vs tab
 

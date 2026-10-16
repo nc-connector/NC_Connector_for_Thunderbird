@@ -47,6 +47,7 @@
       "vendor/spark-md5.min.js",
       "modules/fileLinkUploadPolicy.js",
       "modules/nextcloudDav.js",
+      "modules/calendarResourceDirectory.js",
       "modules/fileLinkUploadProgress.js",
       "modules/fileLinkBulkUpload.js",
       "modules/fileLinkTransfer.js",
