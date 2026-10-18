@@ -47,8 +47,19 @@ is intentionally minimal:
 - click entrypoint via `ncCalToolbar.onClicked` bridge (bound to official `calendarItemAction` button)
 - stable editor targeting via opaque `editorId`
 - editor snapshot read via `ncCalToolbar.getCurrent({ editorId, returnFormat: "ical" })`
-- editor write-back via `ncCalToolbar.updateCurrent({ editorId, fields, properties, returnFormat })`
+- editor write-back via `ncCalToolbar.updateCurrent({ editorId, fields, properties, attendees, returnFormat })`
 - tracked lifecycle via `ncCalToolbar.onTrackedEditorClosed`
+
+The existing bridge supports resource-attendee draft updates and a read-only live
+appointment interval; the bundled upstream experiment remains unchanged.
+Read-only/invitation checks, live before-state comparisons, and rollback protect
+the draft. Added participants use native ROOM/RESOURCE types and UI rendering;
+unrelated attendees retain their parameters. Interval snapshots use UTC milliseconds,
+the event time zone, and exclusive all-day end dates without changing live dates.
+No remote event write, save/send, invitation-notification override, or custom
+Free/Busy provider is introduced. The editor regression check is part of the
+normal review aggregate; no resource-picker entry point is enabled by this bridge.
+See [editor API surface](DEVELOPMENT.md#73-nccaltoolbar-api-surface-editor-targeted).
 
 All business logic stays in the background runtime modules (`modules/bgState.js`,
 `modules/bgComposeAttachments.js`, `modules/bgShareCleanupStore.js`,

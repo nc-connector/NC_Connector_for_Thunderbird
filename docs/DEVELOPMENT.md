@@ -542,9 +542,31 @@ Entry / UI:
 
 Snapshot:
 - `browser.ncCalToolbar.getCurrent({ editorId, returnFormat: "ical" })`
+- Resource snapshots expose serialized live `attendees` and `canEditAttendees`.
+- The read-only `availabilityInterval` contains UTC start/end milliseconds and
+  the event time zone. All-day and floating events use the calendar default zone;
+  the all-day end is exclusive. Reading it does not change live date objects or
+  the existing Talk timestamp fields.
 
 Write-back:
-- `browser.ncCalToolbar.updateCurrent({ editorId, fields, properties, returnFormat: "ical" })`
+- `browser.ncCalToolbar.updateCurrent({ editorId, fields, properties, attendees, returnFormat: "ical" })`
+- Attendee updates carry `before`/`after` arrays plus `beforeLocation` and
+  `beforeCalendarId` for stale-selection detection.
+- The bridge rejects attendee writes for tasks, read-only calendars, received
+  invitations, and missing organizer identities. Unchanged attendees keep their
+  native objects and parameters; additions use `ROOM` or `RESOURCE`. An existing
+  ordinary attendee can change only its `CUTYPE` to one of those resource types.
+- Field, property, attendee, and organizer writes roll back together if writing
+  or the final snapshot fails. Native attendee UI rendering supplies the icons.
+  The bridge neither saves/sends the draft nor changes notification preferences.
+
+`tools/calendar-resource-editor-check.js` exercises dialog/tab targeting,
+stale-state and permission guards, native attendee parsing, rollback, and live
+intervals including exclusive all-day ends across DST boundaries. It runs through
+`npm run test:review`. The native attendee integration was checked against
+installed ESR 153.4 source (`attendees`, `organizer`, `getCurrentCalendar`,
+`updateAttendeeInterface`, `CalAttendee`, calendar ACL and invitation checks).
+Live compatibility checks on supported ESR versions remain required before release.
 
 Lifecycle:
 - `browser.ncCalToolbar.onTrackedEditorClosed` with action payload (`discarded`, `superseded`)

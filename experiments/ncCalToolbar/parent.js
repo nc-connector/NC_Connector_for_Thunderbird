@@ -12,6 +12,7 @@ var {
   ExtensionUtils: { ExtensionError },
 } = ChromeUtils.importESModule("resource://gre/modules/ExtensionUtils.sys.mjs");
 var { cal } = ChromeUtils.importESModule("resource:///modules/calendar/calUtils.sys.mjs");
+var { CalAttendee } = ChromeUtils.importESModule("resource:///modules/CalAttendee.sys.mjs");
 
 const EVENT_DIALOG_URL = "chrome://calendar/content/calendar-event-dialog.xhtml";
 const EVENT_TAB_IFRAME_URL = "chrome://calendar/content/calendar-item-iframe.xhtml";
@@ -911,7 +912,7 @@ this.ncCalToolbar = class extends ExtensionAPI {
     );
     const live = {
       title: this._readField(titleTarget) || String(item?.title ?? ""),
-      location: this._readField(locationTarget) || this._readItemProperty(item, "LOCATION"),
+      location: locationTarget ? this._readField(locationTarget) : this._readItemProperty(item, "LOCATION"),
       description: description.text || String(item?.descriptionText ?? "") || this._readItemProperty(item, "DESCRIPTION"),
       descriptionHtml: description.html || String(item?.descriptionHTML ?? ""),
     };
@@ -921,7 +922,35 @@ this.ncCalToolbar = class extends ExtensionAPI {
     if (endTimestamp != null) {
       live.endTimestamp = endTimestamp;
     }
+    const interval = this._readAvailabilityInterval(panelWindow || window);
+    if (interval) live.availabilityInterval = interval;
     return live;
+  }
+
+  _readAvailabilityInterval(editor) {
+    if (!editor?.gStartTime || !editor?.gEndTime || !editor.gStartTimezone) return null;
+    const start = editor.gStartTime.clone();
+    const end = editor.gEndTime.clone();
+    const allDay = editor.document.getElementById("event-all-day")?.checked === true;
+    const timezone = allDay || editor.gStartTimezone.isFloating
+      ? cal.dtz.defaultTimezone : editor.gStartTimezone;
+    if (!timezone || timezone.isFloating) return null;
+    if (allDay) {
+      // Native saveEvent uses an inclusive editor end date and exclusive DTEND.
+      end.day += 1;
+    }
+    for (const value of [start, end]) {
+      if (allDay || value.timezone.isFloating) {
+        value.isDate = false;
+        value.timezone = cal.dtz.defaultTimezone;
+        if (allDay) value.hour = value.minute = value.second = 0;
+      }
+    }
+    const startSeconds = this._calendarDateTimeToUnixSeconds(start);
+    const endSeconds = this._calendarDateTimeToUnixSeconds(end);
+    if (startSeconds == null || endSeconds == null || endSeconds <= startSeconds) return null;
+    return { start: startSeconds * 1000, end: endSeconds * 1000,
+      timeZone: timezone.isUTC ? "UTC" : timezone.tzid };
   }
 
   /**
@@ -969,6 +998,14 @@ this.ncCalToolbar = class extends ExtensionAPI {
       ...live,
       snapshotSource: ical ? (hasLive ? "mixed" : "ical") : "live",
     };
+    const attendeeEditor = this._attendeeEditor(editorWindow);
+    snapshot.attendees = attendeeEditor
+      ? attendeeEditor.attendees.map(attendee => attendee.icalString)
+      : [];
+    snapshot.canEditAttendees = this._canEditAttendees(attendeeEditor, item);
+    if (attendeeEditor?.getCurrentCalendar) {
+      snapshot.calendarId = String(attendeeEditor.getCurrentCalendar()?.id || "");
+    }
     if (ical) {
       snapshot.format = "ical";
       snapshot.item = ical;
@@ -977,6 +1014,134 @@ this.ncCalToolbar = class extends ExtensionAPI {
       snapshot.editorType = editorType;
     }
     return snapshot;
+  }
+
+  _attendeeEditor(window) {
+    const panel = this._panelWindow(window) || window;
+    return Array.isArray(panel?.attendees) ? panel : null;
+  }
+
+  _canEditAttendees(editor, item) {
+    if (!editor || editor.closed || !item?.isEvent?.()
+        || typeof editor.getCurrentCalendar !== "function"
+        || typeof editor.updateAttendeeInterface !== "function"
+        || !cal.acl || !cal.itip) {
+      return false;
+    }
+    try {
+      const calendar = editor.getCurrentCalendar();
+      return !!calendar && !editor.gIsReadOnly
+        && cal.acl.isCalendarWritable(calendar)
+        && !!(editor.organizer?.id || calendar.getProperty("organizerId"))
+        && (editor.mode === "new"
+          ? cal.acl.userCanAddItemsToCalendar(calendar)
+          : cal.acl.userCanModifyItem(item))
+        && !cal.itip.isInvitation(item);
+    } catch (error) {
+      this._logError("attendee permission check failed", error);
+      return false;
+    }
+  }
+
+  _parseAttendee(value) {
+    if (typeof value !== "string" || !value.trim()) {
+      throw new ExtensionError("resource_selection_invalid");
+    }
+    // Parse one complete component so injected extra properties or components
+    // cannot be silently ignored by a single-property parser.
+    const calendar = cal.icsService.parseICS(
+      `BEGIN:VCALENDAR\r\nVERSION:2.0\r\nBEGIN:VEVENT\r\n${value.trim()}\r\nEND:VEVENT\r\nEND:VCALENDAR\r\n`
+    );
+    const event = calendar.getFirstSubcomponent("ANY");
+    const property = event?.getFirstProperty("ANY");
+    if (calendar.componentType !== "VCALENDAR" || event?.componentType !== "VEVENT"
+        || calendar.getNextSubcomponent("ANY") || event.getFirstSubcomponent("ANY")
+        || property?.propertyName !== "ATTENDEE" || event.getNextProperty("ANY")) {
+      throw new ExtensionError("resource_selection_invalid");
+    }
+    const attendee = new CalAttendee();
+    attendee.icalProperty = property;
+    if (!attendee.id || attendee.isOrganizer) {
+      throw new ExtensionError("resource_selection_invalid");
+    }
+    return attendee;
+  }
+
+  _prepareAttendees(window, item, update) {
+    const editor = this._attendeeEditor(window);
+    if (!this._canEditAttendees(editor, item)) {
+      throw new ExtensionError("resource_readonly");
+    }
+    if (!Array.isArray(update.before) || !Array.isArray(update.after)) {
+      throw new ExtensionError("resource_selection_invalid");
+    }
+    const before = editor.attendees;
+    const beforeLines = before.map(attendee => attendee.icalString);
+    if (beforeLines.length !== update.before.length
+        || beforeLines.some((line, index) => line !== update.before[index])) {
+      throw new ExtensionError("resource_selection_changed");
+    }
+    if ((typeof update.beforeLocation === "string"
+          && update.beforeLocation !== this._readLiveEventSnapshot(window, item).location)
+        || (typeof update.beforeCalendarId === "string"
+          && update.beforeCalendarId !== String(editor.getCurrentCalendar()?.id || ""))) {
+      throw new ExtensionError("resource_selection_changed");
+    }
+    const retained = new Set();
+    const identities = new Set();
+    const after = update.after.map(line => {
+      // Retain native objects and every parameter of unchanged attendees.
+      const index = beforeLines.findIndex((value, i) => value === line && !retained.has(i));
+      let attendee = index >= 0 ? before[index] : this._parseAttendee(line);
+      if (index >= 0) {
+        retained.add(index);
+      } else if (!["ROOM", "RESOURCE"].includes(attendee.userType)) {
+        throw new ExtensionError("resource_selection_invalid");
+      }
+      if (index < 0) {
+        const promotedIndex = before.findIndex((existing, i) => !retained.has(i)
+          && String(existing.id).toLowerCase() === String(attendee.id).toLowerCase()
+          && !["ROOM", "RESOURCE"].includes(existing.userType));
+        if (promotedIndex >= 0) {
+          const previous = before[promotedIndex];
+          const comparable = attendee.clone();
+          comparable.userType = previous.userType;
+          if (comparable.icalString !== previous.icalString) {
+            throw new ExtensionError("resource_selection_invalid");
+          }
+          const promoted = previous.clone();
+          promoted.userType = attendee.userType;
+          attendee = promoted;
+          retained.add(promotedIndex);
+        }
+      }
+      const id = String(attendee.id).toLowerCase();
+      if (identities.has(id)) {
+        throw new ExtensionError("resource_selection_invalid");
+      }
+      identities.add(id);
+      return attendee;
+    });
+    before.forEach((attendee, index) => {
+      if (!retained.has(index) && !["ROOM", "RESOURCE"].includes(attendee.userType)) {
+        throw new ExtensionError("resource_selection_invalid");
+      }
+    });
+    let organizer = editor.organizer;
+    if (!organizer && after.length) {
+      // Match Thunderbird's attendee dialog when a personal event first gains
+      // attendees. Do not replace an existing organizer or notification setting.
+      const calendar = editor.getCurrentCalendar();
+      const id = calendar.getProperty("organizerId");
+      if (!id) {
+        throw new ExtensionError("resource_readonly");
+      }
+      organizer = new CalAttendee();
+      organizer.id = cal.email.removeMailTo(id);
+      organizer.commonName = calendar.getProperty("organizerCN");
+      organizer.isOrganizer = true;
+    }
+    return { editor, before, after, organizer, beforeOrganizer: editor.organizer };
   }
 
   /**
@@ -1784,11 +1949,25 @@ this.ncCalToolbar = class extends ExtensionAPI {
             updateOptions?.properties && typeof updateOptions.properties === "object"
               ? updateOptions.properties
               : {};
-          if (!Object.keys(fields).length && !Object.keys(properties).length) {
-            throw new ExtensionError("updateCurrent requires at least one field or property update");
+          const attendeeUpdate = updateOptions?.attendees;
+          if (!Object.keys(fields).length && !Object.keys(properties).length && !attendeeUpdate) {
+            throw new ExtensionError("updateCurrent requires a field, property, or attendee update");
           }
 
           this._assertWindowOpen(window, "updateCurrent");
+          let attendeePlan = null;
+          if (attendeeUpdate) {
+            try {
+              attendeePlan = this._prepareAttendees(window, item, attendeeUpdate);
+            } catch (error) {
+              // Native parser exceptions can contain attendee data.
+              this._logError("updateCurrent attendee validation failed", null, { editorId });
+              if (error instanceof ExtensionError) {
+                throw error;
+              }
+              throw new ExtensionError("resource_selection_invalid");
+            }
+          }
           const targets = {};
           for (const key of ["title", "location", "description"]) {
             if (
@@ -1816,6 +1995,8 @@ this.ncCalToolbar = class extends ExtensionAPI {
           // contract without requiring a rollback from an incomplete snapshot.
           const beforeProps = this._snapshotProperties(item, properties);
           const appliedFields = { title: false, location: false, description: false };
+          const appliedProps = [];
+          let appliedAttendees = false;
 
           try {
             for (const key of ["title", "location", "description"]) {
@@ -1825,6 +2006,8 @@ this.ncCalToolbar = class extends ExtensionAPI {
                   && targets[key]?.kind === "html-body"
                   && typeof fields.descriptionHtml === "string";
                 const value = writeHtml ? fields.descriptionHtml : fields[key];
+                // An input listener can throw after the DOM value changed.
+                appliedFields[key] = true;
                 this._writeField(targets[key], value, { html: writeHtml });
                 if (key === "description" && targets[key]?.kind === "html-body") {
                   this._applyDescriptionState(item, {
@@ -1834,13 +2017,36 @@ this.ncCalToolbar = class extends ExtensionAPI {
                       : String(targets[key]?.element?.innerHTML ?? ""),
                   });
                 }
-                appliedFields[key] = true;
               }
             }
+            this._applyProperties(item, properties, appliedProps);
+            if (attendeePlan) {
+              appliedAttendees = true;
+              attendeePlan.editor.attendees = attendeePlan.after;
+              attendeePlan.editor.organizer = attendeePlan.organizer;
+              // Thunderbird renders CUTYPE with its native room/resource icon
+              // and saves window.attendees only on the user's later Save action.
+              attendeePlan.editor.updateAttendeeInterface();
+            }
+            return this._snapshotItem(item, editorId, "", window);
           } catch (error) {
-            this._logError("updateCurrent field write failed", error, {
+            this._logError("updateCurrent write failed", error, {
               editorId,
             });
+            if (appliedAttendees) {
+              attendeePlan.editor.attendees = attendeePlan.before;
+              attendeePlan.editor.organizer = attendeePlan.beforeOrganizer;
+              try {
+                attendeePlan.editor.updateAttendeeInterface();
+              } catch (rollbackError) {
+                this._logError("updateCurrent attendee UI rollback failed", rollbackError, { editorId });
+              }
+            }
+            try {
+              this._rollbackProperties(item, beforeProps, appliedProps);
+            } catch (rollbackError) {
+              this._logError("updateCurrent property rollback failed", rollbackError, { editorId });
+            }
             for (const key of ["description", "location", "title"]) {
               if (!appliedFields[key]) {
                 continue;
@@ -1852,8 +2058,8 @@ this.ncCalToolbar = class extends ExtensionAPI {
                 if (key === "description" && beforeDescriptionState) {
                   this._applyDescriptionState(item, beforeDescriptionState);
                 }
-              } catch (error) {
-                this._logError("updateCurrent field rollback failed", error, {
+              } catch (rollbackError) {
+                this._logError("updateCurrent field rollback failed", rollbackError, {
                   editorId,
                   field: key,
                 });
@@ -1861,41 +2067,6 @@ this.ncCalToolbar = class extends ExtensionAPI {
             }
             throw error;
           }
-
-          const appliedProps = [];
-          try {
-            this._applyProperties(item, properties, appliedProps);
-          } catch (error) {
-            this._logError("updateCurrent property write failed", error, {
-              editorId,
-            });
-            try {
-              this._rollbackProperties(item, beforeProps, appliedProps);
-            } catch (error) {
-              this._logError("updateCurrent property rollback failed", error, {
-                editorId,
-              });
-            }
-            try {
-              for (const key of ["description", "location", "title"]) {
-                if (appliedFields[key]) {
-                  this._writeField(targets[key], beforeFields[key] ?? "", {
-                    html: key === "description" && targets[key]?.kind === "html-body",
-                  });
-                  if (key === "description" && beforeDescriptionState) {
-                    this._applyDescriptionState(item, beforeDescriptionState);
-                  }
-                }
-              }
-            } catch (error) {
-              this._logError("updateCurrent field rollback failed", error, {
-                editorId,
-              });
-            }
-            throw error;
-          }
-
-          return this._snapshotItem(item, editorId, "", window);
         },
       },
     };

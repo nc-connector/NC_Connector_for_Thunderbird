@@ -28,8 +28,19 @@
           "location": { "type": "string", "optional": true },
           "description": { "type": "string", "optional": true },
           "descriptionHtml": { "type": "string", "optional": true },
+          "attendees": { "type": "array", "items": { "type": "string" }, "optional": true, "description": "Serialized ATTENDEE properties from the live unsaved editor." },
+          "canEditAttendees": { "type": "boolean", "optional": true },
           "startTimestamp": { "type": "integer", "optional": true },
           "endTimestamp": { "type": "integer", "optional": true },
+          "availabilityInterval": {
+            "type": "object", "optional": true,
+            "description": "Live resource availability interval in UTC milliseconds, with an exclusive end and the event time zone. All-day and floating events use the calendar default time zone.",
+            "properties": {
+              "start": { "type": "number" },
+              "end": { "type": "number" },
+              "timeZone": { "type": "string" }
+            }
+          },
           "snapshotSource": { "type": "string", "enum": ["ical", "live", "mixed"], "optional": true }
         }
       },
@@ -41,6 +52,17 @@
           "location": { "type": "string", "optional": true },
           "description": { "type": "string", "optional": true },
           "descriptionHtml": { "type": "string", "optional": true }
+        }
+      },
+      {
+        "id": "CurrentItemAttendeesUpdate",
+        "type": "object",
+        "description": "Replace live attendees only while the before snapshot still matches. Ordinary attendees remain unchanged except for an explicit CUTYPE-only promotion to ROOM or RESOURCE. Other additions and changes are limited to room/resource attendees.",
+        "properties": {
+          "before": { "type": "array", "items": { "type": "string" } },
+          "after": { "type": "array", "items": { "type": "string" } },
+          "beforeLocation": { "type": "string", "optional": true },
+          "beforeCalendarId": { "type": "string", "optional": true }
         }
       },
       {
@@ -111,7 +133,7 @@
         "name": "updateCurrent",
         "type": "function",
         "async": true,
-        "description": "Update the current item for the editor identified by editorId. Requires at least one update via fields or properties. All requested UI fields are resolved before writing starts. The operation is transactional across fields and properties: if a field write fails, field changes are rolled back; if a property write fails, applied properties are rolled back and previously applied field changes are rolled back as well. Throws if the editor cannot be resolved or if any requested field target is unavailable.",
+        "description": "Update the current item for the editor identified by editorId. Requires an update via fields, properties, or attendees. Requested targets and attendee permissions are checked before writing. Field, property, and attendee changes roll back together on failure. This only edits the open draft; it never saves or sends the event.",
         "parameters": [
           {
             "name": "updateOptions",
@@ -120,6 +142,7 @@
               "editorId": { "$ref": "EditorId" },
               "fields": { "$ref": "CurrentItemFieldsUpdate", "optional": true },
               "properties": { "$ref": "CurrentItemPropertiesUpdate", "optional": true },
+              "attendees": { "$ref": "CurrentItemAttendeesUpdate", "optional": true },
               "returnFormat": { "type": "string", "enum": ["ical"], "optional": true }
             }
           }
