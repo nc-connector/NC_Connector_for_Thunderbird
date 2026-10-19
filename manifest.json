@@ -48,6 +48,7 @@
       "modules/fileLinkUploadPolicy.js",
       "modules/nextcloudDav.js",
       "modules/calendarResourceDirectory.js",
+      "modules/calendarResourceAvailability.js",
       "modules/fileLinkUploadProgress.js",
       "modules/fileLinkBulkUpload.js",
       "modules/fileLinkTransfer.js",

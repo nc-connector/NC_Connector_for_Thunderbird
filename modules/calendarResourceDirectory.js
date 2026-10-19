@@ -260,5 +260,8 @@
     return resources;
   }
 
-  global.NCCalendarResourceDirectory = Object.freeze({ list });
+  global.NCCalendarResourceDirectory = Object.freeze({
+    list,
+    dav: Object.freeze({ children, child, text, successfulProperties, property, normalizeEmail, parseXml, readResponse })
+  });
 })(typeof window !== "undefined" ? window : globalThis);

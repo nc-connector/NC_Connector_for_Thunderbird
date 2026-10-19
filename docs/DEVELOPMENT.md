@@ -504,6 +504,28 @@ bookings or changing calendar items. It is loaded through the existing ordered M
 background scripts; no picker entry point is added here. The directory regression
 check runs through `npm run test:review`.
 
+`modules/calendarResourceAvailability.js` provides a read-only CalDAV scheduling
+service for one picker session. It discovers the configured account's scheduling
+outbox and sends `VFREEBUSY` requests in batches of at most 50 recipients, with no
+more than two requests in flight. The existing ICAL parser reads responses;
+missing, invalid, or incomplete responses remain unknown instead of free.
+
+The service reuses the directory's bounded DAV XML/response readers and the core
+authentication, timeout, and host-permission guards. Discovery targets must stay
+within the configured DAV installation. Requests use explicit account credentials
+without ambient authentication or redirects, and recheck the current account
+before and after network access. Returned data contains anonymous busy intervals,
+not event content or organizers.
+
+Successful intervals are cached for two minutes within the session. Requests
+covering a smaller interval can reuse that cache; older replies cannot replace
+newer query results. Cancellation aborts queued and active requests, and session
+disposal clears its cache. No availability data is persisted. This service adds
+no picker UI or router entry point; callers must enforce editor/token and Seat
+access separately. `tools/calendar-resource-availability-check.js` covers
+transport boundaries, response validation, batching, cache, and cancellation in
+the normal review aggregate.
+
 ### 7.2 Editor variants: dialog vs tab
 
 Event editors can open as:

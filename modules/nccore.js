@@ -994,6 +994,7 @@ const NCCore = (() => {
     completeLoginFlow,
     getOpts,
     getCurrentUserId,
+    assertAuthenticationAllowed,
     runAuthenticatedRequest,
     getConnectionState,
     isConnectionPausedError,

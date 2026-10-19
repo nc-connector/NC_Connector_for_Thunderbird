@@ -7,6 +7,7 @@
     "test:calendar-room-cleanup": "node tools/calendar-room-cleanup-check.js",
     "test:calendar-talk-reliability": "node tools/calendar-talk-reliability-check.js",
     "test:calendar-resource-directory": "node tools/calendar-resource-directory-check.js",
+    "test:calendar-resource-availability": "node tools/calendar-resource-availability-check.js",
     "test:calendar-resource-editor": "node tools/calendar-resource-editor-check.js",
     "test:share-plaintext-contract": "node tools/share-plaintext-contract-check.js",
     "test:policy-contract": "node tools/policy-contract-check.js",
