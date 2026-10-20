@@ -9,6 +9,8 @@
   const LOG_PREFIX = "[NCUI][ConnectionRequired]";
   const params = new URLSearchParams(window.location.search);
   const source = params.get("source") === "talk" ? "talk" : "sharing";
+  const notice = params.get("notice") || "";
+  const reauthenticate = notice && params.get("reauthenticate") === "1";
   const message = document.getElementById("connectionRequiredMessage");
   const status = document.getElementById("connectionRequiredStatus");
   const openSettingsButton = document.getElementById("openSettingsBtn");
@@ -29,12 +31,23 @@
   }
 
   NCTalkDomI18n.translatePage(translate, {
-    titleKey: "connection_required_title"
+    titleKey: notice ? "extName" : "connection_required_title"
   });
+  if (params.get("native") === "1") document.body.classList.add("native-popup");
   if (message){
-    message.textContent = translate(source === "talk"
+    // This is display-only text from the entry check; no operation resumes here.
+    message.textContent = notice || translate(source === "talk"
       ? "connection_required_talk_message"
       : "connection_required_sharing_message");
+    message.classList.toggle("is-error", !!notice);
+  }
+  if (notice){
+    document.getElementById("connectionRequiredTitle").hidden = true;
+    document.getElementById("accessNoticeIcon").hidden = false;
+    openSettingsButton.hidden = !reauthenticate;
+    if (reauthenticate) openSettingsButton.textContent = translate("connection_reauthenticate");
+    closeButton.textContent = translate("ui_button_ok");
+    closeButton.focus();
   }
 
   async function openSettings(){
@@ -50,7 +63,8 @@
     }
     try{
       const response = await browser.runtime.sendMessage({
-        type: "connection:openOptions"
+        type: "connection:openOptions",
+        reauthenticate: !!reauthenticate
       });
       if (!response?.ok){
         throw new Error(response?.error || "connection_options_open_failed");
@@ -74,4 +88,7 @@
 
   openSettingsButton?.addEventListener("click", openSettings);
   closeButton?.addEventListener("click", () => window.close());
+  document.addEventListener("keydown", event => {
+    if (event.key === "Escape") window.close();
+  });
 })();

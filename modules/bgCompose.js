@@ -301,6 +301,12 @@ browser.composeAction.onClicked.addListener(async (tab) => {
       await openConnectionRequiredWindow("sharing");
       return;
     }
+    const access = await NCPolicyRuntime.getActionAccess();
+    if (!access.enabled){
+      L("composeAction.onClicked blocked", { reason: access.code });
+      await openConnectionRequiredWindow("sharing", access);
+      return;
+    }
     await openSharingWizardWindow(tab.id);
   }catch(error){
     console.error("[NCBG] composeAction.onClicked", error);

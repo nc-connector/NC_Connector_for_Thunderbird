@@ -472,6 +472,15 @@ const NCPolicyRuntime = (() => {
     return withLocalPreferences(status, account);
   }
 
+  async function getActionAccess(){
+    const opts = await NCCore.getOpts();
+    // Local Share/Talk must not acquire a backend dependency from the entry UI.
+    const status = opts?.managedSetup?.isEnterpriseRollout === true
+      ? await getPolicyStatus(opts)
+      : { connectionState: await NCCore.getConnectionState() };
+    return NCPolicyState.getActionAccessState(status, bgI18n);
+  }
+
   async function assertManagedAccess(policyStatus = null){
     let status = policyStatus;
     if (!status){
@@ -481,11 +490,11 @@ const NCPolicyRuntime = (() => {
       }
       status = await getPolicyStatus(opts);
     }
-    const access = NCPolicyState.getManagedAccessState(status);
-    if (!access.allowed){
-      const error = new Error(bgI18n(access.messageKey));
+    const access = NCPolicyState.getActionAccessState(status, bgI18n);
+    if (!access.enabled){
+      const error = new Error(access.notice);
       error.name = "ManagedAccessError";
-      error.code = access.reason;
+      error.code = access.code;
       error.ncUserMessage = error.message;
       throw error;
     }
@@ -508,6 +517,7 @@ const NCPolicyRuntime = (() => {
 
   return {
     getPolicyStatus,
+    getActionAccess,
     probePolicyStatus,
     assertManagedAccess
   };

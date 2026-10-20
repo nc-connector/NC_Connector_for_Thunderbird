@@ -387,7 +387,10 @@ async function verifyManagedAccessAndSourceMetadata(){
     { payload: null, response: { status: 404 }, key: "enterprise_rollout_backend_required" },
     { payload: null, response: { status: 503 }, key: "enterprise_rollout_status_unavailable" },
     { payload: { ...payload, status: { ...payload.status, seat_assigned: false, seat_state: "none" } }, response: {}, key: "enterprise_rollout_seat_required" },
-    { payload: { ...payload, status: { ...payload.status, seat_state: "suspended_overlimit" } }, response: {}, key: "enterprise_rollout_seat_required" }
+    { payload: { ...payload, status: { ...payload.status, seat_state: "suspended_overlimit" } }, response: {}, key: "policy_warning_seat_suspended" },
+    { payload: { ...payload, status: { ...payload.status, is_valid: false, access_status: "EXPIRED" } }, response: {}, key: "policy_license_expired" },
+    { payload: { ...payload, status: { ...payload.status, is_valid: false, access_status: "OFFLINE_EXPIRED", license_status: "ACTIVE" } }, response: {}, key: "policy_license_offline_expired" },
+    { payload: { ...payload, status: { ...payload.status, is_valid: false, access_status: "ACTIVATION_REQUIRED", license_activation: { state: "conflict" } } }, response: {}, key: "policy_license_activation_conflict" }
   ]){
     const fixture = loadPolicyContext(entry.payload, { ...entry.response, account });
     const denied = await fixture.NCPolicyRuntime.getPolicyStatus();
@@ -399,13 +402,19 @@ async function verifyManagedAccessAndSourceMetadata(){
     }catch(error){
       thrown = error;
     }
-    assert(thrown?.name === "ManagedAccessError" && thrown.message === entry.key, "Managed execution must enforce the same reason shown in its banner");
+    const entryAccess = fixture.NCPolicyState.getActionAccessState(denied, key => key);
+    assert(thrown?.name === "ManagedAccessError" && thrown.message === entryAccess.notice
+      && thrown.message.split("\n")[0] === entry.key, "Managed execution must enforce the same reason shown at entry");
+    assert(JSON.stringify(await fixture.NCPolicyRuntime.getActionAccess()) === JSON.stringify(entryAccess),
+      "Manual Share and calendar actions must use the same access decision and explanation");
     assert(fixture.NCPolicyState.getStatusNotice(denied).code === access.reason, "Managed status must not promise a local feature fallback");
   }
   const unmanaged = loadPolicyContext(null);
   let requests = 0;
   unmanaged.fetch = async () => { requests++; throw new Error("Unexpected backend request"); };
   assert(await unmanaged.NCPolicyRuntime.assertManagedAccess() === null && requests === 0, "Unmanaged actions must not acquire a new backend dependency");
+  assert((await unmanaged.NCPolicyRuntime.getActionAccess()).enabled && requests === 0,
+    "Unmanaged manual Share/Talk entry must not introduce a backend request");
 }
 
 async function run(){

@@ -325,6 +325,15 @@ notice. `openInNormalThunderbirdTab()` targets a normal Thunderbird window,
 not the compose or calendar dialog. Unmanaged actions retain
 `ui/connectionRequired.html` with explicit Settings navigation through
 `connection:openOptions`.
+Configured manual actions use `NCPolicyState.getActionAccessState()` before
+opening functional UI. Manual Share reads it through `NCPolicyRuntime.getActionAccess()`.
+A refusal opens the existing `connectionRequired.html` notice in readable red,
+with the localized reason and OK. Its query text is display-only and never
+resumes an action. Authentication refusal alone offers explicit sign-in.
+Unmanaged Share/Talk retain local use without an additional backend request.
+Automatic attachment flows retain their noninteractive guards. Entry checks do
+not replace the checks before upload or Talk mutations.
+
 
 `NCManagedSetup` tracks `AuthMode` presence and validity separately. Strings are
 trimmed and compared case-insensitively against `LoginFlow` and `Manual`. Any
@@ -474,6 +483,9 @@ Current implementation:
   - tracked close lifecycle (`onTrackedEditorClosed`)
 - `experiments/calendar/**` remains untouched and is used only for persisted item monitoring.
 - Business logic remains in background runtime modules (`modules/bgState.js`, `modules/bgComposeAttachments.js`, `modules/bgComposeShareCleanup.js`, `modules/bgComposeShareInsert.js`, `modules/bgComposePasswordRecipients.js`, `modules/bgComposePasswordMail.js`, `modules/bgComposePasswordDelivery.js`, `modules/bgComposePasswordDispatch.js`, `modules/passwordPolicyRuntime.js`, `modules/bgCompose.js`, `modules/bgCalendarLifecycle.js`, `modules/bgCalendar.js`, `modules/bgRouter.js`, `modules/talkAddressbook.js`, `modules/talkcore.js`).
+
+Share and Talk use the same 48px `.nc-brand-header` from `ui/tbTheme.css`.
+Keep header and logo geometry there, not in page-specific styles.
 
 ### 7.1.1 Why the Talk popup is assigned with `setPopup()`
 
@@ -1016,7 +1028,6 @@ Runtime rules:
 - Active UI/runtime paths should avoid legacy `innerHTML` and `execCommand(...)` write APIs where ESR-140-compatible DOM/clipboard alternatives exist.
 - Separate password follow-up dispatch is seat-restricted and only available with backend endpoint + usable active assigned seat. Global `overlicensed=true` does not deny an active Seat; only personal suspension or invalid access closes the Seat gate. Community and Pro use the same check.
 - `policyRuntime` reads the optional `license_status`, `access_status`, `can_manage_license`, `license_activation.state`, `license_connection_error`, `license_last_sync_at_iso` and `license_offline_until_iso` fields. `policyState` owns the shared notice selection and text formatting for settings, Share/Talk warnings, feature tooltips, VFS actions and password-dispatch refusals. `wizardPolicyUi` only applies the result to the UI. VFS status carries the same plain notice descriptor. Display fields do not replace the validity, personal Seat or policy-domain gates, and dates are used only for display.
-- Core status fields require JSON booleans for `seat_assigned`/`is_valid` and a non-empty string for `seat_state`; malformed responses are failed verification, including otherwise accepted HTTP-404 bodies. Optional policy domains and license metadata remain optional.
 - Notice precedence separates full administrators from ordinary users without a seat, then distinguishes invalid entitlement and genuinely suspended seats before grace/synchronization notices. Old payloads retain generic access wording. Only `suspended_overlimit` uses suspended-seat wording. Blocking `access_status` takes precedence over commercial `license_status`; a commercial grace period never hides an activation/offline refusal.
 - The general no-seat banner uses `policy_warning_no_seat` to explain local Sharing and Talk availability. Feature hints retain `sharing_password_separate_no_seat_tooltip`; the shared formatter selects the text for its display context without changing entitlement checks.
 - License administration links require `can_manage_license === true` and use the locally constructed HTTPS `endpointUrl`, preserving the configured Nextcloud subdirectory. No URL from the backend payload is used. Missing role metadata hides the link; neither mail client activates licenses or contacts the license server directly.
@@ -1083,6 +1094,7 @@ Direct and chunked files run in a pool of at most three workers. Chunks belongin
 
 `NCFileLinkUpload.uploadFile()` is the only Direct-versus-Chunked selector. The normal FileLink plan, external VFS files, and VFS-provider writes all enter that function. Provider `writeFile()` builds a one-file plan, so it receives the same retry, progress, cancellation, and completion behavior; Bulk remains a queue optimization and is not synthesized across independent provider calls.
 
+- Managed missing-seat notices reuse `enterprise_rollout_seat_required` unchanged. Assigned but paused or invalid Seats retain their specific existing cause. Missing backend, failed verification, authentication pause, and rate limiting remain separate. Core status fields require JSON booleans for `seat_assigned`/`is_valid` and a non-empty string for `seat_state`; malformed responses are failed verification, including otherwise accepted HTTP-404 bodies. Optional policy domains and license metadata remain optional.
 Directory planning creates:
 
 - every directory needed by chunked or Bulk destinations

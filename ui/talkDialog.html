@@ -10,7 +10,6 @@ See LICENSE.txt for details.
 <style>
 :root{
   --brand-blue:var(--tb-accent);
-  --header-height:48px;
   --dialog-accent:var(--tb-accent);
   --dialog-surface:var(--tb-bg);
   --dialog-outline:var(--tb-border);
@@ -75,22 +74,6 @@ textarea{
   min-height:0;
   animation:dialogEnter .35s ease-out;
 }
-.dialog-hero{
-  background:var(--brand-blue);
-  padding:0;
-  text-align:center;
-  height:var(--header-height);
-  overflow:hidden;
-  display:flex;
-  align-items:center;
-  justify-content:center;
-  align-items:flex-start;
-}
-.dialog-hero img{
-  width:auto; height:100%; max-width:328px; display:block; object-fit:contain;
-  margin:0 auto;
-}
-
 .dialog-content{
   padding:var(--dialog-gap) var(--dialog-pad-right) var(--dialog-gap) var(--dialog-pad-left);
   display:flex;
@@ -207,31 +190,6 @@ textarea{
   line-height:1.4;
 }
 .delegate-addressbook-help a{
-  display:inline-block;
-  margin-top:6px;
-  color:var(--brand-blue);
-  text-decoration:underline;
-}
-.policy-warning{
-  border:1px solid #b00020;
-  border-radius:var(--tb-radius);
-  background:rgba(176,0,32,0.08);
-  color:#b00020;
-  padding:8px 10px;
-  font-size:12px;
-  line-height:1.4;
-}
-.policy-warning-title{
-  font-weight:700;
-}
-.policy-warning.is-informational{
-  border-color:#b8860b;
-  background:rgba(218,165,32,0.12);
-  color:var(--tb-text);
-}
-#policyWarningText{white-space:pre-line;overflow-wrap:anywhere;}
-.policy-warning a[hidden]{display:none;}
-.policy-warning a{
   display:inline-block;
   margin-top:6px;
   color:var(--brand-blue);
@@ -685,12 +643,12 @@ textarea{
 </style>
 <body>
   <div class="dialog">
-    <div class="dialog-hero">
+    <div class="nc-brand-header">
       <img src="assets/header-solid-blue-328x96.png" alt="NC Connector">
     </div>
     <div class="dialog-content">
 <div class="message" id="messageBar"></div>
-      <div class="policy-warning" id="policyWarningRow" hidden>
+      <div class="wizard-policy-warning" id="policyWarningRow" hidden>
         <div class="policy-warning-title"><span aria-hidden="true">⚠️ </span><span data-i18n="policy_warning_title"></span></div>
         <div id="policyWarningText"></div>
         <a id="policyWarningAdminLink" target="_blank" rel="noopener noreferrer" hidden></a>

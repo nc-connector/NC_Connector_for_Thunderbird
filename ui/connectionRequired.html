@@ -10,12 +10,12 @@ See LICENSE.txt for details.
 <style>
 :root{
   --brand-blue:var(--tb-accent);
-  --header-height:48px;
   --control-height:32px;
   --control-radius:var(--tb-control-radius);
 }
 html,
 body{
+  min-width:420px;
   height:100%;
 }
 body{
@@ -40,21 +40,9 @@ body{
   flex-direction:column;
   overflow:hidden;
 }
-.hero{
-  background:var(--brand-blue);
-  height:var(--header-height);
-  display:flex;
-  align-items:center;
-  justify-content:center;
-  overflow:hidden;
-}
-.hero img{
-  width:auto;
-  height:100%;
-  max-width:328px;
-  display:block;
-  object-fit:contain;
-}
+body.native-popup{width:420px;height:auto;}
+.native-popup .dialog{min-height:0;border:0;}
+[hidden]{display:none !important;}
 .content{
   padding:16px 18px;
   display:flex;
@@ -69,11 +57,16 @@ h1{
   margin:0;
   color:var(--tb-text);
   line-height:1.4;
+  white-space:pre-line;
+  overflow-wrap:anywhere;
 }
+.message.is-error{color:var(--tb-error);}
+.notice-row{display:flex;gap:12px;align-items:flex-start;}
+.notice-row svg{width:24px;height:24px;flex:none;color:var(--tb-error);fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round;}
 .status{
   min-height:16px;
   margin:0;
-  color:#b00020;
+  color:var(--tb-error);
   font-size:12px;
 }
 .status:empty{
@@ -108,12 +101,15 @@ button:disabled{
 </style>
 <body>
   <div class="dialog">
-    <div class="hero">
+    <div class="nc-brand-header">
       <img src="assets/header-solid-blue-328x96.png" alt="NC Connector">
     </div>
     <div class="content">
-      <h1 data-i18n="connection_required_title">Nextcloud is not connected</h1>
-      <p class="message" id="connectionRequiredMessage"></p>
+      <h1 id="connectionRequiredTitle" data-i18n="connection_required_title">Nextcloud is not connected</h1>
+      <div class="notice-row">
+        <svg id="accessNoticeIcon" viewBox="0 0 24 24" aria-hidden="true" hidden><path d="M12 3L2 21h20zM12 9v5M12 18h.01"/></svg>
+        <p class="message" id="connectionRequiredMessage" role="alert"></p>
+      </div>
       <p class="status" id="connectionRequiredStatus" role="alert"></p>
     </div>
     <div class="actions">

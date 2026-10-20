@@ -126,7 +126,8 @@ function run(){
     assert(link && /\bhidden\b/.test(link), `${file}: license management links must start hidden`);
     assert(!/\bhref\s*=/.test(link), `${file}: license management links must have no static target`);
     assert(/\brel="noopener noreferrer"/.test(link), `${file}: backend links must isolate the opened page`);
-    assert(content.includes("is-informational") && content.includes("#b8860b"), `${file}: informational notices must use their yellow warning style`);
+    const warningStyles = file === "options.html" ? content : readText("ui/tbTheme.css");
+    assert(warningStyles.includes("is-informational") && warningStyles.includes("#b8860b"), `${file}: informational notices must use their yellow warning style`);
   }
   for (const file of ["options.js", "ui/talkDialog.js", "ui/nextcloudSharingWizard.js"]){
     assert(!readText(file).includes("POLICY_ADMIN_URL"), `${file}: license links must use the configured backend rather than a fixed guide`);

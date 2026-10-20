@@ -278,17 +278,23 @@ async function isNextcloudAccountConfigured(){
 }
 
 /**
- * Open Settings for managed first sign-in, otherwise show the setup notice.
+ * Open first-sign-in settings or show the current access refusal.
  * @param {"sharing"|"talk"} source
+ * @param {object|null} access Current denial; never resumes the original action
  * @returns {Promise<object>}
  */
-async function openConnectionRequiredWindow(source = "sharing"){
+async function openConnectionRequiredWindow(source = "sharing", access = null){
   const options = await NCCore.getOpts();
-  if (options.managedSetup?.isEnterpriseRollout === true){
+  const denied = access?.enabled === false;
+  if (!denied && options.managedSetup?.isEnterpriseRollout === true){
     return await openAuthenticationRequiredOptions();
   }
   const popupUrl = new URL(browser.runtime.getURL("ui/connectionRequired.html"));
   popupUrl.searchParams.set("source", source === "talk" ? "talk" : "sharing");
+  if (denied){
+    popupUrl.searchParams.set("notice", access.notice);
+    if (access.code === "auth_required") popupUrl.searchParams.set("reauthenticate", "1");
+  }
   const windowInfo = await browser.windows.create({
     url: popupUrl.toString(),
     type: "popup",

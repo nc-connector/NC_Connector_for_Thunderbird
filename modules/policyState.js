@@ -96,9 +96,11 @@ const NCPolicyState = (() => {
     if (connectionReason === "auth_required" || connectionReason === "rate_limited"){
       return connectionReason;
     }
-    const managedAccess = getManagedAccessState(policyStatus);
-    if (!forFeature && !managedAccess.allowed && policyStatus?.reason !== "credentials_missing"){
-      return managedAccess.reason;
+    if (!forFeature){
+      const managedAccess = getManagedAccessState(policyStatus);
+      if (!managedAccess.allowed){
+        return managedAccess.reason;
+      }
     }
     if (policyStatus?.fetchSucceeded === false){
       return ["credentials_missing", "endpoint_missing", "permission_missing", "local_defaults"].includes(policyStatus.reason)
@@ -274,10 +276,24 @@ const NCPolicyState = (() => {
       }else if (!isEndpointAvailable(status)){
         reason = "enterprise_backend_required";
       }else if (!hasSeatEntitlement(status)){
-        reason = "enterprise_seat_required";
+        // Missing assignment needs the managed-installation explanation; an
+        // assigned but paused or rejected Seat keeps its actual refusal reason.
+        reason = status.status?.seatAssigned
+          ? getStatusNoticeCode(status, true)
+          : "enterprise_seat_required";
+        reason ||= "seat_unavailable";
       }
     }
     return { managed, allowed: !reason, reason, messageKey: NOTICE_KEYS[reason] || "" };
+  }
+
+  function getActionAccessState(status, translate, requiresSeat = false){
+    const managed = getManagedAccessState(status);
+    const code = managed.reason || (requiresSeat ? getSeatUnavailableReason(status) : "");
+    const notice = code
+      ? getStatusNoticeMessage({ ...getStatusNotice(status, true), code }, translate, true)
+      : "";
+    return { enabled: !code, code, notice };
   }
 
   function isDomainActive(status, domain){
@@ -361,6 +377,7 @@ const NCPolicyState = (() => {
     normalizeDefaultsSource,
     getDefaultsSourceState,
     getManagedAccessState,
+    getActionAccessState,
     isDomainAvailable,
     isDomainActive,
     isLocked,

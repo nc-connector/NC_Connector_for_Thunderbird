@@ -1887,35 +1887,59 @@ function testExperimentShutdownLifecycle(){
 }
 
 async function testConnectionRequiredSetupNavigation(){
-  function createNotice(source){
+  function createNotice(source, { notice = "", reauthenticate = false, native = false } = {}){
     const requests = [];
     const pendingResponses = [];
     const errors = [];
+    const titles = [];
+    const documentListeners = {};
+    const bodyClasses = new Set();
+    let focusedElement = "";
     const elements = Object.fromEntries([
-      "connectionRequiredMessage", "connectionRequiredStatus", "openSettingsBtn", "closeBtn"
-    ].map((id) => [id, {
-      textContent: "",
-      disabled: false,
-      hidden: false,
-      dataset: {},
-      classList: { toggle(){} },
-      listeners: {},
-      setAttribute(){},
-      addEventListener(type, listener){
-        this.listeners[type] = listener;
-      }
-    }]));
+      "connectionRequiredTitle", "connectionRequiredMessage", "connectionRequiredStatus", "accessNoticeIcon", "openSettingsBtn", "closeBtn"
+    ].map((id) => {
+      const classes = new Set();
+      return [id, {
+        textContent: "",
+        disabled: false,
+        hidden: id === "accessNoticeIcon",
+        dataset: {},
+        classList: {
+          toggle(name, enabled){
+            if (enabled) classes.add(name);
+            else classes.delete(name);
+          },
+          contains: (name) => classes.has(name)
+        },
+        listeners: {},
+        set innerHTML(value){ throw new Error(`Notice content must not be parsed as HTML: ${value}`); },
+        focus(){ focusedElement = id; },
+        setAttribute(){},
+        addEventListener(type, listener){
+          this.listeners[type] = listener;
+        }
+      }];
+    }));
+    const params = new URLSearchParams({ source });
+    if (notice) params.set("notice", notice);
+    if (reauthenticate) params.set("reauthenticate", "1");
+    if (native) params.set("native", "1");
     let closeCount = 0;
     const context = {
       URLSearchParams,
       window: {
-        location: { search: `?source=${source}` },
+        location: { search: `?${params}` },
         addEventListener(){},
         close(){ closeCount++; }
       },
-      document: { getElementById: (id) => elements[id], querySelector: () => null },
+      document: {
+        body: { classList: { add: (name) => bodyClasses.add(name) } },
+        getElementById: (id) => elements[id],
+        querySelector: () => null,
+        addEventListener: (type, listener) => { documentListeners[type] = listener; }
+      },
       NCLogContext: { safeConsoleError: (...args) => errors.push(args) },
-      NCTalkDomI18n: { translatePage(){} },
+      NCTalkDomI18n: { translatePage: (_translate, options) => titles.push(options.titleKey) },
       browser: {
         i18n: { getMessage: (key) => key },
         runtime: {
@@ -1928,7 +1952,17 @@ async function testConnectionRequiredSetupNavigation(){
     };
     vm.createContext(context);
     loadScript("ui/connectionRequired.js", context);
-    return { elements, errors, requests, pendingResponses, get closeCount(){ return closeCount; } };
+    return {
+      elements,
+      errors,
+      requests,
+      pendingResponses,
+      titles,
+      documentListeners,
+      bodyClasses,
+      get focusedElement(){ return focusedElement; },
+      get closeCount(){ return closeCount; }
+    };
   }
 
   for (const source of ["sharing", "talk"]){
@@ -1943,7 +1977,7 @@ async function testConnectionRequiredSetupNavigation(){
     await manual.elements.openSettingsBtn.listeners.click();
     assert(
       manual.requests.length === 1
-        && JSON.stringify(manual.requests[0]) === JSON.stringify({ type: "connection:openOptions" }),
+        && JSON.stringify(manual.requests[0]) === JSON.stringify({ type: "connection:openOptions", reauthenticate: false }),
       `${source}: an explicit Settings click must open setup once`
     );
     manual.pendingResponses[0].resolve({ ok: true, opened: true });
@@ -1976,6 +2010,61 @@ async function testConnectionRequiredSetupNavigation(){
     await retry;
     assert(notice.closeCount === 0, "A successful response without opened=true must not close the notice");
   }
+
+  const seatMessage = "Diese Installation wird zentral verwaltet und erfordert einen zugewiesenen, gültigen NC Connector Seat.";
+  const germanMessages = JSON.parse(readText("_locales/de/messages.json"));
+  assert(germanMessages.enterprise_rollout_seat_required.message === seatMessage,
+    "Managed Seat refusal must retain the existing German wording exactly");
+  for (const source of ["sharing", "talk"]){
+    for (const native of [false, true]){
+      const notice = createNotice(source, { notice: seatMessage, native });
+      assert(notice.elements.connectionRequiredMessage.textContent === seatMessage
+        && notice.elements.connectionRequiredMessage.classList.contains("is-error")
+        && notice.titles.join(",") === "extName",
+      `${source}: access refusal must show the unchanged localized text as an error in the existing notice page`);
+      assert(notice.elements.connectionRequiredTitle.hidden && notice.elements.openSettingsBtn.hidden
+        && !notice.elements.accessNoticeIcon.hidden
+        && notice.elements.closeBtn.textContent === "ui_button_ok" && notice.focusedElement === "closeBtn",
+      "Seat refusal must hide setup guidance and offer a focused OK button");
+      assert(notice.bodyClasses.has("native-popup") === native && notice.requests.length === 0
+        && notice.closeCount === 0 && notice.errors.length === 0,
+      "Popup presentation must not initiate Settings, LoginFlow, policy checks, or action continuation");
+      notice.elements.closeBtn.listeners.click();
+      assert(notice.closeCount === 1 && notice.requests.length === 0,
+        "OK must only close the refusal without resuming the original action");
+      notice.documentListeners.keydown({ key: "Tab" });
+      assert(notice.closeCount === 1, "Other keys must not dismiss the refusal");
+      notice.documentListeners.keydown({ key: "Escape" });
+      assert(notice.closeCount === 2 && notice.requests.length === 0,
+        "Escape must only dismiss the notice without retaining or resuming an action");
+    }
+  }
+
+  const literalText = '<img src=x onerror="unexpected()"> & <script>unexpected()</script>';
+  const literal = createNotice("sharing", { notice: literalText });
+  assert(literal.elements.connectionRequiredMessage.textContent === literalText && literal.errors.length === 0,
+    "Refusal text from query parameters must be displayed literally, never parsed as HTML");
+
+  const rateLimited = createNotice("sharing", { notice: "connection_rate_limited" });
+  assert(rateLimited.elements.connectionRequiredMessage.textContent === "connection_rate_limited"
+    && rateLimited.elements.openSettingsBtn.hidden && rateLimited.requests.length === 0,
+  "Rate-limit refusal must retain its own explanation without offering or starting LoginFlow");
+
+  const authentication = createNotice("talk", { notice: "connection_auth_required", reauthenticate: true });
+  assert(authentication.elements.connectionRequiredMessage.textContent === "connection_auth_required"
+    && !authentication.elements.openSettingsBtn.hidden
+    && authentication.elements.openSettingsBtn.textContent === "connection_reauthenticate"
+    && authentication.requests.length === 0,
+  "Authentication refusal must offer reauthentication without opening Settings or LoginFlow automatically");
+  const explicitReauthentication = authentication.elements.openSettingsBtn.listeners.click();
+  await authentication.elements.openSettingsBtn.listeners.click();
+  assert(authentication.requests.length === 1
+    && JSON.stringify(authentication.requests[0]) === JSON.stringify({ type: "connection:openOptions", reauthenticate: true }),
+  "Only an explicit reauthentication click may open Settings, without an action-resume payload");
+  authentication.pendingResponses[0].resolve({ ok: true, opened: true });
+  await explicitReauthentication;
+  assert(authentication.closeCount === 1 && authentication.requests.length === 1,
+    "Confirmed reauthentication navigation must close the notice without resuming Talk");
 }
 
 async function testTalkSetupRouting(){

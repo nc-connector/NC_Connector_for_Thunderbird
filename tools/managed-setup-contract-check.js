@@ -384,6 +384,158 @@ async function checkFirstSignInNavigation(){
   }
 }
 
+function createManualShareEntryHarness({
+  configured = true,
+  managed = true,
+  access = { enabled: true, code: "", notice: "" },
+  accountError = null,
+  accessError = null
+} = {}){
+  const calls = [];
+  const errors = [];
+  const windows = [];
+  const requestContexts = [];
+  const attachmentEvents = [];
+  let clickHandler;
+  let attachmentHandler;
+  const account = {
+    baseUrl: "https://cloud.example.test",
+    user: configured ? "alice" : "",
+    appPass: configured ? "saved-app-password" : "",
+    managedSetup: { isEnterpriseRollout: managed }
+  };
+  const context = {
+    URL,
+    console: { error: (...args) => errors.push(args) },
+    L(){},
+    CONNECTION_REQUIRED_POPUP_WIDTH: 480,
+    CONNECTION_REQUIRED_POPUP_HEIGHT: 250,
+    SHARING_POPUP_WIDTH: 640,
+    SHARING_POPUP_HEIGHT: 640,
+    NCCore: {
+      getOpts: async () => {
+        calls.push("account");
+        if (accountError) throw accountError;
+        return account;
+      }
+    },
+    NCPolicyRuntime: {
+      getActionAccess: async () => {
+        calls.push("access");
+        if (accessError) throw accessError;
+        return access;
+      }
+    },
+    openAuthenticationRequiredOptions: async () => { calls.push("settings"); },
+    focusPopupWindowBestEffort: async () => true,
+    bindSharingWizardRequestContext: (windowId, tabId, launchContext) => {
+      requestContexts.push({ windowId, tabId, launchContext });
+      return { attachmentMode: false };
+    },
+    bgShortId: (value) => value,
+    handleComposeAttachmentAdded: async (tab, attachment) => {
+      attachmentEvents.push({ tab, attachment });
+    },
+    browser: {
+      runtime: { getURL: (path) => `moz-extension://test/${path}` },
+      windows: {
+        create: async (options) => {
+          windows.push(options);
+          return { id: 84 };
+        }
+      },
+      composeAction: { onClicked: { addListener: (listener) => { clickHandler = listener; } } },
+      compose: { onAttachmentAdded: { addListener: (listener) => { attachmentHandler = listener; } } }
+    }
+  };
+  vm.createContext(context);
+  for (const [file, startMarker, endMarker] of [
+    ["modules/bgState.js", "async function isNextcloudAccountConfigured(){", "function shortToken("],
+    ["modules/bgComposeAttachments.js", "async function openSharingWizardWindow(", "async function listComposeAttachments("],
+    ["modules/bgCompose.js", "browser.composeAction.onClicked.addListener(", "browser.compose.onIdentityChanged.addListener("]
+  ]){
+    const source = readText(file);
+    const start = source.indexOf(startMarker);
+    const end = source.indexOf(endMarker, start);
+    assert(start >= 0 && end > start, `Manual Share fixture must load ${startMarker}`);
+    vm.runInContext(source.slice(start, end), context, { filename: file });
+  }
+  return {
+    calls,
+    errors,
+    windows,
+    requestContexts,
+    attachmentEvents,
+    click: () => clickHandler({ id: 31 }),
+    addAttachment: (tab, attachment) => attachmentHandler(tab, attachment)
+  };
+}
+
+async function checkManualShareEntryAccess(){
+  for (const managed of [false, true]){
+    const missing = createManualShareEntryHarness({ configured: false, managed });
+    await missing.click();
+    assert(!missing.calls.includes("access") && missing.requestContexts.length === 0,
+      "Missing credentials must route to setup before checking access or retaining a wizard context");
+    assert(missing.errors.length === 0, "First-sign-in routing must complete without errors");
+    if (managed){
+      assert(missing.calls.includes("settings") && missing.windows.length === 0,
+        "Managed first sign-in must open Settings without a separate wizard or notice");
+    }else{
+      assert(!missing.calls.includes("settings") && missing.windows.length === 1
+        && missing.windows[0].url === "moz-extension://test/ui/connectionRequired.html?source=sharing",
+      "Unmanaged first sign-in must retain the explicit setup notice");
+    }
+
+    const allowed = createManualShareEntryHarness({ managed });
+    await allowed.click();
+    assert(allowed.calls.join(",") === "account,access" && allowed.errors.length === 0,
+      "Configured manual Share must evaluate the shared access result once before opening");
+    assert(allowed.windows.length === 1
+      && allowed.windows[0].url === "moz-extension://test/ui/nextcloudSharingWizard.html?tabId=31"
+      && allowed.requestContexts.length === 1 && allowed.requestContexts[0].tabId === 31
+      && allowed.requestContexts[0].launchContext === null,
+    "Allowed manual Share must open its existing wizard and bind only its compose context");
+  }
+
+  for (const code of ["enterprise_seat_required", "enterprise_backend_required", "enterprise_verification_failed", "auth_required", "rate_limited"]){
+    const notice = `Current refusal: ${code} <display-only> & no continuation`;
+    const denied = createManualShareEntryHarness({ access: { enabled: false, code, notice } });
+    await denied.click();
+    assert(denied.windows.length === 1 && denied.requestContexts.length === 0
+      && !denied.calls.includes("settings") && denied.errors.length === 0,
+    `${code}: denied manual Share must show one notice without opening a wizard, retaining context, or starting sign-in`);
+    const url = new URL(denied.windows[0].url);
+    assert(url.pathname === "/ui/connectionRequired.html" && url.searchParams.get("source") === "sharing"
+      && url.searchParams.get("notice") === notice,
+    `${code}: the existing notice page must receive the unchanged refusal as display-only text`);
+    assert(url.searchParams.get("reauthenticate") === (code === "auth_required" ? "1" : null)
+      && [...url.searchParams.keys()].every((key) => ["source", "notice", "reauthenticate"].includes(key)),
+    `${code}: only authentication refusal may offer explicit reauthentication, without an action-resume identifier`);
+
+    const previousCalls = denied.calls.length;
+    const tab = { id: 31 };
+    const attachment = { id: 7 };
+    denied.addAttachment(tab, attachment);
+    await Promise.resolve();
+    assert(denied.attachmentEvents.length === 1 && denied.attachmentEvents[0].tab === tab
+      && denied.attachmentEvents[0].attachment === attachment && denied.calls.length === previousCalls
+      && denied.windows.length === 1 && denied.requestContexts.length === 0,
+    "Automatic attachment events must retain their own routing without invoking the manual access notice");
+  }
+
+  for (const stage of ["account", "access"]){
+    const error = new Error(`${stage} unavailable`);
+    const failed = createManualShareEntryHarness(stage === "account" ? { accountError: error } : { accessError: error });
+    await failed.click();
+    assert(failed.windows.length === 0 && failed.requestContexts.length === 0 && !failed.calls.includes("settings"),
+      `${stage}: an entry-check failure must not open a wizard, retain context, or start sign-in`);
+    assert(failed.errors.length === 1 && failed.errors[0][0] === "[NCBG] composeAction.onClicked"
+      && failed.errors[0][1] === error,
+    `${stage}: entry-check failures must be logged by the existing compose action boundary`);
+  }
+}
+
 async function checkCreatedRoomCleanupOwner(){
   for (const storageFails of [false, true]){
     let route;
@@ -445,6 +597,7 @@ async function run(){
   await checkManagedVfsAndCalendarBoundaries();
   await checkCoreAndOptionsFailClosed();
   await checkFirstSignInNavigation();
+  await checkManualShareEntryAccess();
   console.log("[OK] managed-setup-contract-check passed");
 }
 
