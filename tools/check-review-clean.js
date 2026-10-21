@@ -17,6 +17,8 @@ const CHECKS = [
   "tools/calendar-resource-directory-check.js",
   "tools/calendar-resource-availability-check.js",
   "tools/calendar-resource-editor-check.js",
+  "tools/calendar-resource-runtime-check.js",
+  "tools/calendar-resource-ui-check.js",
   "tools/share-plaintext-contract-check.js",
   "tools/policy-contract-check.js",
   "tools/policy-editability-check.js",

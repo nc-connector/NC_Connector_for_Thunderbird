@@ -30,6 +30,7 @@ Installation, managed configuration, and troubleshooting for NC Connector's Shar
 | Nextcloud | Version 32 or newer, reachable through HTTPS |
 | Sharing | Files Sharing and WebDAV, permission to create public links, write access to the target folder, and enough storage |
 | Meetings | Nextcloud Talk and a calendar configured in Thunderbird |
+| Room/resource selection (`ifb-pro`) | Nextcloud resource directory, a writable Nextcloud CalDAV calendar in Thunderbird with server-side scheduling, NC Connector Backend, and a valid assigned Seat |
 | User search and moderator selection | An exposed [Nextcloud system address book](#system-address-book) |
 | Central policies, signatures, separate password delivery, external VFS providers, and Enterprise Rollout | NC Connector Backend and a valid assigned NC Connector Seat for each user |
 | One-time password links | The Nextcloud Secrets app in addition |
@@ -48,7 +49,7 @@ The firewall and reverse proxy must allow these paths below that URL:
 | --- | --- |
 | `/index.php/login/v2` and its subpaths | Browser sign-in and app-password retrieval |
 | `/ocs/v2.php/` | Nextcloud account, capabilities, sharing, and Talk requests |
-| `/remote.php/dav/` | File access and the system address book |
+| `/remote.php/dav/` | File access, the system address book, and room/resource discovery (including PROPFIND requests) |
 | `/apps/ncc_backend_4mc/` and `/index.php/apps/ncc_backend_4mc/` | Backend settings and templates; the second path is used as a fallback |
 
 Allow WebDAV methods, including `PROPFIND`, `MKCOL`, `COPY`, `MOVE`, and `DELETE`, as well as `GET`, `PUT`, and `POST`. Preserve `Authorization`, `Destination`, `Depth`, `Overwrite`, `OCS-APIRequest`, `X-NC-WebDAV-Auto-Mkcol`, `OC-Total-Length`, and multipart upload headers. Set request-size limits and timeouts for the files your organization permits.
@@ -160,11 +161,11 @@ Example with a locked URL, browser sign-in, and backend defaults:
 
 ### First sign-in
 
-If the connection has not been set up in a managed installation, clicking **Insert Nextcloud share** or **Insert Talk link** opens the **General** settings tab in Thunderbird's main window. A blue notice explains why sign-in is needed. The configured server address and sign-in method appear below it.
+If the connection has not been set up in a managed installation, clicking **Insert Nextcloud share** or the calendar's **NC Connector** button opens the **General** settings tab in Thunderbird's main window. A blue notice explains why sign-in is needed. The configured server address and sign-in method appear below it.
 
 1. With **LoginFlow**, click **Login with Nextcloud** in Settings. If Thunderbird asks for permission to access the server, approve it there.
 2. Complete sign-in and approve access in the browser. Keep the Settings tab open. With managed `AuthMode=LoginFlow`, NC Connector verifies and saves the connection automatically.
-3. Return to the email or appointment and click **Insert Nextcloud share** or **Insert Talk link** again. Backend and Seat checks then apply as usual.
+3. Return to the email or appointment and click **Insert Nextcloud share** or **NC Connector** again. Backend and Seat checks then apply as usual.
 
 With **Manual**, enter the username and app password, run **Test connection**, and save. The managed sign-in method stays locked in either case.
 
@@ -276,12 +277,47 @@ Set defaults and the language of inserted meeting text under **Talk Link**. User
 
 Save the appointment after inserting the Talk link. Participant assignment and moderator delegation are processed after saving. Moving and saving an appointment also updates the start time of an enabled lobby.
 
+In the event editor, choose **NC Connector → Create a Talk meeting**.
+
 A room created for an unsaved event is cleaned up if the event is discarded. Deleting the room for an already saved event is a separate, disabled-by-default option under **Talk Link**. Enable it only if deleting the event should also remove the room for all participants. NC Connector leaves the room intact if the user no longer has the necessary authority or another known appointment still references it. A pasted Talk URL alone does not enable automatic room deletion.
 
 <a id="55-mixed-local-nextcloud-and-vfs-sources"></a>
 <a id="vfs-sources-and-provider-access"></a>
 
 ### My Nextcloud and other storage providers
+### Rooms and resources (`ifb-pro`)
+
+Publish the rooms and resources in Nextcloud using Calendar Resource Management or
+RoomVox and grant the intended users access. Resource selection does not require
+the system address book. Rooms, resources, and vehicles are listed using the same
+directory requests as Nextcloud Calendar 6.6.2. Compare visibility with Calendar
+while signed in as the same user; the server and resource provider control access.
+An entry without a usable calendar email address remains visible as **Unknown**
+but cannot be selected or checked for availability. The same applies when multiple
+entries share one address. Correct those addresses in the resource provider and
+reopen the picker. Other rooms remain usable; the add-on never invents an address.
+
+Leaving RoomVox's email setting empty to generate an address automatically is
+supported. The picker uses the resulting DAV address normally; an empty
+configuration field does not by itself make the room unavailable.
+
+1. Assign a valid Seat and configure a writable Nextcloud CalDAV calendar in Thunderbird.
+2. Right-click that calendar in Thunderbird's calendar list and open **Properties**. Leave **Prefer client-side email scheduling** unchecked so Nextcloud handles scheduling. This is a per-calendar setting; see [Thunderbird's scheduling setting](https://support.mozilla.org/en-US/kb/enable-email-invitations-caldav-servers-configured).
+3. Save the calendar properties, fully quit Thunderbird, and restart it after disabling client-side email scheduling. Only then create the test booking.
+4. Create a test appointment in that Nextcloud calendar, not a local calendar or one from another provider. Choose **NC Connector → Select rooms and resources** and apply one room and the required resources. Check the attendees and the copied room location.
+5. Save and synchronize the appointment. Verify the booking and its response on the Nextcloud server, and invitation delivery to a test participant. Free/Busy in the native participant dialog is provided by Thunderbird.
+
+With client-side email scheduling enabled, Thunderbird sends resource invitations
+by email instead of leaving their scheduling to Nextcloud. The appointment and
+selected room can still appear in Nextcloud Calendar without a room/resource
+booking being processed by the server. This applies to native Nextcloud rooms and
+resources as well as external providers; a visible room is not a booking confirmation.
+
+NC Connector only applies the selection to the draft; it does not change this
+calendar setting or perform a separate booking. After correcting the setting,
+verify a new test booking before rollout. Do not assume that changing the setting
+retroactively books existing appointments.
+
 
 The Sharing wizard accepts local files, **My Nextcloud**, and connected external providers. My Nextcloud copies files and folders to the new share folder without changing their originals. External files pass through Thunderbird to Nextcloud; they are not transferred directly between the two clouds. Large external files can require substantial Thunderbird memory.
 

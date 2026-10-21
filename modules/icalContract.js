@@ -633,6 +633,7 @@
   const api = {
     ensureIcal,
     stringifyValue,
+    resolveRuntimeTimeZone,
     parseEventData,
     parseEventStartUnixSeconds,
     parseEventEndUnixSeconds,

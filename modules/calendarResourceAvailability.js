@@ -189,14 +189,30 @@
     const root = dav.parseXml(xml, CALDAV, "schedule-response");
     const responses = new Map();
     for (const response of dav.children(root)){
-      if (response.namespaceURI !== CALDAV || response.localName !== "response"){
-        throw availabilityError("Unexpected scheduling response element");
+      const candidates = new Set();
+      for (const recipient of dav.children(response).filter((node) => node.namespaceURI === CALDAV && node.localName === "recipient")){
+        for (const href of dav.children(recipient).filter((node) => node.namespaceURI === DAV && node.localName === "href")){
+          const address = dav.text(href);
+          const email = address.toLowerCase().startsWith("mailto:") ? await dav.normalizeEmail(address.slice(7)) : "";
+          if (email && emails.includes(email)) candidates.add(email);
+        }
       }
-      const recipient = dav.child(response, CALDAV, "recipient");
-      const href = dav.text(dav.child(recipient, DAV, "href"));
-      const email = href.toLowerCase().startsWith("mailto:") ? await dav.normalizeEmail(href.slice(7)) : "";
-      if (!email || !emails.includes(email)) throw availabilityError("Unexpected scheduling recipient");
-      responses.set(email, responses.has(email) ? null : response);
+      try{
+        if (response.namespaceURI !== CALDAV || response.localName !== "response"){
+          throw availabilityError("Unexpected scheduling response element");
+        }
+        const recipient = dav.child(response, CALDAV, "recipient");
+        const href = dav.text(dav.child(recipient, DAV, "href"));
+        if (!href.toLowerCase().startsWith("mailto:") || candidates.size !== 1){
+          throw availabilityError("Unexpected scheduling recipient");
+        }
+        const email = [...candidates][0];
+        responses.set(email, responses.has(email) ? null : response);
+      }catch(error){
+        // An ambiguous envelope invalidates its recipients, not unrelated batch entries.
+        for (const email of candidates) responses.set(email, null);
+        global.NCLogContext.safeConsoleError("[NCBG]", "resource scheduling recipient rejected", { name: error.name });
+      }
     }
     const values = [];
     for (const email of emails){
@@ -357,8 +373,9 @@
         await requirePermission();
         const emails = [];
         for (const resource of resources){
+          if (resource?.selectable === false) continue;
           const email = await dav.normalizeEmail(resource?.email);
-          if (!email) throw availabilityError("Invalid resource scheduling address");
+          if (!email) continue;
           if (!emails.includes(email)) emails.push(email);
         }
         const results = new Map();

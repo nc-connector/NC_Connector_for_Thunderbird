@@ -1,4 +1,136 @@
 {
+  "calendar_action_title": {
+    "message": "NC Connector"
+  },
+  "calendar_action_tooltip": {
+    "message": "Nextcloud Talk, místnosti a zdroje pro tuto událost"
+  },
+  "calendar_action_talk": {
+    "message": "Vytvořit schůzku v aplikaci Talk"
+  },
+  "calendar_action_talk_description": {
+    "message": "Přidat online schůzku přes Nextcloud Talk."
+  },
+  "calendar_action_resources": {
+    "message": "Vybrat místnosti a zdroje"
+  },
+  "calendar_action_resources_description": {
+    "message": "Přidat k události jednu místnost a potřebné vybavení."
+  },
+  "calendar_action_loading": {
+    "message": "Ověřování dostupných akcí…"
+  },
+  "calendar_action_error": {
+    "message": "Akce události se nepodařilo načíst. Zavřete toto okno a zkuste to znovu."
+  },
+  "resource_title": {
+    "message": "Místnosti a zdroje Nextcloud"
+  },
+  "resource_instructions": {
+    "message": "Vyberte nejvýše jednu místnost a libovolný počet zdrojů."
+  },
+  "resource_search": {
+    "message": "Hledat"
+  },
+  "resource_rooms": {
+    "message": "Místnosti"
+  },
+  "resource_resources": {
+    "message": "Zdroje"
+  },
+  "resource_room": {
+    "message": "Místnost"
+  },
+  "resource_resource": {
+    "message": "Zdroj"
+  },
+  "resource_details": {
+    "message": "Podrobnosti"
+  },
+  "resource_details_for": {
+    "message": "Podrobnosti o $1"
+  },
+  "resource_empty": {
+    "message": "Pro tento účet nejsou dostupné žádné místnosti ani zdroje."
+  },
+  "resource_no_matches": {
+    "message": "Žádné odpovídající místnosti ani zdroje."
+  },
+  "resource_not_provided": {
+    "message": "Neuvedeno"
+  },
+  "resource_loading": {
+    "message": "Načítání místností a zdrojů…"
+  },
+  "resource_applying": {
+    "message": "Používání výběru…"
+  },
+  "resource_load_failed": {
+    "message": "Místnosti a zdroje se nepodařilo načíst. Zkuste to prosím znovu."
+  },
+  "resource_apply_failed": {
+    "message": "Výběr se nepodařilo zcela použít. Před uložením zkontrolujte účastníky a místo události."
+  },
+  "resource_context_expired": {
+    "message": "Kontext této události již není dostupný. Zavřete toto okno a znovu otevřete výběr z události."
+  },
+  "resource_selection_changed": {
+    "message": "Účastníci nebo místo události se změnili. Před použitím výběr znovu načtěte."
+  },
+  "resource_invalid_selection": {
+    "message": "Vyberte nejvýše jednu místnost."
+  },
+  "resource_readonly": {
+    "message": "Místnosti a zdroje lze změnit pouze v upravitelné události, kterou organizujete."
+  },
+  "resource_connection_changed": {
+    "message": "Účet Nextcloud se změnil. Zavřete toto okno a znovu otevřete výběr."
+  },
+  "resource_apply": {
+    "message": "Použít"
+  },
+  "resource_retry": {
+    "message": "Znovu načíst"
+  },
+  "resource_selected_count": {
+    "message": "Vybráno: $1"
+  },
+  "resource_name": {
+    "message": "Název"
+  },
+  "resource_type": {
+    "message": "Typ"
+  },
+  "resource_email": {
+    "message": "Adresa kalendáře"
+  },
+  "resource_room_type": {
+    "message": "Kategorie místnosti"
+  },
+  "resource_resource_type": {
+    "message": "Kategorie zdroje"
+  },
+  "resource_capacity": {
+    "message": "Kapacita"
+  },
+  "resource_building": {
+    "message": "Budova"
+  },
+  "resource_address": {
+    "message": "Adresa"
+  },
+  "resource_floor": {
+    "message": "Podlaží"
+  },
+  "resource_room_number": {
+    "message": "Číslo místnosti"
+  },
+  "resource_features": {
+    "message": "Vybavení"
+  },
+  "resource_location": {
+    "message": "Místo"
+  },
   "options_remove_credentials_button": {
     "message": "Odstranit uložené přihlašovací údaje"
   },
@@ -1474,5 +1606,98 @@
   },
   "vfs_setup_failed": {
     "message": "Přístup se nepodařilo udělit."
+  },
+  "resource_group_by": {
+    "message": "Seskupit podle"
+  },
+  "resource_grouping_none": {
+    "message": "Žádné"
+  },
+  "resource_filter_any": {
+    "message": "Libovolné"
+  },
+  "resource_minimum_capacity": {
+    "message": "Minimální kapacita"
+  },
+  "resource_expand_all": {
+    "message": "Rozbalit vše"
+  },
+  "resource_collapse_all": {
+    "message": "Sbalit vše"
+  },
+  "resource_expand_group": {
+    "message": "Rozbalit skupinu"
+  },
+  "resource_collapse_group": {
+    "message": "Sbalit skupinu"
+  },
+  "resource_features_filter": {
+    "message": "Vybavení (vše požadováno)"
+  },
+  "resource_features_selected": {
+    "message": "Vybráno: $1"
+  },
+  "resource_clear_filters": {
+    "message": "Obnovit filtry"
+  },
+  "resource_without_information": {
+    "message": "Neuvedeno"
+  },
+  "resource_only_available": {
+    "message": "Pouze dostupné"
+  },
+  "resource_availability": {
+    "message": "Dostupnost"
+  },
+  "resource_available": {
+    "message": "Dostupné"
+  },
+  "resource_busy": {
+    "message": "Obsazeno"
+  },
+  "resource_unknown": {
+    "message": "Neznámé"
+  },
+  "resource_checking": {
+    "message": "Probíhá kontrola"
+  },
+  "resource_show_availability": {
+    "message": "Zobrazit dostupnost"
+  },
+  "resource_appointment_interval": {
+    "message": "Událost"
+  },
+  "resource_availability_title": {
+    "message": "Dostupnost zdroje"
+  },
+  "resource_date": {
+    "message": "Datum"
+  },
+  "resource_previous_day": {
+    "message": "Předchozí den"
+  },
+  "resource_next_day": {
+    "message": "Následující den"
+  },
+  "resource_time_zone": {
+    "message": "Časové pásmo"
+  },
+  "resource_today": {
+    "message": "Dnes"
+  },
+  "resource_availability_failed": {
+    "message": "Dostupnost se nepodařilo načíst."
+  },
+  "resource_grouping_save_failed": {
+    "message": "Nastavení seskupení se nepodařilo uložit."
+  },
+  "resource_close": {
+    "message": "Zavřít"
+  },
+  "resource_previous_month": {
+    "message": "Předchozí měsíc"
+  },
+  "resource_next_month": {
+    "message": "Následující měsíc"
   }
 }

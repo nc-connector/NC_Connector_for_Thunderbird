@@ -1,4 +1,136 @@
 {
+  "calendar_action_title": {
+    "message": "NC Connector"
+  },
+  "calendar_action_tooltip": {
+    "message": "Nextcloud Talk, helyiségek és erőforrások ehhez az eseményhez"
+  },
+  "calendar_action_talk": {
+    "message": "Talk-megbeszélés létrehozása"
+  },
+  "calendar_action_talk_description": {
+    "message": "Online megbeszélés hozzáadása a Nextcloud Talk használatával."
+  },
+  "calendar_action_resources": {
+    "message": "Helyiségek és erőforrások kiválasztása"
+  },
+  "calendar_action_resources_description": {
+    "message": "Egy helyiség és a szükséges felszerelés hozzáadása az eseményhez."
+  },
+  "calendar_action_loading": {
+    "message": "Elérhető műveletek ellenőrzése…"
+  },
+  "calendar_action_error": {
+    "message": "Az esemény műveletei nem tölthetők be. Zárja be ezt az ablakot, majd próbálja újra."
+  },
+  "resource_title": {
+    "message": "Nextcloud-helyiségek és -erőforrások"
+  },
+  "resource_instructions": {
+    "message": "Legfeljebb egy helyiséget és tetszőleges számú erőforrást válasszon."
+  },
+  "resource_search": {
+    "message": "Keresés"
+  },
+  "resource_rooms": {
+    "message": "Helyiségek"
+  },
+  "resource_resources": {
+    "message": "Erőforrások"
+  },
+  "resource_room": {
+    "message": "Helyiség"
+  },
+  "resource_resource": {
+    "message": "Erőforrás"
+  },
+  "resource_details": {
+    "message": "Részletek"
+  },
+  "resource_details_for": {
+    "message": "$1 részletei"
+  },
+  "resource_empty": {
+    "message": "Ehhez a fiókhoz nem érhetők el helyiségek vagy erőforrások."
+  },
+  "resource_no_matches": {
+    "message": "Nincs megfelelő helyiség vagy erőforrás."
+  },
+  "resource_not_provided": {
+    "message": "Nincs megadva"
+  },
+  "resource_loading": {
+    "message": "Helyiségek és erőforrások betöltése…"
+  },
+  "resource_applying": {
+    "message": "Kijelölés alkalmazása…"
+  },
+  "resource_load_failed": {
+    "message": "A helyiségek és erőforrások nem tölthetők be. Próbálja újra."
+  },
+  "resource_apply_failed": {
+    "message": "A kijelölés nem alkalmazható teljesen. Mentés előtt ellenőrizze az esemény résztvevőit és helyszínét."
+  },
+  "resource_context_expired": {
+    "message": "Az esemény környezete már nem érhető el. Zárja be ezt az ablakot, és nyissa meg újra a választót az eseményből."
+  },
+  "resource_selection_changed": {
+    "message": "Az esemény résztvevői vagy helyszíne megváltozott. Az alkalmazás előtt töltse be újra a kijelölést."
+  },
+  "resource_invalid_selection": {
+    "message": "Legfeljebb egy helyiséget válasszon."
+  },
+  "resource_readonly": {
+    "message": "Helyiségek és erőforrások csak az Ön által szervezett, szerkeszthető eseményben módosíthatók."
+  },
+  "resource_connection_changed": {
+    "message": "A Nextcloud-fiók megváltozott. Zárja be ezt az ablakot, és nyissa meg újra a választót."
+  },
+  "resource_apply": {
+    "message": "Alkalmazás"
+  },
+  "resource_retry": {
+    "message": "Újratöltés"
+  },
+  "resource_selected_count": {
+    "message": "Kijelölve: $1"
+  },
+  "resource_name": {
+    "message": "Név"
+  },
+  "resource_type": {
+    "message": "Típus"
+  },
+  "resource_email": {
+    "message": "Naptárcím"
+  },
+  "resource_room_type": {
+    "message": "Helyiségkategória"
+  },
+  "resource_resource_type": {
+    "message": "Erőforrás-kategória"
+  },
+  "resource_capacity": {
+    "message": "Férőhelyek"
+  },
+  "resource_building": {
+    "message": "Épület"
+  },
+  "resource_address": {
+    "message": "Cím"
+  },
+  "resource_floor": {
+    "message": "Emelet"
+  },
+  "resource_room_number": {
+    "message": "Helyiségszám"
+  },
+  "resource_features": {
+    "message": "Felszereltség"
+  },
+  "resource_location": {
+    "message": "Helyszín"
+  },
   "options_remove_credentials_button": {
     "message": "Mentett bejelentkezési adatok eltávolítása"
   },
@@ -1474,5 +1606,98 @@
   },
   "vfs_setup_failed": {
     "message": "A hozzáférést nem sikerült megadni."
+  },
+  "resource_group_by": {
+    "message": "Csoportosítás"
+  },
+  "resource_grouping_none": {
+    "message": "Nincs"
+  },
+  "resource_filter_any": {
+    "message": "Bármely"
+  },
+  "resource_minimum_capacity": {
+    "message": "Minimális kapacitás"
+  },
+  "resource_expand_all": {
+    "message": "Összes kibontása"
+  },
+  "resource_collapse_all": {
+    "message": "Összes összecsukása"
+  },
+  "resource_expand_group": {
+    "message": "Csoport kibontása"
+  },
+  "resource_collapse_group": {
+    "message": "Csoport összecsukása"
+  },
+  "resource_features_filter": {
+    "message": "Felszereltség (mind szükséges)"
+  },
+  "resource_features_selected": {
+    "message": "$1 kiválasztva"
+  },
+  "resource_clear_filters": {
+    "message": "Szűrők alaphelyzetbe állítása"
+  },
+  "resource_without_information": {
+    "message": "Nincs megadva"
+  },
+  "resource_only_available": {
+    "message": "Csak elérhetők"
+  },
+  "resource_availability": {
+    "message": "Elérhetőség"
+  },
+  "resource_available": {
+    "message": "Elérhető"
+  },
+  "resource_busy": {
+    "message": "Foglalt"
+  },
+  "resource_unknown": {
+    "message": "Ismeretlen"
+  },
+  "resource_checking": {
+    "message": "Ellenőrzés folyamatban"
+  },
+  "resource_show_availability": {
+    "message": "Elérhetőség megtekintése"
+  },
+  "resource_appointment_interval": {
+    "message": "Esemény"
+  },
+  "resource_availability_title": {
+    "message": "Erőforrás elérhetősége"
+  },
+  "resource_date": {
+    "message": "Dátum"
+  },
+  "resource_previous_day": {
+    "message": "Előző nap"
+  },
+  "resource_next_day": {
+    "message": "Következő nap"
+  },
+  "resource_time_zone": {
+    "message": "Időzóna"
+  },
+  "resource_today": {
+    "message": "Ma"
+  },
+  "resource_availability_failed": {
+    "message": "Az elérhetőséget nem sikerült lekérni."
+  },
+  "resource_grouping_save_failed": {
+    "message": "A csoportosítási beállítást nem sikerült menteni."
+  },
+  "resource_close": {
+    "message": "Bezárás"
+  },
+  "resource_previous_month": {
+    "message": "Előző hónap"
+  },
+  "resource_next_month": {
+    "message": "Következő hónap"
   }
 }

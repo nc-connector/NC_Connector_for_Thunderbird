@@ -1,0 +1,86 @@
+<!-- Copyright (c) 2026 Bastian Kleinschmidt. Licensed under AGPL-3.0; see LICENSE.txt. -->
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title data-i18n="resource_title"></title>
+  <link rel="stylesheet" href="tbTheme.css">
+  <link rel="stylesheet" href="calendarAction.css">
+  <link rel="stylesheet" href="calendarResources.css">
+</head>
+<body class="resource-picker">
+  <header class="nc-brand-header"><img src="assets/header-solid-blue-328x96.png" alt="NC Connector"></header>
+  <main aria-busy="true">
+    <div class="wizard-policy-warning" id="policyWarningRow" hidden>
+      <div class="policy-warning-title"><span aria-hidden="true">⚠️ </span><span data-i18n="policy_warning_title"></span></div>
+      <div id="policyWarningText"></div>
+      <a id="policyWarningAdminLink" target="_blank" rel="noopener noreferrer" hidden></a>
+    </div>
+    <p class="resource-instructions" data-i18n="resource_instructions"></p>
+    <p id="interval" class="resource-interval"></p>
+    <div class="resource-filters" id="filters">
+      <label><span data-i18n="resource_building"></span><select id="building" disabled></select></label>
+      <label><span data-i18n="resource_floor"></span><select id="floor" disabled></select></label>
+      <label><span data-i18n="resource_minimum_capacity"></span><input id="capacity" type="number" min="0" max="2147483647" value="0" disabled></label>
+      <div class="feature-filter"><label id="featuresLabel" data-i18n="resource_features_filter"></label><button id="featuresButton" type="button" aria-labelledby="featuresLabel featuresButton" aria-expanded="false" aria-controls="featuresMenu" disabled></button><div id="featuresMenu" class="feature-menu" hidden></div></div>
+      <label class="available-filter"><input id="onlyAvailable" type="checkbox" disabled><span data-i18n="resource_only_available"></span></label>
+      <button id="clearFilters" type="button" data-i18n="resource_clear_filters" disabled></button>
+    </div>
+    <div class="resource-grouping">
+      <label><span data-i18n="resource_group_by"></span><select id="grouping" disabled></select></label>
+      <label class="resource-search"><span data-i18n="resource_search"></span><input id="search" type="search" disabled autocomplete="off"></label>
+      <button id="expandAll" type="button" data-i18n="resource_collapse_all" disabled></button>
+    </div>
+    <div class="resource-columns">
+      <div class="resource-list" id="resourceList">
+        <div class="resource-table-head resource-grid"><span data-i18n="resource_name"></span><span data-i18n="resource_room_type"></span><span data-i18n="resource_building"></span><span data-i18n="resource_capacity"></span><span data-i18n="resource_availability"></span><span aria-hidden="true">▦</span></div>
+        <div id="groups"></div>
+        <p id="empty" class="resource-empty" hidden></p>
+      </div>
+      <section class="resource-details" aria-labelledby="detailsTitle">
+        <h2 id="detailsTitle" data-i18n="resource_details"></h2>
+        <dl id="details"></dl>
+      </section>
+    </div>
+    <p id="selectionCount" class="selection-count" role="status" aria-live="polite"></p>
+    <p id="status" class="calendar-status" role="status" aria-live="polite"></p>
+    <button id="reauthenticate" type="button" data-i18n="connection_reauthenticate" hidden></button>
+  </main>
+  <footer class="calendar-footer">
+    <button id="retry" type="button" data-i18n="resource_retry" hidden></button>
+    <button id="apply" type="button" class="primary" data-i18n="resource_apply" disabled></button>
+    <button id="cancel" type="button" data-i18n="ui_button_cancel"></button>
+  </footer>
+  <div id="resourceMenu" class="resource-menu" hidden><button id="showAvailability" type="button" data-i18n="resource_show_availability"></button></div>
+  <section id="dayView" class="resource-day-view" role="dialog" aria-modal="true" aria-labelledby="dayTitle" hidden>
+    <div class="day-heading"><h2 id="dayTitle"></h2><button id="dayClose" type="button" data-i18n="resource_close"></button></div>
+    <div class="day-controls">
+      <button id="previousDay" type="button">‹</button>
+      <span id="dayDateLabel" data-i18n="resource_date"></span>
+      <div id="dateControl" class="day-date-control">
+        <button id="dayDate" type="button" aria-haspopup="dialog" aria-expanded="false" aria-controls="datePopover" aria-labelledby="dayDateLabel dayDate"></button>
+        <div id="datePopover" class="date-popover" role="dialog" aria-labelledby="calendarMonth" hidden>
+          <div class="month-navigation"><button id="previousMonth" type="button">‹</button><strong id="calendarMonth" aria-live="polite"></strong><button id="nextMonth" type="button">›</button></div>
+          <table class="month-grid" role="grid" aria-labelledby="calendarMonth"><thead><tr id="calendarWeekdays"></tr></thead><tbody id="calendarDays"></tbody></table>
+          <button id="calendarClose" type="button" data-i18n="resource_close"></button>
+        </div>
+      </div>
+      <button id="nextDay" type="button">›</button>
+      <button id="today" type="button" data-i18n="resource_today"></button>
+    </div>
+    <p id="dayZone"></p><p id="dayStatus" role="status" aria-live="polite"></p>
+    <div class="day-legend"><span class="availability-free" data-i18n="resource_available"></span><span class="availability-busy" data-i18n="resource_busy"></span><span class="appointment-key" data-i18n="resource_appointment_interval"></span></div>
+    <div class="day-scroll" id="dayScroll" tabindex="0"><div id="timeline" class="day-timeline"></div></div>
+  </section>
+  <template id="roomIcon"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 21V3h14v18M3 21h18M9 21V6l8 2v13M13 13h1"/></svg></template>
+  <template id="resourceIcon"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 4h18v12H3zM8 20h8M12 16v4M7 8h10"/></svg></template>
+  <template id="calendarIcon"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 5h16v16H4zM4 10h16M8 3v4M16 3v4M8 14h2M14 14h2M8 17h2M14 17h2"/></svg></template>
+  <script src="../modules/logContext.js"></script>
+  <script src="../modules/i18n.js"></script>
+  <script src="domI18n.js"></script>
+  <script src="../modules/policyState.js"></script>
+  <script src="wizardPolicyUi.js"></script>
+  <script src="calendarResources.js"></script>
+</body>
+</html>

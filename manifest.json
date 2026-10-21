@@ -87,6 +87,7 @@
       "modules/bgCalendarState.js",
       "modules/bgCalendarDeparture.js",
       "modules/bgCalendar.js",
+      "modules/bgCalendarResources.js",
       "modules/bgRouter.js"
     ]
   },
@@ -102,7 +103,8 @@
       "16": "icons/app-16.png",
       "32": "icons/app-32.png"
     },
-    "default_title": "__MSG_ui_insert_button_label__",
+    "default_label": "__MSG_calendar_action_title__",
+    "default_title": "__MSG_calendar_action_tooltip__",
     "type": "button"
   },
   "options_ui": {

@@ -10,15 +10,15 @@
  * calendar item monitoring/synchronization.
  */
 
-const TALK_DIALOG_POPUP_PATH = "ui/talkDialog.html";
-const TALK_CONNECTION_REQUIRED_POPUP_PATH = "ui/connectionRequired.html?source=talk";
-const TALK_POPUP_CREDENTIAL_KEYS = new Set(["baseUrl", "user", "appPass"]);
-let TALK_POPUP_CONFIGURATION_REVISION = 0;
+const CALENDAR_ACTION_POPUP_PATH = "ui/calendarAction.html";
+const CALENDAR_CONNECTION_REQUIRED_POPUP_PATH = "ui/connectionRequired.html?source=talk";
+const CALENDAR_POPUP_CREDENTIAL_KEYS = new Set(["baseUrl", "user", "appPass"]);
+let CALENDAR_POPUP_CONFIGURATION_REVISION = 0;
 
-void configureTalkCalendarItemPopup();
+void configureCalendarItemPopup();
 
-async function configureTalkCalendarItemPopup(){
-  const revision = ++TALK_POPUP_CONFIGURATION_REVISION;
+async function configureCalendarItemPopup(){
+  const revision = ++CALENDAR_POPUP_CONFIGURATION_REVISION;
   try{
     if (typeof browser.calendarItemAction?.setPopup !== "function"){
       console.error("[NCBG] calendarItemAction.setPopup missing");
@@ -31,12 +31,12 @@ async function configureTalkCalendarItemPopup(){
     const configured = await isNextcloudAccountConfigured();
     const managedSetupRequired = !configured
       && (await NCCore.getOpts()).managedSetup?.isEnterpriseRollout === true;
-    if (revision !== TALK_POPUP_CONFIGURATION_REVISION){
+    if (revision !== CALENDAR_POPUP_CONFIGURATION_REVISION){
       return;
     }
     const popup = configured
-      ? TALK_DIALOG_POPUP_PATH
-      : (managedSetupRequired ? "" : TALK_CONNECTION_REQUIRED_POPUP_PATH);
+      ? CALENDAR_ACTION_POPUP_PATH
+      : (managedSetupRequired ? "" : CALENDAR_CONNECTION_REQUIRED_POPUP_PATH);
     // Managed first sign-in opens Settings from the command listener instead.
     await browser.calendarItemAction.setPopup({ popup });
     L("calendar item action popup configured", {
@@ -46,11 +46,11 @@ async function configureTalkCalendarItemPopup(){
     });
   }catch(error){
     console.error("[NCBG] calendar item action popup configure failed", error);
-    if (revision === TALK_POPUP_CONFIGURATION_REVISION
+    if (revision === CALENDAR_POPUP_CONFIGURATION_REVISION
       && typeof browser.calendarItemAction?.setPopup === "function"){
       try{
         await browser.calendarItemAction.setPopup({
-          popup: TALK_CONNECTION_REQUIRED_POPUP_PATH
+          popup: CALENDAR_CONNECTION_REQUIRED_POPUP_PATH
         });
       }catch(fallbackError){
         console.error("[NCBG] calendar item action setup popup configure failed", fallbackError);
@@ -61,11 +61,11 @@ async function configureTalkCalendarItemPopup(){
 
 browser.storage.onChanged.addListener((changes, areaName) => {
   const credentialsChanged = areaName === "managed"
-    || (areaName === "local" && Object.keys(changes || {}).some((key) => TALK_POPUP_CREDENTIAL_KEYS.has(key)));
+    || (areaName === "local" && Object.keys(changes || {}).some((key) => CALENDAR_POPUP_CREDENTIAL_KEYS.has(key)));
   if (!credentialsChanged){
     return;
   }
-  void configureTalkCalendarItemPopup();
+  void configureCalendarItemPopup();
 });
 
 /**
@@ -88,20 +88,6 @@ browser.ncCalToolbar?.onClicked?.addListener((snapshot) => {
         console.error("[NCBG] ncCalToolbar.onClicked missing or invalid editorId");
         return;
       }
-
-      // Fire-and-forget preflight only. The wizard performs its own live status
-      // refresh, so Talk button responsiveness must not depend on this request.
-      void NCTalkCore.getSystemAddressbookStatus({ forceRefresh: false })
-        .then((status) => {
-          L("system addressbook check on talk click", {
-            available: !!status?.available,
-            count: Number.isFinite(status?.count) ? status.count : 0,
-            hasError: !!status?.error
-          });
-        })
-        .catch((error) => {
-          console.error("[NCBG] system addressbook check on talk click failed", error);
-        });
 
       const contextId = createCalendarWizardContextId();
       const context = setCalendarWizardContext(contextId, {

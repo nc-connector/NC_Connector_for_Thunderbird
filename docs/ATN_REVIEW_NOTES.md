@@ -43,23 +43,36 @@ release-specific differences remain in `CHANGELOG.md`.
 The active editor integration is provided by `experiments/ncCalToolbar/**` and
 is intentionally minimal:
 
-- stable Talk button via standard `calendar_item_action` in event dialog and event tab
+- shared NC Connector action menu via standard `calendar_item_action` in event dialog and event tab
 - click entrypoint via `ncCalToolbar.onClicked` bridge (bound to official `calendarItemAction` button)
 - stable editor targeting via opaque `editorId`
 - editor snapshot read via `ncCalToolbar.getCurrent({ editorId, returnFormat: "ical" })`
 - editor write-back via `ncCalToolbar.updateCurrent({ editorId, fields, properties, attendees, returnFormat })`
 - tracked lifecycle via `ncCalToolbar.onTrackedEditorClosed`
 
-The existing bridge supports resource-attendee draft updates and a read-only live
-appointment interval; the bundled upstream experiment remains unchanged.
-Read-only/invitation checks, live before-state comparisons, and rollback protect
-the draft. Added participants use native ROOM/RESOURCE types and UI rendering;
-unrelated attendees retain their parameters. Interval snapshots use UTC milliseconds,
-the event time zone, and exclusive all-day end dates without changing live dates.
-No remote event write, save/send, invitation-notification override, or custom
-Free/Busy provider is introduced. The editor regression check is part of the
-normal review aggregate; no resource-picker entry point is enabled by this bridge.
-See [editor API surface](DEVELOPMENT.md#73-nccaltoolbar-api-surface-editor-targeted).
+The room/resource picker adds attendee read/write support and a read-only live
+appointment interval to this existing bridge; the bundled upstream experiment
+is unchanged. Read-only/invitation checks,
+live before-state comparisons, and rollback protect the draft. New participants
+use native ROOM/RESOURCE types and UI rendering. No remote event write, save/send,
+invitation-notification override, or custom Free/Busy provider is introduced.
+Directory Depth-1 PROPFINDs run only when the user opens the picker, against their
+configured Nextcloud account, and contain no event or attendee data. They enumerate
+the same two principal collections and properties as Calendar 6.6.2 with resource
+booking enabled, excluding collection roots and adding no email search predicate.
+Server/provider visibility controls the returned principals. Catalog validation,
+Seat/managed access, and location/selection rules remain in ordinary background
+modules. One malformed principal cannot reject unrelated entries. Trusted principals
+without a usable unique scheduling address stay visible as Unknown, with selection
+and day queries disabled; neither empty nor ambiguous addresses enter scheduling
+or draft changes. Direct CalDAV `VFREEBUSY` queries run in ordinary background modules while
+the picker is open, against the configured account's scheduling outbox. They carry
+the requested interval and visible resource addresses, never event content, and
+do not create bookings or send meeting invitations. A malformed recipient response
+affects only that recipient's availability, not healthy recipients in the batch.
+Results retain anonymous busy
+intervals only. The resource day view stays in the same native popup. See
+[resource picker architecture](DEVELOPMENT.md#712-room-and-resource-picker-ifb-pro).
 
 All business logic stays in the background runtime modules (`modules/bgState.js`,
 `modules/bgComposeAttachments.js`, `modules/bgShareCleanupStore.js`,
@@ -84,8 +97,8 @@ must replace that loading mechanism with explicit imports.
 
 ## Behavior Guarantees
 
-1) Talk button is present in dialog and tab editors.
-2) With a configured account, the button opens the Talk wizard through the native calendar item action popup. Missing credentials follow the Settings setup path described below.
+1) The NC Connector button is present in dialog and tab editors.
+2) With a configured account, the button opens an action menu for Talk or room/resource selection through the native calendar item action popup. Missing credentials follow the Settings setup path described below.
 3) Wizard can read/write unsaved editor state through `editorId` targeting.
 4) Editor close signals handle discarded/superseded cleanup; only official calendar create/update events with matching `X-NCTALK-TOKEN` confirm persistence.
 5) Event move/delete handling remains driven by official calendar item events.

@@ -1,4 +1,136 @@
 {
+  "calendar_action_title": {
+    "message": "NC Connector"
+  },
+  "calendar_action_tooltip": {
+    "message": "此日程的 Nextcloud Talk、房间和资源"
+  },
+  "calendar_action_talk": {
+    "message": "创建 Talk 会议"
+  },
+  "calendar_action_talk_description": {
+    "message": "添加 Nextcloud Talk 在线会议。"
+  },
+  "calendar_action_resources": {
+    "message": "选择房间和资源"
+  },
+  "calendar_action_resources_description": {
+    "message": "为日程添加一个房间及所需设备。"
+  },
+  "calendar_action_loading": {
+    "message": "正在检查可用操作…"
+  },
+  "calendar_action_error": {
+    "message": "无法加载日程操作。请关闭此窗口后重试。"
+  },
+  "resource_title": {
+    "message": "Nextcloud 房间和资源"
+  },
+  "resource_instructions": {
+    "message": "最多选择一个房间，可选择多个资源。"
+  },
+  "resource_search": {
+    "message": "搜索"
+  },
+  "resource_rooms": {
+    "message": "房间"
+  },
+  "resource_resources": {
+    "message": "资源"
+  },
+  "resource_room": {
+    "message": "房间"
+  },
+  "resource_resource": {
+    "message": "资源"
+  },
+  "resource_details": {
+    "message": "详细信息"
+  },
+  "resource_details_for": {
+    "message": "$1 的详细信息"
+  },
+  "resource_empty": {
+    "message": "此账户没有可用的房间或资源。"
+  },
+  "resource_no_matches": {
+    "message": "没有匹配的房间或资源。"
+  },
+  "resource_not_provided": {
+    "message": "未提供"
+  },
+  "resource_loading": {
+    "message": "正在加载房间和资源…"
+  },
+  "resource_applying": {
+    "message": "正在应用所选内容…"
+  },
+  "resource_load_failed": {
+    "message": "无法加载房间和资源。请重试。"
+  },
+  "resource_apply_failed": {
+    "message": "无法完整应用所选内容。保存前请检查日程的参与者和地点。"
+  },
+  "resource_context_expired": {
+    "message": "此日程的上下文已不可用。请关闭此窗口，然后从日程中重新打开选择器。"
+  },
+  "resource_selection_changed": {
+    "message": "日程的参与者或地点已更改。请重新加载所选内容后再应用。"
+  },
+  "resource_invalid_selection": {
+    "message": "最多选择一个房间。"
+  },
+  "resource_readonly": {
+    "message": "只有在您组织的可编辑日程中，才能更改房间和资源。"
+  },
+  "resource_connection_changed": {
+    "message": "Nextcloud 账户已更改。请关闭此窗口，然后重新打开选择器。"
+  },
+  "resource_apply": {
+    "message": "应用"
+  },
+  "resource_retry": {
+    "message": "重新加载"
+  },
+  "resource_selected_count": {
+    "message": "已选择：$1"
+  },
+  "resource_name": {
+    "message": "名称"
+  },
+  "resource_type": {
+    "message": "类型"
+  },
+  "resource_email": {
+    "message": "日历地址"
+  },
+  "resource_room_type": {
+    "message": "房间类别"
+  },
+  "resource_resource_type": {
+    "message": "资源类别"
+  },
+  "resource_capacity": {
+    "message": "容纳人数"
+  },
+  "resource_building": {
+    "message": "建筑"
+  },
+  "resource_address": {
+    "message": "地址"
+  },
+  "resource_floor": {
+    "message": "楼层"
+  },
+  "resource_room_number": {
+    "message": "房间号"
+  },
+  "resource_features": {
+    "message": "设施"
+  },
+  "resource_location": {
+    "message": "地点"
+  },
   "options_remove_credentials_button": {
     "message": "移除已保存的登录凭据"
   },
@@ -1474,5 +1606,98 @@
   },
   "vfs_setup_failed": {
     "message": "无法授予访问权限。"
+  },
+  "resource_group_by": {
+    "message": "分组依据"
+  },
+  "resource_grouping_none": {
+    "message": "无"
+  },
+  "resource_filter_any": {
+    "message": "不限"
+  },
+  "resource_minimum_capacity": {
+    "message": "最小容纳人数"
+  },
+  "resource_expand_all": {
+    "message": "全部展开"
+  },
+  "resource_collapse_all": {
+    "message": "全部折叠"
+  },
+  "resource_expand_group": {
+    "message": "展开分组"
+  },
+  "resource_collapse_group": {
+    "message": "折叠分组"
+  },
+  "resource_features_filter": {
+    "message": "设施（全部必需）"
+  },
+  "resource_features_selected": {
+    "message": "已选择 $1 项"
+  },
+  "resource_clear_filters": {
+    "message": "重置筛选条件"
+  },
+  "resource_without_information": {
+    "message": "未指定"
+  },
+  "resource_only_available": {
+    "message": "仅显示可用项"
+  },
+  "resource_availability": {
+    "message": "可用状态"
+  },
+  "resource_available": {
+    "message": "可用"
+  },
+  "resource_busy": {
+    "message": "忙碌"
+  },
+  "resource_unknown": {
+    "message": "未知"
+  },
+  "resource_checking": {
+    "message": "正在检查"
+  },
+  "resource_show_availability": {
+    "message": "显示可用状态"
+  },
+  "resource_appointment_interval": {
+    "message": "日程"
+  },
+  "resource_availability_title": {
+    "message": "资源可用状态"
+  },
+  "resource_date": {
+    "message": "日期"
+  },
+  "resource_previous_day": {
+    "message": "前一天"
+  },
+  "resource_next_day": {
+    "message": "后一天"
+  },
+  "resource_time_zone": {
+    "message": "时区"
+  },
+  "resource_today": {
+    "message": "今天"
+  },
+  "resource_availability_failed": {
+    "message": "无法获取可用状态。"
+  },
+  "resource_grouping_save_failed": {
+    "message": "无法保存分组设置。"
+  },
+  "resource_close": {
+    "message": "关闭"
+  },
+  "resource_previous_month": {
+    "message": "上个月"
+  },
+  "resource_next_month": {
+    "message": "下个月"
   }
 }

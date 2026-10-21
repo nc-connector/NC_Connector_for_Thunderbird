@@ -120,7 +120,7 @@ function run(){
     }
   }
 
-  for (const file of ["options.html", "ui/talkDialog.html", "ui/nextcloudSharingWizard.html"]){
+  for (const file of ["options.html", "ui/talkDialog.html", "ui/nextcloudSharingWizard.html", "ui/calendarResources.html"]){
     const content = readText(file);
     const link = content.match(/<a\b[^>]*\bid="policyWarningAdminLink"[^>]*>/)?.[0] || "";
     assert(link && /\bhidden\b/.test(link), `${file}: license management links must start hidden`);

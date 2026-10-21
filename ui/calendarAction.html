@@ -1,0 +1,45 @@
+<!-- Copyright (c) 2026 Bastian Kleinschmidt. Licensed under AGPL-3.0; see LICENSE.txt. -->
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title data-i18n="calendar_action_title"></title>
+  <link rel="stylesheet" href="tbTheme.css">
+  <link rel="stylesheet" href="calendarAction.css">
+</head>
+<body class="calendar-menu">
+  <header class="nc-brand-header"><img src="assets/header-solid-blue-328x96.png" alt="NC Connector"></header>
+  <main class="calendar-actions" aria-busy="true">
+    <section>
+      <button id="talk" class="action-card" type="button" disabled aria-labelledby="talkLabel" aria-describedby="talkDescription talkNotice">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="6" width="12" height="12" rx="2"/><path d="M15 10l6-4v12l-6-4z"/></svg>
+        <span class="action-copy">
+          <span id="talkLabel" data-i18n="calendar_action_talk"></span>
+          <span id="talkDescription" class="action-description" data-i18n="calendar_action_talk_description"></span>
+        </span>
+      </button>
+      <p id="talkNotice" class="action-notice" hidden></p>
+    </section>
+    <section>
+      <button id="resources" class="action-card" type="button" disabled aria-labelledby="resourceLabel" aria-describedby="resourceDescription resourceNotice">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 21V3h14v18M3 21h18M9 21V6l8 2v13"/><path d="M13 13h1"/></svg>
+        <span class="action-copy">
+          <span id="resourceLabel" data-i18n="calendar_action_resources"></span>
+          <span id="resourceDescription" class="action-description" data-i18n="calendar_action_resources_description"></span>
+        </span>
+      </button>
+      <p id="resourceNotice" class="action-notice" hidden></p>
+    </section>
+    <p id="status" class="calendar-status" role="status" aria-live="polite"></p>
+    <button id="reauthenticate" type="button" data-i18n="connection_reauthenticate" hidden></button>
+  </main>
+  <footer class="calendar-footer">
+    <button id="cancel" type="button" data-i18n="ui_button_cancel"></button>
+  </footer>
+  <script src="../modules/logContext.js"></script>
+  <script src="../modules/i18n.js"></script>
+  <script src="domI18n.js"></script>
+  <script src="calendarAction.js"></script>
+</body>
+</html>

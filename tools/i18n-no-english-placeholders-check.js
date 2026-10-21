@@ -23,6 +23,7 @@ const ALLOWED_IDENTICAL_KEYS_GLOBAL = new Set([
   "ui_button_ok",
   "ui_description_help_url",
   "talk_dialog_title",
+  "calendar_action_title",
   "sharing_password_mail_notify_title",
   "options_tab_vfs",
   "options_base_url_placeholder",
@@ -38,6 +39,8 @@ const ALLOWED_IDENTICAL_KEYS_BY_LOCALE = {
     "options_about_copyright_label"
   ]),
   de: new Set([
+    "resource_details",
+    "resource_name",
     "ui_create_password_placeholder",
     "options_about_version_label",
     "options_about_copyright_label",
@@ -49,6 +52,8 @@ const ALLOWED_IDENTICAL_KEYS_BY_LOCALE = {
     "sharing_status_error_row"
   ]),
   fr: new Set([
+    "resource_type",
+    "resource_date",
     "options_tab_signature"
   ]),
   it: new Set([
@@ -57,6 +62,8 @@ const ALLOWED_IDENTICAL_KEYS_BY_LOCALE = {
     "sharing_file_type_file"
   ]),
   nl: new Set([
+    "resource_details",
+    "resource_type",
     "sharing_files_table_type",
     "sharing_files_table_status"
   ]),

@@ -2068,7 +2068,7 @@ async function testConnectionRequiredSetupNavigation(){
 }
 
 async function testTalkSetupRouting(){
-  const source = sourceSection("modules/bgCalendar.js", "const TALK_DIALOG_POPUP_PATH", "async function hydrateTalkWizardContextFromEditor(");
+  const source = sourceSection("modules/bgCalendar.js", "const CALENDAR_ACTION_POPUP_PATH", "async function hydrateTalkWizardContextFromEditor(");
   for (const configured of [false, true]){
     for (const managed of [false, true]){
       for (const authMode of ["manual", "loginFlow", "invalid"]){
@@ -2099,7 +2099,7 @@ async function testTalkSetupRouting(){
         vm.createContext(context);
         vm.runInContext(source, context, { filename: "modules/bgCalendar.js" });
         await flushPromises();
-        const expectedPopup = configured ? "ui/talkDialog.html"
+        const expectedPopup = configured ? "ui/calendarAction.html"
           : (managed ? "" : "ui/connectionRequired.html?source=talk");
         assert(popups.length === 1 && popups[0] === expectedPopup, `${configured}/${managed}/${authMode}: Talk must select its existing wizard, unmanaged notice, or managed command without a popup`);
         await clickHandler({ editorId: "ed-00000000-0000-0000-0000-000000000000" });
@@ -2137,7 +2137,7 @@ function testStaticLifecycleRules(){
     "Manual sharing must show setup guidance before opening its wizard"
   );
   assert(
-    calendarSource.includes("TALK_CONNECTION_REQUIRED_POPUP_PATH")
+    calendarSource.includes("CALENDAR_CONNECTION_REQUIRED_POPUP_PATH")
       && calendarSource.includes('await openConnectionRequiredWindow("talk");')
       && stateSource.includes("return await openAuthenticationRequiredOptions();"),
     "Both managed actions must open the same Settings setup before preparing a wizard context"

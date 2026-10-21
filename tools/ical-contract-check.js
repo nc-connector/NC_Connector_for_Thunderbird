@@ -21,6 +21,10 @@ function assert(condition, message){
 }
 
 function run(){
+  assert(contract.resolveRuntimeTimeZone("W. Europe Standard Time") === "Europe/Berlin",
+    "Shared Windows timezone resolver must remain available to the resource picker");
+  assert(contract.resolveRuntimeTimeZone("Customized Time Zone") === "",
+    "Unknown custom timezones must not guess an IANA or machine timezone");
   const thunderbirdIcal = fixture("thunderbird-event.ics");
   const thunderbirdData = contract.parseEventData(thunderbirdIcal);
   assert(thunderbirdData.props.SUMMARY === "TB Meeting", "TB summary mismatch");

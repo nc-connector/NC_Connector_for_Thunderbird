@@ -1,4 +1,136 @@
 {
+  "calendar_action_title": {
+    "message": "NC Connector"
+  },
+  "calendar_action_tooltip": {
+    "message": "Nextcloud Talk, помещения и ресурсы для этого события"
+  },
+  "calendar_action_talk": {
+    "message": "Создать встречу в Talk"
+  },
+  "calendar_action_talk_description": {
+    "message": "Добавить онлайн-встречу в Nextcloud Talk."
+  },
+  "calendar_action_resources": {
+    "message": "Выбрать помещения и ресурсы"
+  },
+  "calendar_action_resources_description": {
+    "message": "Добавить к событию одно помещение и необходимое оборудование."
+  },
+  "calendar_action_loading": {
+    "message": "Проверка доступных действий…"
+  },
+  "calendar_action_error": {
+    "message": "Не удалось загрузить действия для события. Закройте это окно и повторите попытку."
+  },
+  "resource_title": {
+    "message": "Помещения и ресурсы Nextcloud"
+  },
+  "resource_instructions": {
+    "message": "Выберите не более одного помещения и любое количество ресурсов."
+  },
+  "resource_search": {
+    "message": "Поиск"
+  },
+  "resource_rooms": {
+    "message": "Помещения"
+  },
+  "resource_resources": {
+    "message": "Ресурсы"
+  },
+  "resource_room": {
+    "message": "Помещение"
+  },
+  "resource_resource": {
+    "message": "Ресурс"
+  },
+  "resource_details": {
+    "message": "Сведения"
+  },
+  "resource_details_for": {
+    "message": "Сведения о $1"
+  },
+  "resource_empty": {
+    "message": "Для этой учётной записи нет доступных помещений или ресурсов."
+  },
+  "resource_no_matches": {
+    "message": "Подходящих помещений или ресурсов не найдено."
+  },
+  "resource_not_provided": {
+    "message": "Не указано"
+  },
+  "resource_loading": {
+    "message": "Загрузка помещений и ресурсов…"
+  },
+  "resource_applying": {
+    "message": "Применение выбора…"
+  },
+  "resource_load_failed": {
+    "message": "Не удалось загрузить помещения и ресурсы. Повторите попытку."
+  },
+  "resource_apply_failed": {
+    "message": "Не удалось полностью применить выбор. Перед сохранением проверьте участников и место проведения события."
+  },
+  "resource_context_expired": {
+    "message": "Контекст этого события больше недоступен. Закройте это окно и снова откройте выбор из события."
+  },
+  "resource_selection_changed": {
+    "message": "Участники или место проведения события изменились. Перезагрузите выбор перед применением."
+  },
+  "resource_invalid_selection": {
+    "message": "Выберите не более одного помещения."
+  },
+  "resource_readonly": {
+    "message": "Изменять помещения и ресурсы можно только в редактируемом событии, организатором которого вы являетесь."
+  },
+  "resource_connection_changed": {
+    "message": "Учётная запись Nextcloud изменилась. Закройте это окно и снова откройте выбор."
+  },
+  "resource_apply": {
+    "message": "Применить"
+  },
+  "resource_retry": {
+    "message": "Перезагрузить"
+  },
+  "resource_selected_count": {
+    "message": "Выбрано: $1"
+  },
+  "resource_name": {
+    "message": "Название"
+  },
+  "resource_type": {
+    "message": "Тип"
+  },
+  "resource_email": {
+    "message": "Адрес календаря"
+  },
+  "resource_room_type": {
+    "message": "Категория помещения"
+  },
+  "resource_resource_type": {
+    "message": "Категория ресурса"
+  },
+  "resource_capacity": {
+    "message": "Вместимость"
+  },
+  "resource_building": {
+    "message": "Здание"
+  },
+  "resource_address": {
+    "message": "Адрес"
+  },
+  "resource_floor": {
+    "message": "Этаж"
+  },
+  "resource_room_number": {
+    "message": "Номер помещения"
+  },
+  "resource_features": {
+    "message": "Оснащение"
+  },
+  "resource_location": {
+    "message": "Место проведения"
+  },
   "options_remove_credentials_button": {
     "message": "Удалить сохранённые учётные данные"
   },
@@ -1474,5 +1606,98 @@
   },
   "vfs_setup_failed": {
     "message": "Не удалось предоставить доступ."
+  },
+  "resource_group_by": {
+    "message": "Группировать по"
+  },
+  "resource_grouping_none": {
+    "message": "Без группировки"
+  },
+  "resource_filter_any": {
+    "message": "Любое"
+  },
+  "resource_minimum_capacity": {
+    "message": "Минимальная вместимость"
+  },
+  "resource_expand_all": {
+    "message": "Развернуть всё"
+  },
+  "resource_collapse_all": {
+    "message": "Свернуть всё"
+  },
+  "resource_expand_group": {
+    "message": "Развернуть группу"
+  },
+  "resource_collapse_group": {
+    "message": "Свернуть группу"
+  },
+  "resource_features_filter": {
+    "message": "Оборудование (требуется всё)"
+  },
+  "resource_features_selected": {
+    "message": "Выбрано: $1"
+  },
+  "resource_clear_filters": {
+    "message": "Сбросить фильтры"
+  },
+  "resource_without_information": {
+    "message": "Не указано"
+  },
+  "resource_only_available": {
+    "message": "Только доступные"
+  },
+  "resource_availability": {
+    "message": "Доступность"
+  },
+  "resource_available": {
+    "message": "Доступно"
+  },
+  "resource_busy": {
+    "message": "Занято"
+  },
+  "resource_unknown": {
+    "message": "Неизвестно"
+  },
+  "resource_checking": {
+    "message": "Проверка…"
+  },
+  "resource_show_availability": {
+    "message": "Показать доступность"
+  },
+  "resource_appointment_interval": {
+    "message": "Событие"
+  },
+  "resource_availability_title": {
+    "message": "Доступность ресурса"
+  },
+  "resource_date": {
+    "message": "Дата"
+  },
+  "resource_previous_day": {
+    "message": "Предыдущий день"
+  },
+  "resource_next_day": {
+    "message": "Следующий день"
+  },
+  "resource_time_zone": {
+    "message": "Часовой пояс"
+  },
+  "resource_today": {
+    "message": "Сегодня"
+  },
+  "resource_availability_failed": {
+    "message": "Не удалось получить сведения о доступности."
+  },
+  "resource_grouping_save_failed": {
+    "message": "Не удалось сохранить настройку группировки."
+  },
+  "resource_close": {
+    "message": "Закрыть"
+  },
+  "resource_previous_month": {
+    "message": "Предыдущий месяц"
+  },
+  "resource_next_month": {
+    "message": "Следующий месяц"
   }
 }

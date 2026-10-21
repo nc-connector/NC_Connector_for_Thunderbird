@@ -1,4 +1,136 @@
 {
+  "calendar_action_title": {
+    "message": "NC Connector"
+  },
+  "calendar_action_tooltip": {
+    "message": "Nextcloud Talk, ruimtes en middelen voor deze afspraak"
+  },
+  "calendar_action_talk": {
+    "message": "Talk-vergadering maken"
+  },
+  "calendar_action_talk_description": {
+    "message": "Een onlinevergadering met Nextcloud Talk toevoegen."
+  },
+  "calendar_action_resources": {
+    "message": "Ruimtes en middelen selecteren"
+  },
+  "calendar_action_resources_description": {
+    "message": "Een ruimte en de benodigde apparatuur aan de afspraak toevoegen."
+  },
+  "calendar_action_loading": {
+    "message": "Beschikbare acties controleren…"
+  },
+  "calendar_action_error": {
+    "message": "De acties voor deze afspraak konden niet worden geladen. Sluit dit venster en probeer het opnieuw."
+  },
+  "resource_title": {
+    "message": "Nextcloud-ruimtes en -middelen"
+  },
+  "resource_instructions": {
+    "message": "Selecteer maximaal één ruimte en zoveel middelen als nodig."
+  },
+  "resource_search": {
+    "message": "Zoeken"
+  },
+  "resource_rooms": {
+    "message": "Ruimtes"
+  },
+  "resource_resources": {
+    "message": "Middelen"
+  },
+  "resource_room": {
+    "message": "Ruimte"
+  },
+  "resource_resource": {
+    "message": "Middel"
+  },
+  "resource_details": {
+    "message": "Details"
+  },
+  "resource_details_for": {
+    "message": "Details van $1"
+  },
+  "resource_empty": {
+    "message": "Er zijn geen ruimtes of middelen beschikbaar voor dit account."
+  },
+  "resource_no_matches": {
+    "message": "Geen overeenkomende ruimtes of middelen."
+  },
+  "resource_not_provided": {
+    "message": "Niet opgegeven"
+  },
+  "resource_loading": {
+    "message": "Ruimtes en middelen laden…"
+  },
+  "resource_applying": {
+    "message": "Selectie toepassen…"
+  },
+  "resource_load_failed": {
+    "message": "De ruimtes en middelen konden niet worden geladen. Probeer het opnieuw."
+  },
+  "resource_apply_failed": {
+    "message": "De selectie kon niet volledig worden toegepast. Controleer de deelnemers en de locatie van de afspraak voordat u opslaat."
+  },
+  "resource_context_expired": {
+    "message": "De context van deze afspraak is niet meer beschikbaar. Sluit dit venster en open de keuzelijst opnieuw vanuit de afspraak."
+  },
+  "resource_selection_changed": {
+    "message": "De deelnemers of de locatie van de afspraak zijn gewijzigd. Laad de selectie opnieuw voordat u deze toepast."
+  },
+  "resource_invalid_selection": {
+    "message": "Selecteer maximaal één ruimte."
+  },
+  "resource_readonly": {
+    "message": "Ruimtes en middelen kunnen alleen worden gewijzigd in een bewerkbare afspraak die u organiseert."
+  },
+  "resource_connection_changed": {
+    "message": "Het Nextcloud-account is gewijzigd. Sluit dit venster en open de keuzelijst opnieuw."
+  },
+  "resource_apply": {
+    "message": "Toepassen"
+  },
+  "resource_retry": {
+    "message": "Opnieuw laden"
+  },
+  "resource_selected_count": {
+    "message": "Geselecteerd: $1"
+  },
+  "resource_name": {
+    "message": "Naam"
+  },
+  "resource_type": {
+    "message": "Type"
+  },
+  "resource_email": {
+    "message": "Kalenderadres"
+  },
+  "resource_room_type": {
+    "message": "Ruimtecategorie"
+  },
+  "resource_resource_type": {
+    "message": "Middelcategorie"
+  },
+  "resource_capacity": {
+    "message": "Capaciteit"
+  },
+  "resource_building": {
+    "message": "Gebouw"
+  },
+  "resource_address": {
+    "message": "Adres"
+  },
+  "resource_floor": {
+    "message": "Verdieping"
+  },
+  "resource_room_number": {
+    "message": "Ruimtenummer"
+  },
+  "resource_features": {
+    "message": "Voorzieningen"
+  },
+  "resource_location": {
+    "message": "Locatie"
+  },
   "options_remove_credentials_button": {
     "message": "Opgeslagen inloggegevens verwijderen"
   },
@@ -1474,5 +1606,98 @@
   },
   "vfs_setup_failed": {
     "message": "Toegang kon niet worden verleend."
+  },
+  "resource_group_by": {
+    "message": "Groeperen op"
+  },
+  "resource_grouping_none": {
+    "message": "Geen"
+  },
+  "resource_filter_any": {
+    "message": "Alle"
+  },
+  "resource_minimum_capacity": {
+    "message": "Minimale capaciteit"
+  },
+  "resource_expand_all": {
+    "message": "Alles uitklappen"
+  },
+  "resource_collapse_all": {
+    "message": "Alles inklappen"
+  },
+  "resource_expand_group": {
+    "message": "Groep uitklappen"
+  },
+  "resource_collapse_group": {
+    "message": "Groep inklappen"
+  },
+  "resource_features_filter": {
+    "message": "Voorzieningen (alle vereist)"
+  },
+  "resource_features_selected": {
+    "message": "$1 geselecteerd"
+  },
+  "resource_clear_filters": {
+    "message": "Filters herstellen"
+  },
+  "resource_without_information": {
+    "message": "Niet opgegeven"
+  },
+  "resource_only_available": {
+    "message": "Alleen beschikbaar"
+  },
+  "resource_availability": {
+    "message": "Beschikbaarheid"
+  },
+  "resource_available": {
+    "message": "Beschikbaar"
+  },
+  "resource_busy": {
+    "message": "Bezet"
+  },
+  "resource_unknown": {
+    "message": "Onbekend"
+  },
+  "resource_checking": {
+    "message": "Wordt gecontroleerd"
+  },
+  "resource_show_availability": {
+    "message": "Beschikbaarheid tonen"
+  },
+  "resource_appointment_interval": {
+    "message": "Afspraak"
+  },
+  "resource_availability_title": {
+    "message": "Beschikbaarheid van resource"
+  },
+  "resource_date": {
+    "message": "Datum"
+  },
+  "resource_previous_day": {
+    "message": "Vorige dag"
+  },
+  "resource_next_day": {
+    "message": "Volgende dag"
+  },
+  "resource_time_zone": {
+    "message": "Tijdzone"
+  },
+  "resource_today": {
+    "message": "Vandaag"
+  },
+  "resource_availability_failed": {
+    "message": "De beschikbaarheid kon niet worden opgehaald."
+  },
+  "resource_grouping_save_failed": {
+    "message": "De groeperingsvoorkeur kon niet worden opgeslagen."
+  },
+  "resource_close": {
+    "message": "Sluiten"
+  },
+  "resource_previous_month": {
+    "message": "Vorige maand"
+  },
+  "resource_next_month": {
+    "message": "Volgende maand"
   }
 }

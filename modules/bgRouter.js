@@ -338,13 +338,38 @@ browser.runtime.onMessage.addListener((msg, sender) => {
       return messageError("talk:getSystemAddressbookStatus", error);
     }
   }
-  if (msg.type === "talk:claimPopupContext"){
+  if (msg.type === "talk:claimPopupContext" || msg.type === "calendar:claimPopupContext"){
     const contextId = consumeLatestCalendarWizardPopupContext();
     if (!contextId){
       return { ok:false, error: bgI18n("talk_error_context_id_missing") };
     }
     L("talk popup context claimed", { contextId });
     return { ok:true, contextId };
+  }
+  if (["calendar:actionState", "resource:list", "resource:apply", "resource:interval", "resource:availability",
+    "resource:cancel", "resource:close"].includes(msg.type)){
+    try{
+      const page = new URL(sender?.url || "");
+      page.search = "";
+      page.hash = "";
+      const allowedPages = ["ui/calendarAction.html", "ui/calendarResources.html"].map((path) => browser.runtime.getURL(path));
+      if (sender.id !== browser.runtime.id || !allowedPages.includes(page.href)){
+        throw new Error("Unexpected resource picker sender");
+      }
+      const contextId = readMessageContextId(msg);
+      if (msg.type === "calendar:actionState") return await NCCalendarResources.actionState(contextId);
+      if (msg.type === "resource:list") return await NCCalendarResources.list(contextId);
+      if (msg.type === "resource:interval") return await NCCalendarResources.currentInterval(contextId, msg.selectionToken);
+      if (msg.type === "resource:availability") return await NCCalendarResources.availability(
+        contextId, msg.selectionToken, msg.requestId, msg.email, msg.date);
+      if (msg.type === "resource:cancel") return NCCalendarResources.cancel(contextId, msg.selectionToken, msg.lane, msg.requestId);
+      if (msg.type === "resource:close") return NCCalendarResources.close(contextId, msg.selectionToken);
+      return await NCCalendarResources.apply(contextId, msg.selectionToken, msg.selectedEmails);
+    }catch(error){
+      return NCCalendarResources.errorResponse(error,
+        msg.type === "resource:apply" ? "resource_apply_failed"
+          : msg.type === "resource:availability" ? "resource_availability_failed" : "resource_load_failed");
+    }
   }
   if (msg.type === "talk:initDialog"){
     try{

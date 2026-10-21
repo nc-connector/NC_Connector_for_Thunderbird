@@ -29,7 +29,6 @@ It complements:
 - [7. Calendar integration (Talk button in event editor)](#7-calendar-integration-talk-button-in-event-editor)
   - [7.1 Why a custom toolbar experiment exists](#71-why-a-custom-toolbar-experiment-exists)
   - [7.1.1 Why the Talk popup is assigned with `setPopup()`](#711-why-the-talk-popup-is-assigned-with-setpopup)
-  - [7.1.2 Room and resource directory](#712-room-and-resource-directory)
   - [7.2 Editor variants: dialog vs tab](#72-editor-variants-dialog-vs-tab)
   - [7.2.1 Why manual tab/window correlation exists today](#721-why-manual-tabwindow-correlation-exists-today)
   - [7.3 `ncCalToolbar` API surface (editor-targeted)](#73-nccaltoolbar-api-surface-editor-targeted)
@@ -166,7 +165,7 @@ Key files you’ll touch most:
 - `ui/debugForwarder.js` — shared runtime debug forwarding/helper layer for Talk, Sharing, and attachment prompt UIs
 - `ui/addressbookUi.js` — shared system-addressbook tooltip lock helper used by Talk wizard + options
 - `ui/passwordPolicyClient.js` — shared password-policy fetch/generate helper for both wizards
-- `ui/wizardPolicyUi.js` — shared policy warning, lock, default, and password-policy UI helpers for Talk/Sharing/options
+- `ui/wizardPolicyUi.js` — shared policy warning, lock, default, and password-policy UI helpers for Talk/Sharing/resources/options
 - `options.html` + `options.js` — settings UI
 
 Compose lifecycle state stays with its focused owner module. Attachment prompts
@@ -325,15 +324,16 @@ notice. `openInNormalThunderbirdTab()` targets a normal Thunderbird window,
 not the compose or calendar dialog. Unmanaged actions retain
 `ui/connectionRequired.html` with explicit Settings navigation through
 `connection:openOptions`.
+
 Configured manual actions use `NCPolicyState.getActionAccessState()` before
-opening functional UI. Manual Share reads it through `NCPolicyRuntime.getActionAccess()`.
+opening functional UI. Share reads it through `NCPolicyRuntime.getActionAccess()`;
+the calendar menu receives the same result for Talk and seat-required resources.
 A refusal opens the existing `connectionRequired.html` notice in readable red,
 with the localized reason and OK. Its query text is display-only and never
 resumes an action. Authentication refusal alone offers explicit sign-in.
 Unmanaged Share/Talk retain local use without an additional backend request.
 Automatic attachment flows retain their noninteractive guards. Entry checks do
-not replace the checks before upload or Talk mutations.
-
+not replace the checks before upload, Talk mutations, or resource list/apply.
 
 `NCManagedSetup` tracks `AuthMode` presence and validity separately. Strings are
 trimmed and compared case-insensitively against `LoginFlow` and `Manual`. Any
@@ -484,59 +484,166 @@ Current implementation:
 - `experiments/calendar/**` remains untouched and is used only for persisted item monitoring.
 - Business logic remains in background runtime modules (`modules/bgState.js`, `modules/bgComposeAttachments.js`, `modules/bgComposeShareCleanup.js`, `modules/bgComposeShareInsert.js`, `modules/bgComposePasswordRecipients.js`, `modules/bgComposePasswordMail.js`, `modules/bgComposePasswordDelivery.js`, `modules/bgComposePasswordDispatch.js`, `modules/passwordPolicyRuntime.js`, `modules/bgCompose.js`, `modules/bgCalendarLifecycle.js`, `modules/bgCalendar.js`, `modules/bgRouter.js`, `modules/talkAddressbook.js`, `modules/talkcore.js`).
 
-Share and Talk use the same 48px `.nc-brand-header` from `ui/tbTheme.css`.
-Keep header and logo geometry there, not in page-specific styles.
+### 7.1.1 Why the calendar popup is assigned with `setPopup()`
 
-### 7.1.1 Why the Talk popup is assigned with `setPopup()`
+The **NC Connector** action menu uses the native `calendar_item_action` popup so Thunderbird owns the foreground popup behavior in event editors. Its two actions open the existing Talk wizard or the room/resource picker within that popup.
 
-The Talk wizard uses the native `calendar_item_action` popup so Thunderbird owns the foreground popup behavior in event editors.
-
-The popup is assigned at runtime with `browser.calendarItemAction.setPopup({ popup: "ui/talkDialog.html" })` instead of `calendar_item_action.default_popup` in `manifest.json`.
+The popup is assigned at runtime with `browser.calendarItemAction.setPopup({ popup: "ui/calendarAction.html" })` instead of `calendar_item_action.default_popup` in `manifest.json`.
 
 Reason:
 - The bundled upstream calendar experiment processes manifest popup paths itself.
 - In packaged Thunderbird builds, the manifest value can already be expanded to a `moz-extension://...` URL before that code runs.
 - Resolving that value again can produce a broken nested URL like `moz-extension://.../moz-extension://.../ui/talkDialog.html`.
 
-This is a compatibility workaround, not the preferred long-term shape. If upstream fixes the popup path handling so already expanded URLs are not resolved again, move the Talk popup back to `calendar_item_action.default_popup` in `manifest.json` and remove the runtime `setPopup()` setup.
+If upstream fixes the popup path handling so already expanded URLs are not resolved again, move the action popup back to `calendar_item_action.default_popup` in `manifest.json` and remove the runtime `setPopup()` setup.
 
-The Talk context is prepared by `ncCalToolbar.onClicked` and claimed by the popup through `talk:claimPopupContext`.
+The editor context is prepared by `ncCalToolbar.onClicked` and claimed through `calendar:claimPopupContext`. Navigation passes its ID to the selected wizard. The Talk wizard still accepts `talk:claimPopupContext` for its existing entry path. Talk address-book loading happens in Talk, not when opening the shared menu.
 
-### 7.1.2 Room and resource directory
+Equal refusal reasons for both actions open one notice instead of duplicated
+disabled cards. Mixed access keeps both entries invocable: permitted actions
+open their wizard, refused actions explain the block. Unusable resource editor
+contexts remain disabled. The notice retains a 420px intrinsic native-panel
+width; no window resize or editor mutation is involved.
 
-`modules/calendarResourceDirectory.js` performs fresh, authenticated Depth-0
-`principal-property-search` REPORTs against `principals/calendar-rooms/` and
-`principals/calendar-resources/`. Nextcloud applies group visibility. Parsing accepts
-successful DAV propstats, validates collection-local principal hrefs and resource
-types, and bounds response size. It uses the existing connection, host-permission,
+The action menu and resource picker use intrinsic CSS widths (420px / 780px).
+Do not cap their bodies with `max-width:100vw`: the native `ViewPopup` measures
+preferred content size from an initially narrow viewport, so a viewport-relative
+cap can collapse the popup to a thin strip. Thunderbird applies its own 800px by
+600px popup limits. Do not use the standalone-window `popupSizing.js` helper here;
+its window resizing calls can target the parent editor instead of the panel.
+The UI regression check guards this sizing rule in addition to interactions.
+
+Share, Talk, the calendar action menu, and the resource picker use the same
+48px `.nc-brand-header` from `ui/tbTheme.css`. Keep header and logo geometry there,
+not in page-specific styles. The resource details determine the two-column row
+height; size containment keeps a long catalog independently scrollable. Details
+have no height cap or nested scrollbar. Unusually long metadata or enlarged text
+can scroll the main content within the native panel limit, with actions outside it.
+
+### 7.1.2 Room and resource picker (`ifb-pro`)
+
+`modules/calendarResourceDirectory.js` performs fresh, authenticated Depth-1
+PROPFINDs against `principals/calendar-rooms/` and `principals/calendar-resources/`,
+matching Calendar 6.6.2's `fetchRoomAndResourcePrincipals()` and cdav-library 2.7.0's
+`findPrincipalsInCollection()` with `enableCalDAVResourceBooking: true`. The requested
+principal properties match that upstream list; there is no email search predicate or
+second discovery path. Nextcloud and its resource provider decide which principals
+the account can see. Collection-root responses are excluded after URL validation.
+Vehicles retain the ROOM/RESOURCE classification returned by their collection.
+Parsing accepts successful DAV propstats, validates collection-local principal hrefs,
+and bounds response size. Failed optional propstats are ignored, and the last
+successfully parsed response for a principal path replaces earlier responses.
+Malformed or untrusted individual principals are skipped with a data-free debug
+reason; malformed root XML, transport, and authentication failures still reject the
+read. A missing or unusable Sabre `email-address` does not hide a trusted principal.
+It uses the existing connection, host-permission,
 version, timeout, and authentication-pause mechanisms. There is no new credential store.
 
-`NCCalendarResourceDirectory.list()` returns room/resource metadata without creating
-bookings or changing calendar items. It is loaded through the existing ordered MV2
-background scripts; no picker entry point is added here. The directory regression
-check runs through `npm run test:review`.
+Protocol references: [Calendar 6.6.2 principal store](https://github.com/nextcloud/calendar/blob/v6.6.2/src/store/principals.js),
+[cdav-library 2.7.0 collection lookup](https://github.com/nextcloud/cdav-library/blob/v2.7.0/src/index.js),
+and [principal properties](https://github.com/nextcloud/cdav-library/blob/v2.7.0/src/models/principal.js).
 
-`modules/calendarResourceAvailability.js` provides a read-only CalDAV scheduling
-service for one picker session. It discovers the configured account's scheduling
-outbox and sends `VFREEBUSY` requests in batches of at most 50 recipients, with no
-more than two requests in flight. The existing ICAL parser reads responses;
-missing, invalid, or incomplete responses remain unknown instead of free.
+`modules/bgCalendarResources.js` owns access and selection. Both list and apply use
+the existing managed-access and valid active Seat checks, without a license-mode
+filter. The catalog and opaque selection token are short-lived UI state, bound to
+the editor and account revision in a WeakMap. A background restart invalidates
+the picker; no remote mutation needs recovery. The runtime router accepts these
+messages only from the extension's action and resource pages.
 
-The service reuses the directory's bounded DAV XML/response readers and the core
-authentication, timeout, and host-permission guards. Discovery targets must stay
-within the configured DAV installation. Requests use explicit account credentials
-without ambient authentication or redirects, and recheck the current account
-before and after network access. Returned data contains anonymous busy intervals,
-not event content or organizers.
+The catalog uses principal paths for UI row/detail identity and carries a
+`selectable` flag. Missing/invalid addresses and all aliases of a duplicate email
+remain visible with Unknown availability, but cannot be selected or queried. The
+existing session map contains only usable, unique scheduling addresses; forged
+apply/day requests cannot select the other rows or remove their existing attendees.
+There is no synthesized address or fallback to `calendar-user-address-set` for
+resource recipients. Scheduling-originator discovery still uses that address set.
 
-Successful intervals are cached for two minutes within the session. Requests
-covering a smaller interval can reuse that cache; older replies cannot replace
-newer query results. Cancellation aborts queued and active requests, and session
-disposal clears its cache. No availability data is persisted. This service adds
-no picker UI or router entry point; callers must enforce editor/token and Seat
-access separately. `tools/calendar-resource-availability-check.js` covers
-transport boundaries, response validation, batching, cache, and cancellation in
-the normal review aggregate.
+The list response carries the already-checked policy status to the picker.
+`wizardPolicyUi` renders its warning with the same texts and banner styles as
+Share and Talk. Grace and license-sync warnings do not disable permitted actions;
+list/apply checks still decide access. Reloads and failures hide the previous
+warning. The banner flows above search without adding a scrollbar to the details.
+
+The picker allows one catalog room plus multiple resources. It displays all
+supplied room/building metadata and copies a selected room's location. The
+background parses ATTENDEE properties with vendored ICAL, preserves unrelated
+participants and response parameters, and adds `CUTYPE=ROOM` or `RESOURCE`.
+The bridge compares the original attendees, location, and calendar before writing
+the live draft and rolls back all requested fields together on failure. Native
+attendee UI rendering provides resource icons. Read-only calendars, tasks, and
+received invitations cannot be edited through this picker.
+
+The picker does not save/send, book remotely, change invitation notification
+preferences, or read booking organizers. Thunderbird's native calendar provider
+still owns scheduling and the editor's Free/Busy integration.
+
+The picker reads availability directly through CalDAV scheduling. The existing
+editor bridge supplies a read-only `availabilityInterval` in UTC milliseconds
+with the event time zone; all-day end dates are exclusive. The background validates
+the picker token, account, editor, and Seat before and after availability requests.
+Before validating that zone with `Intl`, the picker reuses Talk's
+`NCIcalContract.resolveRuntimeTimeZone()` Windows-to-IANA mapping. Native UTC
+start/end values stay unchanged. The normalized zone is shared by interval
+display, polling, and day queries (including DST boundaries). Unsupported custom
+zones remain unknown; there is no machine-zone fallback or editor write.
+`calendarResourceAvailability.js` discovers the configured account's scheduling
+outbox and sends batched `VFREEBUSY` requests, with at most two requests in flight.
+Only successful, complete responses become free/busy; missing or invalid responses
+stay unknown. A malformed or duplicate scheduling-recipient envelope makes only
+its identifiable affected addresses unknown; healthy recipients in the same batch
+retain their results. Unidentified/foreign envelopes are ignored without expanding
+the requested recipient set. Same-origin DAV URLs, bounded XML, explicit authentication, and the
+existing timeout/connection gates apply. No event title or organizer is retained.
+Successful anonymous intervals are cached for two minutes within the picker session.
+
+Search, building, floor, minimum capacity, all-selected equipment, and available-only
+filters intersect without clearing selection. Reset clears those filters only.
+Search shares the grouping row, between the grouping selector and expand-all
+button, instead of occupying a full-width row above the filters.
+Grouping uses DAV metadata and never changes ROOM/RESOURCE types. Building grouping
+nests floors; other modes retain the room/resource sections. The grouping choice and
+expand-all state are saved in `storage.local` as `calendarResourceGrouping` and
+`calendarResourceGroupsExpanded`; individual group toggles are session-local.
+The calendar button and keyboard-accessible context menu open a single-resource
+day view inside the same native popup, not another window. Day queries use the
+event time zone. Its date button opens an in-document month grid anchored below
+the button; no native `input[type=date]` panel can fall behind the parent popup.
+Month browsing does not request availability until a date is selected. Arrow keys,
+Home/End and Page Up/Down navigate dates; Escape closes the month grid first and
+returns focus to the button. Focus changes within the calendar use `relatedTarget`;
+the transient `body` focus during a pointer click must not dismiss the selected day.
+The same day-query path handles date selection and
+day navigation, including 23/25-hour days. Results display only anonymous occupied
+periods and the current appointment outline. Independent interval/day cancellation
+lanes and UI revisions reject outdated results. Closing or expiring the picker
+disposes requests and cache; no persistent workflow needs recovery.
+
+Runtime, directory, availability, editor, and UI regressions run through
+`npm run test:review`; live CalDAV scheduling and native-popup behavior on the
+supported Thunderbird versions still require verification before release.
+
+Resource-picker API and dependency review:
+
+| Interface | Parameters / result used | Permission |
+| --- | --- | --- |
+| `messengerUtilities.parseMailboxString` | One string; Promise of mailbox objects, read `email` / `name` | None; no mailing-list expansion |
+| `runtime.sendMessage` / `onMessage` | Serializable message and response; validate `sender.id` and page URL | None |
+| `runtime.getURL` / `runtime.id` | Local page URL and own extension ID | None |
+| `storage.onChanged` | Changes object and area name; invalidate account-bound selections | Existing `storage` |
+| `storage.local.get` / `set` | Two picker layout preferences; Promise-based reads/writes | Existing `storage` |
+| `i18n.getMessage` | Locale key and substitutions; string | None |
+| `calendarItemAction.setPopup` | `{popup}` through the bundled upstream schema | Existing experiment |
+| `ncCalToolbar.getCurrent` / `updateCurrent` | Editor-ID snapshot and stale-checked draft update; local schema | Existing editor bridge |
+| ICAL 2.2.1, `vendor/ical.js` | Existing UMD `ICAL` global through ordered background scripts; component parser and property writer | No new dependency |
+
+Standard API references: [runtime](https://webextension-api.thunderbird.net/en/mv3/runtime.html),
+[storage](https://webextension-api.thunderbird.net/en/mv3/storage.html),
+[i18n](https://webextension-api.thunderbird.net/en/mv3/i18n.html), and
+[mailbox parsing](https://webextension-api.thunderbird.net/en/mv3/messengerUtilities.html).
+The native attendee integration was checked against installed ESR 153.4 source
+(`attendees`, `organizer`, `getCurrentCalendar`, `updateAttendeeInterface`,
+`CalAttendee`, calendar ACL and invitation checks). Live compatibility checks on
+the supported ESR versions remain part of the release checklist.
 
 ### 7.2 Editor variants: dialog vs tab
 
@@ -576,31 +683,12 @@ Entry / UI:
 
 Snapshot:
 - `browser.ncCalToolbar.getCurrent({ editorId, returnFormat: "ical" })`
-- Resource snapshots expose serialized live `attendees` and `canEditAttendees`.
-- The read-only `availabilityInterval` contains UTC start/end milliseconds and
-  the event time zone. All-day and floating events use the calendar default zone;
-  the all-day end is exclusive. Reading it does not change live date objects or
-  the existing Talk timestamp fields.
 
 Write-back:
 - `browser.ncCalToolbar.updateCurrent({ editorId, fields, properties, attendees, returnFormat: "ical" })`
+- Resource snapshots expose serialized live `attendees` and `canEditAttendees`.
 - Attendee updates carry `before`/`after` arrays plus `beforeLocation` and
   `beforeCalendarId` for stale-selection detection.
-- The bridge rejects attendee writes for tasks, read-only calendars, received
-  invitations, and missing organizer identities. Unchanged attendees keep their
-  native objects and parameters; additions use `ROOM` or `RESOURCE`. An existing
-  ordinary attendee can change only its `CUTYPE` to one of those resource types.
-- Field, property, attendee, and organizer writes roll back together if writing
-  or the final snapshot fails. Native attendee UI rendering supplies the icons.
-  The bridge neither saves/sends the draft nor changes notification preferences.
-
-`tools/calendar-resource-editor-check.js` exercises dialog/tab targeting,
-stale-state and permission guards, native attendee parsing, rollback, and live
-intervals including exclusive all-day ends across DST boundaries. It runs through
-`npm run test:review`. The native attendee integration was checked against
-installed ESR 153.4 source (`attendees`, `organizer`, `getCurrentCalendar`,
-`updateAttendeeInterface`, `CalAttendee`, calendar ACL and invitation checks).
-Live compatibility checks on supported ESR versions remain required before release.
 
 Lifecycle:
 - `browser.ncCalToolbar.onTrackedEditorClosed` with action payload (`discarded`, `superseded`)

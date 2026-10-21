@@ -52,6 +52,16 @@ Aus einem Thunderbird-Termin kann direkt ein Nextcloud Talk-Raum erstellt werden
 
 NC Connector kann Terminänderungen mit dem Raum abgleichen und eingeladene Teilnehmer übernehmen. Verworfene, nicht gespeicherte Termine räumen ihre Talk-Räume wieder auf. Das Löschen gespeicherter Termine entfernt Räume nur nach ausdrücklicher Aktivierung.
 
+## Räume und Ressourcen (`ifb-pro`)
+
+Der **NC Connector**-Button im Terminfenster bietet **Talk-Besprechung erstellen** und
+**Räume und Ressourcen auswählen**. Der Picker zeigt Räume und Geräte mit den
+hinterlegten Details, erlaubt einen Raum plus mehrere Ressourcen und übernimmt
+Teilnehmer sowie den Raumort in den geöffneten Termin. Voraussetzung ist ein gültig
+zugeteilter Seat. Buchung und natives Free/Busy laufen über Thunderbirds
+Nextcloud-CalDAV-Kalender; die Übernahme speichert oder versendet den Termin nicht.
+Weitere Hinweise stehen in der [Betriebsanleitung](docs/ADMIN.md#rooms-and-resources-ifb-pro).
+
 ## Signaturen
 
 Mit Backend kann Thunderbird zentral verwaltete E-Mail-Signaturen einfügen oder lokale Signaturen entfernen, wenn die Policy das vorgibt. NC Connector greift nur die Signatur der passenden Absenderidentität an. Signaturen anderer Konten bleiben unberührt.

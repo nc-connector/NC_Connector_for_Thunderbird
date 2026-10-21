@@ -13,6 +13,7 @@
   - Runtime consumers:
     - `modules/bgCalendar.js`
     - `modules/bgCalendarLifecycle.js`
+    - `modules/bgCalendarResources.js`
     - `modules/talkAddressbook.js`
 
 ## DOMPurify

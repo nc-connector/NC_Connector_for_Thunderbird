@@ -1,0 +1,27 @@
+/* Copyright (c) 2026 Bastian Kleinschmidt. Licensed under AGPL-3.0; see LICENSE.txt. */
+*{box-sizing:border-box;}
+[hidden]{display:none !important;}
+body{margin:0;background:var(--tb-bg);color:var(--tb-text);font:message-box;}
+button,input{font:inherit;}
+button{min-height:34px;padding:6px 14px;border:1px solid var(--tb-border-strong);border-radius:var(--tb-control-radius);background:var(--tb-surface);color:var(--tb-text);cursor:pointer;}
+button:hover:not(:disabled){background:var(--tb-surface-2);}
+button:disabled{opacity:.55;cursor:default;}
+button:focus-visible,input:focus-visible{outline:2px solid var(--tb-text);outline-offset:2px;}
+/* Native action panels measure preferred content width from an initially narrow
+   viewport. A viewport-relative max-width would collapse that measurement. */
+.calendar-menu{width:420px;}
+.calendar-actions{padding:18px;display:grid;gap:14px;}
+.action-card{width:100%;min-height:84px;text-align:start;display:flex;align-items:center;gap:14px;padding:14px;font-weight:600;}
+.action-card svg{width:30px;height:30px;flex:none;fill:none;stroke:currentColor;stroke-width:1.6;stroke-linecap:round;stroke-linejoin:round;}
+.action-copy{display:grid;gap:4px;min-width:0;line-height:1.4;overflow-wrap:anywhere;}
+.action-description{font-weight:400;color:var(--tb-muted);}
+.action-notice{margin:8px 4px 0;line-height:1.45;color:var(--tb-error);overflow-wrap:anywhere;}
+.calendar-status{margin:0;line-height:1.45;color:var(--tb-muted);overflow-wrap:anywhere;}
+.calendar-status:empty{display:none;}
+.calendar-status.is-error{color:var(--tb-error);}
+.calendar-footer{display:flex;flex-wrap:wrap;gap:10px;justify-content:flex-end;padding:12px 18px;border-top:1px solid var(--tb-border);}
+.calendar-footer .primary{background:#006fae;border-color:#006fae;color:#fff;}
+.calendar-footer .primary:hover:not(:disabled){background:#005e94;}
+@media (forced-colors:active){
+  .calendar-footer .primary{border-color:ButtonText;}
+}

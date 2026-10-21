@@ -52,6 +52,15 @@ A Thunderbird event can create a Nextcloud Talk room directly. The dialog suppor
 
 NC Connector can sync event changes back to the room and add invited attendees. Discarded unsaved events clean up their Talk rooms again. Deleting saved events removes rooms only when this behavior is explicitly enabled.
 
+## Rooms and resources (`ifb-pro`)
+
+The event editor's **NC Connector** button offers **Create a Talk meeting** and **Select rooms and resources**.
+The resource picker shows rooms and equipment with their supplied metadata, allows
+one room plus multiple resources, and applies attendees and the room location to
+the open event. A valid assigned Seat is required. Use Thunderbird's Nextcloud
+CalDAV calendar for booking and native Free/Busy; applying the selection does not
+save or send the event. See the [operating notes](docs/ADMIN.md#rooms-and-resources-ifb-pro).
+
 ## Signatures
 
 With the backend, Thunderbird can insert managed email signatures or remove local signatures when the policy says so. NC Connector only touches the signature for the matching sender identity. Signatures from other accounts stay untouched.

@@ -1,4 +1,136 @@
 {
+  "calendar_action_title": {
+    "message": "NC Connector"
+  },
+  "calendar_action_tooltip": {
+    "message": "この予定の Nextcloud Talk、会議室、リソース"
+  },
+  "calendar_action_talk": {
+    "message": "Talk 会議を作成"
+  },
+  "calendar_action_talk_description": {
+    "message": "Nextcloud Talk のオンライン会議を追加します。"
+  },
+  "calendar_action_resources": {
+    "message": "会議室とリソースを選択"
+  },
+  "calendar_action_resources_description": {
+    "message": "会議室を1室と必要な備品を予定に追加します。"
+  },
+  "calendar_action_loading": {
+    "message": "利用可能な操作を確認しています…"
+  },
+  "calendar_action_error": {
+    "message": "予定の操作を読み込めませんでした。このウィンドウを閉じて、もう一度お試しください。"
+  },
+  "resource_title": {
+    "message": "Nextcloud の会議室とリソース"
+  },
+  "resource_instructions": {
+    "message": "会議室は最大 1 つ、リソースは必要な数だけ選択してください。"
+  },
+  "resource_search": {
+    "message": "検索"
+  },
+  "resource_rooms": {
+    "message": "会議室"
+  },
+  "resource_resources": {
+    "message": "リソース"
+  },
+  "resource_room": {
+    "message": "会議室"
+  },
+  "resource_resource": {
+    "message": "リソース"
+  },
+  "resource_details": {
+    "message": "詳細"
+  },
+  "resource_details_for": {
+    "message": "$1 の詳細"
+  },
+  "resource_empty": {
+    "message": "このアカウントで利用可能な会議室やリソースはありません。"
+  },
+  "resource_no_matches": {
+    "message": "一致する会議室やリソースはありません。"
+  },
+  "resource_not_provided": {
+    "message": "未登録"
+  },
+  "resource_loading": {
+    "message": "会議室とリソースを読み込んでいます…"
+  },
+  "resource_applying": {
+    "message": "選択内容を適用しています…"
+  },
+  "resource_load_failed": {
+    "message": "会議室とリソースを読み込めませんでした。もう一度お試しください。"
+  },
+  "resource_apply_failed": {
+    "message": "選択内容をすべて適用できませんでした。保存する前に、予定の参加者と場所を確認してください。"
+  },
+  "resource_context_expired": {
+    "message": "この予定のコンテキストは利用できなくなりました。このウィンドウを閉じて、予定から選択画面を開き直してください。"
+  },
+  "resource_selection_changed": {
+    "message": "予定の参加者または場所が変更されました。適用する前に選択内容を再読み込みしてください。"
+  },
+  "resource_invalid_selection": {
+    "message": "会議室は最大 1 つ選択してください。"
+  },
+  "resource_readonly": {
+    "message": "会議室とリソースを変更できるのは、自分が主催する編集可能な予定のみです。"
+  },
+  "resource_connection_changed": {
+    "message": "Nextcloud アカウントが変更されました。このウィンドウを閉じて、選択画面を開き直してください。"
+  },
+  "resource_apply": {
+    "message": "適用"
+  },
+  "resource_retry": {
+    "message": "再読み込み"
+  },
+  "resource_selected_count": {
+    "message": "選択済み: $1"
+  },
+  "resource_name": {
+    "message": "名前"
+  },
+  "resource_type": {
+    "message": "種類"
+  },
+  "resource_email": {
+    "message": "カレンダーアドレス"
+  },
+  "resource_room_type": {
+    "message": "会議室の分類"
+  },
+  "resource_resource_type": {
+    "message": "リソースの分類"
+  },
+  "resource_capacity": {
+    "message": "定員"
+  },
+  "resource_building": {
+    "message": "建物"
+  },
+  "resource_address": {
+    "message": "住所"
+  },
+  "resource_floor": {
+    "message": "階"
+  },
+  "resource_room_number": {
+    "message": "部屋番号"
+  },
+  "resource_features": {
+    "message": "設備"
+  },
+  "resource_location": {
+    "message": "場所"
+  },
   "options_remove_credentials_button": {
     "message": "保存済みの認証情報を削除"
   },
@@ -1474,5 +1606,98 @@
   },
   "vfs_setup_failed": {
     "message": "アクセスを許可できませんでした。"
+  },
+  "resource_group_by": {
+    "message": "グループ化"
+  },
+  "resource_grouping_none": {
+    "message": "なし"
+  },
+  "resource_filter_any": {
+    "message": "指定なし"
+  },
+  "resource_minimum_capacity": {
+    "message": "最小収容人数"
+  },
+  "resource_expand_all": {
+    "message": "すべて展開"
+  },
+  "resource_collapse_all": {
+    "message": "すべて折りたたむ"
+  },
+  "resource_expand_group": {
+    "message": "グループを展開"
+  },
+  "resource_collapse_group": {
+    "message": "グループを折りたたむ"
+  },
+  "resource_features_filter": {
+    "message": "設備（すべて必須）"
+  },
+  "resource_features_selected": {
+    "message": "$1 件選択済み"
+  },
+  "resource_clear_filters": {
+    "message": "フィルターをリセット"
+  },
+  "resource_without_information": {
+    "message": "未設定"
+  },
+  "resource_only_available": {
+    "message": "利用可能のみ"
+  },
+  "resource_availability": {
+    "message": "空き状況"
+  },
+  "resource_available": {
+    "message": "利用可能"
+  },
+  "resource_busy": {
+    "message": "使用中"
+  },
+  "resource_unknown": {
+    "message": "不明"
+  },
+  "resource_checking": {
+    "message": "確認中"
+  },
+  "resource_show_availability": {
+    "message": "空き状況を表示"
+  },
+  "resource_appointment_interval": {
+    "message": "予定"
+  },
+  "resource_availability_title": {
+    "message": "リソースの空き状況"
+  },
+  "resource_date": {
+    "message": "日付"
+  },
+  "resource_previous_day": {
+    "message": "前日"
+  },
+  "resource_next_day": {
+    "message": "翌日"
+  },
+  "resource_time_zone": {
+    "message": "タイムゾーン"
+  },
+  "resource_today": {
+    "message": "今日"
+  },
+  "resource_availability_failed": {
+    "message": "空き状況を取得できませんでした。"
+  },
+  "resource_grouping_save_failed": {
+    "message": "グループ化の設定を保存できませんでした。"
+  },
+  "resource_close": {
+    "message": "閉じる"
+  },
+  "resource_previous_month": {
+    "message": "前の月"
+  },
+  "resource_next_month": {
+    "message": "次の月"
   }
 }

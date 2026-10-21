@@ -1,4 +1,136 @@
 {
+  "calendar_action_title": {
+    "message": "NC Connector"
+  },
+  "calendar_action_tooltip": {
+    "message": "Nextcloud Talk, sale e risorse per questo evento"
+  },
+  "calendar_action_talk": {
+    "message": "Crea una riunione Talk"
+  },
+  "calendar_action_talk_description": {
+    "message": "Aggiungi una riunione online con Nextcloud Talk."
+  },
+  "calendar_action_resources": {
+    "message": "Seleziona sale e risorse"
+  },
+  "calendar_action_resources_description": {
+    "message": "Aggiungi una sala e le attrezzature necessarie all’evento."
+  },
+  "calendar_action_loading": {
+    "message": "Verifica delle azioni disponibili…"
+  },
+  "calendar_action_error": {
+    "message": "Impossibile caricare le azioni dell’evento. Chiudi questa finestra e riprova."
+  },
+  "resource_title": {
+    "message": "Sale e risorse Nextcloud"
+  },
+  "resource_instructions": {
+    "message": "Seleziona al massimo una sala e tutte le risorse necessarie."
+  },
+  "resource_search": {
+    "message": "Cerca"
+  },
+  "resource_rooms": {
+    "message": "Sale"
+  },
+  "resource_resources": {
+    "message": "Risorse"
+  },
+  "resource_room": {
+    "message": "Sala"
+  },
+  "resource_resource": {
+    "message": "Risorsa"
+  },
+  "resource_details": {
+    "message": "Dettagli"
+  },
+  "resource_details_for": {
+    "message": "Dettagli di $1"
+  },
+  "resource_empty": {
+    "message": "Non sono disponibili sale o risorse per questo account."
+  },
+  "resource_no_matches": {
+    "message": "Nessuna sala o risorsa corrispondente."
+  },
+  "resource_not_provided": {
+    "message": "Non specificato"
+  },
+  "resource_loading": {
+    "message": "Caricamento di sale e risorse…"
+  },
+  "resource_applying": {
+    "message": "Applicazione della selezione…"
+  },
+  "resource_load_failed": {
+    "message": "Impossibile caricare le sale e le risorse. Riprova."
+  },
+  "resource_apply_failed": {
+    "message": "Non è stato possibile applicare tutta la selezione. Controlla i partecipanti e il luogo dell’evento prima di salvare."
+  },
+  "resource_context_expired": {
+    "message": "Il contesto di questo evento non è più disponibile. Chiudi questa finestra e riapri il selettore dall’evento."
+  },
+  "resource_selection_changed": {
+    "message": "I partecipanti o il luogo dell’evento sono cambiati. Ricarica la selezione prima di applicarla."
+  },
+  "resource_invalid_selection": {
+    "message": "Seleziona al massimo una sala."
+  },
+  "resource_readonly": {
+    "message": "Le sale e le risorse possono essere modificate solo in un evento modificabile organizzato da te."
+  },
+  "resource_connection_changed": {
+    "message": "L’account Nextcloud è cambiato. Chiudi questa finestra e riapri il selettore."
+  },
+  "resource_apply": {
+    "message": "Applica"
+  },
+  "resource_retry": {
+    "message": "Ricarica"
+  },
+  "resource_selected_count": {
+    "message": "Selezionati: $1"
+  },
+  "resource_name": {
+    "message": "Nome"
+  },
+  "resource_type": {
+    "message": "Tipo"
+  },
+  "resource_email": {
+    "message": "Indirizzo calendario"
+  },
+  "resource_room_type": {
+    "message": "Categoria della sala"
+  },
+  "resource_resource_type": {
+    "message": "Categoria della risorsa"
+  },
+  "resource_capacity": {
+    "message": "Capienza"
+  },
+  "resource_building": {
+    "message": "Edificio"
+  },
+  "resource_address": {
+    "message": "Indirizzo"
+  },
+  "resource_floor": {
+    "message": "Piano"
+  },
+  "resource_room_number": {
+    "message": "Numero della sala"
+  },
+  "resource_features": {
+    "message": "Dotazioni"
+  },
+  "resource_location": {
+    "message": "Luogo"
+  },
   "options_remove_credentials_button": {
     "message": "Rimuovi le credenziali salvate"
   },
@@ -1474,5 +1606,98 @@
   },
   "vfs_setup_failed": {
     "message": "Impossibile concedere l’accesso."
+  },
+  "resource_group_by": {
+    "message": "Raggruppa per"
+  },
+  "resource_grouping_none": {
+    "message": "Nessuno"
+  },
+  "resource_filter_any": {
+    "message": "Qualsiasi"
+  },
+  "resource_minimum_capacity": {
+    "message": "Capienza minima"
+  },
+  "resource_expand_all": {
+    "message": "Espandi tutto"
+  },
+  "resource_collapse_all": {
+    "message": "Comprimi tutto"
+  },
+  "resource_expand_group": {
+    "message": "Espandi gruppo"
+  },
+  "resource_collapse_group": {
+    "message": "Comprimi gruppo"
+  },
+  "resource_features_filter": {
+    "message": "Dotazioni (tutte richieste)"
+  },
+  "resource_features_selected": {
+    "message": "$1 selezionate"
+  },
+  "resource_clear_filters": {
+    "message": "Reimposta filtri"
+  },
+  "resource_without_information": {
+    "message": "Non specificato"
+  },
+  "resource_only_available": {
+    "message": "Solo disponibili"
+  },
+  "resource_availability": {
+    "message": "Disponibilità"
+  },
+  "resource_available": {
+    "message": "Disponibile"
+  },
+  "resource_busy": {
+    "message": "Occupato"
+  },
+  "resource_unknown": {
+    "message": "Sconosciuto"
+  },
+  "resource_checking": {
+    "message": "Verifica in corso"
+  },
+  "resource_show_availability": {
+    "message": "Mostra disponibilità"
+  },
+  "resource_appointment_interval": {
+    "message": "Appuntamento"
+  },
+  "resource_availability_title": {
+    "message": "Disponibilità della risorsa"
+  },
+  "resource_date": {
+    "message": "Data"
+  },
+  "resource_previous_day": {
+    "message": "Giorno precedente"
+  },
+  "resource_next_day": {
+    "message": "Giorno successivo"
+  },
+  "resource_time_zone": {
+    "message": "Fuso orario"
+  },
+  "resource_today": {
+    "message": "Oggi"
+  },
+  "resource_availability_failed": {
+    "message": "Impossibile recuperare la disponibilità."
+  },
+  "resource_grouping_save_failed": {
+    "message": "Impossibile salvare la preferenza di raggruppamento."
+  },
+  "resource_close": {
+    "message": "Chiudi"
+  },
+  "resource_previous_month": {
+    "message": "Mese precedente"
+  },
+  "resource_next_month": {
+    "message": "Mese successivo"
   }
 }

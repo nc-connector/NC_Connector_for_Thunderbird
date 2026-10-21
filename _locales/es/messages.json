@@ -1,4 +1,136 @@
 {
+  "calendar_action_title": {
+    "message": "NC Connector"
+  },
+  "calendar_action_tooltip": {
+    "message": "Nextcloud Talk, salas y recursos para este evento"
+  },
+  "calendar_action_talk": {
+    "message": "Crear una reunión en Talk"
+  },
+  "calendar_action_talk_description": {
+    "message": "Añadir una reunión en línea con Nextcloud Talk."
+  },
+  "calendar_action_resources": {
+    "message": "Seleccionar salas y recursos"
+  },
+  "calendar_action_resources_description": {
+    "message": "Añadir una sala y el equipamiento necesario al evento."
+  },
+  "calendar_action_loading": {
+    "message": "Comprobando las acciones disponibles…"
+  },
+  "calendar_action_error": {
+    "message": "No se pudieron cargar las acciones del evento. Cierre esta ventana e inténtelo de nuevo."
+  },
+  "resource_title": {
+    "message": "Salas y recursos de Nextcloud"
+  },
+  "resource_instructions": {
+    "message": "Seleccione como máximo una sala y tantos recursos como necesite."
+  },
+  "resource_search": {
+    "message": "Buscar"
+  },
+  "resource_rooms": {
+    "message": "Salas"
+  },
+  "resource_resources": {
+    "message": "Recursos"
+  },
+  "resource_room": {
+    "message": "Sala"
+  },
+  "resource_resource": {
+    "message": "Recurso"
+  },
+  "resource_details": {
+    "message": "Detalles"
+  },
+  "resource_details_for": {
+    "message": "Detalles de $1"
+  },
+  "resource_empty": {
+    "message": "No hay salas ni recursos disponibles para esta cuenta."
+  },
+  "resource_no_matches": {
+    "message": "No hay salas ni recursos que coincidan."
+  },
+  "resource_not_provided": {
+    "message": "No especificado"
+  },
+  "resource_loading": {
+    "message": "Cargando salas y recursos…"
+  },
+  "resource_applying": {
+    "message": "Aplicando la selección…"
+  },
+  "resource_load_failed": {
+    "message": "No se pudieron cargar las salas y los recursos. Inténtelo de nuevo."
+  },
+  "resource_apply_failed": {
+    "message": "No se pudo aplicar toda la selección. Compruebe los asistentes y la ubicación del evento antes de guardar."
+  },
+  "resource_context_expired": {
+    "message": "El contexto de este evento ya no está disponible. Cierre esta ventana y vuelva a abrir el selector desde el evento."
+  },
+  "resource_selection_changed": {
+    "message": "Los asistentes o la ubicación del evento han cambiado. Vuelva a cargar la selección antes de aplicarla."
+  },
+  "resource_invalid_selection": {
+    "message": "Seleccione como máximo una sala."
+  },
+  "resource_readonly": {
+    "message": "Solo se pueden modificar salas y recursos en un evento editable que usted organice."
+  },
+  "resource_connection_changed": {
+    "message": "La cuenta de Nextcloud ha cambiado. Cierre esta ventana y vuelva a abrir el selector."
+  },
+  "resource_apply": {
+    "message": "Aplicar"
+  },
+  "resource_retry": {
+    "message": "Volver a cargar"
+  },
+  "resource_selected_count": {
+    "message": "Seleccionados: $1"
+  },
+  "resource_name": {
+    "message": "Nombre"
+  },
+  "resource_type": {
+    "message": "Tipo"
+  },
+  "resource_email": {
+    "message": "Dirección de calendario"
+  },
+  "resource_room_type": {
+    "message": "Categoría de sala"
+  },
+  "resource_resource_type": {
+    "message": "Categoría de recurso"
+  },
+  "resource_capacity": {
+    "message": "Capacidad"
+  },
+  "resource_building": {
+    "message": "Edificio"
+  },
+  "resource_address": {
+    "message": "Dirección"
+  },
+  "resource_floor": {
+    "message": "Planta"
+  },
+  "resource_room_number": {
+    "message": "Número de sala"
+  },
+  "resource_features": {
+    "message": "Equipamiento"
+  },
+  "resource_location": {
+    "message": "Ubicación"
+  },
   "options_remove_credentials_button": {
     "message": "Eliminar las credenciales guardadas"
   },
@@ -1474,5 +1606,98 @@
   },
   "vfs_setup_failed": {
     "message": "No se pudo conceder el acceso."
+  },
+  "resource_group_by": {
+    "message": "Agrupar por"
+  },
+  "resource_grouping_none": {
+    "message": "Ninguna"
+  },
+  "resource_filter_any": {
+    "message": "Cualquiera"
+  },
+  "resource_minimum_capacity": {
+    "message": "Capacidad mínima"
+  },
+  "resource_expand_all": {
+    "message": "Expandir todo"
+  },
+  "resource_collapse_all": {
+    "message": "Contraer todo"
+  },
+  "resource_expand_group": {
+    "message": "Expandir grupo"
+  },
+  "resource_collapse_group": {
+    "message": "Contraer grupo"
+  },
+  "resource_features_filter": {
+    "message": "Equipamiento (todo obligatorio)"
+  },
+  "resource_features_selected": {
+    "message": "$1 seleccionados"
+  },
+  "resource_clear_filters": {
+    "message": "Restablecer filtros"
+  },
+  "resource_without_information": {
+    "message": "Sin especificar"
+  },
+  "resource_only_available": {
+    "message": "Solo disponibles"
+  },
+  "resource_availability": {
+    "message": "Disponibilidad"
+  },
+  "resource_available": {
+    "message": "Disponible"
+  },
+  "resource_busy": {
+    "message": "Ocupado"
+  },
+  "resource_unknown": {
+    "message": "Desconocido"
+  },
+  "resource_checking": {
+    "message": "Comprobando…"
+  },
+  "resource_show_availability": {
+    "message": "Mostrar disponibilidad"
+  },
+  "resource_appointment_interval": {
+    "message": "Cita"
+  },
+  "resource_availability_title": {
+    "message": "Disponibilidad del recurso"
+  },
+  "resource_date": {
+    "message": "Fecha"
+  },
+  "resource_previous_day": {
+    "message": "Día anterior"
+  },
+  "resource_next_day": {
+    "message": "Día siguiente"
+  },
+  "resource_time_zone": {
+    "message": "Zona horaria"
+  },
+  "resource_today": {
+    "message": "Hoy"
+  },
+  "resource_availability_failed": {
+    "message": "No se pudo consultar la disponibilidad."
+  },
+  "resource_grouping_save_failed": {
+    "message": "No se pudo guardar la preferencia de agrupación."
+  },
+  "resource_close": {
+    "message": "Cerrar"
+  },
+  "resource_previous_month": {
+    "message": "Mes anterior"
+  },
+  "resource_next_month": {
+    "message": "Mes siguiente"
   }
 }

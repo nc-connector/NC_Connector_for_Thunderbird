@@ -57,7 +57,7 @@ function principal(kind = "ROOM", patch = {}){
     element(DAV, "displayname", kind === "ROOM" ? "Elefantenraum" : "Eule"),
     element(CALDAV, "calendar-user-type", kind),
     element(CALDAV, "calendar-user-address-set", [element(DAV, "href", `mailto:${email}`)]),
-    element(SABRE, "email-address", "unused-fallback@resources.invalid"),
+    element(SABRE, "email-address", email),
     element(NC, "resource-type", "projector"),
     element(NC, "room-type", "meeting-room"),
     element(NC, "room-seating-capacity", "18"),
@@ -92,6 +92,7 @@ function createHarness({ room = multistatus([principal()]), resource = multistat
     return response;
   } });
   harness.context.TextDecoder = TextDecoder;
+  harness.context.L = (...args) => harness.logs.push(args);
   harness.context.setTimeout = (callback, delay) => {
     const timer = setTimeout(callback, delay);
     timer.unref();
@@ -108,21 +109,53 @@ function createHarness({ room = multistatus([principal()]), resource = multistat
 }
 
 async function checkDiscovery(){
-  const harness = createHarness();
+  const roomsRoot = "/subfolder/remote.php/dav/principals/calendar-rooms/";
+  const resourcesRoot = "/subfolder/remote.php/dav/principals/calendar-resources/";
+  const harness = createHarness({
+    room: multistatus([
+      principal("ROOM", { href: roomsRoot, properties: [] }),
+      principal("ROOM", { href: roomsRoot + "mini/", email: "mini@resources.invalid" }),
+      principal("ROOM", { href: roomsRoot + "mini-copy/", email: "mini-copy@resources.invalid" }),
+      principal("ROOM", { href: roomsRoot + "vehicle/", email: "car@resources.invalid", properties: [
+        element(DAV, "displayname", "Mini vehicle"), element(CALDAV, "calendar-user-type", "ROOM"),
+        element(SABRE, "email-address", "car@resources.invalid"), element(NC, "resource-type", "car")
+      ] })
+    ]),
+    resource: multistatus([
+      principal("RESOURCE", { href: ACCOUNT.baseUrl + "/remote.php/dav/principals/calendar-resources", properties: [] }),
+      principal("RESOURCE"),
+      principal("RESOURCE", { href: resourcesRoot + "native-vehicle/", properties: [
+        element(DAV, "displayname", "Native vehicle"), element(CALDAV, "calendar-user-type", "RESOURCE"),
+        element(SABRE, "email-address", "native-car@resources.invalid"), element(NC, "resource-type", "vehicle")
+      ] })
+    ])
+  });
   const resources = await harness.directory.list(ACCOUNT);
-  check(resources.length === 2, "Rooms and resources are both discovered");
+  check(resources.length === 5, "Collection roots are excluded while both Mini rooms, equipment, and vehicles are discovered");
   const room = resources[0];
-  check(room.displayName === "Elefantenraum" && room.email === "room@resources.invalid" && room.kind === "ROOM", "Room identity is preserved");
+  check(room.displayName === "Elefantenraum" && room.email === "mini@resources.invalid" && room.kind === "ROOM", "Room identity is preserved");
   check(room.roomType === "meeting-room" && room.resourceType === "projector" && room.capacity === 18, "Room classification and capacity are preserved");
   check(room.buildingName === "Headquarters" && room.buildingAddress === "Main Street 3"
     && room.floor === "2" && room.roomNumber === "5" && room.features === "projector, TV", "Room metadata is preserved");
   check(room.location === "5, 2, Main Street 3", "Location matches Nextcloud without a duplicate building name");
-  check(resources[1].kind === "RESOURCE", "Equipment remains a resource");
-  check(harness.requests.length === 2, "Each discovery uses exactly two fresh REPORTs");
+  check(resources[1].email === "mini-copy@resources.invalid", "Both Mini principals are listed without an email search predicate");
+  check(resources[2].kind === "ROOM" && resources[2].resourceType === "car", "RoomVox vehicles retain the server ROOM classification");
+  check(resources[3].kind === "RESOURCE", "Equipment remains a resource");
+  check(resources[4].kind === "RESOURCE" && resources[4].resourceType === "vehicle", "Native vehicles retain the server RESOURCE classification");
+  check(harness.requests.length === 2, "Each discovery uses exactly two fresh PROPFINDs");
+  const calendarProperties = [
+    "d:displayname", "c:calendar-user-type", "c:calendar-user-address-set", "d:principal-URL", "d:alternate-URI-set", "s:email-address", "n:language",
+    "n:resource-type", "n:resource-vehicle-type", "n:resource-vehicle-make", "n:resource-vehicle-model", "n:resource-vehicle-is-electric",
+    "n:resource-vehicle-range", "n:resource-vehicle-seating-capacity", "n:resource-contact-person", "n:resource-contact-person-vcard", "n:room-type",
+    "n:room-seating-capacity", "n:room-building-name", "n:room-building-address", "n:room-building-story", "n:room-building-room-number", "n:room-features"
+  ];
   for (const request of harness.requests){
     const options = request.options;
-    check(options.method === "REPORT" && options.headers.Depth === "0", "Discovery uses permission-filtered depth-zero REPORT");
-    check(options.body.includes("<s:email-address/>") && options.body.includes("<d:match>@</d:match>"), "Email property search activates server group filtering");
+    check(options.method === "PROPFIND" && options.headers.Depth === "1", "Discovery matches Calendar 6.6.2 depth-one collection enumeration");
+    const properties = Array.from(options.body.matchAll(/<([a-z]:[a-zA-Z-]+)\/>/g), (match) => match[1]);
+    check(properties.join("\n") === calendarProperties.join("\n"), "Requested properties exactly match cdav 2.7.0 resource-booking principal properties");
+    check(options.body.startsWith('<d:propfind xmlns:d="DAV:"') && options.body.endsWith("</d:prop></d:propfind>")
+      && !options.body.includes("property-search") && !options.body.includes("<d:match>"), "Collection request has no principal search filter");
     check(options.credentials === "omit" && options.redirect === "error" && options.cache === "no-store", "Requests isolate credentials and reject redirects and stale cache");
     check(request.url.startsWith(ACCOUNT.baseUrl + "/remote.php/dav/principals/"), "Subfolder base URL is retained");
     check(options.signal && options.headers.Authorization, "Shared auth and deadline are passed to fetch");
@@ -130,28 +163,16 @@ async function checkDiscovery(){
   await harness.directory.list(ACCOUNT);
   check(harness.requests.length === 4, "Reopening never returns a cached directory");
   check(!JSON.stringify(resources).includes(ACCOUNT.appPass), "DTO carries no credentials");
+  const restricted = createHarness({ room: multistatus([principal("ROOM", { href: roomsRoot, properties: [] })]), resource: multistatus() });
+  check((await restricted.directory.list(ACCOUNT)).length === 0, "Principals omitted by the server remain absent without a second search path");
 }
 
 async function checkInvalidResponses(){
-  const failures = [
+  for (const [label, room] of [
     ["malformed XML", "<broken>"],
     ["DTD", '<!DOCTYPE x [<!ENTITY x "expanded">]><d:multistatus/>'],
-    ["non-DAV root", documentXml(element("wrong", "multistatus"))],
-    ["unexpected multistatus child", multistatus([element(DAV, "collection")])],
-    ["foreign principal", multistatus([principal("ROOM", { href: "https://other.example.test/subfolder/remote.php/dav/principals/calendar-rooms/one/" })])],
-    ["escaped collection", multistatus([principal("ROOM", { href: "/remote.php/dav/principals/calendar-rooms/one/" })])],
-    ["nested principal", multistatus([principal("ROOM", { href: "/subfolder/remote.php/dav/principals/calendar-rooms/one/two/" })])],
-    ["encoded separator", multistatus([principal("ROOM", { href: "/subfolder/remote.php/dav/principals/calendar-rooms/one%2Ftwo/" })])],
-    ["encoded traversal", multistatus([principal("ROOM", { href: "/subfolder/remote.php/dav/principals/calendar-rooms/%252e%252e/" })])],
-    ["duplicate principal", multistatus([principal(), principal()])],
-    ["duplicate href", multistatus([principal("ROOM", { extra: [element(DAV, "href", "/other")] })])],
-    ["wrong principal kind", multistatus([principal("RESOURCE", { href: "/subfolder/remote.php/dav/principals/calendar-rooms/one/" })])],
-    ["duplicate property", multistatus([principal("ROOM", { properties: [element(CALDAV, "calendar-user-type", "ROOM"), element(CALDAV, "calendar-user-type", "ROOM")] })])],
-    ["rejected properties", multistatus([principal("ROOM", { propstats: [propstat([], "HTTP/1.1 403 Forbidden")] })])],
-    ["missing successful properties", multistatus([principal("ROOM", { propstats: [propstat([], "HTTP/1.1 404 Not Found")] })])],
-    ["mailbox injection", multistatus([principal("ROOM", { email: "room@example.test,person@example.test", properties: [element(CALDAV, "calendar-user-type", "ROOM"), element(SABRE, "email-address", "room@example.test,person@example.test")] })])]
-  ];
-  for (const [label, room] of failures){
+    ["non-DAV root", documentXml(element("wrong", "multistatus"))]
+  ]){
     const harness = createHarness({ room });
     const error = await expectRejected(() => harness.directory.list(ACCOUNT), label);
     check(error.ncResourceCode === "resource_load_failed", `${label} fails without returning a partial directory`);
@@ -159,19 +180,95 @@ async function checkInvalidResponses(){
     const logs = collectLogText(harness.logs);
     check(!logs.includes(ACCOUNT.appPass) && !logs.includes("<d:"), "Errors do not log credentials or XML bodies");
   }
+  for (const [label, bad] of [
+    ["unexpected multistatus child", element(DAV, "collection")],
+    ...[
+      ["foreign principal", "https://other.example.test/subfolder/remote.php/dav/principals/calendar-rooms/one/"],
+      ["foreign collection root", "https://other.example.test/subfolder/remote.php/dav/principals/calendar-rooms/"],
+      ["credential-bearing collection root", "https://intruder@cloud.example.test/subfolder/remote.php/dav/principals/calendar-rooms/"],
+      ["query-bearing collection root", "/subfolder/remote.php/dav/principals/calendar-rooms/?query=1"],
+      ["fragment-bearing collection root", "/subfolder/remote.php/dav/principals/calendar-rooms/#fragment"],
+      ["escaped collection", "/remote.php/dav/principals/calendar-rooms/one/"],
+      ["nested principal", "/subfolder/remote.php/dav/principals/calendar-rooms/one/two/"],
+      ["normalized collection traversal", "/subfolder/remote.php/dav/principals/calendar-rooms/one/../"],
+      ["encoded separator", "/subfolder/remote.php/dav/principals/calendar-rooms/one%2Ftwo/"],
+      ["encoded traversal", "/subfolder/remote.php/dav/principals/calendar-rooms/%252e%252e/"]
+    ].map(([label, href]) => [label, principal("ROOM", { href })]),
+    ["duplicate href", principal("ROOM", { extra: [element(DAV, "href", "/other")] })],
+    ["rejected individual response", principal("ROOM", { extra: [element(DAV, "status", "HTTP/1.1 403 Forbidden")] })],
+    ["malformed successful propstat", principal("ROOM", { propstats: [element(DAV, "propstat", [element(DAV, "status", "HTTP/1.1 200 OK")])] })]
+  ]){
+    const good = principal("ROOM", { href: "/subfolder/remote.php/dav/principals/calendar-rooms/good/", email: "good@resources.invalid" });
+    const harness = createHarness({ room: multistatus([good, bad]) });
+    const resources = await harness.directory.list(ACCOUNT);
+    check(resources.length === 2 && resources[0].email === "good@resources.invalid" && resources[0].selectable,
+      `${label}: one bad entry cannot hide an unrelated room or the resource collection`);
+    check(harness.requests.length === 2 && collectLogText(harness.logs).includes("resource directory principal skipped"),
+      `${label}: rejected record is diagnosed and discovery continues`);
+    check((await createHarness({ room: multistatus([bad]), resource: multistatus() }).directory.list(ACCOUNT)).length === 0,
+      `${label}: an all-rejected catalog remains a usable empty list`);
+  }
   const duplicate = createHarness({ resource: multistatus([principal("RESOURCE", { email: "ROOM@resources.invalid" })]) });
-  await expectRejected(() => duplicate.directory.list(ACCOUNT), "Duplicate email across rooms and resources");
-  assertions++;
+  const aliases = await duplicate.directory.list(ACCOUNT);
+  check(aliases.length === 2 && aliases.every((entry) => !entry.selectable), "Duplicate addresses remain visible but cannot become ambiguous recipients");
+  const repeated = await createHarness({ room: multistatus([principal(), principal()]), resource: multistatus() }).directory.list(ACCOUNT);
+  check(repeated.length === 1 && repeated[0].selectable, "A repeated principal href is deduplicated without becoming an address alias");
+  const recovered = await createHarness({ room: multistatus([principal("ROOM", { properties: [] }), principal()]),
+    resource: multistatus() }).directory.list(ACCOUNT);
+  check(recovered.length === 1 && recovered[0].selectable && recovered[0].email === "room@resources.invalid",
+    "A valid later response replaces an incomplete response for the same principal path");
 }
 
 async function checkOptionalMetadata(){
+  const automatic = await createHarness({ room: multistatus([principal("ROOM", { properties: [
+    element(DAV, "displayname", "Mini automatic address"),
+    element(SABRE, "email-address", "mini@roomvox.local")
+  ] })]), resource: multistatus() }).directory.list(ACCOUNT);
+  check(automatic.length === 1 && automatic[0].email === "mini@roomvox.local" && automatic[0].selectable,
+    "A RoomVox automatically generated Sabre address remains selectable without a calendar-user-address-set property");
   const properties = [element(CALDAV, "calendar-user-type", "ROOM"), element(SABRE, "email-address", "ROOM@resources.invalid")];
   const harness = createHarness({ room: multistatus([principal("ROOM", { propstats: [propstat(properties), propstat([element(NC, "room-features")], "HTTP/1.1 404 Not Found")] })]), resource: multistatus() });
   const resources = await harness.directory.list(ACCOUNT);
-  check(resources.length === 1 && resources[0].email === "room@resources.invalid", "Sabre email fallback is normalized");
+  check(resources.length === 1 && resources[0].email === "room@resources.invalid" && resources[0].selectable, "Calendar's Sabre scheduling address is normalized");
   check(resources[0].capacity === null && resources[0].location === "" && resources[0].features === "", "Absent optional fields are not fabricated");
   const empty = createHarness({ room: multistatus(), resource: multistatus() });
   check((await empty.directory.list(ACCOUNT)).length === 0, "Permission-filtered empty collections are a valid result");
+  const roomRoot = "/subfolder/remote.php/dav/principals/calendar-rooms/";
+  const mixed = createHarness({ room: multistatus([
+    principal("ROOM", { href: roomRoot + "good/", properties: [
+      element(DAV, "displayname", "Healthy"), element(CALDAV, "calendar-user-type", "RESOURCE"),
+      element(CALDAV, "calendar-user-address-set", [element(DAV, "href", "mailto:wrong@resources.invalid")]),
+      element(SABRE, "email-address", "RIGHT@resources.invalid"), element(NC, "room-seating-capacity", "12 seats")
+    ] }),
+    principal("ROOM", { href: roomRoot + "missing/", properties: [element(DAV, "displayname", "Missing address")] }),
+    principal("ROOM", { href: roomRoot + "injected/", properties: [element(DAV, "displayname", "Invalid address"),
+      element(SABRE, "email-address", "room@example.test,person@example.test")] }),
+    principal("ROOM", { href: roomRoot + "optional/", propstats: [propstat([
+      element(DAV, "displayname", "Optional rejected"), element(SABRE, "email-address", "optional@resources.invalid")
+    ]), propstat([element(NC, "room-features")], "HTTP/1.1 403 Forbidden")] }),
+    principal("ROOM", { href: roomRoot + "all-optional-missing/", propstats: [propstat([], "HTTP/1.1 404 Not Found")] }),
+    principal("ROOM", { href: roomRoot + "duplicate-property/", properties: [
+      element(SABRE, "email-address", "old@resources.invalid"), element(SABRE, "email-address", "last@resources.invalid")
+    ] })
+  ]), resource: multistatus() });
+  const entries = await mixed.directory.list(ACCOUNT);
+  check(entries.length === 6 && entries[0].email === "right@resources.invalid" && entries[0].kind === "ROOM" && entries[0].capacity === 12,
+    "Calendar Sabre priority, collection classification, and capacity parsing tolerate independent optional metadata");
+  check(entries[1].displayName === "Missing address" && entries[1].email === "" && !entries[1].selectable
+    && entries[2].displayName === "Invalid address" && !entries[2].selectable,
+  "Missing and malformed scheduling addresses retain named, unselectable rows");
+  check(entries[3].selectable && entries[3].features === "" && !entries[4].selectable,
+    "Rejected optional properties never suppress healthy properties or poison other rows");
+  check(entries[5].email === "last@resources.invalid", "Repeated DAV properties use the final value like cdav");
+  const emptyAddresses = await createHarness({ room: multistatus([
+    principal("ROOM", { href: roomRoot + "empty1/", properties: [] }), principal("ROOM", { href: roomRoot + "empty2/", properties: [] })
+  ]), resource: multistatus() }).directory.list(ACCOUNT);
+  check(emptyAddresses.length === 2 && emptyAddresses.every((entry) => entry.email === "" && !entry.selectable),
+    "Multiple addressless rooms remain distinct and do not break an all-unbookable catalog");
+  const parserFailure = createHarness({ room: multistatus([principal()]), resource: multistatus() });
+  parserFailure.context.browser.messengerUtilities.parseMailboxString = async () => { throw new Error("Malformed mailbox"); };
+  const unreadable = await parserFailure.directory.list(ACCOUNT);
+  check(unreadable.length === 1 && !unreadable[0].selectable, "An individual mailbox parser refusal keeps the room visible without a recipient");
 }
 
 async function checkNetworkGuards(){

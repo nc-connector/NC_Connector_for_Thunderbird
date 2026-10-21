@@ -146,6 +146,11 @@ async function testTransportAndCache(){
   const failure = await expectRejected(() => harness.session.query([ROOM], START, END), "Closed session must reject");
   check(failure.name === "AbortError", "Disposed picker is an explicit cancellation");
   check(!collectLogText(harness.logs).includes(ACCOUNT.appPass) && !collectLogText(harness.logs).includes(ROOM.email), "Logs contain neither secrets nor resource identifiers");
+  const automatic = createHarness();
+  const generated = await automatic.session.query([{ email: "mini@roomvox.local", selectable: true, kind: "ROOM" }], START, END);
+  check(generated.length === 1 && generated[0].email === "mini@roomvox.local" && generated[0].state === "free",
+    "RoomVox's generated local-domain address is scheduled without requiring a manually configured email");
+  automatic.session.dispose();
 }
 
 async function testPeriods(){
@@ -226,6 +231,61 @@ async function testRejectedData(){
   const mixed = await partial.session.query([ROOM, { email: "missing@resources.invalid" }], START, END);
   check(mixed[0].state === "free" && mixed[1].state === "unknown", "Missing recipient does not invalidate a separate complete response");
   partial.session.dispose();
+}
+
+async function testIsolatedRecipients(){
+  const middle = "middle@resources.invalid";
+  const last = "last@resources.invalid";
+  const href = (email) => element(DAV, "href", `mailto:${email}`);
+  const middleRecipient = () => element(CALDAV, "recipient", [href(middle)]);
+  for (const malformed of [
+    element(CALDAV, "response", [element(CALDAV, "recipient", [href(middle), href(middle)])]),
+    element(CALDAV, "response", [middleRecipient(), middleRecipient()]),
+    element("wrong", "response", [middleRecipient()]),
+    recipient(middle, calendar(middle)),
+    element(CALDAV, "response", [middleRecipient(), element(CALDAV, "request-status", "2.0;Success"),
+      element(CALDAV, "request-status", "2.0;Success"), element(CALDAV, "calendar-data", calendar(middle))])
+  ]){
+    const test = createHarness({ post: () => response(schedule([
+      recipient(ROOM.email, calendar(ROOM.email)), recipient(middle, calendar(middle)), malformed, recipient(last, calendar(last))
+    ])) });
+    const values = await test.session.query([ROOM, { email: middle }, { email: last }], START, END);
+    check(values[0].state === "free" && values[1].state === "unknown" && values[2].state === "free",
+      "Malformed or ambiguous recipient envelopes invalidate only their affected room, preserving healthy batch responses");
+    test.session.dispose();
+  }
+  for (const malformed of [
+    element(CALDAV, "response", [element(CALDAV, "request-status", "2.0;Success")]),
+    recipient("foreign@resources.invalid", calendar(middle)),
+    element(CALDAV, "response", [element(CALDAV, "recipient", [element(DAV, "href", "mailto:bad,address@example.test")])])
+  ]){
+    const test = createHarness({ post: () => response(schedule([
+      recipient(ROOM.email, calendar(ROOM.email)), malformed, recipient(last, calendar(last))
+    ])) });
+    const values = await test.session.query([ROOM, { email: middle }, { email: last }], START, END);
+    check(values[0].state === "free" && values[1].state === "unknown" && values[2].state === "free",
+      "Unidentified or foreign envelopes do not suppress unrelated requested recipients");
+    test.session.dispose();
+  }
+  const ambiguous = createHarness({ post: () => response(schedule([
+    recipient(ROOM.email, calendar(ROOM.email)),
+    element(CALDAV, "response", [element(CALDAV, "recipient", [href(ROOM.email), href(middle)])]),
+    recipient(last, calendar(last))
+  ])) });
+  const affected = await ambiguous.session.query([ROOM, { email: middle }, { email: last }], START, END);
+  check(affected[0].state === "unknown" && affected[1].state === "unknown" && affected[2].state === "free",
+    "A recipient envelope naming multiple requested addresses invalidates all its candidates but not unrelated results");
+  ambiguous.session.dispose();
+  const inputs = createHarness();
+  const values = await inputs.session.query([ROOM, { email: "" }, { email: "bad,address@example.test" },
+    { email: "alias@resources.invalid", selectable: false }, null], START, END);
+  check(values.length === 1 && values[0].state === "free" && inputs.posts[0].emails.join() === ROOM.email,
+    "Malformed and explicitly disabled addresses never enter the scheduling batch or suppress a healthy query");
+  inputs.session.dispose();
+  const empty = createHarness();
+  check((await empty.session.query([{ email: "" }, { email: "alias@resources.invalid", selectable: false }], START, END)).length === 0
+    && empty.requests.length === 0, "An all-unbookable query needs no scheduling discovery or POST");
+  empty.session.dispose();
 }
 
 async function testDiscoverySafety(){
@@ -350,6 +410,7 @@ async function testConcurrencyAndCancellation(){
   await testTransportAndCache();
   await testPeriods();
   await testRejectedData();
+  await testIsolatedRecipients();
   await testDiscoverySafety();
   await testConcurrencyAndCancellation();
   console.log(`Calendar resource availability: ${assertions} assertions passed`);

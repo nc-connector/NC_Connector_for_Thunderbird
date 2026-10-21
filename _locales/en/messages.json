@@ -1,4 +1,136 @@
 {
+  "calendar_action_title": {
+    "message": "NC Connector"
+  },
+  "calendar_action_tooltip": {
+    "message": "Nextcloud Talk, rooms and resources for this event"
+  },
+  "calendar_action_talk": {
+    "message": "Create a Talk meeting"
+  },
+  "calendar_action_talk_description": {
+    "message": "Add an online meeting with Nextcloud Talk."
+  },
+  "calendar_action_resources": {
+    "message": "Select rooms and resources"
+  },
+  "calendar_action_resources_description": {
+    "message": "Add a room and the required equipment to the event."
+  },
+  "calendar_action_loading": {
+    "message": "Checking available actions…"
+  },
+  "calendar_action_error": {
+    "message": "The event actions could not be loaded. Close this window and try again."
+  },
+  "resource_title": {
+    "message": "Nextcloud rooms and resources"
+  },
+  "resource_instructions": {
+    "message": "Select at most one room and any number of resources."
+  },
+  "resource_search": {
+    "message": "Search"
+  },
+  "resource_rooms": {
+    "message": "Rooms"
+  },
+  "resource_resources": {
+    "message": "Resources"
+  },
+  "resource_room": {
+    "message": "Room"
+  },
+  "resource_resource": {
+    "message": "Resource"
+  },
+  "resource_details": {
+    "message": "Details"
+  },
+  "resource_details_for": {
+    "message": "Details for $1"
+  },
+  "resource_empty": {
+    "message": "No rooms or resources are available for this account."
+  },
+  "resource_no_matches": {
+    "message": "No matching rooms or resources."
+  },
+  "resource_not_provided": {
+    "message": "Not provided"
+  },
+  "resource_loading": {
+    "message": "Loading rooms and resources…"
+  },
+  "resource_applying": {
+    "message": "Applying selection…"
+  },
+  "resource_load_failed": {
+    "message": "Rooms and resources could not be loaded. Please try again."
+  },
+  "resource_apply_failed": {
+    "message": "The selection could not be fully applied. Check the event's attendees and location before saving."
+  },
+  "resource_context_expired": {
+    "message": "This event context is no longer available. Close this window and open the picker again from the event."
+  },
+  "resource_selection_changed": {
+    "message": "The event's attendees or location have changed. Reload the selection before applying it."
+  },
+  "resource_invalid_selection": {
+    "message": "Select no more than one room."
+  },
+  "resource_readonly": {
+    "message": "Rooms and resources can only be changed in an editable event that you organize."
+  },
+  "resource_connection_changed": {
+    "message": "The Nextcloud account has changed. Close this window and open the picker again."
+  },
+  "resource_apply": {
+    "message": "Apply"
+  },
+  "resource_retry": {
+    "message": "Reload"
+  },
+  "resource_selected_count": {
+    "message": "Selected: $1"
+  },
+  "resource_name": {
+    "message": "Name"
+  },
+  "resource_type": {
+    "message": "Type"
+  },
+  "resource_email": {
+    "message": "Calendar address"
+  },
+  "resource_room_type": {
+    "message": "Room category"
+  },
+  "resource_resource_type": {
+    "message": "Resource category"
+  },
+  "resource_capacity": {
+    "message": "Capacity"
+  },
+  "resource_building": {
+    "message": "Building"
+  },
+  "resource_address": {
+    "message": "Address"
+  },
+  "resource_floor": {
+    "message": "Floor"
+  },
+  "resource_room_number": {
+    "message": "Room number"
+  },
+  "resource_features": {
+    "message": "Equipment"
+  },
+  "resource_location": {
+    "message": "Location"
+  },
   "options_remove_credentials_button": {
     "message": "Remove saved credentials"
   },
@@ -1474,5 +1606,98 @@
   },
   "vfs_setup_failed": {
     "message": "Access could not be granted."
+  },
+  "resource_group_by": {
+    "message": "Group by"
+  },
+  "resource_grouping_none": {
+    "message": "None"
+  },
+  "resource_filter_any": {
+    "message": "Any"
+  },
+  "resource_minimum_capacity": {
+    "message": "Minimum capacity"
+  },
+  "resource_expand_all": {
+    "message": "Expand all"
+  },
+  "resource_collapse_all": {
+    "message": "Collapse all"
+  },
+  "resource_expand_group": {
+    "message": "Expand group"
+  },
+  "resource_collapse_group": {
+    "message": "Collapse group"
+  },
+  "resource_features_filter": {
+    "message": "Features (all required)"
+  },
+  "resource_features_selected": {
+    "message": "$1 selected"
+  },
+  "resource_clear_filters": {
+    "message": "Reset filters"
+  },
+  "resource_without_information": {
+    "message": "Not specified"
+  },
+  "resource_only_available": {
+    "message": "Only available"
+  },
+  "resource_availability": {
+    "message": "Availability"
+  },
+  "resource_available": {
+    "message": "Available"
+  },
+  "resource_busy": {
+    "message": "Busy"
+  },
+  "resource_unknown": {
+    "message": "Unknown"
+  },
+  "resource_checking": {
+    "message": "Checking…"
+  },
+  "resource_show_availability": {
+    "message": "Show availability"
+  },
+  "resource_appointment_interval": {
+    "message": "Appointment"
+  },
+  "resource_availability_title": {
+    "message": "Resource availability"
+  },
+  "resource_date": {
+    "message": "Date"
+  },
+  "resource_previous_day": {
+    "message": "Previous day"
+  },
+  "resource_next_day": {
+    "message": "Next day"
+  },
+  "resource_time_zone": {
+    "message": "Time zone"
+  },
+  "resource_today": {
+    "message": "Today"
+  },
+  "resource_availability_failed": {
+    "message": "Availability could not be retrieved."
+  },
+  "resource_grouping_save_failed": {
+    "message": "The grouping preference could not be saved."
+  },
+  "resource_close": {
+    "message": "Close"
+  },
+  "resource_previous_month": {
+    "message": "Previous month"
+  },
+  "resource_next_month": {
+    "message": "Next month"
   }
 }

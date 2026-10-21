@@ -1,4 +1,136 @@
 {
+  "calendar_action_title": {
+    "message": "NC Connector"
+  },
+  "calendar_action_tooltip": {
+    "message": "Nextcloud Talk, salles et ressources pour cet événement"
+  },
+  "calendar_action_talk": {
+    "message": "Créer une réunion Talk"
+  },
+  "calendar_action_talk_description": {
+    "message": "Ajouter une réunion en ligne avec Nextcloud Talk."
+  },
+  "calendar_action_resources": {
+    "message": "Sélectionner des salles et des ressources"
+  },
+  "calendar_action_resources_description": {
+    "message": "Ajouter une salle et l’équipement nécessaire à l’événement."
+  },
+  "calendar_action_loading": {
+    "message": "Vérification des actions disponibles…"
+  },
+  "calendar_action_error": {
+    "message": "Impossible de charger les actions de l’événement. Fermez cette fenêtre et réessayez."
+  },
+  "resource_title": {
+    "message": "Salles et ressources Nextcloud"
+  },
+  "resource_instructions": {
+    "message": "Sélectionnez au maximum une salle et autant de ressources que nécessaire."
+  },
+  "resource_search": {
+    "message": "Rechercher"
+  },
+  "resource_rooms": {
+    "message": "Salles"
+  },
+  "resource_resources": {
+    "message": "Ressources"
+  },
+  "resource_room": {
+    "message": "Salle"
+  },
+  "resource_resource": {
+    "message": "Ressource"
+  },
+  "resource_details": {
+    "message": "Détails"
+  },
+  "resource_details_for": {
+    "message": "Détails de $1"
+  },
+  "resource_empty": {
+    "message": "Aucune salle ni ressource n’est disponible pour ce compte."
+  },
+  "resource_no_matches": {
+    "message": "Aucune salle ni ressource correspondante."
+  },
+  "resource_not_provided": {
+    "message": "Non renseigné"
+  },
+  "resource_loading": {
+    "message": "Chargement des salles et ressources…"
+  },
+  "resource_applying": {
+    "message": "Application de la sélection…"
+  },
+  "resource_load_failed": {
+    "message": "Impossible de charger les salles et ressources. Veuillez réessayer."
+  },
+  "resource_apply_failed": {
+    "message": "La sélection n’a pas pu être entièrement appliquée. Vérifiez les participants et le lieu de l’événement avant d’enregistrer."
+  },
+  "resource_context_expired": {
+    "message": "Le contexte de cet événement n’est plus disponible. Fermez cette fenêtre et rouvrez le sélecteur depuis l’événement."
+  },
+  "resource_selection_changed": {
+    "message": "Les participants ou le lieu de l’événement ont changé. Rechargez la sélection avant de l’appliquer."
+  },
+  "resource_invalid_selection": {
+    "message": "Sélectionnez au maximum une salle."
+  },
+  "resource_readonly": {
+    "message": "Les salles et ressources ne peuvent être modifiées que dans un événement modifiable dont vous êtes l’organisateur."
+  },
+  "resource_connection_changed": {
+    "message": "Le compte Nextcloud a changé. Fermez cette fenêtre et rouvrez le sélecteur."
+  },
+  "resource_apply": {
+    "message": "Appliquer"
+  },
+  "resource_retry": {
+    "message": "Recharger"
+  },
+  "resource_selected_count": {
+    "message": "Sélectionnés : $1"
+  },
+  "resource_name": {
+    "message": "Nom"
+  },
+  "resource_type": {
+    "message": "Type"
+  },
+  "resource_email": {
+    "message": "Adresse de calendrier"
+  },
+  "resource_room_type": {
+    "message": "Catégorie de salle"
+  },
+  "resource_resource_type": {
+    "message": "Catégorie de ressource"
+  },
+  "resource_capacity": {
+    "message": "Capacité"
+  },
+  "resource_building": {
+    "message": "Bâtiment"
+  },
+  "resource_address": {
+    "message": "Adresse"
+  },
+  "resource_floor": {
+    "message": "Étage"
+  },
+  "resource_room_number": {
+    "message": "Numéro de salle"
+  },
+  "resource_features": {
+    "message": "Équipement"
+  },
+  "resource_location": {
+    "message": "Lieu"
+  },
   "options_remove_credentials_button": {
     "message": "Supprimer les identifiants enregistrés"
   },
@@ -1474,5 +1606,98 @@
   },
   "vfs_setup_failed": {
     "message": "L’accès n’a pas pu être autorisé."
+  },
+  "resource_group_by": {
+    "message": "Regrouper par"
+  },
+  "resource_grouping_none": {
+    "message": "Aucun"
+  },
+  "resource_filter_any": {
+    "message": "Tous"
+  },
+  "resource_minimum_capacity": {
+    "message": "Capacité minimale"
+  },
+  "resource_expand_all": {
+    "message": "Tout développer"
+  },
+  "resource_collapse_all": {
+    "message": "Tout réduire"
+  },
+  "resource_expand_group": {
+    "message": "Développer le groupe"
+  },
+  "resource_collapse_group": {
+    "message": "Réduire le groupe"
+  },
+  "resource_features_filter": {
+    "message": "Équipements (tous requis)"
+  },
+  "resource_features_selected": {
+    "message": "$1 sélectionnés"
+  },
+  "resource_clear_filters": {
+    "message": "Réinitialiser les filtres"
+  },
+  "resource_without_information": {
+    "message": "Non renseigné"
+  },
+  "resource_only_available": {
+    "message": "Disponibles uniquement"
+  },
+  "resource_availability": {
+    "message": "Disponibilité"
+  },
+  "resource_available": {
+    "message": "Disponible"
+  },
+  "resource_busy": {
+    "message": "Occupé"
+  },
+  "resource_unknown": {
+    "message": "Inconnu"
+  },
+  "resource_checking": {
+    "message": "Vérification en cours"
+  },
+  "resource_show_availability": {
+    "message": "Afficher la disponibilité"
+  },
+  "resource_appointment_interval": {
+    "message": "Rendez-vous"
+  },
+  "resource_availability_title": {
+    "message": "Disponibilité de la ressource"
+  },
+  "resource_date": {
+    "message": "Date"
+  },
+  "resource_previous_day": {
+    "message": "Jour précédent"
+  },
+  "resource_next_day": {
+    "message": "Jour suivant"
+  },
+  "resource_time_zone": {
+    "message": "Fuseau horaire"
+  },
+  "resource_today": {
+    "message": "Aujourd’hui"
+  },
+  "resource_availability_failed": {
+    "message": "La disponibilité n’a pas pu être récupérée."
+  },
+  "resource_grouping_save_failed": {
+    "message": "Le regroupement n’a pas pu être enregistré."
+  },
+  "resource_close": {
+    "message": "Fermer"
+  },
+  "resource_previous_month": {
+    "message": "Mois précédent"
+  },
+  "resource_next_month": {
+    "message": "Mois suivant"
   }
 }

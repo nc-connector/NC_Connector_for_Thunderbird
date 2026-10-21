@@ -1,4 +1,136 @@
 {
+  "calendar_action_title": {
+    "message": "NC Connector"
+  },
+  "calendar_action_tooltip": {
+    "message": "此行程的 Nextcloud Talk、房間與資源"
+  },
+  "calendar_action_talk": {
+    "message": "建立 Talk 會議"
+  },
+  "calendar_action_talk_description": {
+    "message": "新增 Nextcloud Talk 線上會議。"
+  },
+  "calendar_action_resources": {
+    "message": "選擇房間與資源"
+  },
+  "calendar_action_resources_description": {
+    "message": "為行程新增一個房間及所需設備。"
+  },
+  "calendar_action_loading": {
+    "message": "正在檢查可用操作…"
+  },
+  "calendar_action_error": {
+    "message": "無法載入行程操作。請關閉此視窗後重試。"
+  },
+  "resource_title": {
+    "message": "Nextcloud 房間與資源"
+  },
+  "resource_instructions": {
+    "message": "最多選擇一個房間，可選擇多個資源。"
+  },
+  "resource_search": {
+    "message": "搜尋"
+  },
+  "resource_rooms": {
+    "message": "房間"
+  },
+  "resource_resources": {
+    "message": "資源"
+  },
+  "resource_room": {
+    "message": "房間"
+  },
+  "resource_resource": {
+    "message": "資源"
+  },
+  "resource_details": {
+    "message": "詳細資訊"
+  },
+  "resource_details_for": {
+    "message": "$1 的詳細資訊"
+  },
+  "resource_empty": {
+    "message": "此帳號沒有可用的房間或資源。"
+  },
+  "resource_no_matches": {
+    "message": "沒有符合的房間或資源。"
+  },
+  "resource_not_provided": {
+    "message": "未提供"
+  },
+  "resource_loading": {
+    "message": "正在載入房間與資源…"
+  },
+  "resource_applying": {
+    "message": "正在套用所選項目…"
+  },
+  "resource_load_failed": {
+    "message": "無法載入房間與資源。請重試。"
+  },
+  "resource_apply_failed": {
+    "message": "無法完整套用所選項目。儲存前請檢查行程的參與者與地點。"
+  },
+  "resource_context_expired": {
+    "message": "此行程的內容已無法使用。請關閉此視窗，然後從行程重新開啟選擇器。"
+  },
+  "resource_selection_changed": {
+    "message": "行程的參與者或地點已變更。請重新載入所選項目後再套用。"
+  },
+  "resource_invalid_selection": {
+    "message": "最多選擇一個房間。"
+  },
+  "resource_readonly": {
+    "message": "只有在您主辦的可編輯行程中，才能變更房間與資源。"
+  },
+  "resource_connection_changed": {
+    "message": "Nextcloud 帳號已變更。請關閉此視窗，然後重新開啟選擇器。"
+  },
+  "resource_apply": {
+    "message": "套用"
+  },
+  "resource_retry": {
+    "message": "重新載入"
+  },
+  "resource_selected_count": {
+    "message": "已選取：$1"
+  },
+  "resource_name": {
+    "message": "名稱"
+  },
+  "resource_type": {
+    "message": "類型"
+  },
+  "resource_email": {
+    "message": "行事曆地址"
+  },
+  "resource_room_type": {
+    "message": "房間類別"
+  },
+  "resource_resource_type": {
+    "message": "資源類別"
+  },
+  "resource_capacity": {
+    "message": "容納人數"
+  },
+  "resource_building": {
+    "message": "建築"
+  },
+  "resource_address": {
+    "message": "地址"
+  },
+  "resource_floor": {
+    "message": "樓層"
+  },
+  "resource_room_number": {
+    "message": "房間號碼"
+  },
+  "resource_features": {
+    "message": "設備"
+  },
+  "resource_location": {
+    "message": "地點"
+  },
   "options_remove_credentials_button": {
     "message": "移除已儲存的登入憑證"
   },
@@ -1474,5 +1606,98 @@
   },
   "vfs_setup_failed": {
     "message": "無法授予存取權限。"
+  },
+  "resource_group_by": {
+    "message": "分組依據"
+  },
+  "resource_grouping_none": {
+    "message": "無"
+  },
+  "resource_filter_any": {
+    "message": "不限"
+  },
+  "resource_minimum_capacity": {
+    "message": "最少容納人數"
+  },
+  "resource_expand_all": {
+    "message": "全部展開"
+  },
+  "resource_collapse_all": {
+    "message": "全部摺疊"
+  },
+  "resource_expand_group": {
+    "message": "展開群組"
+  },
+  "resource_collapse_group": {
+    "message": "摺疊群組"
+  },
+  "resource_features_filter": {
+    "message": "設備（全部必須）"
+  },
+  "resource_features_selected": {
+    "message": "已選取 $1 項"
+  },
+  "resource_clear_filters": {
+    "message": "重設篩選條件"
+  },
+  "resource_without_information": {
+    "message": "未指定"
+  },
+  "resource_only_available": {
+    "message": "僅顯示可用項目"
+  },
+  "resource_availability": {
+    "message": "可用狀態"
+  },
+  "resource_available": {
+    "message": "可用"
+  },
+  "resource_busy": {
+    "message": "忙碌"
+  },
+  "resource_unknown": {
+    "message": "未知"
+  },
+  "resource_checking": {
+    "message": "正在檢查"
+  },
+  "resource_show_availability": {
+    "message": "顯示可用狀態"
+  },
+  "resource_appointment_interval": {
+    "message": "行程"
+  },
+  "resource_availability_title": {
+    "message": "資源可用狀態"
+  },
+  "resource_date": {
+    "message": "日期"
+  },
+  "resource_previous_day": {
+    "message": "前一天"
+  },
+  "resource_next_day": {
+    "message": "後一天"
+  },
+  "resource_time_zone": {
+    "message": "時區"
+  },
+  "resource_today": {
+    "message": "今天"
+  },
+  "resource_availability_failed": {
+    "message": "無法取得可用狀態。"
+  },
+  "resource_grouping_save_failed": {
+    "message": "無法儲存分組設定。"
+  },
+  "resource_close": {
+    "message": "關閉"
+  },
+  "resource_previous_month": {
+    "message": "上個月"
+  },
+  "resource_next_month": {
+    "message": "下個月"
   }
 }
