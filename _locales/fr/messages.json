@@ -1,4 +1,13 @@
 {
+  "sharing_compose_existing_share": {
+    "message": "Ce message contient déjà un partage Nextcloud. Les règles relatives aux pièces jointes restent applicables aux fichiers supplémentaires. Si leur partage est obligatoire, retirez ces pièces jointes et partagez-les dans un nouveau message."
+  },
+  "sharing_compose_files_added": {
+    "message": "$1 fichiers ajoutés au partage."
+  },
+  "sharing_compose_pending_attachments": {
+    "message": "Des fichiers sont encore en cours d’ajout. Vérifiez la file d’attente, puis terminez à nouveau."
+  },
   "calendar_action_title": {
     "message": "NC Connector"
   },
@@ -858,7 +867,7 @@
     "message": "Le partage n’a pas pu être finalisé en toute sécurité. Fermez la fenêtre de partage et vérifiez le message avant de réessayer."
   },
   "sharing_attachment_routing_active": {
-    "message": "Le partage de fichiers est toujours en cours. Terminez-le ou fermez la fenêtre de partage avant d’envoyer le message."
+    "message": "Le message n’a pas été envoyé. Terminez ou annulez l’assistant de partage ouvert, ou retirez les fichiers joints qui doivent être partagés via NC Connector."
   },
   "sharing_saved_template_unsupported": {
     "message": "Les messages contenant un partage NC Connector ne peuvent pas être enregistrés ni envoyés comme modèles Thunderbird. Créez un nouveau message et partagez à nouveau les fichiers."

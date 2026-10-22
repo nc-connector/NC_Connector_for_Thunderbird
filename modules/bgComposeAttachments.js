@@ -5,54 +5,10 @@
  */
 'use strict';
 /**
- * Compose attachment and sharing-launch runtime module.
- * Owns attachment automation, threshold prompt flow, and launch context handling.
+ * Owns the shared compose/wizard queue and attachment automation prompts.
  */
 
-function pruneSharingLaunchContexts(){
-  const cutoff = Date.now() - SHARING_LAUNCH_CONTEXT_TTL_MS;
-  for (const [contextId, entry] of SHARING_LAUNCH_CONTEXTS.entries()){
-    if (!entry || typeof entry.created !== "number" || entry.created < cutoff){
-      const attachmentHandoffActive = Array.from(ATTACHMENT_AUTOMATION_BY_TAB.values())
-        .some((state) => state?.handoff?.contextId === contextId);
-      if (attachmentHandoffActive){
-        continue;
-      }
-      SHARING_LAUNCH_CONTEXTS.delete(contextId);
-    }
-  }
-}
-
-function createSharingLaunchContextId(){
-  const rand = Math.random().toString(16).slice(2);
-  return `sharing-${Date.now()}-${rand}`;
-}
-
-function setSharingLaunchContext(entry){
-  pruneSharingLaunchContexts();
-  const contextId = createSharingLaunchContextId();
-  const next = Object.assign({}, entry || {}, { created: Date.now() });
-  SHARING_LAUNCH_CONTEXTS.set(contextId, next);
-  L("sharing launch context stored", {
-    contextId: bgShortId(contextId, 24),
-    mode: next?.mode || "",
-    attachmentCount: Array.isArray(next?.attachments) ? next.attachments.length : 0
-  });
-  return contextId;
-}
-
-function getSharingLaunchContext(contextId){
-  if (!contextId) return null;
-  pruneSharingLaunchContexts();
-  const entry = SHARING_LAUNCH_CONTEXTS.get(contextId) || null;
-  L("sharing launch context read", {
-    contextId: bgShortId(contextId, 24),
-    found: !!entry
-  });
-  return entry;
-}
-
-function bindSharingWizardRequestContext(windowId, tabId, launchContext = null){
+function bindSharingWizardRequestContext(windowId, tabId, options = null){
   const normalizedWindowId = Number(windowId);
   const normalizedTabId = Number(tabId);
   if (!Number.isInteger(normalizedWindowId)
@@ -64,7 +20,7 @@ function bindSharingWizardRequestContext(windowId, tabId, launchContext = null){
   const context = Object.freeze({
     windowId: normalizedWindowId,
     tabId: normalizedTabId,
-    attachmentMode: launchContext?.mode === "attachments"
+    attachmentMode: options?.mode === "attachments"
   });
   SHARING_WIZARD_REQUEST_BY_WINDOW.set(normalizedWindowId, context);
   return context;
@@ -97,304 +53,323 @@ function clearComposeAttachmentEvalTimer(tabId){
   ATTACHMENT_EVAL_TIMER_BY_TAB.delete(tabId);
 }
 
+
+const COMPOSE_SHARING_BY_TAB = new Map();
+const COMPOSE_SHARING_ACK_TIMEOUT_MS = 30000;
+
+async function hasComposeSharingBlock(tabId){
+  if (hasComposeShareCleanup(tabId)){
+    return true;
+  }
+  const details = await browser.compose.getComposeDetails(tabId);
+  return (details?.customHeaders || []).some((header) =>
+    String(header.name).toLowerCase() === COMPOSE_SHARE_DRAFT_HEADER.toLowerCase());
+}
+
 function getComposeAttachmentAutomationState(tabId){
   let state = ATTACHMENT_AUTOMATION_BY_TAB.get(tabId);
   if (!state){
-    state = {
-      phase: "idle",
-      evaluationTask: null,
-      rerunRequested: false,
-      promptId: "",
-      wizardWindowId: 0,
-      handoff: null,
-      disposed: false
-    };
+    state = { phase: "idle", evaluationTask: null, rerunRequested: false,
+      promptId: "", disposed: false };
     ATTACHMENT_AUTOMATION_BY_TAB.set(tabId, state);
   }
   return state;
 }
 
 function isComposeAttachmentRoutingActive(tabId){
-  const state = ATTACHMENT_AUTOMATION_BY_TAB.get(tabId);
-  return !!state?.handoff || state?.phase === "handoff";
+  return COMPOSE_SHARING_BY_TAB.has(Number(tabId));
 }
 
-function hasPendingComposeAttachmentEvaluation(tabId){
-  const state = ATTACHMENT_AUTOMATION_BY_TAB.get(tabId);
-  return ATTACHMENT_EVAL_TIMER_BY_TAB.has(tabId)
-    || ATTACHMENT_PENDING_ADDED_BY_TAB.has(tabId)
-    || !!state?.evaluationTask
-    || state?.phase === "evaluating";
-}
-
-/**
- * Apply the mandatory attachment route before a compose send can continue.
- * The current send is cancelled while the queued evaluation starts immediately.
- * @param {number} tabId
- * @returns {Promise<boolean>} true when the current send must be cancelled
- */
 async function prepareComposeAttachmentRoutingBeforeSend(tabId){
   if (isComposeAttachmentRoutingActive(tabId)){
     return true;
   }
-  if (!hasPendingComposeAttachmentEvaluation(tabId)){
-    return false;
-  }
   try{
-    const guard = await assertAttachmentAutomationAllowed("before_send", tabId);
-    if (isComposeAttachmentRoutingActive(tabId)){
-      return true;
-    }
-    if (!guard.ok){
-      return false;
-    }
+    // Use the same native attachment list as intake; embedded body images are not files in this list.
+    const attachments = await listComposeAttachments(tabId);
+    if (isComposeAttachmentRoutingActive(tabId)) return true;
+    if (!attachments.length) return false;
     const settings = await getComposeAttachmentAutomationSettings();
-    if (isComposeAttachmentRoutingActive(tabId)){
-      return true;
-    }
-    if (!settings.alwaysConnector){
+    if (isComposeAttachmentRoutingActive(tabId)) return true;
+    if (!settings.alwaysConnector
+      && !(settings.thresholdMandatory && sumAttachmentBytes(attachments) > settings.thresholdBytes)){
       return false;
+    }
+    // A completed share prevents a second wizard, never the required attachment check.
+    if (settings.alwaysConnector && !await hasComposeSharingBlock(tabId)){
+      const guard = await assertAttachmentAutomationAllowed("before_send", tabId);
+      if (guard.ok && !isComposeAttachmentRoutingActive(tabId)){
+        clearComposeAttachmentEvalTimer(tabId);
+        void requestComposeAttachmentEvaluation(tabId).catch((error) => {
+          console.error("[NCBG] compose attachment evaluation before send failed", error);
+        });
+      }
     }
   }catch(error){
     console.error("[NCBG] compose attachment send guard failed", error);
-    return true;
   }
-
-  clearComposeAttachmentEvalTimer(tabId);
-  L("compose send deferred for mandatory attachment routing", { tabId });
-  void requestComposeAttachmentEvaluation(tabId).catch((error) => {
-    console.error("[NCBG] compose attachment evaluation before send failed", error);
-  });
   return true;
 }
 
-function settleComposeAttachmentHandoffReady(handoff, result){
-  if (!handoff || handoff.readySettled){
+function postComposeSharingMessage(session, message){
+  if (session.closed || !session.port){
+    throw new Error("sharing_compose_session_closed");
+  }
+  session.port.postMessage(message);
+}
+
+function exchangeComposeSharingBatch(session, batch, type, expectedType, extra = {}){
+  return new Promise((resolve, reject) => {
+    const timer = setTimeout(() => {
+      if (session.ack?.batchId === batch.id){
+        session.ack = null;
+      }
+      reject(new Error("sharing_compose_ack_timeout"));
+    }, COMPOSE_SHARING_ACK_TIMEOUT_MS);
+    session.ack = {
+      batchId: batch.id,
+      type: expectedType,
+      resolve(){
+        clearTimeout(timer);
+        session.ack = null;
+        resolve();
+      },
+      reject(error){
+        clearTimeout(timer);
+        session.ack = null;
+        reject(error);
+      }
+    };
+    try{
+      postComposeSharingMessage(session, { type, batchId: batch.id, ...extra });
+    }catch(error){
+      session.ack.reject(error);
+    }
+  });
+}
+
+async function restoreComposeSharingBatch(session, batch){
+  if (session.tabClosed || !batch.detached.length){
     return;
   }
-  handoff.readySettled = true;
-  handoff.resolveReady(result);
-}
-
-function claimComposeAttachmentWizard(tabId, contextId, windowId){
-  const normalizedWindowId = Number(windowId);
-  if (!Number.isInteger(normalizedWindowId) || normalizedWindowId <= 0){
-    throw new Error("sharing_wizard_window_invalid");
-  }
-  const state = ATTACHMENT_AUTOMATION_BY_TAB.get(tabId);
-  const handoff = state?.handoff;
-  if (!state || state.disposed || !handoff || handoff.contextId !== contextId){
-    throw new Error("attachment_launch_context_missing");
-  }
-  if (state.wizardWindowId > 0 && state.wizardWindowId !== normalizedWindowId){
-    throw new Error("attachment_launch_window_mismatch");
-  }
-  const currentOwner = ATTACHMENT_AUTOMATION_TAB_BY_WINDOW.get(normalizedWindowId);
-  if (Number.isInteger(currentOwner) && currentOwner !== tabId){
-    throw new Error("attachment_launch_window_owned");
-  }
-  state.wizardWindowId = normalizedWindowId;
-  ATTACHMENT_AUTOMATION_TAB_BY_WINDOW.set(normalizedWindowId, tabId);
-  return handoff;
-}
-
-function beginComposeAttachmentHandoff(tabId, launchContext){
-  const state = ATTACHMENT_AUTOMATION_BY_TAB.get(tabId);
-  if (!state || state.disposed){
-    throw new Error("attachment_handoff_missing");
-  }
-  if (state.handoff){
-    throw new Error("attachment_handoff_active");
-  }
-  const attachments = Array.isArray(launchContext?.attachments)
-    ? launchContext.attachments
-    : [];
-  if (!attachments.length){
-    throw new Error("attachment_launch_context_empty");
-  }
-  const contextId = setSharingLaunchContext({
-    ...launchContext,
-    sourceTabId: tabId,
-    expectedAttachmentCount: attachments.length
-  });
-  let resolveReady;
-  // The popup may request its context before windows.create() returns. Keep
-  // that request pending until the background has bound the actual window.
-  const readyPromise = new Promise((resolve) => {
-    resolveReady = resolve;
-  });
-  const handoff = {
-    contextId,
-    expectedAttachmentCount: attachments.length,
-    detached: [],
-    adopted: false,
-    readyPromise,
-    resolveReady,
-    readySettled: false,
-    rollbackTask: null
-  };
-  state.handoff = handoff;
-  state.phase = "handoff";
-  return handoff;
-}
-
-async function getComposeAttachmentLaunchContext(contextId, tabId, windowId){
-  const normalizedTabId = Number(tabId);
-  const state = ATTACHMENT_AUTOMATION_BY_TAB.get(normalizedTabId);
-  const handoff = state?.handoff;
-  if (!handoff || handoff.contextId !== contextId || handoff.adopted){
-    return { ok:false, error:"context_not_found" };
-  }
+  markComposeAttachmentSuppressed(session.tabId, true);
+  const failed = [];
   try{
-    claimComposeAttachmentWizard(normalizedTabId, contextId, windowId);
-  }catch(error){
-    return { ok:false, error:error?.message || String(error) };
+    for (const item of batch.detached){
+      try{
+        await browser.compose.addAttachment(session.tabId, { file: item.file, name: item.name });
+      }catch(error){
+        failed.push(item);
+        console.error("[NCBG] compose attachment restore failed", {
+          tabId: session.tabId, error: error?.message || String(error)
+        });
+      }
+    }
+  }finally{
+    markComposeAttachmentSuppressed(session.tabId, false);
   }
-  const ready = await handoff.readyPromise;
-  if (!ready?.ok){
-    return { ok:false, error:ready?.error || "context_not_ready" };
+  batch.detached = failed;
+  if (failed.length){
+    session.restoreFailed = true;
+    throw new Error("attachment_restore_failed");
   }
-  if (ATTACHMENT_AUTOMATION_BY_TAB.get(normalizedTabId)?.handoff !== handoff){
-    return { ok:false, error:"context_not_found" };
-  }
-  const context = getSharingLaunchContext(contextId);
-  if (!context
-    || Number(context.sourceTabId) !== normalizedTabId
-    || Number(context.expectedAttachmentCount) !== handoff.expectedAttachmentCount){
-    return { ok:false, error:"context_not_found" };
-  }
-  return { ok:true, context };
 }
 
-async function rollbackComposeAttachmentHandoff(tabId, reason = ""){
-  const state = ATTACHMENT_AUTOMATION_BY_TAB.get(tabId);
-  const handoff = state?.handoff;
-  if (!handoff){
-    return { ok:true, restored:0, failed:0 };
+function drainComposeSharingAttachments(session){
+  if (!session.ready || session.closed || session.finalizing || session.finished){
+    return session.intakeTask || Promise.resolve();
   }
-  if (handoff.adopted){
-    return { ok:false, error:"context_already_adopted", restored:0, failed:0 };
-  }
-  if (handoff.rollbackTask){
-    return handoff.rollbackTask;
-  }
-
-  state.phase = "rollback";
-  settleComposeAttachmentHandoffReady(handoff, {
-    ok:false,
-    error:reason || "attachment_handoff_rolled_back"
-  });
-  SHARING_LAUNCH_CONTEXTS.delete(handoff.contextId);
-  if (state.wizardWindowId > 0){
-    ATTACHMENT_AUTOMATION_TAB_BY_WINDOW.delete(state.wizardWindowId);
-  }
-
+  session.rerun = true;
+  if (session.intakeTask) return session.intakeTask;
   const task = (async () => {
-    const failed = [];
-    const detached = handoff.detached.slice();
-    if (detached.length){
-      markComposeAttachmentSuppressed(tabId, true);
-    }
-    try{
-      for (const item of detached){
-        try{
-          await browser.compose.addAttachment(tabId, {
-            file: item.file,
-            name: item.name || item.file?.name || ""
-          });
-        }catch(error){
-          failed.push(item);
-          console.error("[NCBG] compose attachment restore failed", {
-            tabId,
-            error: error?.message || String(error)
-          });
+    while (session.rerun && !session.closed && !session.finalizing){
+      session.rerun = false;
+      await NCPolicyRuntime.assertManagedAccess();
+      const attachments = await listComposeAttachments(session.tabId);
+      if (session.closed || !attachments.length) break;
+      const files = await collectComposeAttachmentFiles(session.tabId, attachments);
+      if (session.closed) break;
+      const batch = { id: createSecureRuntimeId(), detached: [] };
+      session.batch = batch;
+      try{
+        L("compose attachments offered to sharing wizard", {
+          tabId: session.tabId, windowId: session.windowId, count: files.length
+        });
+        await exchangeComposeSharingBatch(session, batch, "attachments", "accepted", {
+          attachments: files.map((item) => ({
+            sourceAttachmentId: item.attachmentId, name: item.name,
+            sizeBytes: item.size, displayPath: item.displayPath, file: item.file
+          }))
+        });
+        for (const item of files){
+          if (session.closed) throw new Error("sharing_compose_session_closed");
+          await browser.compose.removeAttachment(session.tabId, item.attachmentId);
+          batch.detached.push(item);
         }
-      }
-    }finally{
-      if (detached.length){
-        setTimeout(() => {
-          markComposeAttachmentSuppressed(tabId, false);
-        }, 0);
+        // Keep the detached originals until the wizard has committed the queue.
+        await exchangeComposeSharingBatch(session, batch, "committed", "applied", {
+          revision: session.queueRevision + 1
+        });
+        session.queueRevision++;
+        batch.detached = [];
+        session.batch = null;
+        ATTACHMENT_PENDING_ADDED_BY_TAB.delete(session.tabId);
+        L("compose attachments adopted by sharing wizard", {
+          tabId: session.tabId, windowId: session.windowId, count: files.length
+        });
+        session.rerun = true;
+      }catch(error){
+        if (!session.closed){
+          try{
+            postComposeSharingMessage(session, { type: "rejected", batchId: batch.id });
+          }catch(postError){
+            console.error("[NCBG] compose queue rejection failed", postError);
+          }
+        }
+        await restoreComposeSharingBatch(session, batch);
+        session.batch = null;
+        throw error;
       }
     }
-
-    if (ATTACHMENT_AUTOMATION_BY_TAB.get(tabId)?.handoff === handoff){
-      handoff.detached = failed;
-      state.wizardWindowId = 0;
-      if (failed.length){
-        state.phase = "rollback_failed";
-      }else{
-        state.handoff = null;
-        state.phase = state.evaluationTask ? "evaluating" : "idle";
-      }
-    }
-    L("compose attachment handoff rolled back", {
-      tabId,
-      reason: String(reason || ""),
-      restored: detached.length - failed.length,
-      failed: failed.length
-    });
-    return {
-      ok: failed.length === 0,
-      error: failed.length ? "attachment_restore_failed" : "",
-      restored: detached.length - failed.length,
-      failed: failed.length
-    };
-  })();
-  handoff.rollbackTask = task;
-  return task;
+  })().catch((error) => {
+    // A lost acknowledgement leaves queue ownership uncertain. End this UI
+    // session after restoring the current batch, rather than offer it twice.
+    void releaseComposeAttachmentWizard(session.windowId, "queue_intake_failed")
+      .catch(reportComposeSharingIntakeError);
+    throw error;
+  });
+  session.intakeTask = task;
+  return task.finally(() => {
+    if (session.intakeTask === task) session.intakeTask = null;
+  });
 }
 
-function adoptComposeAttachmentLaunchContext(contextId, tabId, windowId, attachmentCount){
-  const normalizedTabId = Number(tabId);
-  const normalizedWindowId = Number(windowId);
-  const normalizedCount = Number(attachmentCount);
-  const state = ATTACHMENT_AUTOMATION_BY_TAB.get(normalizedTabId);
-  const handoff = state?.handoff;
-  if (!handoff
-    || handoff.contextId !== contextId
-    || state.wizardWindowId !== normalizedWindowId
-    || handoff.expectedAttachmentCount !== normalizedCount
-    || state.phase !== "wizard"){
-    return { ok:false, error:"attachment_launch_context_mismatch" };
-  }
-  if (!handoff.adopted){
-    handoff.adopted = true;
-    handoff.detached = [];
-    // From here on the wizard owns the complete queue. Closing it is a user
-    // cancellation and must not put the original attachments back.
-    SHARING_LAUNCH_CONTEXTS.delete(contextId);
-    L("compose attachment launch context adopted", {
-      tabId: normalizedTabId,
-      windowId: normalizedWindowId,
-      attachmentCount: normalizedCount
-    });
-  }
-  return { ok:true };
-}
-
-async function rejectComposeAttachmentLaunchContext(contextId, tabId, windowId, reason = ""){
-  const normalizedTabId = Number(tabId);
-  const state = ATTACHMENT_AUTOMATION_BY_TAB.get(normalizedTabId);
-  const handoff = state?.handoff;
-  if (!handoff || handoff.contextId !== contextId || handoff.adopted){
-    return { ok:false, error:"context_not_found" };
-  }
-  const normalizedWindowId = Number(windowId);
-  if (Number.isInteger(normalizedWindowId) && normalizedWindowId > 0){
+async function releaseComposeAttachmentWizard(windowId, reason = ""){
+  const session = [...COMPOSE_SHARING_BY_TAB.values()]
+    .find((entry) => entry.windowId === Number(windowId));
+  if (!session) return false;
+  if (session.closeTask) return session.closeTask;
+  session.closed = true;
+  session.resolveWindowReady?.(null);
+  session.resolveWindowReady = null;
+  session.ack?.reject(new Error("sharing_compose_session_closed"));
+  session.closeTask = (async () => {
     try{
-      claimComposeAttachmentWizard(normalizedTabId, contextId, normalizedWindowId);
+      await session.intakeTask;
     }catch(error){
-      return { ok:false, error:error?.message || String(error) };
+      console.error("[NCBG] sharing intake stopped", {
+        tabId: session.tabId, reason, error: error?.message || String(error)
+      });
     }
-  }
-  return rollbackComposeAttachmentHandoff(
-    normalizedTabId,
-    reason || "attachment_launch_context_rejected"
-  );
+    clearSharingWizardRequestContext(windowId);
+    if (!session.restoreFailed && COMPOSE_SHARING_BY_TAB.get(session.tabId) === session){
+      COMPOSE_SHARING_BY_TAB.delete(session.tabId);
+    }
+    // Closing is cancellation; already adopted files are intentionally not restored.
+    ATTACHMENT_PENDING_ADDED_BY_TAB.delete(session.tabId);
+    clearComposeAttachmentEvalTimer(session.tabId);
+    session.port?.disconnect();
+    return true;
+  })();
+  return session.closeTask;
 }
+
+async function lockComposeSharingForFinalize(tabId, windowId, queueRevision){
+  const session = COMPOSE_SHARING_BY_TAB.get(Number(tabId));
+  if (!session || !session.ready || session.closed || session.windowId !== Number(windowId)){
+    throw new Error("sharing_wizard_request_context_missing");
+  }
+  if (await hasComposeSharingBlock(tabId)){
+    throw new Error("sharing_compose_existing_share");
+  }
+  await drainComposeSharingAttachments(session);
+  if (session.closed || session.intakeTask || session.batch
+    || Number(queueRevision) !== session.queueRevision){
+    throw new Error("sharing_compose_pending_attachments");
+  }
+  const revision = session.revision;
+  const attachments = await listComposeAttachments(tabId);
+  if (attachments.length || revision !== session.revision){
+    void drainComposeSharingAttachments(session).catch(reportComposeSharingIntakeError);
+    throw new Error("sharing_compose_pending_attachments");
+  }
+  session.finalizing = true;
+  session.finalizeRevision = revision;
+  return session;
+}
+
+function assertComposeSharingFinalizationCurrent(session){
+  if (!session || session.closed || session.revision !== session.finalizeRevision){
+    throw new Error("sharing_compose_pending_attachments");
+  }
+}
+
+function finishComposeSharingFinalize(session, committed){
+  if (!session) return;
+  session.finalizing = false;
+  session.finished = committed === true;
+  if (!committed){
+    void drainComposeSharingAttachments(session).catch(reportComposeSharingIntakeError);
+  }
+}
+
+function reportComposeSharingIntakeError(error){
+  console.error("[NCBG] compose sharing queue intake failed", error);
+  void showComposeShareBlockedNotification("sharing_error_insert_failed");
+}
+
+browser.runtime.onConnect.addListener((port) => {
+  if (port.name !== "nc-sharing-compose") return;
+  let session = null;
+  port.onMessage.addListener((message) => {
+    if (message?.type === "ready" && !session){
+      const candidate = COMPOSE_SHARING_BY_TAB.get(Number(message.tabId));
+      const windowId = Number(port.sender?.tab?.windowId);
+      if (!candidate || candidate.closed || candidate.port
+        || port.sender?.id !== browser.runtime.id || port.sender?.url !== candidate.url
+        || !Number.isInteger(windowId) || windowId <= 0
+        || windowId !== Number(message.windowId)
+        || (candidate.windowId && candidate.windowId !== windowId)){
+        console.error("[NCBG] sharing queue port rejected");
+        port.disconnect();
+        return;
+      }
+      session = candidate;
+      session.port = port;
+      try{
+        // Thunderbird's windows.create waits for native focus. The authenticated
+        // page can be ready earlier, so its Port binds the window without that wait.
+        bindComposeSharingWindow(session, { id: windowId, tabs: [port.sender.tab] });
+        session.ready = true;
+        L("compose sharing queue ready", { tabId: session.tabId, windowId: session.windowId });
+        postComposeSharingMessage(session, {
+          type: "ready", mode: session.mode, reason: session.reason
+        });
+        void drainComposeSharingAttachments(session).catch(reportComposeSharingIntakeError);
+      }catch(error){
+        port.disconnect();
+        reportComposeSharingIntakeError(error);
+      }
+      return;
+    }
+    if (!session || message?.batchId !== session.ack?.batchId) return;
+    if (message.type === session.ack.type){
+      session.ack.resolve();
+    }else if (message.type === "rejected"){
+      session.ack.reject(new Error("sharing_compose_queue_rejected"));
+    }
+  });
+  port.onDisconnect.addListener(() => {
+    if (session){
+      void releaseComposeAttachmentWizard(session.windowId, "queue_port_disconnected")
+        .catch(reportComposeSharingIntakeError);
+    }
+  });
+});
 
 function requestComposeAttachmentEvaluation(tabId){
+  const session = COMPOSE_SHARING_BY_TAB.get(tabId);
+  if (session) return drainComposeSharingAttachments(session);
   const state = getComposeAttachmentAutomationState(tabId);
   if (state.evaluationTask){
     state.rerunRequested = true;
@@ -432,49 +407,6 @@ function settleComposeAttachmentPromptBatch(tabId, decision){
   // additions made while the same prompt was open.
   ATTACHMENT_PENDING_ADDED_BY_TAB.delete(tabId);
   state.rerunRequested = false;
-}
-
-function activateComposeAttachmentWizard(tabId, contextId, windowId){
-  const state = ATTACHMENT_AUTOMATION_BY_TAB.get(tabId);
-  if (!state){
-    throw new Error("attachment_handoff_missing");
-  }
-  const handoff = claimComposeAttachmentWizard(tabId, contextId, windowId);
-  state.phase = "wizard";
-  settleComposeAttachmentHandoffReady(handoff, { ok:true });
-}
-
-async function releaseComposeAttachmentWizard(windowId, reason = ""){
-  const normalizedWindowId = Number(windowId);
-  const tabId = ATTACHMENT_AUTOMATION_TAB_BY_WINDOW.get(normalizedWindowId);
-  if (!Number.isInteger(tabId) || tabId <= 0){
-    return false;
-  }
-  ATTACHMENT_AUTOMATION_TAB_BY_WINDOW.delete(normalizedWindowId);
-  const state = ATTACHMENT_AUTOMATION_BY_TAB.get(tabId);
-  if (!state || state.wizardWindowId !== normalizedWindowId){
-    return false;
-  }
-  state.wizardWindowId = 0;
-  if (state.handoff && !state.handoff.adopted){
-    await rollbackComposeAttachmentHandoff(
-      tabId,
-      reason || "attachment_wizard_closed_before_adoption"
-    );
-  }else{
-    state.handoff = null;
-    state.phase = "idle";
-  }
-  L("compose attachment wizard released", {
-    tabId,
-    windowId: normalizedWindowId,
-    reason: String(reason || "")
-  });
-  if (state.phase !== "rollback_failed"
-    && (state.rerunRequested || ATTACHMENT_PENDING_ADDED_BY_TAB.has(tabId))){
-    scheduleComposeAttachmentEvaluation(tabId);
-  }
-  return true;
 }
 
 function scheduleComposeAttachmentEvaluation(tabId){
@@ -620,6 +552,7 @@ async function getComposeAttachmentAutomationSettings(){
     ? stored[keys.attachmentsOfferAboveEnabled]
     : true;
   let thresholdMb = normalizeAttachmentThresholdMb(stored[keys.attachmentsOfferAboveMb]);
+  let thresholdMandatory = false;
 
   try{
     const policyStatus = await NCPolicyRuntime.getPolicyStatus();
@@ -629,6 +562,7 @@ async function getComposeAttachmentAutomationSettings(){
       return {
         alwaysConnector: false,
         offerAboveEnabled: false,
+        thresholdMandatory: false,
         thresholdMb,
         thresholdBytes: thresholdMb * 1024 * 1024
       };
@@ -664,6 +598,9 @@ async function getComposeAttachmentAutomationSettings(){
         }else{
           thresholdMb = normalizeAttachmentThresholdMb(Number(policyThreshold) || 0);
           offerAboveEnabled = true;
+          thresholdMandatory = NCPolicyState.isLocked(
+            policyStatus, "share", NCSharingStorage.SHARE_POLICY_KEYS.attachmentsMinSizeMb
+          );
         }
       }
     }
@@ -679,6 +616,7 @@ async function getComposeAttachmentAutomationSettings(){
   return {
     alwaysConnector,
     offerAboveEnabled: !alwaysConnector && offerAboveEnabled,
+    thresholdMandatory,
     thresholdMb,
     thresholdBytes: thresholdMb * 1024 * 1024
   };
@@ -789,62 +727,95 @@ function resolveAttachmentPrompt(promptId, decision = "dismiss", source = ""){
   return true;
 }
 
-/**
- * Open sharing wizard popup and optionally attach a pending launch context.
- * @param {number} tabId
- * @param {object|null} launchContext
- * @param {string} launchContextId
- * @returns {Promise<object>}
- */
-async function openSharingWizardWindow(tabId, launchContext = null, launchContextId = ""){
+/** Bind once, whether the page or native window creation finishes first */
+function bindComposeSharingWindow(session, windowInfo){
+  if (session.closed) return null;
+  const windowId = Number(windowInfo?.id);
+  if (!Number.isInteger(windowId) || windowId <= 0
+    || (session.windowId && session.windowId !== windowId)){
+    throw new Error("sharing_wizard_window_mismatch");
+  }
+  if (!session.windowId){
+    session.windowId = windowId;
+    bindSharingWizardRequestContext(windowId, session.tabId, { mode: session.mode });
+  }
+  session.resolveWindowReady?.(windowInfo);
+  session.resolveWindowReady = null;
+  return windowInfo;
+}
+
+/** Reserve one wizard per compose before creating or focusing its window */
+async function openSharingWizardWindow(tabId, options = null){
+  tabId = Number(tabId);
+  const existing = COMPOSE_SHARING_BY_TAB.get(tabId);
+  if (existing){
+    const windowInfo = await existing.openTask;
+    if (!existing.closed && windowInfo){
+      void focusPopupWindowBestEffort(windowInfo, { label: "sharing" }).catch((error) => {
+        console.error("[NCBG] sharing wizard focus failed", error);
+      });
+      await drainComposeSharingAttachments(existing);
+    }
+    return windowInfo;
+  }
+  const session = {
+    tabId, windowId: 0, mode: options?.mode === "attachments" ? "attachments" : "default",
+    reason: options?.reason || null, ready: false, closed: false, revision: 0, queueRevision: 0,
+    port: null, intakeTask: null, batch: null, ack: null, finalizing: false, finished: false
+  };
+  // Reserve before any asynchronous check so manual and automatic starts share one owner.
+  COMPOSE_SHARING_BY_TAB.set(tabId, session);
   const popupUrl = new URL(browser.runtime.getURL("ui/nextcloudSharingWizard.html"));
   popupUrl.searchParams.set("tabId", String(tabId));
-  let contextId = "";
-  if (launchContext && typeof launchContext === "object"){
-    contextId = String(launchContextId || "");
-    if (!contextId){
-      throw new Error("attachment_launch_context_missing");
+  popupUrl.searchParams.set("sessionId", createSecureRuntimeId());
+  if (session.mode === "attachments") popupUrl.searchParams.set("attachmentMode", "1");
+  session.url = popupUrl.href;
+  const windowReady = new Promise((resolve) => { session.resolveWindowReady = resolve; });
+  // Both native completion and the authenticated page use the same window binding.
+  // Neither queue intake nor the opening caller may wait for the first native focus.
+  const windowCreation = (async () => {
+    if (await hasComposeSharingBlock(tabId)){
+      COMPOSE_SHARING_BY_TAB.delete(tabId);
+      session.closed = true;
+      session.resolveWindowReady = null;
+      await showComposeShareBlockedNotification("sharing_compose_existing_share");
+      return null;
     }
-    popupUrl.searchParams.set("launchContextId", contextId);
-  }
-  const windowInfo = await browser.windows.create({
-    url: popupUrl.toString(),
-    type: "popup",
-    width: SHARING_POPUP_WIDTH,
-    height: SHARING_POPUP_HEIGHT
-  });
-  let requestContext;
-  try{
-    requestContext = bindSharingWizardRequestContext(
-      windowInfo?.id,
-      tabId,
-      launchContext
-    );
-    if (requestContext.attachmentMode){
-      activateComposeAttachmentWizard(tabId, contextId, windowInfo?.id);
+    const promptId = getComposeAttachmentAutomationState(tabId).promptId;
+    if (promptId){
+      const prompt = ATTACHMENT_PROMPT_BY_ID.get(promptId);
+      resolveAttachmentPrompt(promptId, "dismiss", "sharing_wizard_opened");
+      if (prompt?.windowId) await browser.windows.remove(prompt.windowId);
     }
-  }catch(error){
-    const windowId = Number(windowInfo?.id) || 0;
-    clearSharingWizardRequestContext(windowId);
-    if (windowId > 0){
-      try{
-        await browser.windows.remove(windowId);
-      }catch(closeError){
-        console.error("[NCBG] sharing wizard bootstrap close failed", closeError);
-      }
+    if (session.closed) return null;
+    const windowInfo = await browser.windows.create({
+      url: session.url, type: "popup",
+      width: SHARING_POPUP_WIDTH, height: SHARING_POPUP_HEIGHT
+    });
+    if (session.tabClosed){
+      if (!session.closeTask) await browser.windows.remove(windowInfo.id);
+      return null;
     }
+    return bindComposeSharingWindow(session, windowInfo);
+  })().catch(async (error) => {
+    if (session.windowId){
+      await releaseComposeAttachmentWizard(session.windowId, "window_creation_failed");
+    }else{
+      session.closed = true;
+      session.resolveWindowReady = null;
+      if (COMPOSE_SHARING_BY_TAB.get(tabId) === session) COMPOSE_SHARING_BY_TAB.delete(tabId);
+    }
+    console.error("[NCBG] sharing wizard creation failed", error);
     throw error;
+  });
+  session.openTask = Promise.race([windowCreation, windowReady]);
+  const windowInfo = await session.openTask;
+  if (windowInfo && !session.closed){
+    // Focus retries are cosmetic and never gate queue ownership or intake.
+    void focusPopupWindowBestEffort(windowInfo, { label: "sharing" }).catch((error) => {
+      console.error("[NCBG] sharing wizard focus failed", error);
+    });
   }
-  const focusApplied = await focusPopupWindowBestEffort(windowInfo, {
-    label: "sharing wizard popup"
-  });
-  L("sharing wizard popup opened", {
-    tabId,
-    windowId: Number(windowInfo?.id) || 0,
-    contextId: bgShortId(contextId, 24),
-    mode: requestContext.attachmentMode ? "attachments" : "default",
-    focusApplied
-  });
   return windowInfo;
 }
 
@@ -891,28 +862,19 @@ async function collectComposeAttachmentFiles(tabId, attachments){
   return out;
 }
 
-async function removeComposeAttachments(tabId, attachmentIds, options = {}){
+async function removeComposeAttachments(tabId, attachmentIds){
   const ids = Array.isArray(attachmentIds) ? attachmentIds : [];
-  const suppressEvents = options.suppressEvents !== false;
-  const onRemoved = typeof options.onRemoved === "function"
-    ? options.onRemoved
-    : null;
   L("compose attachments remove requested", { tabId, count: ids.length });
-  if (suppressEvents){
-    markComposeAttachmentSuppressed(tabId, true);
-  }
+  markComposeAttachmentSuppressed(tabId, true);
   try{
     for (const attachmentId of ids){
       await browser.compose.removeAttachment(tabId, attachmentId);
-      onRemoved?.(attachmentId);
     }
     L("compose attachments removed", { tabId, count: ids.length });
   }finally{
-    if (suppressEvents){
-      setTimeout(() => {
-        markComposeAttachmentSuppressed(tabId, false);
-      }, 0);
-    }
+    setTimeout(() => {
+      markComposeAttachmentSuppressed(tabId, false);
+    }, 0);
   }
 }
 
@@ -930,89 +892,16 @@ function buildAttachmentLaunchReason({ trigger, totalBytes, thresholdMb, lastAdd
   return { trigger: "always" };
 }
 
-/**
- * Start the compose-attachment share flow:
- * - collect current attachments
- * - remove them from compose
- * - launch sharing wizard in attachment mode
- * @param {number} tabId
- * @param {object} context
- * @returns {Promise<void>}
- */
+/** Open the common wizard; its acknowledged queue handoff adopts the attachments */
 async function startComposeAttachmentShareFlow(tabId, context = {}){
-  const automationState = getComposeAttachmentAutomationState(tabId);
-  if (isComposeAttachmentRoutingActive(tabId)){
-    automationState.rerunRequested = true;
-    L("compose attachment flow skipped (already active)", { tabId });
-    return;
-  }
-  automationState.phase = "handoff";
-  try{
-    const guard = await assertAttachmentAutomationAllowed("start_flow", tabId, {
-      trigger: String(context?.trigger || "")
-    });
-    if (!guard.ok){
-      return;
-    }
-    await NCPolicyRuntime.assertManagedAccess();
-    const attachments = await listComposeAttachments(tabId);
-    if (!attachments.length){
-      L("compose attachment flow skipped (no attachments)", { tabId });
-      return;
-    }
-    const collected = await collectComposeAttachmentFiles(tabId, attachments);
-    if (!collected.length){
-      L("compose attachment flow skipped (no collectible files)", { tabId });
-      return;
-    }
-    if (automationState.disposed
-      || ATTACHMENT_AUTOMATION_BY_TAB.get(tabId) !== automationState){
-      return;
-    }
-    const launchContext = {
-      mode: "attachments",
-      reason: buildAttachmentLaunchReason(context),
-      attachments: collected.map((item) => ({
-        sourceAttachmentId: item.attachmentId,
-        name: item.name,
-        sizeBytes: item.size,
-        displayPath: item.displayPath || item.name || "",
-        file: item.file
-      }))
-    };
-    L("compose attachment flow start", {
-      tabId,
-      trigger: launchContext.reason?.trigger || "",
-      attachmentCount: launchContext.attachments.length
-    });
-    const handoff = beginComposeAttachmentHandoff(tabId, launchContext);
-    const collectedById = new Map(collected.map((item) => [item.attachmentId, item]));
-    try{
-      await removeComposeAttachments(
-        tabId,
-        collected.map((item) => item.attachmentId),
-        {
-          // Only restored additions need suppression. Suppressing this removal
-          // would leave a timer that could expose later restore events.
-          suppressEvents: false,
-          onRemoved(attachmentId){
-            const removed = collectedById.get(attachmentId);
-            if (removed){
-              handoff.detached.push(removed);
-            }
-          }
-        }
-      );
-      await openSharingWizardWindow(tabId, launchContext, handoff.contextId);
-    }catch(error){
-      await rollbackComposeAttachmentHandoff(tabId, "attachment_handoff_failed");
-      throw error;
-    }
-  }finally{
-    if (automationState.phase === "handoff"){
-      automationState.phase = "evaluating";
-    }
-  }
+  const guard = await assertAttachmentAutomationAllowed("start_flow", tabId);
+  if (!guard.ok) return;
+  await NCPolicyRuntime.assertManagedAccess();
+  const state = ATTACHMENT_AUTOMATION_BY_TAB.get(tabId);
+  if (state?.disposed) return;
+  await openSharingWizardWindow(tabId, {
+    mode: "attachments", reason: buildAttachmentLaunchReason(context)
+  });
 }
 
 /**
@@ -1093,6 +982,16 @@ async function evaluateComposeAttachmentThreshold(tabId){
     return;
   }
   if (ATTACHMENT_PROMPT_BY_TAB.has(tabId)){
+    return;
+  }
+  const session = COMPOSE_SHARING_BY_TAB.get(tabId);
+  if (session){
+    await drainComposeSharingAttachments(session);
+    return;
+  }
+  if (await hasComposeSharingBlock(tabId)){
+    ATTACHMENT_PENDING_ADDED_BY_TAB.delete(tabId);
+    await showComposeShareBlockedNotification("sharing_compose_existing_share");
     return;
   }
   const guard = await assertAttachmentAutomationAllowed("evaluate", tabId);
@@ -1208,6 +1107,12 @@ async function handleComposeAttachmentAdded(tab, attachment){
     L("compose attachment add ignored (suppressed)", { tabId });
     return;
   }
+  const session = COMPOSE_SHARING_BY_TAB.get(tabId);
+  if (session){
+    session.revision++;
+    await drainComposeSharingAttachments(session);
+    return;
+  }
   queueComposeAddedAttachment(tabId, attachment);
   L("compose attachment added", {
     tabId,
@@ -1230,20 +1135,20 @@ function cleanupComposeAttachmentTabState(tabId, reason = ""){
     resolveAttachmentPrompt(promptId, "dismiss", reason || "tab_closed");
   }
   const automationState = ATTACHMENT_AUTOMATION_BY_TAB.get(tabId);
-  if (automationState?.handoff){
-    settleComposeAttachmentHandoffReady(automationState.handoff, {
-      ok:false,
-      error: reason || "tab_closed"
-    });
-    SHARING_LAUNCH_CONTEXTS.delete(automationState.handoff.contextId);
-  }
-  if (automationState){
-    // The compose surface no longer exists, so there is nowhere to restore to.
-    automationState.disposed = true;
-  }
-  if (Number.isInteger(automationState?.wizardWindowId)
-    && automationState.wizardWindowId > 0){
-    ATTACHMENT_AUTOMATION_TAB_BY_WINDOW.delete(automationState.wizardWindowId);
+  if (automationState) automationState.disposed = true;
+  const session = COMPOSE_SHARING_BY_TAB.get(tabId);
+  if (session){
+    session.tabClosed = true;
+    session.closed = true;
+    session.resolveWindowReady?.(null);
+    session.resolveWindowReady = null;
+    if (session.windowId){
+      void releaseComposeAttachmentWizard(session.windowId, reason)
+        .then(() => browser.windows.remove(session.windowId))
+        .catch(reportComposeSharingIntakeError);
+    }else{
+      COMPOSE_SHARING_BY_TAB.delete(tabId);
+    }
   }
   ATTACHMENT_AUTOMATION_BY_TAB.delete(tabId);
   L("compose attachment tab state cleaned", { tabId, reason: reason || "" });

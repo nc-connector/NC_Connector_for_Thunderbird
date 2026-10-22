@@ -50,6 +50,7 @@
             conflict: {
               type: "file-prefix",
               fileEntry: prefixEntry.entry,
+              nestedEntry: candidate.entry,
               filePath: prefix,
               nestedPath: candidate.path
             },

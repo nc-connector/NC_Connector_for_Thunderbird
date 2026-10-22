@@ -602,6 +602,7 @@ async function verifySharePolicyNumbers(){
   loadScript("modules/textUtils.js", context);
   loadScript("ui/wizardPolicyUi.js", context);
   loadScript("modules/shareRequestRules.js", context);
+  context.browser = { runtime: { onConnect: { addListener(){} } } };
   loadScript("modules/bgComposeAttachments.js", context);
   context.SHARING_KEYS = context.NCSharingStorage.SHARING_KEYS;
   context.SHARE_POLICY_KEYS = context.NCSharingStorage.SHARE_POLICY_KEYS;

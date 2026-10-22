@@ -223,6 +223,10 @@ Existing drafts without an NC Connector signature are not automatically given on
 
 Under **Sharing**, set the base directory, share defaults, and language of the inserted block. Attachment automation can always route attachments through NC Connector or offer it above a size threshold. Automatic attachment shares can link to a ZIP download or the share page; manual shares always link to the share page.
 
+Each compose window has one Sharing wizard. Clicking **Nextcloud share** again focuses that wizard. Existing normal attachments and files added to compose while it is open join its queue, even before the file-selection step. The current step and settings stay unchanged; inline images remain in the message. Attachments leave compose only after the wizard confirms their adoption. Closing the wizard after adoption does not restore them.
+
+Files added during upload join the same share folder. Uploaded files are not uploaded again. After the share block is inserted, that message cannot create another share block. Additional files remain subject to the attachment rules: always-share and exceeded locked size limits block sending while ordinary files remain attached. Remove those attachments and use a new message to share them. Optional attachment offers do not block sending. Embedded body and signature images remain unchanged and are not ordinary file attachments.
+
 Uploads choose the appropriate transfer method automatically. No server-specific upload-mode tuning is needed in the add-on. If an upload fails, diagnose the connection, permissions, and storage rather than switching transfer methods.
 
 <a id="63-attachment-policy-example"></a>
@@ -273,18 +277,14 @@ Explain the manual steps for delayed sending and saved drafts when introducing t
 
 ### Talk rooms and appointments
 
+In the event editor, choose **NC Connector → Create a Talk meeting**.
+
 Set defaults and the language of inserted meeting text under **Talk Link**. User search, moderator selection, and automatic user/guest assignment need the [system address book](#system-address-book).
 
 Save the appointment after inserting the Talk link. Participant assignment and moderator delegation are processed after saving. Moving and saving an appointment also updates the start time of an enabled lobby.
 
-In the event editor, choose **NC Connector → Create a Talk meeting**.
-
 A room created for an unsaved event is cleaned up if the event is discarded. Deleting the room for an already saved event is a separate, disabled-by-default option under **Talk Link**. Enable it only if deleting the event should also remove the room for all participants. NC Connector leaves the room intact if the user no longer has the necessary authority or another known appointment still references it. A pasted Talk URL alone does not enable automatic room deletion.
 
-<a id="55-mixed-local-nextcloud-and-vfs-sources"></a>
-<a id="vfs-sources-and-provider-access"></a>
-
-### My Nextcloud and other storage providers
 ### Rooms and resources (`ifb-pro`)
 
 Publish the rooms and resources in Nextcloud using Calendar Resource Management or
@@ -318,6 +318,10 @@ calendar setting or perform a separate booking. After correcting the setting,
 verify a new test booking before rollout. Do not assume that changing the setting
 retroactively books existing appointments.
 
+<a id="55-mixed-local-nextcloud-and-vfs-sources"></a>
+<a id="vfs-sources-and-provider-access"></a>
+
+### My Nextcloud and other storage providers
 
 The Sharing wizard accepts local files, **My Nextcloud**, and connected external providers. My Nextcloud copies files and folders to the new share folder without changing their originals. External files pass through Thunderbird to Nextcloud; they are not transferred directly between the two clouds. Large external files can require substantial Thunderbird memory.
 

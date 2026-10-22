@@ -1,4 +1,13 @@
 {
+  "sharing_compose_existing_share": {
+    "message": "Diese Nachricht enthält bereits eine Nextcloud-Freigabe. Für weitere Dateien gelten weiterhin die Anhangsregeln. Ist das Teilen vorgeschrieben, entfernen Sie diese Anhänge und teilen Sie sie in einer neuen Nachricht."
+  },
+  "sharing_compose_files_added": {
+    "message": "$1 Dateien zur Freigabe hinzugefügt."
+  },
+  "sharing_compose_pending_attachments": {
+    "message": "Dateien werden noch hinzugefügt. Prüfen Sie die Warteschlange und schließen Sie danach erneut ab."
+  },
   "calendar_action_title": {
     "message": "NC Connector"
   },
@@ -858,7 +867,7 @@
     "message": "Die Freigabe konnte nicht sicher abgeschlossen werden. Schließen Sie das Freigabefenster und prüfen Sie die Nachricht, bevor Sie es erneut versuchen."
   },
   "sharing_attachment_routing_active": {
-    "message": "Die Dateifreigabe läuft noch. Schließen Sie den Freigabevorgang ab oder das Freigabefenster, bevor Sie die Nachricht senden."
+    "message": "Die Nachricht wurde nicht gesendet. Schließen Sie den offenen Freigabeassistenten ab oder brechen Sie ihn ab, oder entfernen Sie die Dateianhänge, die über NC Connector geteilt werden müssen."
   },
   "sharing_saved_template_unsupported": {
     "message": "Nachrichten mit einer NC-Connector-Freigabe können nicht als Thunderbird-Vorlage gespeichert oder gesendet werden. Erstellen Sie eine neue Nachricht und geben Sie die Dateien erneut frei."

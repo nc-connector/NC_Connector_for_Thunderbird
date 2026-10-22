@@ -1,4 +1,13 @@
 {
+  "sharing_compose_existing_share": {
+    "message": "此郵件已包含 Nextcloud 分享。新增檔案仍須遵守附件規則。如果必須透過分享傳送，請移除這些附件，並在新郵件中分享它們。"
+  },
+  "sharing_compose_files_added": {
+    "message": "已將 $1 個檔案加入分享。"
+  },
+  "sharing_compose_pending_attachments": {
+    "message": "仍在新增檔案。請檢查佇列後再次完成。"
+  },
   "calendar_action_title": {
     "message": "NC Connector"
   },
@@ -858,7 +867,7 @@
     "message": "無法安全完成分享。請關閉分享視窗，並在重試前檢查郵件。"
   },
   "sharing_attachment_routing_active": {
-    "message": "檔案分享仍在處理中。請先完成分享或關閉分享視窗，再傳送郵件。"
+    "message": "郵件尚未傳送。請完成或取消已開啟的分享精靈，或移除必須透過 NC Connector 分享的檔案附件。"
   },
   "sharing_saved_template_unsupported": {
     "message": "包含 NC Connector 分享的郵件無法儲存或作為 Thunderbird 範本傳送。請建立新郵件並重新分享檔案。"

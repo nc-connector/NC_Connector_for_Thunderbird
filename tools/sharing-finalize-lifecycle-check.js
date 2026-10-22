@@ -72,6 +72,7 @@ function createFinalizeHarness(options = {}){
     composeWrites: []
   };
   let runtimeId = 0;
+  let insertionChecks = 0;
   let insertFailurePending = options.insertFailure === true;
 
   composeDetails.set(25, {
@@ -147,6 +148,16 @@ function createFinalizeHarness(options = {}){
     bgShortId(value){
       return String(value || "");
     },
+    async lockComposeSharingForFinalize(){
+      return { ready: true };
+    },
+    assertComposeSharingFinalizationCurrent(){
+      insertionChecks++;
+      if (options.lateAttachment && insertionChecks === 2){
+        throw new Error("sharing_compose_pending_attachments");
+      }
+    },
+    finishComposeSharingFinalize(){},
     createSecureRuntimeId(){
       runtimeId += 1;
       return `runtime-id-${String(runtimeId).padStart(12, "0")}`;
@@ -1166,6 +1177,13 @@ async function verifySuccessfulCommit(){
 }
 
 async function run(){
+  const late = createFinalizeHarness({ lateAttachment: true });
+  const lateResult = await late.context.handleSharingFinalizeTransaction(finalizePayload());
+  assert(lateResult.ok === false && lateResult.canRetry === true
+    && lateResult.code === "sharing_compose_pending_attachments"
+    && late.calls.cleanupCommit.length === 0
+    && late.composeDetails.get(25).body === "<body><p>Original message</p></body>",
+  "A drop during the compose write must roll back the insertion before commit");
   verifyWizardDelegatesShareNoteFinalization();
   await verifyWizardFinalizeCancelLifecycle();
   await verifyPasswordEntitlementFinalization();

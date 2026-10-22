@@ -125,13 +125,17 @@
     uploadCompleted: false,
     uploadResult: null,
     uploadPort: null,
+    composePort: null,
+    composeDisconnected: false,
+    composeReady: false,
+    queueRevision: 0,
+    uploadedQueueRevision: 0,
+    composeBatches: new Map(),
     finalizeStarted: false,
     finalizeInProgress: false,
     finalizeRetryAllowed: false,
     finalized: false,
     tabId: null,
-    launchContextId: null,
-    launchContextAdopted: false,
     mode: 'default',
     attachmentReason: null,
     debugEnabled: false,
@@ -221,7 +225,9 @@
     initializeQueueView();
     try{
       state.tabId = parseTabId();
-      state.launchContextId = parseLaunchContextId();
+      state.mode = new URLSearchParams(window.location.search).get('attachmentMode') === '1'
+        ? 'attachments' : 'default';
+      connectComposeQueue();
       state.wizardWindowId = await resolveWizardWindowId();
       await initDebugLogging();
       attachEvents();
@@ -242,11 +248,6 @@
       }catch(error){
         logUiError('init', error);
       }
-      const launchContextLoaded = await loadLaunchContext();
-      if (!launchContextLoaded){
-        return;
-      }
-      await refreshVfsSourceAvailability();
       if (state.mode === "attachments"){
         await applyAttachmentModeDefaults();
       }else{
@@ -255,23 +256,22 @@
       renderFileQueue();
       updateStep(state.mode === "attachments" ? 3 : 1);
       updateAttachmentModeInfo();
-      const launchContextAdopted = await adoptAttachmentLaunchContext();
-      if (!launchContextAdopted){
+      if (state.composeDisconnected || isPageUnloading){
         return;
       }
+      state.composePort.postMessage({
+        type: 'ready', tabId: state.tabId, windowId: state.wizardWindowId
+      });
+      // Local attachment intake does not depend on remote source discovery.
+      void refreshVfsSourceAvailability().catch((error) => {
+        logUiError('initial VFS availability', error);
+      });
       log('Wizard initialized', {
         tabId: state.tabId,
-        mode: state.mode,
-        launchContextId: state.launchContextId || ""
+        mode: state.mode
       });
     }catch(error){
-      if (!state.launchContextId || state.launchContextAdopted){
-        throw error;
-      }
-      logUiError('attachment wizard bootstrap', error);
-      await rejectAttachmentLaunchContext(
-        error?.message || 'attachment_wizard_bootstrap_failed'
-      );
+      logUiError('sharing wizard bootstrap', error);
       await closeWizardWindow();
     }finally{
       if (!isPageUnloading){
@@ -448,7 +448,10 @@
       getTargetPath: queueEntries.getTargetRelativePath,
       formatSize: formatTransferSize,
       buildStatusNode,
-      canRemove: () => true,
+      canRemove: (node) => node.removalTarget?.kind === 'group'
+        ? !state.files.some((entry) => entry.uploaded
+          && String(entry.queueGroupId || entry.transferGroupId || '') === node.removalTarget.groupId)
+        : !node.entry?.uploaded,
       onRemove: (_node, removalTarget) => removeQueueEntry(removalTarget),
       getSourceIcon: getQueueSourceIcon,
       getToggleContent: () => cloneTemplateContent(dom.queueToggleIcon),
@@ -466,12 +469,6 @@
     if (!raw) return null;
     const parsed = parseInt(raw, 10);
     return Number.isFinite(parsed) ? parsed : null;
-  }
-
-  function parseLaunchContextId(){
-    const params = new URLSearchParams(window.location.search);
-    const raw = String(params.get('launchContextId') || '').trim();
-    return raw || '';
   }
 
   /**
@@ -610,6 +607,9 @@
   }
 
   function handleWindowFocus(){
+    if (!state.composeReady){
+      return;
+    }
     if (state.sourceSelectionInProgress){
       state.vfsPickerReturnFocusSeen = true;
       return;
@@ -786,121 +786,73 @@
     return state.debugEnabled;
   }
 
-  /**
-   * Load launch context passed by the background.
-   * @returns {Promise<boolean>}
-   */
-  async function loadLaunchContext(){
-    if (!state.launchContextId){
-      log('Launch context not set (normal start)');
-      return true;
-    }
-    try{
-      log('Request launch context', { contextId: state.launchContextId });
-      const response = await browser.runtime.sendMessage({
-        type: "sharing:getLaunchContext",
-        payload: {
-          contextId: state.launchContextId,
-          tabId: state.tabId,
-          windowId: state.wizardWindowId
-        }
-      });
-      if (!response?.ok || !response.context){
-        throw new Error(response?.error || 'attachment_launch_context_missing');
+  function connectComposeQueue(){
+    const port = browser.runtime.connect({ name: 'nc-sharing-compose' });
+    state.composePort = port;
+    port.onMessage.addListener((message) => {
+      if (message.type === 'ready'){
+        state.composeReady = true;
+        state.attachmentReason = message.reason || null;
+        updateAttachmentModeInfo();
+        updateButtons();
+        return;
       }
-      const context = response.context;
-      log('Launch context received', {
-        mode: context.mode || '',
-        attachmentCount: Array.isArray(context.attachments) ? context.attachments.length : 0
-      });
-      if (context.mode !== "attachments"){
-        throw new Error('attachment_launch_context_mode_invalid');
-      }
-      const expectedCount = Number(context.expectedAttachmentCount);
-      preloadAttachmentEntries(context.attachments, expectedCount);
-      state.mode = "attachments";
-      state.attachmentReason = context.reason || null;
-      return true;
-    }catch(error){
-      logUiError('launch context', error);
-      log('Launch context error', error?.message || String(error));
-      await rejectAttachmentLaunchContext(error?.message || 'attachment_launch_context_invalid');
-      await closeWizardWindow();
-      return false;
-    }
-  }
-
-  async function adoptAttachmentLaunchContext(){
-    if (!state.launchContextId || state.mode !== "attachments"){
-      return true;
-    }
-    try{
-      const response = await browser.runtime.sendMessage({
-        type: "sharing:adoptAttachmentLaunchContext",
-        payload: {
-          contextId: state.launchContextId,
-          tabId: state.tabId,
-          windowId: state.wizardWindowId,
-          attachmentCount: state.files.length
+      const batchId = String(message.batchId || '');
+      if (message.type === 'attachments'){
+        try{
+          if (state.finalized || !batchId || !Array.isArray(message.attachments)
+            || !message.attachments.length){
+            throw new Error('sharing_compose_queue_rejected');
+          }
+          if (!state.composeBatches.has(batchId)){
+            const entries = message.attachments.map((item) => {
+              if (!(item.file instanceof File)) throw new Error('attachment_file_invalid');
+              return queueEntries.createAttachmentEntry(item);
+            });
+            state.composeBatches.set(batchId, { entries, applied: false });
+          }
+          port.postMessage({ type: 'accepted', batchId });
+          updateButtons();
+        }catch(error){
+          logUiError('compose queue intake', error);
+          port.postMessage({ type: 'rejected', batchId });
         }
-      });
-      if (!response?.ok){
-        throw new Error(response?.error || 'attachment_launch_context_adoption_failed');
-      }
-      state.launchContextAdopted = true;
-      log('Attachment launch context adopted', { files: state.files.length });
-      return true;
-    }catch(error){
-      logUiError('launch context adoption', error);
-      await rejectAttachmentLaunchContext(error?.message || 'attachment_launch_context_adoption_failed');
-      await closeWizardWindow();
-      return false;
-    }
-  }
-
-  async function rejectAttachmentLaunchContext(reason){
-    if (!state.launchContextId || state.launchContextAdopted){
-      return;
-    }
-    try{
-      await browser.runtime.sendMessage({
-        type: "sharing:rejectAttachmentLaunchContext",
-        payload: {
-          contextId: state.launchContextId,
-          tabId: state.tabId,
-          windowId: state.wizardWindowId,
-          reason: String(reason || 'attachment_launch_context_rejected')
+      }else if (message.type === 'committed'){
+        const batch = state.composeBatches.get(batchId);
+        if (!batch) return;
+        if (!batch.applied){
+          state.files.push(...batch.entries);
+          batch.applied = true;
+          state.queueRevision = Number(message.revision);
+          rebuildFileEntryIndex();
+          if (!state.uploadInProgress) invalidateUpload();
+          else renderFileQueue();
+          setMessage(i18n('sharing_compose_files_added', [String(batch.entries.length)]), 'info');
         }
-      });
-    }catch(error){
-      logUiError('launch context rejection', error);
-    }
-  }
-
-  /**
-   * Fill the upload queue from attachment launch context.
-   * @param {Array<object>} attachments
-   * @param {number} expectedCount
-   */
-  function preloadAttachmentEntries(attachments, expectedCount){
-    const list = Array.isArray(attachments) ? attachments : [];
-    const validCount = list.filter((item) => item && item.file instanceof File).length;
-    log('Attachment launch context preload', {
-      received: list.length,
-      valid: validCount
+        port.postMessage({ type: 'applied', batchId });
+        state.composeBatches.delete(batchId);
+        updateButtons();
+      }else if (message.type === 'rejected'){
+        const batch = state.composeBatches.get(batchId);
+        if (batch?.applied){
+          const rejected = new Set(batch.entries);
+          state.files = state.files.filter((entry) => !rejected.has(entry));
+          rebuildFileEntryIndex();
+          invalidateUpload();
+        }
+        state.composeBatches.delete(batchId);
+        updateButtons();
+      }
     });
-    if (!Number.isInteger(expectedCount)
-      || expectedCount <= 0
-      || list.length !== expectedCount
-      || validCount !== expectedCount){
-      throw new Error('attachment_launch_context_incomplete');
-    }
-    state.files = list.map((item) => queueEntries.createAttachmentEntry(item));
-    if (state.files.length !== expectedCount){
-      throw new Error('attachment_launch_queue_incomplete');
-    }
-    rebuildFileEntryIndex();
-    log('Attachment queue prepared', { files: state.files.length });
+    port.onDisconnect.addListener(() => {
+      state.composeReady = false;
+      state.composeDisconnected = true;
+      state.composePort = null;
+      if (!isPageUnloading){
+        logUiError('compose queue disconnected', new Error('sharing_compose_session_closed'));
+        void closeWizardWindow();
+      }
+    });
   }
 
   /**
@@ -1192,7 +1144,8 @@
   }
 
   function updateButtons(){
-    const busy = state.shareFolderCheckInProgress
+    const busy = !state.composeReady || state.composeBatches.size > 0
+      || state.shareFolderCheckInProgress
       || state.sourceSelectionInProgress
       || state.uploadInProgress
       || state.finalizeInProgress;
@@ -1202,7 +1155,9 @@
     queueView?.setRemovalDisabled(sourceControlsDisabled);
     [
       dom.addFilesBtn,
-      dom.addFolderBtn
+      dom.addFolderBtn,
+      dom.fileInput,
+      dom.folderInput
     ].forEach((control) => {
       if (control){
         control.disabled = sourceControlsDisabled;
@@ -1210,12 +1165,12 @@
     });
     [dom.addNextcloudFilesBtn, dom.addNextcloudFolderBtn].forEach((control) => {
       if (control){
-        control.disabled = sourceControlsDisabled || !state.vfsAvailability.nextcloud;
+        control.disabled = sourceControlsDisabled || !!state.uploadResult || !state.vfsAvailability.nextcloud;
       }
     });
     [dom.addExternalFilesBtn, dom.addExternalFolderBtn].forEach((control) => {
       if (control){
-        control.disabled = sourceControlsDisabled || externalBlocked || !externalConnectionReady;
+        control.disabled = sourceControlsDisabled || !!state.uploadResult || externalBlocked || !externalConnectionReady;
       }
     });
     [dom.openVfsSettingsBtn, dom.findVfsProvidersBtn].forEach((control) => {
@@ -1232,13 +1187,13 @@
     setSourceActionState({
       action: dom.nextcloudSourceAction,
       summary: dom.nextcloudSourceSummary,
-      disabled: sourceControlsDisabled || !state.vfsAvailability.nextcloud,
+      disabled: sourceControlsDisabled || !!state.uploadResult || !state.vfsAvailability.nextcloud,
       unavailableTitle: i18n('sharing_vfs_nextcloud_unavailable_tooltip')
     });
     setSourceActionState({
       action: dom.externalSourceAction,
       summary: dom.externalSourceSummary,
-      disabled: sourceControlsDisabled || externalBlocked,
+      disabled: sourceControlsDisabled || !!state.uploadResult || externalBlocked,
       unavailableTitle: getExternalSourceUnavailableTitle()
     });
     if (sourceControlsDisabled){
@@ -1259,7 +1214,8 @@
       setPrimaryAction(dom.finishBtn);
       return;
     }
-    dom.backBtn.disabled = state.finalizeStarted || state.currentStep === 1 || busy;
+    dom.backBtn.disabled = state.finalizeStarted || state.currentStep === 1 || busy
+      || (!!state.uploadResult && state.currentStep <= 3);
     dom.nextBtn.style.visibility = state.currentStep >= TOTAL_STEPS ? 'hidden' : 'visible';
     dom.nextBtn.disabled = state.finalizeStarted
       || busy
@@ -1272,7 +1228,7 @@
       || !state.files.length
       || state.uploadCompleted;
     dom.finishBtn.style.visibility = state.currentStep === TOTAL_STEPS ? 'visible' : 'hidden';
-    dom.finishBtn.disabled = !state.uploadCompleted
+    dom.finishBtn.disabled = (!state.uploadCompleted && !state.uploadResult)
       || busy
       || (state.finalizeStarted && !state.finalizeRetryAllowed)
       || state.finalized;
@@ -1735,7 +1691,7 @@
     const removed = kind === 'group'
       ? state.files.filter(belongsToGroup)
       : state.files.filter((entry) => entry.id === entryId);
-    if (!removed.length){
+    if (!removed.length || removed.some((entry) => entry.uploaded)){
       return;
     }
     state.files = kind === 'group'
@@ -2079,10 +2035,9 @@
 
   function invalidateUpload(){
     state.uploadCompleted = false;
-    state.uploadResult = null;
     pendingUploadScroll = '__top__';
     state.files.forEach((entry) => {
-      queueEntries.resetTransferState(entry);
+      if (!entry.uploaded) queueEntries.resetTransferState(entry);
     });
     setUploadStatus('');
     setOverallProgress({ visible: false });
@@ -2137,7 +2092,7 @@
    * @returns {Promise<void>}
    */
   async function startUpload({ allowEmpty = false } = {}){
-    if (state.uploadInProgress){
+    if (state.uploadInProgress || state.composeBatches.size){
       return;
     }
     if (!state.files.length && !allowEmpty){
@@ -2164,8 +2119,10 @@
       setUploadStatus(i18n('sharing_status_scanning'));
       setOverallProgress({ visible: true, indeterminate: true });
       state.files.forEach((entry) => {
-        queueEntries.resetTransferState(entry);
-        entry.status = 'queued';
+        if (!entry.uploaded){
+          queueEntries.resetTransferState(entry);
+          entry.status = 'queued';
+        }
       });
     }else{
       setMessage(i18n('sharing_status_creating'), 'info');
@@ -2189,42 +2146,53 @@
         write: !!permissions.write,
         delete: !!permissions.delete
       });
-      const result = await runBackgroundFileLinkUpload({
-        shareName: shareContext.sanitizedName,
-        basePath: state.basePath,
-        shareDate: shareContext.shareDate.toISOString(),
-        permissions,
-        passwordEnabled: !!dom.passwordToggle.checked,
-        password: dom.passwordInput.value,
-        expireEnabled: !!dom.expireToggle.checked,
-        expireDate: dom.expireDate.value,
-        noteEnabled,
-        note: noteValue,
-        files: state.files.map((entry) => ({
-          id: entry.id,
-          sourceKind: entry.sourceKind || 'local',
-          sourceLabel: entry.sourceLabel || '',
-          kind: entry.kind || 'file',
-          name: entry.name || entry.file?.name || 'File',
-          file: entry.file,
-          storageRef: entry.storageRef || null,
-          sourcePath: entry.sourcePath || '',
-          size: entry.sourceKind === 'local'
-            ? (Number(entry.file?.size) || 0)
-            : entry.size,
-          lastModified: Number(entry.lastModified ?? entry.file?.lastModified) || 0,
-          contentType: entry.contentType || entry.file?.type || 'application/octet-stream',
-          transferGroupId: entry.transferGroupId || '',
-          transferRole: entry.transferRole || 'item',
-          transferRoot: entry.transferRoot === true,
-          displayPath: entry.displayPath,
-          renamedName: entry.renamedName,
-          relativeDir: entry.relativeDir
-        }))
-      });
-      state.uploadResult = result;
-      renderTargetFolderPath(result?.shareInfo?.folderInfo?.relativeFolder);
+      do{
+        if (!(await ensureUniqueQueueEntries())) return;
+        const batch = state.files.filter((entry) => !entry.uploaded);
+        if (!batch.length && state.uploadResult) break;
+        const result = await runBackgroundFileLinkUpload({
+          append: !!state.uploadResult,
+          shareName: shareContext.sanitizedName,
+          basePath: state.basePath,
+          shareDate: shareContext.shareDate.toISOString(),
+          permissions,
+          passwordEnabled: !!dom.passwordToggle.checked,
+          password: dom.passwordInput.value,
+          expireEnabled: !!dom.expireToggle.checked,
+          expireDate: dom.expireDate.value,
+          noteEnabled,
+          note: noteValue,
+          files: batch.map((entry) => ({
+            id: entry.id,
+            sourceKind: entry.sourceKind || 'local',
+            sourceLabel: entry.sourceLabel || '',
+            kind: entry.kind || 'file',
+            name: entry.name || entry.file?.name || 'File',
+            file: entry.file,
+            storageRef: entry.storageRef || null,
+            sourcePath: entry.sourcePath || '',
+            size: entry.sourceKind === 'local'
+              ? (Number(entry.file?.size) || 0)
+              : entry.size,
+            lastModified: Number(entry.lastModified ?? entry.file?.lastModified) || 0,
+            contentType: entry.contentType || entry.file?.type || 'application/octet-stream',
+            transferGroupId: entry.transferGroupId || '',
+            transferRole: entry.transferRole || 'item',
+            transferRoot: entry.transferRoot === true,
+            displayPath: entry.displayPath,
+            renamedName: entry.renamedName,
+            relativeDir: entry.relativeDir
+          }))
+        });
+        state.uploadResult = result;
+        for (const entry of batch) entry.uploaded = true;
+      }while (state.files.some((entry) => !entry.uploaded));
+      setFinalizeInputsDisabled(true);
+      dom.noteToggle.disabled = state.mode === 'attachments';
+      dom.noteInput.disabled = state.mode === 'attachments' || !dom.noteToggle.checked;
+      renderTargetFolderPath(state.uploadResult?.shareInfo?.folderInfo?.relativeFolder);
       state.uploadCompleted = true;
+      state.uploadedQueueRevision = state.queueRevision;
       setMessage(i18n('sharing_status_ready'), 'success');
       setUploadStatus(i18n('sharing_status_ready'));
       setOverallProgress({ visible: true, percent: 100 });
@@ -2386,6 +2354,9 @@
       });
       return;
     }
+    if (!state.uploadCompleted && state.uploadResult?.shareInfo){
+      await startUpload();
+    }
     if (!state.uploadCompleted || !state.uploadResult?.shareInfo){
       setMessage(i18n('sharing_error_upload_required'), 'error');
       log('Finalize canceled: upload missing');
@@ -2483,8 +2454,10 @@
     }catch(error){
       logUiError("finalize share failed", error);
       if (error?.canRetry === true){
+        state.finalizeStarted = false;
         state.finalizeRetryAllowed = true;
-        setMessage(i18n('sharing_error_insert_failed'), 'error');
+        setMessage(i18n(error.code === 'sharing_compose_pending_attachments'
+          ? 'sharing_compose_pending_attachments' : 'sharing_error_insert_failed'), 'error');
       }else{
         state.finalizeRetryAllowed = false;
         setMessage(
@@ -2596,6 +2569,7 @@
     const response = await browser.runtime.sendMessage({
       type: "sharing:finalizeRenderedShare",
       payload: {
+        queueRevision: state.uploadedQueueRevision,
         tabId,
         wizardWindowId: state.wizardWindowId,
         html: String(payload.html || ""),
@@ -2620,6 +2594,7 @@
     if (!response?.ok){
       const finalizeError = new Error(i18n('sharing_error_insert_failed'));
       finalizeError.canRetry = response?.canRetry === true;
+      finalizeError.code = response?.code || '';
       throw finalizeError;
     }
     log('Share finalize committed', {
@@ -2668,7 +2643,8 @@
         continue;
       }
       if (!promptForRename(
-        queueEntries.getCollisionRenameTarget(state.files, conflict.fileEntry),
+        queueEntries.getCollisionRenameTarget(state.files,
+          conflict.fileEntry.uploaded ? conflict.nestedEntry : conflict.fileEntry),
         'sharing_prompt_rename_file_directory_conflict'
       )){
         return false;
@@ -2865,6 +2841,8 @@
     // Wizard remote cleanup is handled centrally in background by window removal.
     NCDebugForwarder.markRuntimeContextUnloading?.();
     isPageUnloading = true;
+    state.composePort?.disconnect();
+    state.composePort = null;
     if (state.uploadPort){
       NCSharingPortRequest.cancel(state.uploadPort, {
         reason: 'wizard_unload',

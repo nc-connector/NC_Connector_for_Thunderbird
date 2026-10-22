@@ -489,6 +489,40 @@
     }
   }
 
+  async function appendFileLink(prepared, { root, result } = {}){
+    if (!prepared?.request || !prepared?.sourcePlan || !root?.cleanupTarget
+      || !result?.shareInfo?.shareId){
+      throw new Error("file_link_continuation_missing");
+    }
+    const { request, sourcePlan } = prepared;
+    if (sourcePlan.items.some((item) => item.sourceKind !== "local")){
+      throw new Error("file_link_continuation_requires_local_files");
+    }
+    const opts = await NCCore.getOpts();
+    const context = await resolveFileLinkDavContext(opts, request, { requireCapabilities: true });
+    const target = root.cleanupTarget;
+    const relativeFolder = root.folderInfo?.relativeFolder || "";
+    if (!relativeFolder
+      || NCNextcloudDav.buildFileUrl(context.davRoot, relativeFolder) !== target.url
+      || context.authHeader !== target.authHeader
+      || result.shareInfo.folderInfo?.relativeFolder !== relativeFolder){
+      throw new Error("file_link_continuation_account_changed");
+    }
+    logDebug(opts, "appendFileLink:start", { files: sourcePlan.localFiles.length });
+    await NCFileLinkUpload.prepareAndUpload({
+      files: sourcePlan.localFiles,
+      davRoot: context.davRoot,
+      uploadRoot: context.uploadRoot,
+      authHeader: context.authHeader,
+      signal: request.signal,
+      log: (...args) => logDebug(opts, ...args),
+      onStatus: request.onUploadStatus,
+      existingRoot: root
+    });
+    // The original root remains armed for wizard cancellation, including failures.
+    return result;
+  }
+
   async function getFileLinkBasePath(){
     if (typeof browser === "undefined" || !browser?.storage?.local){
       return DEFAULT_BASE_PATH;
@@ -541,6 +575,7 @@
     DEFAULT_BASE_PATH,
     prepareFileLinkRequest,
     createFileLink,
+    appendFileLink,
     checkFileLinkFolderExists,
     buildHtmlBlock,
     buildPlainTextBlock,

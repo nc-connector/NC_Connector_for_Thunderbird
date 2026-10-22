@@ -1,4 +1,13 @@
 {
+  "sharing_compose_existing_share": {
+    "message": "Este mensaje ya contiene un recurso compartido de Nextcloud. Las reglas de adjuntos siguen aplicándose a los archivos adicionales. Si es obligatorio compartirlos, quite esos adjuntos y compártalos en un mensaje nuevo."
+  },
+  "sharing_compose_files_added": {
+    "message": "Se han añadido $1 archivos al recurso compartido."
+  },
+  "sharing_compose_pending_attachments": {
+    "message": "Todavía se están añadiendo archivos. Revise la cola y vuelva a finalizar."
+  },
   "calendar_action_title": {
     "message": "NC Connector"
   },
@@ -858,7 +867,7 @@
     "message": "No se pudo completar la compartición de forma segura. Cierre la ventana de compartición y revise el mensaje antes de volver a intentarlo."
   },
   "sharing_attachment_routing_active": {
-    "message": "El uso compartido de archivos sigue en curso. Finalícelo o cierre la ventana de uso compartido antes de enviar el mensaje."
+    "message": "El mensaje no se ha enviado. Finalice o cancele el asistente de uso compartido abierto, o quite los archivos adjuntos que deban compartirse mediante NC Connector."
   },
   "sharing_saved_template_unsupported": {
     "message": "Los mensajes con una compartición de NC Connector no pueden guardarse ni enviarse como plantillas de Thunderbird. Cree un mensaje nuevo y vuelva a compartir los archivos."

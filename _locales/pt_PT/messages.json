@@ -1,4 +1,13 @@
 {
+  "sharing_compose_existing_share": {
+    "message": "Esta mensagem já contém uma partilha Nextcloud. As regras de anexos continuam a aplicar-se aos ficheiros adicionais. Se a partilha for obrigatória, remova esses anexos e partilhe-os numa nova mensagem."
+  },
+  "sharing_compose_files_added": {
+    "message": "$1 ficheiros adicionados à partilha."
+  },
+  "sharing_compose_pending_attachments": {
+    "message": "Ainda estão a ser adicionados ficheiros. Verifique a fila e volte a concluir."
+  },
   "calendar_action_title": {
     "message": "NC Connector"
   },
@@ -858,7 +867,7 @@
     "message": "Não foi possível concluir a partilha em segurança. Feche a janela de partilha e verifique a mensagem antes de tentar novamente."
   },
   "sharing_attachment_routing_active": {
-    "message": "A partilha de ficheiros ainda está em curso. Conclua-a ou feche a janela de partilha antes de enviar a mensagem."
+    "message": "A mensagem não foi enviada. Conclua ou cancele o assistente de partilha aberto, ou remova os ficheiros anexados que têm de ser partilhados através do NC Connector."
   },
   "sharing_saved_template_unsupported": {
     "message": "As mensagens com uma partilha do NC Connector não podem ser guardadas nem enviadas como modelos do Thunderbird. Crie uma nova mensagem e partilhe novamente os ficheiros."

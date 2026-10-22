@@ -826,66 +826,6 @@ browser.runtime.onMessage.addListener((msg, sender) => {
       };
     }
   }
-  if (msg.type === "sharing:getLaunchContext"){
-    try{
-      const contextId = typeof msg.payload?.contextId === "string" ? msg.payload.contextId.trim() : "";
-      if (!contextId){
-        L("sharing:getLaunchContext invalid request (missing contextId)");
-        return { ok:false, error: "context_id_missing" };
-      }
-      const response = await getComposeAttachmentLaunchContext(
-        contextId,
-        Number(msg.payload?.tabId),
-        Number(msg.payload?.windowId)
-      );
-      if (!response.ok){
-        L("sharing:getLaunchContext miss", { contextId: bgShortId(contextId, 24) });
-        return response;
-      }
-      const context = response.context;
-      L("sharing:getLaunchContext hit", {
-        contextId: bgShortId(contextId, 24),
-        mode: context?.mode || "",
-        attachmentCount: Array.isArray(context?.attachments) ? context.attachments.length : 0
-      });
-      return { ok:true, context };
-    }catch(error){
-      console.error("[NCBG] sharing:getLaunchContext", error);
-      return { ok:false, error: error?.message || String(error) };
-    }
-  }
-  if (msg.type === "sharing:adoptAttachmentLaunchContext"){
-    try{
-      const contextId = typeof msg.payload?.contextId === "string" ? msg.payload.contextId.trim() : "";
-      if (!contextId){
-        return { ok:false, error:"context_id_missing" };
-      }
-      return adoptComposeAttachmentLaunchContext(
-        contextId,
-        Number(msg.payload?.tabId),
-        Number(msg.payload?.windowId),
-        Number(msg.payload?.attachmentCount)
-      );
-    }catch(error){
-      return messageError("sharing:adoptAttachmentLaunchContext", error);
-    }
-  }
-  if (msg.type === "sharing:rejectAttachmentLaunchContext"){
-    try{
-      const contextId = typeof msg.payload?.contextId === "string" ? msg.payload.contextId.trim() : "";
-      if (!contextId){
-        return { ok:false, error:"context_id_missing" };
-      }
-      return await rejectComposeAttachmentLaunchContext(
-        contextId,
-        Number(msg.payload?.tabId),
-        Number(msg.payload?.windowId),
-        String(msg.payload?.reason || "")
-      );
-    }catch(error){
-      return messageError("sharing:rejectAttachmentLaunchContext", error);
-    }
-  }
   if (msg.type === "sharing:resolveAttachmentPrompt"){
     try{
       const promptId = typeof msg.payload?.promptId === "string" ? msg.payload.promptId.trim() : "";

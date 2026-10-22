@@ -407,6 +407,10 @@ function createManualShareEntryHarness({
   const context = {
     URL,
     console: { error: (...args) => errors.push(args) },
+    COMPOSE_SHARING_BY_TAB: new Map(),
+    hasComposeSharingBlock: async () => false,
+    createSecureRuntimeId: () => "test-session-id",
+    getComposeAttachmentAutomationState: () => ({ promptId: "" }),
     L(){},
     CONNECTION_REQUIRED_POPUP_WIDTH: 480,
     CONNECTION_REQUIRED_POPUP_HEIGHT: 250,
@@ -428,8 +432,8 @@ function createManualShareEntryHarness({
     },
     openAuthenticationRequiredOptions: async () => { calls.push("settings"); },
     focusPopupWindowBestEffort: async () => true,
-    bindSharingWizardRequestContext: (windowId, tabId, launchContext) => {
-      requestContexts.push({ windowId, tabId, launchContext });
+    bindSharingWizardRequestContext: (windowId, tabId, options) => {
+      requestContexts.push({ windowId, tabId, options });
       return { attachmentMode: false };
     },
     bgShortId: (value) => value,
@@ -451,7 +455,7 @@ function createManualShareEntryHarness({
   vm.createContext(context);
   for (const [file, startMarker, endMarker] of [
     ["modules/bgState.js", "async function isNextcloudAccountConfigured(){", "function shortToken("],
-    ["modules/bgComposeAttachments.js", "async function openSharingWizardWindow(", "async function listComposeAttachments("],
+    ["modules/bgComposeAttachments.js", "function bindComposeSharingWindow(", "async function listComposeAttachments("],
     ["modules/bgCompose.js", "browser.composeAction.onClicked.addListener(", "browser.compose.onIdentityChanged.addListener("]
   ]){
     const source = readText(file);
@@ -492,9 +496,9 @@ async function checkManualShareEntryAccess(){
     assert(allowed.calls.join(",") === "account,access" && allowed.errors.length === 0,
       "Configured manual Share must evaluate the shared access result once before opening");
     assert(allowed.windows.length === 1
-      && allowed.windows[0].url === "moz-extension://test/ui/nextcloudSharingWizard.html?tabId=31"
+      && allowed.windows[0].url === "moz-extension://test/ui/nextcloudSharingWizard.html?tabId=31&sessionId=test-session-id"
       && allowed.requestContexts.length === 1 && allowed.requestContexts[0].tabId === 31
-      && allowed.requestContexts[0].launchContext === null,
+      && allowed.requestContexts[0].options.mode === "default",
     "Allowed manual Share must open its existing wizard and bind only its compose context");
   }
 

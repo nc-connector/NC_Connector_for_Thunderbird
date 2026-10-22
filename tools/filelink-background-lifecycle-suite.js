@@ -214,6 +214,7 @@ async function createCleanupHarness(deleteRemotePath, overrides = {}){
     NCNextcloudDav: {
       normalizeRelativePath: normalizeTestRelativePath,
       buildFileUrl: buildTestFileUrl,
+      joinPath: (...parts) => parts.map(normalizeTestRelativePath).filter(Boolean).join("/"),
       deleteRemotePath,
       deleteRootReservation: async () => true,
       async deleteTrackedRoot(options){
@@ -617,8 +618,23 @@ function createPort(){
 async function createBackgroundHarness({
   deleteRemotePath = async () => true,
   createFileLink,
+  appendFileLink = async (_prepared, completed) => completed.result,
   assertManagedAccess = async (status) => status,
-  prepareFileLinkRequest = (request) => ({ request, sourcePlan: {} })
+  prepareFileLinkRequest = (request) => ({
+    request,
+    sourcePlan: {
+      items: (request.files || []).map((file) => ({
+        itemId: String(file.id),
+        fileName: file.name,
+        relativeDir: file.relativeDir || "",
+        size: file.size || 0,
+        lastModified: file.lastModified || 0,
+        kind: file.kind || "file",
+        sourceKind: "local",
+        transferGroupId: file.transferGroupId || ""
+      }))
+    }
+  })
 } = {}){
   let connectListener = null;
   let windowRemovedListener = null;
@@ -646,7 +662,8 @@ async function createBackgroundHarness({
     },
     NCSharing: {
       prepareFileLinkRequest,
-      createFileLink: (prepared) => createFileLink(prepared.request)
+      createFileLink: (prepared) => createFileLink(prepared.request),
+      appendFileLink
     },
     browser: {
       runtime: {
@@ -665,6 +682,7 @@ async function createBackgroundHarness({
       }
     }
   });
+  loadScript("modules/fileQueuePathConflicts.js", cleanup.context);
   loadScript("modules/bgFileLinkUpload.js", cleanup.context);
   return {
     context: cleanup.context,
@@ -973,12 +991,73 @@ async function checkUndeliveredResultCleanup(){
   );
 }
 
+async function checkSameShareContinuation(){
+  let creates = 0;
+  let deletes = 0;
+  let failItem = "";
+  const appended = [];
+  const background = await createBackgroundHarness({
+    deleteRemotePath: async () => { deletes++; return true; },
+    createFileLink: async ({ onRootCreated }) => {
+      creates++;
+      const root = createUploadRoot("Single");
+      await onRootCreated(root);
+      return { shareInfo: { folderInfo: root.folderInfo,
+        shareId: "single", shareUrl: "https://cloud.example.test/s/single" } };
+    },
+    appendFileLink: async (prepared, completed) => {
+      const id = prepared.request.files[0].id;
+      if (id === failItem) throw new Error("append_failed");
+      appended.push({ id, root: completed.root });
+      return completed.result;
+    }
+  });
+  async function upload(files, append = false){
+    const port = createPort();
+    background.connect(port);
+    port.emitMessage({ type: "start", windowId: 50, tabId: 60,
+      request: { append, files } });
+    await flushMicrotasks(100);
+    const response = port.posted.find((message) => ["result", "error"].includes(message.type));
+    assert(response, "Every continuation must settle its upload Port");
+    return response;
+  }
+  const first = { id: "first", name: "first.txt", size: 1 };
+  const later = { id: "later", name: "later.txt", size: 2 };
+  const third = { id: "third", name: "third.txt", size: 3 };
+  const initial = await upload([first]);
+  assert(initial.type === "result", "The first batch must create a share");
+  const owner = background.wizardEntries.get(50);
+  const next = await upload([first, later], true);
+  assert(next.type === "result" && next.result === initial.result,
+    "A continuation must return the original share, not create another");
+  assert(appended.map((entry) => entry.id).join(",") === "later",
+    "Completed IDs must not be uploaded again");
+  assert(background.wizardEntries.get(50) === owner && creates === 1 && deletes === 0,
+    "Appending must preserve the original cleanup owner and folder");
+  assert(appended[0].root.folderInfo.relativeFolder === initial.result.shareInfo.folderInfo.relativeFolder,
+    "Later files must use the exact existing root");
+  failItem = "third";
+  assert((await upload([later, third], true)).type === "error", "A failed append must report failure");
+  failItem = "";
+  assert((await upload([later, third], true)).type === "result", "A failed item can be retried");
+  assert(appended.map((entry) => entry.id).join(",") === "later,third",
+    "Retry must skip files already completed in earlier batches");
+  assert((await upload([{ id: "collision", name: "first.txt", size: 9 }], true)).type === "error",
+    "A new ID must not overwrite an existing destination");
+  assert((await upload([later], false)).type === "error",
+    "A second initial upload in the same wizard must be refused");
+  assert(creates === 1 && deletes === 0 && appended.length === 2,
+    "Rejected requests must not mutate the existing share");
+}
+
 async function runBackgroundLifecycleChecks(){
   await checkCleanupGenerations();
   await checkCleanupRetry();
   await checkBackgroundAbort();
   await checkSessionReplacement();
   await checkUndeliveredResultCleanup();
+  await checkSameShareContinuation();
 }
 
 module.exports = {

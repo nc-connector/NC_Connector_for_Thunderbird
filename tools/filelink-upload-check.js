@@ -324,9 +324,55 @@ function plannedFile(index, size, relativeDir = ""){
   });
 }
 
+async function checkOwnedRootContinuation(){
+  const context = createContext();
+  const transfers = [];
+  const roots = [];
+  const existingRoot = { folderInfo: { relativeFolder: "Shares/Original" },
+    cleanupTarget: { url: "https://cloud.example.test/dav/Shares/Original", authHeader: "Basic original" } };
+  context.NCFileLinkTransfer = { ...context.NCFileLinkTransfer,
+    uploadFile: async (options) => { transfers.push(options); return {}; } };
+  context.NCNextcloudDav = { ...context.NCNextcloudDav,
+    prepareFolderPath: async () => { throw new Error("must_not_prepare_new_root"); },
+    createPlannedDirectories: async (options) => { roots.push(options.shareRoot); } };
+  loadScript("modules/fileLinkUpload.js", context);
+  const transfer = await context.NCFileLinkUpload.prepareAndUpload({
+    files: [plannedFile(1, 10), plannedFile(2, 12)], bulkSupported: true,
+    existingRoot, davRoot: "https://cloud.example.test/dav", authHeader: "Basic original",
+    onRootCreated: () => { throw new Error("must_not_replace_root"); }
+  });
+  assert(transfer.root === existingRoot && transfers.length === 2
+    && transfers.every((entry) => entry.overwrite === false && entry.shareRoot === "Shares/Original"),
+  "Continuations must use the common transfer engine with create-only writes into the owned root");
+  assert(roots.join(",") === "Shares/Original", "Only child folders of the existing root may be prepared");
+
+  const source = readText("modules/ncSharing.js");
+  const from = source.indexOf("  async function appendFileLink(");
+  const to = source.indexOf("  async function getFileLinkBasePath(", from);
+  assert(from >= 0 && to > from, "Continuation facade boundaries must exist");
+  const forwarded = [];
+  const account = { davRoot: "https://cloud.example.test/dav", authHeader: "Basic original" };
+  context.NCCore = { getOpts: async () => ({}) };
+  context.resolveFileLinkDavContext = async () => account;
+  context.logDebug = () => {};
+  context.NCFileLinkUpload = { prepareAndUpload: async (request) => forwarded.push(request) };
+  vm.runInContext(source.slice(from, to), context);
+  const prepared = { request: {}, sourcePlan: { items: [{ sourceKind: "local" }], localFiles: [plannedFile(3, 1)] } };
+  const result = { shareInfo: { shareId: "original", folderInfo: existingRoot.folderInfo } };
+  assert(await context.appendFileLink(prepared, { root: existingRoot, result }) === result
+    && forwarded[0].existingRoot === existingRoot,
+  "The facade must forward the existing root and retain share metadata");
+  account.authHeader = "Basic changed";
+  let refused = false;
+  try{ await context.appendFileLink(prepared, { root: existingRoot, result }); }
+  catch(error){ refused = error.message === "file_link_continuation_account_changed"; }
+  assert(refused && forwarded.length === 1, "An account switch must stop continuation before remote changes");
+}
+
 async function run(){
   await checkSharingPortRequest();
   await checkCopyOnlyCompletionLog();
+  await checkOwnedRootContinuation();
   const context = createContext();
   const policy = context.NCFileLinkUploadPolicy;
   const dav = context.NCNextcloudDav;
@@ -544,8 +590,9 @@ async function run(){
     wizardHtml.includes('<script src="sharingPortRequest.js"></script>')
       && portRequestSource.includes("browser.runtime.connect({ name: portName })")
       && (wizardSource.match(/NCSharingPortRequest\.run\(\{/g) || []).length === 2
-      && !wizardSource.includes("browser.runtime.connect("),
-    "Sharing wizard Ports must use the shared request lifecycle"
+      && (wizardSource.match(/browser\.runtime\.connect\(/g) || []).length === 1
+      && wizardSource.includes("name: 'nc-sharing-compose'"),
+    "Upload request Ports must use the shared lifecycle; compose intake has one live Port"
   );
   assert(!wizardSource.includes("NCSharing.createFileLink({"), "Wizard must not own network transfers");
   assert(

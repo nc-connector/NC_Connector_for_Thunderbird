@@ -117,12 +117,20 @@ password-dispatch, header, or body mutation cannot be exposed as committed.
 14) Attachment automation is serialized per compose tab. Prompt ownership is
   reserved before popup creation, and additions made while a prompt is open are
   either consumed, removed, or deliberately ignored with that prompt decision.
-15) Compose attachments are journaled while they move into the sharing wizard.
-  A partial detach or failed wizard bootstrap restores every removed file. The
-  no-restore cancellation boundary starts only after the complete queue has
-  acknowledged the launch context.
-16) Sending is blocked only while automated attachment routing owns the compose
-  tab. A manually opened sharing wizard does not participate in that guard.
+15) Manual Sharing and attachment automation share one per-compose session and
+  the `nc-sharing-compose` Port. Existing and later normal attachments join its
+  queue in every step. Removal follows acceptance; a final queue acknowledgement
+  ends the restore journal. Failed handoff restores removed files and closes the
+  session. Cancellation after confirmed adoption deliberately does not restore.
+16) Sending is blocked while either Sharing entry owns the compose tab. Queue
+  revisions guard finalization; an existing share marker blocks another share.
+  The same before-send guard checks ordinary attachments after share insertion:
+  always-share and exceeded locked size policies still apply. Embedded body
+  images are not part of Thunderbird's native attachment bucket. No new API,
+  permission, automatic attachment deletion, or second sharing path is used.
+  Later local files reuse the upload planner and create-only transfers into the
+  same owned folder, without creating another share. Disconnect ends volatile
+  UI state; persisted remote cleanup still handles recovery.
 17) Manual Sharing and Talk actions do not initialize their wizard while the
   effective Nextcloud URL, user, or app password is missing. Managed installations
   open the General options tab with a first-sign-in notice; unmanaged installations

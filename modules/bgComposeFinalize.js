@@ -346,7 +346,9 @@ async function handleSharingFinalizeTransaction(payload = {}){
   }
 
   let transaction = null;
+  let sharingSession = null;
   try{
+    sharingSession = await lockComposeSharingForFinalize(tabId, wizardWindowId, payload.queueRevision);
     transaction = beginComposeFinalizeTransaction(tabId, wizardWindowId);
     await runComposeFinalizeStage(
       transaction,
@@ -435,6 +437,7 @@ async function handleSharingFinalizeTransaction(payload = {}){
           }
         );
         throwIfComposeFinalizeAborted(transaction);
+        assertComposeSharingFinalizationCurrent(sharingSession);
         transaction.insertMutation = mutation;
         await applySharingInsertMutation(mutation);
         return mutation;
@@ -443,7 +446,9 @@ async function handleSharingFinalizeTransaction(payload = {}){
         transaction.insertMutation = mutation;
       }
     );
+    assertComposeSharingFinalizationCurrent(sharingSession);
     commitComposeFinalizeTransaction(transaction);
+    finishComposeSharingFinalize(sharingSession, true);
     return {
       ok: true,
       transactionId: transaction.transactionId,
@@ -458,6 +463,7 @@ async function handleSharingFinalizeTransaction(payload = {}){
         error?.message || "finalize_failed"
       );
     }
+    finishComposeSharingFinalize(sharingSession, false);
     globalThis.NCLogContext?.safeConsoleError?.(
       "[NCBG]",
       "sharing finalize transaction failed",
@@ -471,7 +477,9 @@ async function handleSharingFinalizeTransaction(payload = {}){
     return {
       ok: false,
       error: bgI18n("sharing_error_insert_failed"),
-      canRetry: rollbackComplete
+      code: error?.message === "sharing_compose_pending_attachments"
+        ? "sharing_compose_pending_attachments" : "",
+      canRetry: rollbackComplete && error?.message !== "sharing_compose_existing_share"
     };
   }
 }

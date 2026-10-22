@@ -112,7 +112,7 @@ Top-level:
 
 Key files you’ll touch most:
 - `modules/bgState.js` — shared runtime state, startup initialization, and `[NCBG]` log helper
-- `modules/bgComposeAttachments.js` — compose attachment automation, threshold prompts, and sharing-launch context handling
+- `modules/bgComposeAttachments.js` — compose attachment automation, threshold prompts, and the shared compose/wizard queue session
 - `modules/bgShareCleanupStore.js` — versioned, secret-free persistence and bounded retry for wizard/compose cleanup ownership
 - `modules/bgComposeShareCleanup.js` — compose-tab and wizard-window remote cleanup lifecycle
 - `modules/bgComposeShareInsert.js` — mode-aware share-block insertion (HTML vs plain-text compose)
@@ -941,18 +941,27 @@ Entry point:
 - `compose_action` button opens the sharing wizard (popup window).
 - `compose.onAttachmentAdded` can auto-open the sharing wizard in attachment mode
   based on sharing options (`always` or threshold-based).
-- After popup creation, background performs best-effort focus retries.
-  Window-manager policy may still refuse foreground focus.
+- Native `windows.create()` can remain pending until the first window focus.
+  The authenticated queue Port can bind the window earlier using its sender tab's
+  window ID, checked against the ready message and the session-specific URL.
+  Both notifications use one binding function; late native completion cannot
+  revive a cancelled session. Opening settles as soon as the window is bound.
+  Best-effort focus retries run separately and never gate attachment intake.
 
 Responsibilities:
 - The sharing wizard collects files and starts a named `runtime.connect()` Port.
+- The compose queue announces readiness after local initialization, without waiting for optional VFS source discovery or a focus/resize event. Focus events do not start a second initialization while the queue is still starting.
 - Before manual mode leaves step 1, it asks background to `PROPFIND` the exact share root and remains on step 1 when that root already exists.
 - `modules/bgFileLinkUpload.js` owns the upload, abort controller, share-folder cleanup handoff, and result delivery for the lifetime of that Port.
 - Shared FileLink modules perform DAV/OCS work in the background context.
 - Public-link share creation sends `label` and the initial `note`. A changed note is updated during background finalization with the base URL and authorization captured by that upload; an unchanged note causes no second OCS request.
 - The background is used for **compose insertion**, because the compose APIs are executed from the background.
-- In attachment mode, background removes selected attachments from compose and
-  passes them as a one-time launch context to the wizard.
+- Manual opening and attachment automation reserve the same per-compose session before opening a popup. Repeated entry focuses that window. An existing share draft marker or cleanup owner blocks a second share.
+- The `nc-sharing-compose` Port binds the wizard URL, compose tab, and window. It adopts existing and later normal attachments in every wizard step: offer files, receive `accepted`, detach originals, send `committed`, receive `applied`. Originals remain journaled until the last acknowledgement; a failed handoff restores them and ends the UI session. Closing after adoption deliberately does not restore files.
+- A queue revision blocks stale finalization. New attachments arriving during finalization roll the insertion back before commit. Sending is blocked while either manual or automatic Sharing owns the compose tab.
+- The existing before-send routing guard rechecks the native attachment list even after the evaluation timer settles or a share marker exists. Effective always-share rules and exceeded locked size thresholds block ordinary file attachments; optional thresholds do not. The marker prevents another wizard, not policy enforcement. `compose.listAttachments` reads Thunderbird's attachment bucket, so embedded body/signature images stay outside this file check. No HTML image filtering, attachment removal, or second upload path is added.
+- Later local files use the same upload planner and transfer engine against the existing owned root, with create-only writes and no second share. Completed entry IDs are retained for retries; conflicts are rejected or renamed before transfer. Uploaded entries and share settings are frozen; only pending entries can be removed. Remote source selections are collected before the first upload.
+- The UI session and its File objects are volatile. Disconnect closes the wizard; existing persisted remote cleanup ownership remains responsible for recovery. Ordered MV2 background globals still require explicit imports when migrating to MV3; no additional experiment or permission is used.
 
 Key files:
 - `ui/nextcloudSharingWizard.html`
@@ -1033,10 +1042,7 @@ Attachment mode specifics:
   - `compose.onAfterSave` is serialized with any active finalize transaction. A save observed before insertion or after rollback is ignored; a save observed after insertion is committed only if finalize commits
   - reopening a draft is allowed only when exactly one valid marker resolves to a saved local record in the same Thunderbird profile. Missing, conflicting, tainted, or incomplete state blocks send
   - saved drafts retain their remote shares when the compose tab closes. Because the add-on has no message-deletion permission/event, deleting a saved draft outside compose cannot trigger immediate remote cleanup; administrators may need to remove an orphan after verifying it is unused
-  - adding another share to an already saved draft marks an unsaved delta without
-    making the previously saved baseline deletable. Discard/crash retains the
-    complete group conservatively; the new unused share can become an orphan,
-    but the link still present in the stored draft is never deleted
+  - new share insertion into a marked draft is blocked. Cleanup still understands legacy multi-share drafts and retains their saved baseline on discard or crash
   - Thunderbird templates containing an NC Connector share are unsupported. Saving as template records that state and blocks both the template and messages instantiated from it
   - password-dispatch payloads are deliberately not persisted. Before a password-protected share draft can close, background captures the current envelope and opens explicit manual password drafts. Failed or incomplete handoff remains queued and blocks sending the main draft
 - Password separation:
@@ -1117,6 +1123,7 @@ Runtime rules:
 - Separate password follow-up dispatch is seat-restricted and only available with backend endpoint + usable active assigned seat. Global `overlicensed=true` does not deny an active Seat; only personal suspension or invalid access closes the Seat gate. Community and Pro use the same check.
 - `policyRuntime` reads the optional `license_status`, `access_status`, `can_manage_license`, `license_activation.state`, `license_connection_error`, `license_last_sync_at_iso` and `license_offline_until_iso` fields. `policyState` owns the shared notice selection and text formatting for settings, Share/Talk warnings, feature tooltips, VFS actions and password-dispatch refusals. `wizardPolicyUi` only applies the result to the UI. VFS status carries the same plain notice descriptor. Display fields do not replace the validity, personal Seat or policy-domain gates, and dates are used only for display.
 - Notice precedence separates full administrators from ordinary users without a seat, then distinguishes invalid entitlement and genuinely suspended seats before grace/synchronization notices. Old payloads retain generic access wording. Only `suspended_overlimit` uses suspended-seat wording. Blocking `access_status` takes precedence over commercial `license_status`; a commercial grace period never hides an activation/offline refusal.
+- Managed missing-seat notices reuse `enterprise_rollout_seat_required` unchanged. Assigned but paused or invalid Seats retain their specific existing cause. Missing backend, failed verification, authentication pause, and rate limiting remain separate. Core status fields require JSON booleans for `seat_assigned`/`is_valid` and a non-empty string for `seat_state`; malformed responses are failed verification, including otherwise accepted HTTP-404 bodies. Optional policy domains and license metadata remain optional.
 - The general no-seat banner uses `policy_warning_no_seat` to explain local Sharing and Talk availability. Feature hints retain `sharing_password_separate_no_seat_tooltip`; the shared formatter selects the text for its display context without changing entitlement checks.
 - License administration links require `can_manage_license === true` and use the locally constructed HTTPS `endpointUrl`, preserving the configured Nextcloud subdirectory. No URL from the backend payload is used. Missing role metadata hides the link; neither mail client activates licenses or contacts the license server directly.
 - Backend attachment-threshold policy uses `attachments_min_size_mb` as both value and enable-state: a positive integer enables threshold mode, `null` disables it.
@@ -1182,7 +1189,6 @@ Direct and chunked files run in a pool of at most three workers. Chunks belongin
 
 `NCFileLinkUpload.uploadFile()` is the only Direct-versus-Chunked selector. The normal FileLink plan, external VFS files, and VFS-provider writes all enter that function. Provider `writeFile()` builds a one-file plan, so it receives the same retry, progress, cancellation, and completion behavior; Bulk remains a queue optimization and is not synthesized across independent provider calls.
 
-- Managed missing-seat notices reuse `enterprise_rollout_seat_required` unchanged. Assigned but paused or invalid Seats retain their specific existing cause. Missing backend, failed verification, authentication pause, and rate limiting remain separate. Core status fields require JSON booleans for `seat_assigned`/`is_valid` and a non-empty string for `seat_state`; malformed responses are failed verification, including otherwise accepted HTTP-404 bodies. Optional policy domains and license metadata remain optional.
 Directory planning creates:
 
 - every directory needed by chunked or Bulk destinations
@@ -1427,7 +1433,6 @@ Talk wizard:
 
 Sharing wizard:
 - `sharing:checkFolderExists`
-- `sharing:getLaunchContext`
 - `sharing:resolveAttachmentPrompt`
 - `sharing:checkAttachmentAutomationAllowed`
 - `sharing:finalizeRenderedShare`

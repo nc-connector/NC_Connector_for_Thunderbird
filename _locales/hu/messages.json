@@ -1,4 +1,13 @@
 {
+  "sharing_compose_existing_share": {
+    "message": "Ez az üzenet már tartalmaz Nextcloud-megosztást. A további fájlokra továbbra is érvényesek a mellékletszabályok. Ha a megosztás kötelező, távolítsa el ezeket a mellékleteket, és ossza meg őket egy új üzenetben."
+  },
+  "sharing_compose_files_added": {
+    "message": "$1 fájl hozzáadva a megosztáshoz."
+  },
+  "sharing_compose_pending_attachments": {
+    "message": "A fájlok hozzáadása még folyamatban van. Ellenőrizze a várólistát, majd fejezze be újra."
+  },
   "calendar_action_title": {
     "message": "NC Connector"
   },
@@ -858,7 +867,7 @@
     "message": "A megosztást nem sikerült biztonságosan befejezni. Zárja be a megosztási ablakot, és az újabb próbálkozás előtt ellenőrizze az üzenetet."
   },
   "sharing_attachment_routing_active": {
-    "message": "A fájlmegosztás még folyamatban van. Az üzenet elküldése előtt fejezze be, vagy zárja be a megosztási ablakot."
+    "message": "Az üzenet nem lett elküldve. Fejezze be vagy szakítsa meg a megnyitott megosztási varázslót, vagy távolítsa el azokat a fájlmellékleteket, amelyeket az NC Connector segítségével kell megosztani."
   },
   "sharing_saved_template_unsupported": {
     "message": "NC Connector-megosztást tartalmazó üzenet nem menthető és nem küldhető Thunderbird-sablonként. Hozzon létre új üzenetet, és ossza meg újra a fájlokat."

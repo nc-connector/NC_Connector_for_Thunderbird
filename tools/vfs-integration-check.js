@@ -1490,7 +1490,7 @@ function checkManifestAndReviewSurface(){
     "Returning from a VFS picker must not refresh while its runtime actor is closing"
   );
   assert(
-    /action: dom\.externalSourceAction,[\s\S]{0,220}?disabled: sourceControlsDisabled \|\| externalBlocked/.test(wizardRuntime)
+    /action: dom\.externalSourceAction,[\s\S]{0,220}?disabled: sourceControlsDisabled \|\| !!state\.uploadResult \|\| externalBlocked/.test(wizardRuntime)
       && wizardRuntime.includes("state.vfsAvailability.external.connections.length > 0")
       && wizardRuntime.includes("type: 'vfs:getExternalStatus'")
       && wizardRuntime.includes("getVfsExternalUnavailableHint")

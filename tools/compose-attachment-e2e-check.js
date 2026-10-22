@@ -191,6 +191,7 @@ async function createHarness({ tabId, wizardWindowId }){
       local: storage
     },
     runtime: {
+      id: "test-addon",
       getURL(path){
         return `moz-extension://test/${path}`;
       },
@@ -295,7 +296,6 @@ async function createHarness({ tabId, wizardWindowId }){
     ATTACHMENT_PROMPT_HEIGHT: 260,
     ATTACHMENT_EVAL_DEBOUNCE_MS: 250,
     ATTACHMENT_DEFAULT_THRESHOLD_MB: 20,
-    SHARING_LAUNCH_CONTEXT_TTL_MS: 15 * 60 * 1000,
     COMPOSE_SHARE_CLEANUP_SEND_GRACE_MS: 15000,
     SHARE_CLEANUP_RETRY_DELAYS_MS: Object.freeze([
       2000,
@@ -305,7 +305,6 @@ async function createHarness({ tabId, wizardWindowId }){
       60000
     ]),
     SHARING_KEYS: {},
-    SHARING_LAUNCH_CONTEXTS: new Map(),
     SHARING_WIZARD_REQUEST_BY_WINDOW: new Map(),
     ATTACHMENT_PROMPT_BY_ID: new Map(),
     ATTACHMENT_PROMPT_BY_TAB: new Map(),
@@ -314,7 +313,6 @@ async function createHarness({ tabId, wizardWindowId }){
     ATTACHMENT_PENDING_ADDED_BY_TAB: new Map(),
     ATTACHMENT_SUPPRESSED_TABS: new Set(),
     ATTACHMENT_AUTOMATION_BY_TAB: new Map(),
-    ATTACHMENT_AUTOMATION_TAB_BY_WINDOW: new Map(),
     PASSWORD_MAIL_DISPATCH_BY_TAB: new Map(),
     COMPOSE_SHARE_CLEANUP_BY_TAB: new Map(),
     SHARING_WIZARD_CLEANUP_BY_WINDOW: new Map(),
@@ -396,6 +394,7 @@ async function createHarness({ tabId, wizardWindowId }){
     },
     NCNextcloudDav: {
       normalizeRelativePath,
+      joinPath: (...parts) => parts.map(normalizeRelativePath).filter(Boolean).join("/"),
       buildFileUrl,
       async deleteTrackedRoot(options){
         calls.remoteDeletes.push({
@@ -417,7 +416,11 @@ async function createHarness({ tabId, wizardWindowId }){
     NCSharing: {
       prepareFileLinkRequest(request){
         calls.uploadRequests.push(request);
-        return { request, sourcePlan: {} };
+        return { request, sourcePlan: { items: request.files.map((file) => ({
+          itemId: file.id, kind: "file", fileName: file.name,
+          relativeDir: file.relativeDir || "", size: file.size,
+          lastModified: file.lastModified || 0
+        })) } };
       },
       async createFileLink(prepared){
         const request = prepared?.request;
@@ -593,9 +596,9 @@ async function runThroughFinalize(harness){
   await context.startComposeAttachmentShareFlow(tabId, { trigger: "always" });
 
   assert(
-    harness.calls.removedAttachments.length === 2
-      && harness.attachmentsByTab.get(tabId).length === 0,
-    "Attachment automation must detach the complete compose attachment set"
+    harness.calls.removedAttachments.length === 0
+      && harness.attachmentsByTab.get(tabId).length === 2,
+    "Attachment automation must retain originals until the queue accepts them"
   );
   assert(
     context.isComposeAttachmentRoutingActive(tabId),
@@ -608,41 +611,28 @@ async function runThroughFinalize(harness){
   ))[0];
   assert(blocked?.cancel === true, "Sending must be blocked before attachment adoption completes");
 
-  const handoff = vm.runInContext(
-    `ATTACHMENT_AUTOMATION_BY_TAB.get(${tabId}).handoff`,
-    context
-  );
-  assert(handoff?.contextId, "Attachment handoff must expose one launch context ID");
-  const launchResponse = await events.runtimeMessage.request({
-    type: "sharing:getLaunchContext",
-    payload: {
-      contextId: handoff.contextId,
-      tabId,
-      windowId: wizardWindowId
-    }
-  }, {});
-  assert(
-    launchResponse?.ok === true && launchResponse.context.attachments.length === 2,
-    "The bound wizard must receive the complete attachment launch context"
-  );
-  launchResponse.context.attachments.forEach((entry, index) => {
-    assert(entry.file === harness.files[index], "Launch context must preserve each original File object");
+  const session = vm.runInContext(`COMPOSE_SHARING_BY_TAB.get(${tabId})`, context);
+  const queuePort = createPort();
+  queuePort.name = "nc-sharing-compose";
+  queuePort.sender = { id: "test-addon", url: session.url, tab: { windowId: wizardWindowId } };
+  queuePort.disconnect = () => {};
+  await events.runtimeConnect.emit(queuePort);
+  queuePort.emitMessage({ type: "ready", tabId, windowId: wizardWindowId });
+  await waitFor(() => queuePort.posted.some((message) => message.type === "attachments"),
+    "The bound wizard must receive the current attachment set");
+  const offer = queuePort.posted.find((message) => message.type === "attachments");
+  assert(offer.attachments.length === 2, "The queue must receive all original attachments");
+  offer.attachments.forEach((entry, index) => {
+    assert(entry.file === harness.files[index], "The queue must preserve each original File");
   });
-
-  const adoption = await events.runtimeMessage.request({
-    type: "sharing:adoptAttachmentLaunchContext",
-    payload: {
-      contextId: handoff.contextId,
-      tabId,
-      windowId: wizardWindowId,
-      attachmentCount: launchResponse.context.attachments.length
-    }
-  }, {});
-  assert(adoption?.ok === true, "The wizard must adopt the complete attachment launch context");
-  assert(
-    !vm.runInContext(`SHARING_LAUNCH_CONTEXTS.has(${JSON.stringify(handoff.contextId)})`, context),
-    "Adoption must release background launch-context File references"
-  );
+  queuePort.emitMessage({ type: "accepted", batchId: offer.batchId });
+  await waitFor(() => queuePort.posted.some((message) => message.type === "committed"),
+    "Queue acceptance must detach originals and request adoption");
+  queuePort.emitMessage({ type: "applied", batchId: offer.batchId });
+  await waitFor(() => !session.intakeTask && session.queueRevision === 1,
+    "The queue must finish its confirmed handoff");
+  assert(harness.attachmentsByTab.get(tabId).length === 0,
+    "Confirmed adoption must remove the originals from compose");
 
   const port = createPort();
   await events.runtimeConnect.emit(port);
@@ -658,7 +648,7 @@ async function runThroughFinalize(harness){
       expireEnabled: false,
       noteEnabled: false,
       note: "",
-      files: launchResponse.context.attachments.map(buildUploadFile)
+      files: offer.attachments.map(buildUploadFile)
     }
   });
   await waitFor(
@@ -692,6 +682,7 @@ async function runThroughFinalize(harness){
     payload: {
       tabId,
       wizardWindowId,
+      queueRevision: session.queueRevision,
       html: '<section data-ncc-share="true">Attachment share</section>',
       plainText: "Attachment share",
       cleanup: {
@@ -806,9 +797,32 @@ async function checkComposeCloseCleanup(){
   );
 }
 
+async function checkPostSharePolicyAtSend(){
+  const harness = await createHarness({ tabId:43, wizardWindowId:143 });
+  const finalized = await runThroughFinalize(harness);
+  const details = harness.composeDetails.get(harness.tabId);
+  details.body += '<div class="moz-signature"><img src="cid:signature-logo"></div>';
+  const bodyWithSignature = details.body;
+  harness.context.getComposeAttachmentAutomationSettings = async () => ({ alwaysConnector:true });
+  harness.attachmentsByTab.set(harness.tabId, [{ id:900, name:"ordinary-image.png", size:20 }]);
+  const blocked = (await harness.events.beforeSend.emit({ id:harness.tabId }, details))[0];
+  assert(blocked?.cancel === true, "An existing share must not allow a policy-violating image file through onBeforeSend");
+  assert(harness.context.getPersistentShareCleanupGroup(finalized.draftGroupId)?.state === "active",
+    "Blocked Send must not mark the share as sent or send-pending");
+  assert(harness.attachmentsByTab.get(harness.tabId).length === 1,
+    "Blocking Send must not delete the ordinary attachment");
+  assert(harness.composeDetails.get(harness.tabId).body === bodyWithSignature,
+    "Blocking Send must not rewrite embedded signature images");
+  harness.attachmentsByTab.set(harness.tabId, []);
+  const allowed = (await harness.events.beforeSend.emit({ id:harness.tabId }, details))[0];
+  assert(allowed?.cancel !== true, "An embedded signature must remain sendable after removing the ordinary file");
+  assert(harness.calls.uploadRequests.length === 1, "Post-share Send checks must not create a second upload");
+}
+
 async function run(){
   await checkConfirmedSend();
   await checkComposeCloseCleanup();
+  await checkPostSharePolicyAtSend();
   console.log("[OK] compose-attachment-e2e-check passed");
 }
 

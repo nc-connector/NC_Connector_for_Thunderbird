@@ -428,6 +428,10 @@ async function prepareSharingInsertMutation(payload = {}, options = {}){
   const details = await browser.compose.getComposeDetails(tabId);
   const insertionMode = resolveSharingInsertMode(details);
   const addDraftMarker = options.addDraftMarker === true;
+  if (addDraftMarker && normalizeComposeCustomHeaders(details?.customHeaders)
+    .some((header) => header.name.toLowerCase() === COMPOSE_SHARE_DRAFT_HEADER.toLowerCase())){
+    throw new Error("sharing_compose_existing_share");
+  }
   const draftGroupId = addDraftMarker
     ? resolveComposeShareDraftGroupId(details?.customHeaders, options.draftGroupId)
     : "";

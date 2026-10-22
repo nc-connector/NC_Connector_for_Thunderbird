@@ -208,7 +208,143 @@ function buildFixture(){
   ];
 }
 
-function run(){
+async function testLiveComposeQueue(){
+  const source = readText("ui/nextcloudSharingWizard.js");
+  function extract(start, end){
+    const from = source.indexOf(start);
+    const to = source.indexOf(end, from);
+    assert(from >= 0 && to > from, `Wizard function boundary missing: ${start}`);
+    return source.slice(from, to);
+  }
+  let receive;
+  let disconnect;
+  let closed = 0;
+  const posted = [];
+  const uploads = [];
+  const File = class { constructor(name){ this.name = name; this.size = 10; } };
+  const state = { files: [], composeBatches: new Map(), queueRevision: 0,
+    uploadedQueueRevision: 0, uploadCompleted: false, uploadResult: null,
+    currentStep: 1, mode: "default" };
+  const result = { shareInfo: { shareId: "single", folderInfo: { relativeFolder: "Shares/Single" } } };
+  const context = createContext();
+  Object.assign(context, {
+    state, File, isPageUnloading: false,
+    browser: { runtime: { connect: () => ({
+      postMessage: (message) => posted.push(message),
+      onMessage: { addListener: (handler) => { receive = handler; } },
+      onDisconnect: { addListener: (handler) => { disconnect = handler; } }
+    }) } },
+    dom: { noteToggle: { checked: true }, noteInput: { value: "keep this note" },
+      passwordToggle: {}, passwordInput: {}, expireToggle: {}, expireDate: {} },
+    updateAttachmentModeInfo(){}, updateButtons(){}, rebuildFileEntryIndex(){},
+    invalidateUpload(){ state.uploadCompleted = false; }, renderFileQueue(){},
+    setMessage(){}, logUiError(){}, closeWizardWindow: async () => { closed++; },
+    hasInsufficientDestinationStorage: () => false, validatePasswordIfNeeded: () => true,
+    ensureUniqueQueueEntries: async () => true, log(){}, setUploadStatus(){},
+    setOverallProgress(){}, getPermissions: () => ({ read: true }),
+    getShareContext: () => ({ sanitizedName: "Single", shareDate: new Date("2026-10-21") }),
+    setFinalizeInputsDisabled(){}, renderTargetFolderPath(){}, refreshConnectionWarning: async () => {},
+    i18n: (key) => key
+  });
+  context.queueEntries = context.NCSharingQueueEntries.create({
+    sanitizeFileName: (value) => value, sanitizeRelativeDir: (value) => value,
+    findPathConflict: context.NCFileQueuePathConflicts.find
+  });
+  const apply = (batchId, name, revision) => {
+    receive({ type: "attachments", batchId, attachments: [{ file: new File(name), name }] });
+    assert(posted.at(-1).type === "accepted", "Valid files must be accepted before detaching");
+    receive({ type: "committed", batchId, revision });
+    assert(posted.at(-1).type === "applied", "A committed queue must acknowledge adoption");
+  };
+  context.runBackgroundFileLinkUpload = async (request) => {
+    uploads.push(request);
+    if (uploads.length === 1) apply("during-upload", "later.txt", 2);
+    return result;
+  };
+  vm.runInContext(extract("  function connectComposeQueue(){", "  /**\n   * Apply the fixed defaults"), context);
+  vm.runInContext(extract("  async function startUpload(", "  /**\n   * Update UI state for upload"), context);
+  context.connectComposeQueue();
+  receive({ type: "ready" });
+  receive({ type: "attachments", batchId: "first", attachments: [{ file: new File("first.txt"), name: "first.txt" }] });
+  assert(state.files.length === 0, "An offered batch must not enter the active queue before commit");
+  receive({ type: "committed", batchId: "first", revision: 1 });
+  receive({ type: "committed", batchId: "first", revision: 1 });
+  assert(state.files.length === 1 && state.currentStep === 1 && context.dom.noteInput.value === "keep this note",
+    "A drop before the queue step must preserve the current step, settings and unique entry");
+  await context.startUpload();
+  assert(uploads.length === 2 && uploads[0].append === false && uploads[1].append === true,
+    "A drop during the first upload must continue the existing share");
+  assert(uploads[0].files.length === 1 && uploads[1].files.length === 1
+    && uploads[1].files[0].file.name === "later.txt",
+  "Continuation must upload only newly adopted files");
+  assert(state.uploadResult === result && state.uploadedQueueRevision === 2
+    && state.files.every((entry) => entry.uploaded), "Completion must retain the same share and current queue revision");
+  apply("after-upload", "last.txt", 3);
+  assert(!state.uploadCompleted && state.uploadResult === result,
+    "Later adoption must invalidate completion but preserve remote ownership");
+  await context.startUpload();
+  assert(uploads.length === 3 && uploads[2].append === true && uploads[2].files.length === 1,
+    "A later upload must not resend completed entries");
+  disconnect();
+  assert(closed === 1 && !state.composeReady, "Disconnected queue sessions must close the wizard");
+}
+
+async function testQueueBootstrapWithoutVfsOrFocus(){
+  const source = readText("ui/nextcloudSharingWizard.js");
+  const start = source.indexOf("  async function init(){");
+  const end = source.indexOf("  function setWizardReady(", start);
+  assert(start >= 0 && end > start, "The wizard bootstrap must be available");
+  let resolveVfs;
+  const vfs = new Promise((resolve) => { resolveVfs = resolve; });
+  const messages = [];
+  const errors = [];
+  let vfsRefreshes = 0;
+  let uiReady = false;
+  const state = { composeDisconnected: false };
+  const context = {
+    state, dom: {}, URLSearchParams, isPageUnloading: false,
+    window: { location: { search: "?tabId=31&attachmentMode=1" } },
+    NCTalkDomI18n: { translatePage(){} }, NCSharingStorage: {},
+    passwordPolicyActions: { load: async () => {} },
+    cacheElements(){}, setWizardReady(ready){ uiReady = ready; }, initializeQueueView(){},
+    parseTabId: () => 31,
+    connectComposeQueue(){ state.composePort = { postMessage: (message) => messages.push(message) }; },
+    resolveWizardWindowId: async () => 91, initDebugLogging: async () => {}, attachEvents(){},
+    refreshPolicyStatus: async () => {}, loadDefaultSettings: async () => {}, setDefaultShareName(){},
+    applyDefaultSecuritySettings: async () => {}, loadBasePath: async () => {},
+    refreshVfsSourceAvailability(){ vfsRefreshes++; return vfs; },
+    applyAttachmentModeDefaults: async () => {}, renderFileQueue(){},
+    updateStep(step){ state.currentStep = step; }, updateAttachmentModeInfo(){},
+    log(){}, logUiError(...args){ errors.push(args); }, i18n: (key) => key,
+    closeWizardWindow: async () => {}, setupWindowSizing(){}
+  };
+  vm.createContext(context);
+  vm.runInContext(source.slice(start, end), context, { filename: "ui/nextcloudSharingWizard.js" });
+  const focusStart = source.indexOf("  function handleWindowFocus(){");
+  const focusEnd = source.indexOf("  async function loadDefaultSettings(", focusStart);
+  vm.runInContext(source.slice(focusStart, focusEnd), context);
+  context.handleWindowFocus();
+  assert(vfsRefreshes === 0, "Focus during bootstrap must not start a duplicate discovery");
+  let timeout;
+  try{
+    await Promise.race([
+      context.init(),
+      new Promise((_, reject) => { timeout = setTimeout(() => reject(new Error("Queue waits for VFS discovery")), 1000); })
+    ]);
+    assert(messages.length === 1 && messages[0].type === "ready"
+      && messages[0].tabId === 31 && messages[0].windowId === 91
+      && state.currentStep === 3 && uiReady && errors.length === 0,
+    "Attachment queue bootstrap must announce ready without interaction or a VFS response");
+    assert(vfsRefreshes === 1, "Optional source discovery must still start once");
+  }finally{
+    clearTimeout(timeout);
+    resolveVfs();
+  }
+}
+
+async function run(){
+  await testQueueBootstrapWithoutVfsOrFocus();
+  await testLiveComposeQueue();
   const context = createContext();
   testQueueEntryModel(context);
   const queue = context.NCSharingQueueTree;
@@ -342,7 +478,7 @@ function run(){
   );
   assert(
     wizardSource.includes("NCSharing.buildShareFolderInfo(")
-      && wizardSource.includes("result?.shareInfo?.folderInfo?.relativeFolder")
+      && wizardSource.includes("state.uploadResult?.shareInfo?.folderInfo?.relativeFolder")
       && wizardSource.includes("formatTransferSize(destination.usage)"),
     "The queue must use the upload path builder, reserved result path, and reported unlimited usage"
   );
@@ -423,4 +559,7 @@ function run(){
   console.log("[OK] sharing-queue-ui-check passed");
 }
 
-run();
+run().catch((error) => {
+  console.error("[FAIL] sharing-queue-ui-check", error);
+  process.exitCode = 1;
+});

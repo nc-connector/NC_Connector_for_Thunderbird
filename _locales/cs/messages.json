@@ -1,4 +1,13 @@
 {
+  "sharing_compose_existing_share": {
+    "message": "Tato zpráva již obsahuje sdílení Nextcloud. Na další soubory se stále vztahují pravidla pro přílohy. Pokud je sdílení povinné, odeberte tyto přílohy a sdílejte je v nové zprávě."
+  },
+  "sharing_compose_files_added": {
+    "message": "Ke sdílení bylo přidáno $1 souborů."
+  },
+  "sharing_compose_pending_attachments": {
+    "message": "Soubory se stále přidávají. Zkontrolujte frontu a poté znovu dokončete."
+  },
   "calendar_action_title": {
     "message": "NC Connector"
   },
@@ -858,7 +867,7 @@
     "message": "Sdílení se nepodařilo bezpečně dokončit. Zavřete okno sdílení a před dalším pokusem zprávu zkontrolujte."
   },
   "sharing_attachment_routing_active": {
-    "message": "Sdílení souborů stále probíhá. Před odesláním zprávy ho dokončete nebo zavřete okno sdílení."
+    "message": "Zpráva nebyla odeslána. Dokončete nebo zrušte otevřeného průvodce sdílením, nebo odeberte souborové přílohy, které musí být sdíleny prostřednictvím NC Connector."
   },
   "sharing_saved_template_unsupported": {
     "message": "Zprávy se sdílením NC Connector nelze uložit ani odeslat jako šablony Thunderbirdu. Vytvořte novou zprávu a soubory znovu nasdílejte."

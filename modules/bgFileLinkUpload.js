@@ -8,6 +8,50 @@
 const FILELINK_UPLOAD_PORT = "nc-filelink-upload";
 const FILELINK_UPLOAD_SESSIONS = new Map();
 const FILELINK_UPLOAD_SESSION_BY_WINDOW = new Map();
+const FILELINK_COMPLETED_BY_CLEANUP = new WeakMap();
+
+function fileLinkTargetDescriptor(item){
+  return {
+    entry: { id: item.itemId, size: item.size, modified: item.lastModified,
+      transferGroupId: item.transferGroupId },
+    path: NCNextcloudDav.joinPath(item.relativeDir, item.fileName),
+    kind: item.kind
+  };
+}
+
+async function continueFileLinkUploadSession(session, prepared){
+  const owner = getSharingWizardRemoteCleanupEntry(session.windowId, session.tabId);
+  const completed = owner && FILELINK_COMPLETED_BY_CLEANUP.get(owner);
+  if (!completed) throw new Error("file_link_continuation_missing");
+  const items = prepared.sourcePlan.items;
+  const pending = items.filter((item) => {
+    const descriptor = fileLinkTargetDescriptor(item);
+    const previous = completed.targets.find((target) => target.entry.id === item.itemId);
+    if (!previous) return true;
+    if (previous.path !== descriptor.path || previous.kind !== descriptor.kind
+      || previous.entry.size !== descriptor.entry.size
+      || previous.entry.modified !== descriptor.entry.modified){
+      throw new Error("file_link_continuation_item_changed");
+    }
+    return !completed.done.has(item.itemId);
+  });
+  const additions = pending.filter((item) => !completed.targets.some((target) =>
+    target.entry.id === item.itemId)).map(fileLinkTargetDescriptor);
+  if (NCFileQueuePathConflicts.find([...completed.targets, ...additions])){
+    throw new Error("file_link_continuation_target_conflict");
+  }
+  completed.targets.push(...additions);
+  for (const item of pending){
+    if (getSharingWizardRemoteCleanupEntry(session.windowId, session.tabId) !== owner){
+      throw new Error("file_link_continuation_owner_changed");
+    }
+    const file = prepared.request.files.find((entry) => String(entry.id) === item.itemId);
+    const next = NCSharing.prepareFileLinkRequest({ ...prepared.request, files: [file] });
+    await NCSharing.appendFileLink(next, completed);
+    completed.done.add(item.itemId);
+  }
+  return completed.result;
+}
 
 function postFileLinkUploadMessage(session, message){
   if (!session || session.disconnected){
@@ -144,6 +188,16 @@ async function prepareBackgroundFileLinkRequest(session, request){
 async function runFileLinkUploadSession(session, request){
   try{
     const preparedRequest = await prepareBackgroundFileLinkRequest(session, request);
+    if (request.append === true){
+      session.rootHandled = true;
+      const result = await continueFileLinkUploadSession(session, preparedRequest);
+      session.completed = true;
+      postFileLinkUploadMessage(session, { type: "result", result });
+      return;
+    }
+    if (getSharingWizardRemoteCleanupEntry(session.windowId, session.tabId)){
+      throw new Error("file_link_share_already_created");
+    }
     const previousCleanupDone = await deleteSharingWizardRemoteCleanupNow(
       session.windowId,
       "before_upload"
@@ -169,6 +223,12 @@ async function runFileLinkUploadSession(session, request){
       }
     });
     const cleanupId = getSharingWizardRemoteCleanupId(session.windowId);
+    const owner = getSharingWizardRemoteCleanupEntry(session.windowId, session.tabId);
+    FILELINK_COMPLETED_BY_CLEANUP.set(owner, {
+      root: session.root, result,
+      targets: preparedRequest.sourcePlan.items.map(fileLinkTargetDescriptor),
+      done: new Set(preparedRequest.sourcePlan.items.map((item) => item.itemId))
+    });
     session.rootHandled = true;
     session.completed = true;
     const delivered = postFileLinkUploadMessage(session, {

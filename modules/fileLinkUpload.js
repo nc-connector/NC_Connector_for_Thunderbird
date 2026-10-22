@@ -249,12 +249,14 @@
     additionalDirectories = [],
     additionalUploadFiles = [],
     serverCopyCount = 0,
-    transferAdditionalSources
+    transferAdditionalSources,
+    existingRoot = null
   } = {}){
     onStatus?.({ phase: "scanning" });
     const plan = NCFileLinkUploadPolicy.buildPlan({
       files,
-      bulkSupported,
+      // Continuations use create-only transfers; DAV Bulk can overwrite targets.
+      bulkSupported: !existingRoot && bulkSupported,
       fixedRequestCount
     });
     const checksums = plan.useBulkUpload
@@ -295,41 +297,44 @@
       log
     });
     const baseSegments = NCNextcloudDav.normalizeRelativePath(basePath).split("/").filter(Boolean);
-    const folderTotal = baseSegments.length + 1 + directories.length;
+    const rootFolderCount = existingRoot ? 0 : baseSegments.length + 1;
+    const folderTotal = rootFolderCount + directories.length;
     let folderCurrent = 0;
     const folderStatus = createFolderStatusReporter(onStatus, folderTotal);
-    let root = null;
+    let root = existingRoot;
     try{
       folderStatus.set(folderCurrent, true);
-      await NCNextcloudDav.prepareFolderPath({
-        davRoot,
-        relativePath: basePath,
-        authHeader,
-        signal,
-        log,
-        onCreated: () => {
-          folderCurrent++;
-          folderStatus.set(folderCurrent);
-        }
-      });
-      try{
-        root = await reserveRoot({
+      if (!root){
+        await NCNextcloudDav.prepareFolderPath({
           davRoot,
-          candidates: rootCandidates,
+          relativePath: basePath,
           authHeader,
           signal,
           log,
-          collisionMessage
+          onCreated: () => {
+            folderCurrent++;
+            folderStatus.set(folderCurrent);
+          }
         });
-      }catch(error){
-        if (error?.ncRecoveredRootCandidate){
-          await onRootCreated?.(error.ncRecoveredRootCandidate);
+        try{
+          root = await reserveRoot({
+            davRoot,
+            candidates: rootCandidates,
+            authHeader,
+            signal,
+            log,
+            collisionMessage
+          });
+        }catch(error){
+          if (error?.ncRecoveredRootCandidate){
+            await onRootCreated?.(error.ncRecoveredRootCandidate);
+          }
+          throw error;
         }
-        throw error;
+        folderCurrent++;
+        folderStatus.set(folderCurrent);
+        await onRootCreated?.(root);
       }
-      folderCurrent++;
-      folderStatus.set(folderCurrent);
-      await onRootCreated?.(root);
       await NCNextcloudDav.createPlannedDirectories({
         davRoot,
         shareRoot: root.folderInfo.relativeFolder,
@@ -338,7 +343,7 @@
         signal,
         log,
         onProgress: (current) => {
-          folderCurrent = baseSegments.length + 1 + current;
+          folderCurrent = rootFolderCount + current;
           folderStatus.set(folderCurrent);
         }
       });
@@ -356,6 +361,7 @@
         log,
         onStatus,
         progress,
+        fileUploadOptions: existingRoot ? { overwrite: false } : undefined,
         logCompletion: false
       });
       if (typeof transferAdditionalSources === "function"){

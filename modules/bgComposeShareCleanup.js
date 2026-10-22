@@ -128,6 +128,11 @@ function getSharingWizardRemoteCleanupId(windowId){
   );
 }
 
+function getSharingWizardRemoteCleanupEntry(windowId, tabId){
+  const entry = SHARING_WIZARD_CLEANUP_BY_WINDOW.get(Number(windowId));
+  return entry?.tabId === Number(tabId) ? entry : null;
+}
+
 function clearSharingWizardRemoteCleanup(windowId, reason = "", expectedEntry = null){
   const entry = SHARING_WIZARD_CLEANUP_BY_WINDOW.get(windowId);
   if (!entry){
