@@ -1,136 +1,153 @@
-<div align="center" style="background:#0082C9; padding:1px 0;"><img src="ui/assets/header-solid-blue-1920x480.png" alt="Add-on" height="80"></div>
-
-[English](https://github.com/nc-connector/NC_Connector_for_Thunderbird/blob/main/README.md) | [Deutsch](https://github.com/nc-connector/NC_Connector_for_Thunderbird/blob/main/README.de.md)
-[Admin Guide](https://github.com/nc-connector/NC_Connector_for_Thunderbird/blob/main/docs/ADMIN.md) | [Development Guide](https://github.com/nc-connector/NC_Connector_for_Thunderbird/blob/main/docs/DEVELOPMENT.md) | [Translations](https://github.com/nc-connector/NC_Connector_for_Thunderbird/blob/main/Translations.md) | [VENDOR](https://github.com/nc-connector/NC_Connector_for_Thunderbird/blob/main/VENDOR.md)
+<div align="center"><img src="ui/assets/header-solid-blue-1920x480.png" alt="NC Connector for Thunderbird" height="80"></div>
 
 # NC Connector for Thunderbird
 
-NC Connector is the Thunderbird-native Nextcloud integration for organizations that take Thunderbird seriously. The add-on brings shares, Talk meetings, managed signatures, and attachment rules directly into mail and calendar.
+<p align="center">
+  <strong>Your Nextcloud, inside Thunderbird.</strong><br/>
+  Share files, create Talk meetings, find rooms and resources, and keep your team’s signatures consistent, all from your mail and calendar.
+</p>
 
-## What the add-on does
+<p align="center">
+  <a href="https://addons.thunderbird.net/thunderbird/addon/nc4tb/"><strong>Get the Thunderbird add-on</strong></a>
+  &nbsp;·&nbsp;
+  <a href="https://github.com/nc-connector/NC_Connector_for_Thunderbird/blob/main/docs/ADMIN.md#contents">Admin guide</a>
+  &nbsp;·&nbsp;
+  <a href="https://nc-connector.de/">Website</a>
+  &nbsp;·&nbsp;
+  <a href="https://github.com/nc-connector/NC_Connector_for_Thunderbird/blob/main/README.de.md">Deutsch</a>
+</p>
 
-- create Nextcloud shares directly from new mails, replies, and forwards
-- combine local files, files and folders from the configured Nextcloud, and files or folders from compatible Thunderbird VFS providers in one share queue
-- upload files through Nextcloud 32 WebDAV using parallel direct uploads, chunked upload v2, and DAV bulk upload when supported
-- control password, expiration date, permissions, and separate password delivery
-- send passwords either as plain mail or as a Nextcloud Secret link
-- create and update Talk rooms directly from Thunderbird events
-- optionally add invited users and guests to Talk rooms
-- apply managed email signatures from the optional backend
-- use attachment automation with clear rules instead of manual steps
-- write debug logs to Thunderbird's developer console for support cases
+For **Thunderbird on Windows, macOS, and Linux**, including new messages, replies, and forwards. Looking for Outlook? [Get the Outlook Classic add-in](https://github.com/nc-connector/NC_Connector_for_Outlook).
 
-## Optional backend
+---
 
-Without the backend, sharing and Talk work locally in Thunderbird. With NC Connector Backend, teams get central management:
+## See it in action
 
-- seat assignment and policies
-- defaults for sharing, Talk, and signatures
-- custom HTML templates for shares, password mails, and Talk invitations
-- separate password delivery and optional Nextcloud Secret links
-- admin locks for selected options
-
-## Sharing
-
-The sharing wizard uploads files and folders to Nextcloud and inserts the finished share block into the mail. HTML mails receive a formatted block, plain-text mails receive a clean text block.
-
-Key points:
-
-- available in compose windows, replies, and forwards
-- high-speed upload selection is automatic, with progress for folder preparation, completed files, transferred bytes, and current transfer rate
-- files and folders already stored on the configured Nextcloud are copied server-side; external VFS content is read in Thunderbird and uploaded to that Nextcloud without a disk staging folder
-- review mixed selections in a source-grouped folder tree with file sizes, queue totals, and available Nextcloud storage before upload
-- optional expiration date and custom permissions per share
-- attachment automation for large attachments or always through NC Connector, with a selectable `ZIP download` or `Nextcloud share page` link target; ZIP is the built-in fallback when no valid effective value exists, including a missing or invalid locked backend value
-- separate password mails are sent only after the primary mail was sent successfully
-- if auto-send fails, NC Connector opens a prepared manual password mail
-- closed drafts without successful send clean up created shares again
-
-## Talk
-
-A Thunderbird event can create a Nextcloud Talk room directly. The dialog supports lobby, password, room type, listable scope, and moderation. Password-protected rooms start with a generated password that can be replaced or generated again.
-
-NC Connector can sync event changes back to the room and add invited attendees. Discarded unsaved events clean up their Talk rooms again. Deleting saved events removes rooms only when this behavior is explicitly enabled.
-
-## Rooms and resources (`ifb-pro`)
-
-The event editor's **NC Connector** button offers **Create a Talk meeting** and **Select rooms and resources**.
-The resource picker shows rooms and equipment with their supplied metadata, allows
-one room plus multiple resources, and applies attendees and the room location to
-the open event. A valid assigned Seat is required. Use Thunderbird's Nextcloud
-CalDAV calendar for booking and native Free/Busy; applying the selection does not
-save or send the event. See the [operating notes](docs/ADMIN.md#rooms-and-resources-ifb-pro).
-
-## Signatures
-
-With the backend, Thunderbird can insert managed email signatures or remove local signatures when the policy says so. NC Connector only touches the signature for the matching sender identity. Signatures from other accounts stay untouched.
-
-## Installation
-
-1. Install the latest XPI from [GitHub Releases](https://github.com/nc-connector/NC_Connector_for_Thunderbird/releases) or ATN.
-2. Restart Thunderbird.
-3. Open the add-on options.
-4. Enter the Nextcloud URL.
-5. Use Login with Nextcloud or enter an app password manually.
-6. Test the connection and save.
-
-## Requirements
-
-- Thunderbird ESR 140 through ESR 153
-- Windows, macOS, or Linux
-- Nextcloud 32 or newer with Files Sharing
-- for Talk features: Nextcloud Talk
-- for user/moderator search: Nextcloud system address book
-- for Secret-link password delivery: Nextcloud Secrets and NC Connector Backend
-- for other cloud sources: a compatible Thunderbird VFS provider; provider discovery uses an optional permission enabled from the VFS settings tab
-
-## Language
-
-The UI is localized. Supported languages are documented in [`Translations.md`](https://github.com/nc-connector/NC_Connector_for_Thunderbird/blob/main/Translations.md). The manifest default locale is German; generated text blocks use English when the selected or Thunderbird UI language is unsupported.
-
-Text blocks for shares and Talk can be configured independently from the UI language. Backend templates are used only when the backend is available and the policy allows them.
-
-## Troubleshooting
-
-Debug mode can be enabled in the options. Relevant logs appear in Thunderbird's developer console with prefixes such as `[NCBG]`, `[NCUI][Talk]`, `[NCUI][Sharing]`, `[NCUI][Options]`, and `[ncCalToolbar]`.
-
-For common setup, system address book, and backend policy issues, see the [Admin Guide](https://github.com/nc-connector/NC_Connector_for_Thunderbird/blob/main/docs/ADMIN.md).
-
-## More documentation
-
-- [Changelog](https://github.com/nc-connector/NC_Connector_for_Thunderbird/blob/main/CHANGELOG.md)
-- [Admin Guide](https://github.com/nc-connector/NC_Connector_for_Thunderbird/blob/main/docs/ADMIN.md)
-- [Development Guide](https://github.com/nc-connector/NC_Connector_for_Thunderbird/blob/main/docs/DEVELOPMENT.md)
-- [Third-party licenses](https://github.com/nc-connector/NC_Connector_for_Thunderbird/blob/main/VENDOR.md)
-
-## Roadmap
-
-Planned work across Thunderbird, Outlook, and the Backend is tracked in the public [NC Connector Roadmap](https://github.com/orgs/nc-connector/projects/1).
-
-## Screenshots
+Four workflows, shown in Thunderbird. Expand a section to watch the demo.
 
 <details>
-<summary><strong>Settings</strong></summary>
+<summary><strong>Share files instead of sending large attachments</strong></summary>
 
-| <a href="screenshots/Settings.png"><img src="screenshots/Settings.png" alt="Settings" width="230"></a> |
-| --- |
+Combine files and folders from your computer and **My Nextcloud** in one share. Add a password, expiration date, and access permissions, then insert the link into your message. Existing Nextcloud files are copied into the share; the originals stay unchanged.
+
+<p align="center">
+  <a href="screenshots/gif/nc-connector_filelink_en_1200x900.gif">
+    <img src="screenshots/gif/nc-connector_filelink_en_1200x900.gif" alt="Thunderbird demo: choose files, configure a Nextcloud share, and insert its link into an email" width="900" />
+  </a>
+</p>
+
+Attachment rules can offer sharing when a size limit is reached or handle attachments automatically. Choose a share-page link or a direct ZIP download. Compatible storage-provider add-ons can add more sources with the optional backend and a valid assigned seat.
+
+*Local files, My Nextcloud, and attachment rules work with local settings, without NC Connector Backend.*
 
 </details>
 
 <details>
-<summary><strong>Talk wizard</strong></summary>
+<summary><strong>Create a Nextcloud Talk meeting from your calendar</strong></summary>
 
-| <a href="screenshots/talk_wizzard1.png"><img src="screenshots/talk_wizzard1.png" alt="Talk wizard" width="230"></a> | <a href="screenshots/talk_wizzard2.png"><img src="screenshots/talk_wizzard2.png" alt="Talk wizard step 2" width="230"></a> |
-| --- | --- |
+Create a Talk room from a Thunderbird event and insert the meeting link. Configure password protection, a lobby, and moderation options without switching to the browser. Keep the Talk meeting in sync when the event changes.
+
+<p align="center">
+  <a href="screenshots/gif/nc-connector_talk_en_1200x900.gif">
+    <img src="screenshots/gif/nc-connector_talk_en_1200x900.gif" alt="Thunderbird demo: open the Talk wizard, configure a meeting, and add its link to a calendar event" width="900" />
+  </a>
+</p>
+
+*Works with local settings, without NC Connector Backend. Requires Nextcloud Talk.*
+
+</details>
+
+<details>
+<summary><strong>Keep your team's email signatures consistent</strong></summary>
+
+Design signature templates centrally in Nextcloud, use placeholders for user details, and apply the result to matching sender identities in Thunderbird. Signatures for unrelated accounts stay untouched.
+
+<p align="center">
+  <a href="screenshots/gif/nc-connector_signatur_en_1200x900.gif">
+    <img src="screenshots/gif/nc-connector_signatur_en_1200x900.gif" alt="Thunderbird demo: design a signature in NC Connector Backend and apply it to a matching sender identity" width="900" />
+  </a>
+</p>
+
+*Requires the optional backend and a valid assigned seat. The free Community seat is sufficient.*
 
 </details>
 
-<details open>
-<summary><strong>Sharing wizard</strong></summary>
+<details>
+<summary><strong>Find rooms and resources for your next meeting</strong></summary>
 
-| <a href="screenshots/filelink_wizzard1.png"><img src="screenshots/filelink_wizzard1.png" alt="Sharing step 1" width="230"></a> | <a href="screenshots/filelink_wizzard2.png"><img src="screenshots/filelink_wizzard2.png" alt="Sharing step 2" width="230"></a> |
-| --- | --- |
-| <a href="screenshots/filelink_wizzard3.png"><img src="screenshots/filelink_wizzard3.png" alt="Sharing step 3" width="230"></a> | <a href="screenshots/filelink_wizzard4.png"><img src="screenshots/filelink_wizzard4.png" alt="Sharing step 4" width="230"></a> |
-| <a href="screenshots/filelink_wizzard5.png"><img src="screenshots/filelink_wizzard5.png" alt="Sharing step 5" width="230"></a> | |
+Find rooms and equipment published through Nextcloud, including RoomVox and Calendar Resource Management. Filter by building, floor, capacity, equipment, and availability. Add one room and multiple resources to the event, or open a resource's day view to inspect free/busy times.
+
+<p align="center">
+  <a href="screenshots/gif/nc-connector_resources_thunderbird_en_1200x900.gif">
+    <img src="screenshots/gif/nc-connector_resources_thunderbird_en_1200x900.gif" alt="Thunderbird demo: filter rooms and resources, inspect availability, and add the selection to an event" width="900" />
+  </a>
+</p>
+
+*Requires the backend and a valid assigned seat.*
+
+Selection is not a booking confirmation. Use a **writable Nextcloud CalDAV calendar with server-side scheduling**, save and synchronize the event, then check the resource's response.
+
+In that calendar's **Properties**, leave **Prefer client-side email scheduling** unchecked. After disabling it, **fully quit and restart Thunderbird** before creating a booking. Otherwise, the event may appear in Nextcloud without an actual resource booking. This applies to both native Nextcloud resources and resources from other apps.
 
 </details>
+
+## Optional backend. One full-featured seat included.
+
+File sharing, **My Nextcloud**, Talk, and attachment rules work without the backend using local settings.
+
+For centrally managed installations, add [NC Connector Backend](https://apps.nextcloud.com/apps/ncc_backend_4mc) to Nextcloud. It includes **one free Community seat**, assigned to one Nextcloud user. That seat unlocks the **same seat-based features as paid seats**; paid plans add seats for more users.
+
+- Central settings, administrator locks, and delegated management
+- Low-touch enterprise rollout with user-friendly sign-in
+- Managed signatures, custom templates, and branding
+- Room and resource picker with filters and availability checks
+- Separate password delivery by email or one-time Nextcloud Secrets links; Secrets links also require the Secrets app
+- Additional storage sources in Thunderbird, using compatible provider add-ons
+
+Users in a centrally managed setup need the corresponding backend access and assigned seat.
+
+[Install the free backend](https://apps.nextcloud.com/apps/ncc_backend_4mc) · [Plans and licensing](https://nc-connector.de/preise-lizenzierung/)
+
+## Get started
+
+1. Install NC Connector from [Thunderbird Add-ons](https://addons.thunderbird.net/thunderbird/addon/nc4tb/), or download an **XPI** from [Releases](https://github.com/nc-connector/NC_Connector_for_Thunderbird/releases) and choose **Install Add-on From File** in Thunderbird's Add-ons Manager.
+2. Restart Thunderbird and open the NC Connector add-on settings.
+3. Enter your Nextcloud URL and sign in with **Nextcloud Login** or an app password.
+4. Test the connection and save your settings.
+
+For managed deployment, follow the [enterprise rollout guide](https://github.com/nc-connector/NC_Connector_for_Thunderbird/blob/main/docs/ADMIN.md#enterprise-rollout).
+
+### What you need
+
+- **Thunderbird 140 or newer**, within the compatibility range listed for the selected add-on release
+- **Windows, macOS, or Linux**
+- **Nextcloud 32 or newer** over HTTPS, with Files Sharing enabled, permission to create public links, and sufficient storage
+- **Nextcloud Talk** for online meetings
+- A **writable Nextcloud CalDAV calendar with server-side scheduling** when booking rooms and resources
+
+### Add more storage sources
+
+With a valid assigned seat, compatible **VFS provider add-ons** can make other storage services available in the sharing wizard. Install the provider separately and grant the required access in NC Connector's **VFS** settings. Your configured Nextcloud remains available as **My Nextcloud** without an external provider.
+
+[VFS Provider for Google Drive](https://github.com/nc-connector/vfs-provider-googledrive) · [Provider setup and permissions](https://github.com/nc-connector/NC_Connector_for_Thunderbird/blob/main/docs/ADMIN.md#vfs-sources-and-provider-access)
+
+## Documentation
+
+- [Admin guide](https://github.com/nc-connector/NC_Connector_for_Thunderbird/blob/main/docs/ADMIN.md#contents): setup, rollout, policies, updates, and troubleshooting
+- [Development guide](https://github.com/nc-connector/NC_Connector_for_Thunderbird/blob/main/docs/DEVELOPMENT.md): build, tests, and architecture
+- [Changelog](https://github.com/nc-connector/NC_Connector_for_Thunderbird/blob/main/CHANGELOG.md) · [Supported languages](https://github.com/nc-connector/NC_Connector_for_Thunderbird/blob/main/Translations.md) · [Screenshots](https://github.com/nc-connector/NC_Connector_for_Thunderbird/tree/main/screenshots)
+- [License](https://github.com/nc-connector/NC_Connector_for_Thunderbird/blob/main/LICENSE.txt) · [Third-party components](https://github.com/nc-connector/NC_Connector_for_Thunderbird/blob/main/VENDOR.md)
+
+## Open source, with clear data paths
+
+File sharing and Talk use your own Nextcloud. Connected storage providers access the services you choose; file contents are not relayed through an NC Connector-hosted service.
+
+The daily update check also provides an anonymous count of active users. Backend license checks are separate from file transfers.
+
+[Trust and transparency](https://nc-connector.de/vertrauen-transparenz/) · [Public roadmap](https://github.com/orgs/nc-connector/projects/1)
+
+## Help and feedback
+
+Found a bug or have a feature request? [Open an issue](https://github.com/nc-connector/NC_Connector_for_Thunderbird/issues). Include your Thunderbird, add-on, and Nextcloud versions, plus steps to reproduce. Remove credentials and personal information from logs and screenshots.
+
+For rollout questions, [get in touch](https://nc-connector.de/kontakt/). If NC Connector helps you, a GitHub star or [Thunderbird add-on review](https://addons.thunderbird.net/thunderbird/addon/nc4tb/) helps others find it.
