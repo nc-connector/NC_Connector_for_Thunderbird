@@ -1577,9 +1577,14 @@ Before you ship:
      to linter rules. The local runner only prepares the add-on payload and calls
      upstream `verify.js`; GitHub Actions uses the same update and review commands.
    - the linter already covers generic review rules such as unsafe dynamic HTML writes, manifest/path issues, permissions, vendor files, and Thunderbird API version checks.
-   - the installed upstream package is `webext-linter`. The wrapper adds only
-     `--allow-experiments`, required for this add-on; check selection and report
-     format retain upstream defaults.
+   - the installed upstream package is `webext-linter`. The wrapper always adds
+     `--allow-experiments` and `--eslint`; JavaScript code-sanity checks are
+     mandatory in local tests and CI. Check selection and report format retain
+     upstream defaults. The direct `webext-linter` command also enables ESLint.
+   - a successful exit code is not a completed review. Read every finding,
+     including Info notices, and all extended/standard review sections. Inspect
+     findings hidden by the console's display limit as well. Record verified
+     issues separately from harmless patterns and uncompleted live/listing checks.
    - `npm run webext-linter -- <candidate.xpi> --allow-experiments --llm-review`
      starts upstream's native LLM review against an actual package. Continue with
      `npm run webext-linter -- --llm-verdict <review-file>` using the file named

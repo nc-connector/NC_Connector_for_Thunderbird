@@ -38,7 +38,9 @@ function shouldCopySource(source){
   }
   const first = rel.split("/")[0];
   if (
+      first.includes(".xpi.extracted") ||
       first === "node_modules" ||
+      first === "WEBEXT-LINTER-CACHE" ||
       first === "tools" ||
       first === ".tmp" ||
       first === ".git" ||
@@ -102,7 +104,8 @@ try{
   exitCode = run(process.execPath, [
     linterVerify,
     prepared.target,
-    "--allow-experiments"
+    "--allow-experiments",
+    "--eslint"
   ], prepared.cwd);
 }finally{
   prepared.cleanup();

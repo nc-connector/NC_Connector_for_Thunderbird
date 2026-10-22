@@ -19,12 +19,13 @@
 ## DOMPurify
 
 - Package: `dompurify`
-- Version: `3.4.13`
-- Source: https://registry.npmjs.org/dompurify/-/dompurify-3.4.13.tgz
-- Source integrity (SHA-512): `sha512-2vmYIoqjze2d+kakP8S/nS5shfsl587kzwEjcGlTdiksUVgFHnFCsLYDVj/JNqJVOQZGSYBTmuycv0PodwmnMQ==`
+- Version: `3.4.17`
+- Source: https://registry.npmjs.org/dompurify/-/dompurify-3.4.17.tgz
+- Source integrity (SHA-512): `sha512-B/pSlYVHQ58kqISD/yDjuJ1yfzI34m1gF4lAod2bwSRhiN4K5Cl3H8Af7hqB2PmTL911tdEudnnXn5FnhRoz0w==`
 - Upstream repository: https://github.com/cure53/DOMPurify
+- Upstream tag: `3.4.17`, commit `a77a3e78b59f72fa4d1c83f22e121ad9cc7d3575`
 - Included file: `vendor/purify.js` (unchanged UMD browser distribution from `dist/purify.js`)
-- SHA-256: `DD9516732E75EF096EBC8347F0D7F08C7B969C409ED050C85560F214A0F704F9`
+- SHA-256: `A7B6DC750251C79C95592D6ABF8908BCECB51319B0B5C4194B82222566ED29B9`
 - License: Apache-2.0 OR MPL-2.0
 - Usage in this add-on:
   - Client-side sanitization of backend-provided Talk invitation HTML

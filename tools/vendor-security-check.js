@@ -17,14 +17,14 @@ function run(){
   const sanitizerSource = readText("modules/htmlSanitizer.js");
   const manifest = JSON.parse(readText("manifest.json"));
   assert(
-    source.toString("utf8", 0, 80).includes("DOMPurify 3.4.13"),
-    "The bundled sanitizer must identify DOMPurify 3.4.13"
+    source.toString("utf8", 0, 80).includes("DOMPurify 3.4.17"),
+    "The bundled sanitizer must identify DOMPurify 3.4.17"
   );
   assert(
-    sha256 === "DD9516732E75EF096EBC8347F0D7F08C7B969C409ED050C85560F214A0F704F9",
-    "The bundled sanitizer must match the official DOMPurify 3.4.13 browser distribution"
+    sha256 === "A7B6DC750251C79C95592D6ABF8908BCECB51319B0B5C4194B82222566ED29B9",
+    "The bundled sanitizer must match the official DOMPurify 3.4.17 browser distribution"
   );
-  assert(vendorDoc.includes("dompurify/-/dompurify-3.4.13.tgz"), "VENDOR.md must link the exact DOMPurify package");
+  assert(vendorDoc.includes("dompurify/-/dompurify-3.4.17.tgz"), "VENDOR.md must link the exact DOMPurify package");
   assert(vendorDoc.includes(sha256), "VENDOR.md must record the bundled DOMPurify SHA-256");
   assert(/const ADD_ATTR = \[[\s\S]*?"nowrap"[\s\S]*?\];/.test(sanitizerSource), "Share sanitizer must explicitly preserve nowrap compatibility attributes");
   assert(/const ADD_TAGS = \[[\s\S]*?"nobr"[\s\S]*?\];/.test(sanitizerSource), "Share sanitizer must explicitly preserve no-break elements");

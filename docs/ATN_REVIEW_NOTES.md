@@ -213,7 +213,7 @@ password-dispatch, header, or body mutation cannot be exposed as committed.
   - Talk HTML policy template (`talk_invitation_template`)
   - Share HTML policy templates (`share_html_block_template_v2` with `share_html_block_template` fallback, and `share_password_template`)
   - Email signature HTML policy template (`email_signature_template`)
-  - bundled sanitizer: `DOMPurify 3.4.13` documented in `VENDOR.md`
+  - bundled sanitizer: `DOMPurify 3.4.17` documented in `VENDOR.md`
 - Follow-up for the previous `ui/signatureCompose.js` `innerHTML` review finding:
   - email signature HTML is still sanitized in background before it reaches the compose script
   - the compose bridge no longer assigns dynamic HTML with `innerHTML`
