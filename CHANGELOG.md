@@ -4,6 +4,21 @@ All notable changes to **NC Connector for Thunderbird** will be documented in th
 
 This project targets **Thunderbird ESR 140** through **ESR 153**.
 
+## 3.5.0.1
+
+### Added
+- Select Nextcloud rooms and resources from the calendar action menu, alongside Talk meetings. Add up to one room and multiple resources to the current event, including their location. Requires a valid assigned NC Connector Seat and a synchronized Nextcloud CalDAV calendar with server-side scheduling enabled for booking.
+- Check availability for the event interval directly through CalDAV, with a per-resource daily view and an in-window date picker.
+- Filter by building, floor, minimum capacity, equipment, and availability; group entries with collapsible building/floor sections and locally saved display preferences.
+
+### Changed
+- Use one Sharing wizard and one share block per compose window. Existing attachments and files added while the wizard is open join the same queue, including during upload. Files added after the share block is inserted remain normal attachments.
+- Share, Talk, and resource actions use consistent access notices, license warnings, and compact headers.
+- Update bundled DOMPurify from 3.4.13 to 3.4.17.
+
+### Fixed
+- Reject malformed backend status responses before applying Seat decisions.
+
 ## 3.4.4
 
 ### Added

@@ -16,7 +16,7 @@ function run(){
   const reviewNotes = readText("docs/ATN_REVIEW_NOTES.md");
   const development = readText("docs/DEVELOPMENT.md");
 
-  assert(/^\d+\.\d+\.\d+$/.test(version), "manifest.json version should use x.y.z format");
+  assert(/^\d+\.\d+\.\d+(?:\.\d+)?$/.test(version), "manifest.json version should use x.y.z or x.y.z.w format");
   assert(new RegExp(`^##\\s+${escapeRegExp(version)}\\s*$`, "m").test(changelog), "CHANGELOG.md should contain a heading for manifest version");
   assert(reviewNotes.includes(`version ${version}`) || reviewNotes.includes(`- ${version}`) || reviewNotes.includes(`# Reviewer Notes - ${version}`), "ATN_REVIEW_NOTES.md should reference manifest version");
 
